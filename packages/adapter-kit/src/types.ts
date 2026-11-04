@@ -854,6 +854,8 @@ export interface NotificationMessage {
   /** Verified sender metadata. Avatar is a bounded JPEG thumbnail, base64 encoded. */
   sender?: { botId: string; name: string; avatar?: string };
   kind: "completion" | "failure" | "help" | "takeover";
+  /** What a `help` message waits for, so the bell can say it; an answer when unset. */
+  need?: "approval" | "answer";
   title: string;
   body: string;
   botId: string;

@@ -1358,6 +1358,13 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "No bots yet": "還沒有機器人",
   "Show bots of": "顯示誰的機器人",
   "Show earlier": "顯示更早的訊息",
+  "Failed {count} times": "失敗 {count} 次",
+  Finished: "已完成",
+  "Finished {count} tasks": "已完成 {count} 項任務",
+  "Has a question": "有問題要問你",
+  "Needs you on the screen": "需要你操作螢幕",
+  "Needs your approval": "需要你的核准",
+  "You're all caught up": "都看完了",
 };
 
 export const PEER_MESSAGE_FORMS = { other: "與{peer}的 {count} 則訊息" };

@@ -6,7 +6,9 @@ import {
   deliverBrowserNotification as deliverNativeBrowserNotification,
   shouldNotifyBrowser,
 } from "../../lib/browser-notifications";
+import { isInboxQuery } from "../../lib/inbox";
 import { notificationIcon, prepareNotificationIcons } from "../../lib/notification-icon";
+import { queryClient } from "../../lib/query";
 import type { RpcClient } from "../../lib/rpc";
 
 type PendingBrowserNotification = {
@@ -83,7 +85,11 @@ export function useBrowserNotifications(
           });
           for await (const frame of stream) {
             if (!active) return;
-            if (frame.alert) show(frame.alert);
+            if (frame.alert) {
+              show(frame.alert);
+              // A request or a finish the bell lists; it refreshes whoever's device it is on.
+              void queryClient.invalidateQueries({ predicate: isInboxQuery });
+            }
           }
         } catch (cause) {
           failure = cause;

@@ -4,7 +4,14 @@ import type { ExecutorDeps } from "./executor-deps.js";
 import { notifyRun } from "./run-notifications.js";
 
 vi.mock("./notification-identity.js", () => ({ notificationIdentity: async () => undefined }));
-vi.mock("@rakazo/db", () => ({ countUnreadInboxChats: async () => 2 }));
+const { recordInboxNotification } = vi.hoisted(() => ({
+  recordInboxNotification: vi.fn(async () => undefined),
+}));
+vi.mock("@rakazo/db", () => ({
+  countUnreadInboxChats: async () => 2,
+  recordInboxNotification,
+  runAsTenant: (_tenant: unknown, work: () => unknown) => work(),
+}));
 
 const run = {
   spaceId: "space-1",
@@ -94,5 +101,42 @@ describe("notifyRun chat alerts", () => {
     delete (value as { notifications?: unknown }).notifications;
     await notifyRun(value, run, message);
     expect(publish).toHaveBeenCalledOnce();
+  });
+});
+
+describe("notifyRun and the bell", () => {
+  it("lists finished work only where the bot would alert", async () => {
+    recordInboxNotification.mockClear();
+    await notifyRun(deps().value, run, message);
+    expect(recordInboxNotification).toHaveBeenCalledWith(expect.anything(), {
+      userId: "user-1",
+      spaceId: "space-1",
+      botId: "bot-1",
+      threadId: "thread-1",
+      groupId: null,
+      runId: "run-1",
+      kind: "completion",
+    });
+    recordInboxNotification.mockClear();
+    await notifyRun(deps({ notifyOnFinish: false }).value, run, message);
+    expect(recordInboxNotification).not.toHaveBeenCalled();
+  });
+
+  it("lists every request, even from a bot whose alerts are off, and says what it waits for", async () => {
+    recordInboxNotification.mockClear();
+    const { value, send } = deps({ notifyOnFinish: false });
+    await notifyRun(value, run, { ...message, kind: "help", need: "approval" });
+    expect(recordInboxNotification).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ kind: "approval" }),
+    );
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("never holds up the push when the bell can't record", async () => {
+    recordInboxNotification.mockRejectedValueOnce(new Error("database unavailable"));
+    const { value, send } = deps();
+    await notifyRun(value, run, message);
+    expect(send).toHaveBeenCalledOnce();
   });
 });

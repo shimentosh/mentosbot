@@ -1346,6 +1346,13 @@ export const PL_MESSAGES: Record<string, string> = {
   "No bots yet": "Nie ma jeszcze botów",
   "Show bots of": "Pokaż boty osoby",
   "Show earlier": "Pokaż wcześniejsze",
+  "Failed {count} times": "Nie powiodło się {count} razy",
+  Finished: "Ukończono",
+  "Finished {count} tasks": "Ukończono zadania: {count}",
+  "Has a question": "Ma pytanie",
+  "Needs you on the screen": "Potrzebuje Cię na ekranie",
+  "Needs your approval": "Potrzebuje Twojej zgody",
+  "You're all caught up": "Wszystko gotowe",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

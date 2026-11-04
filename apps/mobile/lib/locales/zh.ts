@@ -1360,6 +1360,13 @@ export const ZH_MESSAGES: Record<string, string> = {
   "No bots yet": "还没有机器人",
   "Show bots of": "显示谁的机器人",
   "Show earlier": "显示更早的消息",
+  "Failed {count} times": "失败 {count} 次",
+  Finished: "已完成",
+  "Finished {count} tasks": "已完成 {count} 项任务",
+  "Has a question": "有问题要问你",
+  "Needs you on the screen": "需要你操作屏幕",
+  "Needs your approval": "需要你的批准",
+  "You're all caught up": "都看完了",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

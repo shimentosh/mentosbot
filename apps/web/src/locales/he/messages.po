@@ -179,6 +179,14 @@ msgstr "{count, plural, one {הודעה אחת עם {peer}} two {# הודעות 
 msgid "{count, plural, one {# row} other {# rows}}"
 msgstr "{count, plural, one {# שורה} other {# שורות}}"
 
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Failed # time} other {Failed # times}}"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Finished # task} other {Finished # tasks}}"
+msgstr ""
+
 #: src/lib/billing.ts
 msgid "{count} days"
 msgstr "{count} ימים"
@@ -696,6 +704,10 @@ msgstr ""
 #: src/components/ModelCredits.tsx
 msgid "All {credit} goes to model usage."
 msgstr "כל {credit} הולכים לשימוש במודלים."
+
+#: src/pages/shell/notification-bell.tsx
+msgid "All activity"
+msgstr ""
 
 #: src/components/integrations/agent-access.tsx
 #: src/pages/Artifacts.tsx
@@ -3184,6 +3196,7 @@ msgstr "נכשל"
 
 #: src/components/SubagentCard.tsx
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Failed"
 msgstr "נכשל"
 
@@ -3272,6 +3285,10 @@ msgstr "יש להשלים את ההתחברות למנוי ולבדוק שוב."
 #: src/components/CloudAgentCard.tsx
 msgid "finished"
 msgstr "הסתיים"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Finished"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -3411,6 +3428,10 @@ msgstr "יש לנתק קודם את השיחה ואז להזין את הקוד �
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "יש לנתק את השיחה ואז להזין את הקוד שעל המסך."
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Has a question"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -4367,8 +4388,17 @@ msgstr "נדרשת השתלטות"
 #: src/lib/roster-status.ts
 #: src/pages/shell/computer-overlay.tsx
 #: src/pages/shell/message-view.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Needs you"
 msgstr "נדרשת פעולה"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs you on the screen"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs your approval"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Needs: {names}"
@@ -4651,8 +4681,17 @@ msgid "Nothing remembered yet"
 msgstr "עדיין אין זיכרונות"
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Notifications"
 msgstr "התראות"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, {needs} need you"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, new"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Number"
@@ -5206,6 +5245,7 @@ msgid "Received"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Recent"
 msgstr "אחרונים"
 
@@ -7360,6 +7400,10 @@ msgstr "אתם מקבלים חודש חינם כשהם מתחילים את תק�
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "השליטה אצלך"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "You're all caught up"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

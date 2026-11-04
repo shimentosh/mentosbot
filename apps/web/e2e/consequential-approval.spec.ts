@@ -33,6 +33,14 @@ test("A change asks without an approval model, and approvals settings shape what
   expect(alwaysBox!.x).toBeGreaterThan(allowBox!.x);
   expect(denyBox!.x).toBeGreaterThan(alwaysBox!.x);
   await captureScreenshot(page, testInfo, "53-action-confirmation-pending");
+  // The bell lists the request until it is answered.
+  const bell = page.getByTestId("notification-bell");
+  await expect(bell).toHaveAccessibleName("Notifications, 1 need you");
+  await bell.click();
+  const bellList = page.getByTestId("notification-list");
+  await expect(bellList.getByRole("button", { name: /Needs your approval/ })).toBeVisible();
+  await captureScreenshot(page, testInfo, "53b-notification-bell");
+  await page.keyboard.press("Escape");
   const viewport = page.viewportSize();
   await page.setViewportSize({ width: 400, height: 900 });
   await expect(allowOnce).toBeVisible();
@@ -47,6 +55,8 @@ test("A change asks without an approval model, and approvals settings shape what
   );
   await waitForRunIdle(page);
   await expectComposerReady(page);
+  await expect(bell).toHaveAccessibleName(/^Notifications/);
+  await expect(bell).not.toHaveAccessibleName(/need you/);
   await captureScreenshot(page, testInfo, "54-action-confirmation-denied");
 
   await requestDestinationWrite(page, "write this to the destination crm once more");

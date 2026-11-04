@@ -177,6 +177,7 @@ export function ShellSidebar({
           navigate={navigate}
           setNewSpaceOpen={setNewSpaceOpen}
           setCreateBotOpen={setCreateBotOpen}
+          openSpaceChat={openSpaceChat}
         />
         {mini ||
         !(

@@ -91,6 +91,7 @@ import {
   ExternalConversationPolicySchema,
   GroupDetailSchema,
   GroupSchema,
+  InboxSchema,
   IncomingBotCallSchema,
   IntegrationCatalogResultSchema,
   McpServerConfigInput,
@@ -1484,6 +1485,11 @@ export const appContract = {
      * a recent identity confirmation on this session (IDENTITY_CONFIRMATION_REQUIRED).
      */
     accountToken: oc.output(z.object({ token: z.string() })),
+  },
+  /** The bell, across the Spaces of the current organization. */
+  inbox: {
+    list: oc.output(InboxSchema),
+    markRead: oc.output(z.object({ ok: z.literal(true) })),
   },
   notifications: {
     /** Run alerts for the signed-in user's chats in this space, live while connected. */

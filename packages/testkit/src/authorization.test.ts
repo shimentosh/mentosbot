@@ -289,6 +289,8 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["networkExit/get"],
       ["networkExit/connect", { provider: "tailscale", values: {} }],
       ["networkExit/disconnect"],
+      ["inbox/list"],
+      ["inbox/markRead"],
       ["bots/list"],
       ["bots/listArchived"],
       ["bots/get", { botId: "missing-bot" }],

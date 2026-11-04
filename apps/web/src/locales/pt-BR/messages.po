@@ -179,6 +179,14 @@ msgstr "{count, plural, one {# mensagem com {peer}} other {# mensagens com {peer
 msgid "{count, plural, one {# row} other {# rows}}"
 msgstr "{count, plural, one {# linha} other {# linhas}}"
 
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Failed # time} other {Failed # times}}"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Finished # task} other {Finished # tasks}}"
+msgstr ""
+
 #: src/lib/billing.ts
 msgid "{count} days"
 msgstr ""
@@ -696,6 +704,10 @@ msgstr ""
 #: src/components/ModelCredits.tsx
 msgid "All {credit} goes to model usage."
 msgstr "Todos os {credit} vão para o uso de modelos."
+
+#: src/pages/shell/notification-bell.tsx
+msgid "All activity"
+msgstr ""
 
 #: src/components/integrations/agent-access.tsx
 #: src/pages/Artifacts.tsx
@@ -3184,6 +3196,7 @@ msgstr "falhou"
 
 #: src/components/SubagentCard.tsx
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Failed"
 msgstr "Falha"
 
@@ -3272,6 +3285,10 @@ msgstr "Conclua o login de assinatura e teste novamente."
 #: src/components/CloudAgentCard.tsx
 msgid "finished"
 msgstr "concluído"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Finished"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -3411,6 +3428,10 @@ msgstr "Desligue primeiro e depois digite o código na tela."
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "Desligue e depois digite o código na tela."
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Has a question"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -4367,7 +4388,16 @@ msgstr "Requer assumir o controle"
 #: src/lib/roster-status.ts
 #: src/pages/shell/computer-overlay.tsx
 #: src/pages/shell/message-view.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Needs you"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs you on the screen"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs your approval"
 msgstr ""
 
 #: src/pages/shell/import-status.ts
@@ -4651,8 +4681,17 @@ msgid "Nothing remembered yet"
 msgstr "Nada memorizado ainda"
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Notifications"
 msgstr "Notificações"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, {needs} need you"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, new"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Number"
@@ -5206,6 +5245,7 @@ msgid "Received"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Recent"
 msgstr "Recente"
 
@@ -7360,6 +7400,10 @@ msgstr "Você ganha um mês grátis quando eles começarem o teste com um cartã
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Você tem o controle"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "You're all caught up"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
