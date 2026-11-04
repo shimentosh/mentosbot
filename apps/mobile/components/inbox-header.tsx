@@ -19,7 +19,10 @@ export function InboxHeader({
   runCreateAction,
   columnInsets,
   title,
+  needsYou = 0,
 }: {
+  /** Requests waiting on the person, which badge the bell. */
+  needsYou?: number;
   initials: string;
   activityMode: boolean;
   toggleActivityMode: () => void;
@@ -52,14 +55,25 @@ export function InboxHeader({
       {title}
       <View style={styles.headerActions}>
         <HeaderButton
+          testID="home-notifications-button"
+          accessibilityLabel={t("Notifications")}
+          onPress={() => router.push("/notifications")}
+        >
+          <NativeSymbol
+            ios={needsYou ? "bell.badge" : "bell"}
+            android={needsYou ? "notifications" : "notifications-outline"}
+            size={17}
+          />
+        </HeaderButton>
+        <HeaderButton
           accessibilityLabel={t("Activity")}
           active={activityMode}
           accent
           onPress={toggleActivityMode}
         >
           <NativeSymbol
-            ios={activityMode ? "bell.fill" : "bell"}
-            android={activityMode ? "notifications" : "notifications-outline"}
+            ios={activityMode ? "clock.arrow.circlepath" : "clock"}
+            android={activityMode ? "time" : "time-outline"}
             size={17}
             color={activityMode ? tokens.primaryForeground : tokens.foreground}
           />

@@ -1354,6 +1354,13 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   Organization: "組織",
   "Delete organization": "刪除組織",
   "Type {name} to confirm": "輸入 {name} 以確認",
+  "Failed {count} times": "失敗 {count} 次",
+  Finished: "已完成",
+  "Finished {count} tasks": "已完成 {count} 項任務",
+  "Has a question": "有問題要問你",
+  "Needs you on the screen": "需要你操作螢幕",
+  "Needs your approval": "需要你的核准",
+  "You're all caught up": "都看完了",
 };
 
 export const PEER_MESSAGE_FORMS = { other: "與{peer}的 {count} 則訊息" };

@@ -1389,6 +1389,13 @@ export const RU_MESSAGES: Record<string, string> = {
   Organization: "Организация",
   "Delete organization": "Удалить организацию",
   "Type {name} to confirm": "Введите {name} для подтверждения",
+  "Failed {count} times": "Не удалось {count} раз",
+  Finished: "Готово",
+  "Finished {count} tasks": "Выполнено задач: {count}",
+  "Has a question": "Есть вопрос",
+  "Needs you on the screen": "Нужна ваша помощь на экране",
+  "Needs your approval": "Нужно ваше одобрение",
+  "You're all caught up": "Всё просмотрено",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

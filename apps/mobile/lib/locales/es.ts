@@ -1299,6 +1299,13 @@ export const ES_MESSAGES: Record<string, string> = {
   Organization: "Organización",
   "Delete organization": "Eliminar organización",
   "Type {name} to confirm": "Escribe {name} para confirmar",
+  "Failed {count} times": "Falló {count} veces",
+  Finished: "Terminado",
+  "Finished {count} tasks": "Terminó {count} tareas",
+  "Has a question": "Tiene una pregunta",
+  "Needs you on the screen": "Te necesita en la pantalla",
+  "Needs your approval": "Necesita tu aprobación",
+  "You're all caught up": "Estás al día",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

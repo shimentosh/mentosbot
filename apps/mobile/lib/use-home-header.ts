@@ -15,6 +15,7 @@ export function useHomeHeader({
   toggleActivityMode,
   runCreateAction,
   headerTitle,
+  needsYou = 0,
 }: {
   nativeHeader: boolean;
   ready: boolean;
@@ -24,6 +25,8 @@ export function useHomeHeader({
   toggleActivityMode: () => void;
   runCreateAction: (action: CreateAction) => void;
   headerTitle?: () => ReactNode;
+  /** Requests waiting on the person, which badge the bell. */
+  needsYou?: number;
 }) {
   const navigation = useNavigation();
   const router = useRouter();
@@ -49,9 +52,20 @@ export function useHomeHeader({
       unstable_headerRightItems: () => [
         {
           type: "button" as const,
+          label: t("Notifications"),
+          accessibilityLabel: t("Notifications"),
+          identifier: "home-notifications-button",
+          icon: { type: "sfSymbol" as const, name: needsYou ? "bell.badge" : "bell" },
+          onPress: () => router.push("/notifications"),
+        },
+        {
+          type: "button" as const,
           label: t("Activity"),
           accessibilityLabel: t("Activity"),
-          icon: { type: "sfSymbol" as const, name: activityMode ? "bell.fill" : "bell" },
+          icon: {
+            type: "sfSymbol" as const,
+            name: activityMode ? "clock.arrow.circlepath" : "clock",
+          },
           selected: activityMode,
           onPress: toggleActivityMode,
         },
@@ -89,6 +103,7 @@ export function useHomeHeader({
     toggleActivityMode,
     runCreateAction,
     headerTitle,
+    needsYou,
     router,
     t,
     locale,

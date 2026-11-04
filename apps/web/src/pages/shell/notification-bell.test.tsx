@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import type { Inbox, InboxEntry } from "@rakazo/contracts";
+import { groupRecent } from "@rakazo/core";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
-import { groupRecent, InboxList } from "./notification-bell";
+import { InboxList } from "./notification-bell";
 
 vi.mock("@lingui/react/macro", () => ({
   useLingui: () => ({

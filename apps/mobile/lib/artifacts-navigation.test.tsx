@@ -116,7 +116,7 @@ it.each(["android", "ios"])("omits Artifacts from the %s fallback header", (plat
     Array.from(container.querySelectorAll("[aria-label]"), (node) =>
       node.getAttribute("aria-label"),
     ),
-  ).toEqual(["Account", "Activity", "Search", "Create"]);
+  ).toEqual(["Account", "Notifications", "Activity", "Search", "Create"]);
   act(() => control("Account").click());
   act(() => control("Search").click());
   act(() => control("Activity").click());

@@ -1,5 +1,6 @@
 import type { RunActivityRow, SpaceBot, SpaceGroup } from "@rakazo/contracts";
 import { accountDisplay, isRetryableError, reportUiLocale } from "@rakazo/core";
+import { useQuery } from "@tanstack/react-query";
 import type { Href } from "expo-router";
 import {
   Redirect,
@@ -91,6 +92,7 @@ import { findOrganizeTarget } from "../lib/organize-target";
 import { offerPasskeyOnce } from "../lib/passkey";
 import { ACTIVITY_POLL_INTERVAL_MS, INBOX_POLL_INTERVAL_MS } from "../lib/poll-cadence";
 import { registerPushToken } from "../lib/push";
+import { queryClient, rpcQuery } from "../lib/query";
 import { forgetReferrals, rememberReferral } from "../lib/referral";
 import { hasSignedInBefore, rememberSignedIn } from "../lib/returning-user";
 import { loadSavedInbox, saveInbox } from "../lib/saved-chats";
@@ -715,6 +717,12 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     [hasOrganizationMenu, organizations],
   );
 
+  // The bell's badge: requests waiting on the person, across the organization's Spaces.
+  const { data: inbox } = useQuery(
+    { ...rpcQuery("inbox/list"), enabled: ready && hasSession },
+    queryClient,
+  );
+  const needsYou = inbox?.needsYou.length ?? 0;
   useHomeHeader({
     nativeHeader,
     ready,
@@ -724,6 +732,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     toggleActivityMode,
     runCreateAction,
     headerTitle,
+    needsYou,
   });
 
   const openBot = useCallback(
@@ -829,6 +838,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
       {nativeHeader || onShareSelect ? null : (
         <InboxHeader
           initials={initials}
+          needsYou={needsYou}
           activityMode={activityMode}
           toggleActivityMode={toggleActivityMode}
           runCreateAction={runCreateAction}

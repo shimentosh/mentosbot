@@ -1,5 +1,6 @@
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import type { Inbox, InboxEntry } from "@rakazo/contracts";
+import { groupRecent } from "@rakazo/core";
 import { BotAvatar, Button, Popover, PopoverContent, PopoverTrigger } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
@@ -16,19 +17,6 @@ function inboxQuery(userId: string | null, spaceId: string | null) {
     queryKey: [...inboxQueryKey(userId), spaceId ?? ""],
     queryFn: () => rpc.inbox.list(),
   });
-}
-
-/** Consecutive finished (or failed) work from one bot reads as one line. */
-export function groupRecent(entries: InboxEntry[]) {
-  const groups: Array<{ entry: InboxEntry; count: number; read: boolean }> = [];
-  for (const entry of entries) {
-    const last = groups.at(-1);
-    if (last && last.entry.bot.id === entry.bot.id && last.entry.kind === entry.kind) {
-      last.count += 1;
-      last.read &&= entry.read;
-    } else groups.push({ entry, count: 1, read: entry.read });
-  }
-  return groups;
 }
 
 export function NotificationBell({
