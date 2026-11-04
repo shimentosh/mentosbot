@@ -26,6 +26,7 @@ import { ActivityList } from "../ActivityList";
 import { SpaceSearchResults } from "../SpaceSearch";
 import type { SettingsSection } from "../shell-overlay";
 import { SidebarHeader } from "./sidebar-header";
+import { TeamBotsSection } from "./team-bots";
 import type { SidebarSearch } from "./use-sidebar-search";
 
 /** Focuses the search box once it renders, its text selected so typing replaces it. */
@@ -272,6 +273,7 @@ export function ShellSidebar({
                 />
               ) : null}
               {roster}
+              {activityMode || mini ? null : <TeamBotsSection />}
             </>
           )}
           <div className={mini ? "hidden" : "contents"}>{archived}</div>

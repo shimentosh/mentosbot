@@ -105,6 +105,7 @@ function fixture({
   connectedApps = [] as string[],
   userDevices,
   botUserId = "user-1",
+  sharedWith = 0,
   batch,
   browser,
 }: {
@@ -116,6 +117,8 @@ function fixture({
   userDevices?: UserDeviceGateway;
   /** The bot's owner; runs are started by user-1. */
   botUserId?: string;
+  /** Teammates the bot is shared with. */
+  sharedWith?: number;
   connectedApps?: string[];
   routines?: { name: string; prompt: string }[];
   /** Adds `demo_get_other`, a read on a separate installed resource with the same name prefix. */
@@ -444,6 +447,7 @@ function fixture({
       })),
     },
     taughtSkill: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => null) },
+    botAccess: { count: vi.fn(async () => sharedWith) },
     chatGroup: { findMany: vi.fn(async () => []) },
     botSection: { findMany: vi.fn(async () => []) },
     vaultCredential: { findMany: vi.fn(async () => []) },
@@ -3241,6 +3245,13 @@ describe("user_computer_shell", () => {
       expect(f.instructions()).not.toContain(offlineLine);
     }
     expect(gateway.connected).toHaveBeenCalledWith("user-1");
+  });
+
+  it("is never offered on a bot shared with teammates, whose chat they share", async () => {
+    const { gateway } = devices();
+    const f = fixture({ ...ownRun, userDevices: gateway, sharedWith: 1 });
+    await f.run();
+    expect(f.offeredTools()).not.toContain("user_computer_shell");
   });
 
   it.each([

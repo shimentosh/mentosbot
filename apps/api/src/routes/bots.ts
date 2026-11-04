@@ -52,6 +52,7 @@ import { deleteAgentSecret, listAgentSecrets, putAgentSecret } from "../agent-se
 import { changedBotSettings } from "../bot-setting-analytics.js";
 import { requireIdentityConfirmation } from "../identity-confirmation.js";
 import type { RouterDeps } from "../router.js";
+import { listBotsSharedWith } from "../shared-bot-access.js";
 import { loadMessagePage } from "../thread-message-pages.js";
 import type { RouterContext } from "./context.js";
 import {
@@ -298,11 +299,22 @@ export function botsRoutes(ctx: RouterContext) {
     ctx;
   return {
     bots: {
-      list: authed.bots.list.handler(async ({ context }) => repos.listBots(context.actor)),
+      list: authed.bots.list.handler(async ({ context }) => [
+        ...(await repos.listBots(context.actor)),
+        ...(await listBotsSharedWith(deps.prisma, repos, context.actor)),
+      ]),
       listArchived: authed.bots.listArchived.handler(async ({ context }) =>
         repos.listBots(context.actor, { archived: true }),
       ),
       get: authed.bots.get.handler(async ({ context, input }) => {
+        // A teammate's request runs as the bot's owner; they see it as their list does.
+        if (context.sharedBy) {
+          const shared = (await listBotsSharedWith(deps.prisma, repos, context.sharedBy)).find(
+            (bot) => bot.id === input.botId,
+          );
+          // Otherwise the team's owner is reading it, as its own owner sees it.
+          if (shared) return shared;
+        }
         const found = (await repos.listBots(context.actor)).find((bot) => bot.id === input.botId);
         if (!found) throw new IsolationError();
         return found;

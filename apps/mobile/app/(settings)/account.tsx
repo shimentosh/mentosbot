@@ -457,6 +457,17 @@ export default function Account() {
               title={t("Organization")}
               value={activeOrganization(organizations)?.name}
             />
+            {/* The team's owner oversees teammates' bots from here. */}
+            {activeOrganization(organizations)?.role === "owner" &&
+            (activeOrganization(organizations)?.memberCount ?? 0) > 1 ? (
+              <SettingsRow
+                key="team"
+                accessibilityRole="button"
+                chevron="right"
+                onPress={() => router.push("/team")}
+                title={t("Team")}
+              />
+            ) : null}
           </SettingsGroup>
         ) : null}
 

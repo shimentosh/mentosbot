@@ -454,6 +454,11 @@ msgstr ""
 msgid "About {label}"
 msgstr "關於 {label}"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr ""
@@ -1130,6 +1135,7 @@ msgid "Bot models"
 msgstr "機器人模型"
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "機器人螢幕"
 
@@ -1202,6 +1208,14 @@ msgstr "撥號中…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "通話"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -1470,6 +1484,7 @@ msgstr "正在清空…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "關閉"
@@ -2161,6 +2176,7 @@ msgid "Could not load this artifact."
 msgstr "無法載入此成品。"
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "無法載入此對話。"
 
@@ -3096,6 +3112,10 @@ msgstr "每月"
 msgid "Every week"
 msgstr "每週"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
 msgstr "Executor 權杖"
@@ -3880,6 +3900,7 @@ msgstr "正在載入語音供應商…"
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "載入中…"
@@ -4508,6 +4529,10 @@ msgstr "尚無成員"
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "還沒有與 {peerBotName} 的訊息。"
+
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
@@ -5365,6 +5390,10 @@ msgstr "移除變化觸發器"
 msgid "Remove from every space?"
 msgstr ""
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "移除 Git 事件"
@@ -5753,6 +5782,10 @@ msgstr "排程例行任務"
 msgid "Scopes (optional)"
 msgstr "範圍（選填）"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr ""
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "螢幕未連線"
@@ -5962,6 +5995,7 @@ msgstr "形狀 {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "分享"
 
@@ -5983,6 +6017,10 @@ msgstr "共享"
 msgid "Shared memory"
 msgstr "共用記憶"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -5995,6 +6033,14 @@ msgstr "顯示全部"
 #: src/pages/shell/sidebar-header.tsx
 msgid "Show bots"
 msgstr "顯示機器人"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "Show list"
@@ -6281,6 +6327,11 @@ msgstr "停止"
 msgid "Stop computer"
 msgstr "停止電腦"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "停止朗讀"
@@ -6405,6 +6456,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "正在示範，傳送新訊息前請先停止示範。"
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "團隊"
 
@@ -6451,6 +6503,10 @@ msgstr "機器人可以使用這個檔案，但看不到圖片內容。"
 
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
 msgstr ""
 
 #: src/lib/model-connection-preflight.ts
@@ -6528,6 +6584,10 @@ msgstr "無法讀取已儲存的設定，請移除後重新新增。"
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "對方可免費使用 {weeks} 週。"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

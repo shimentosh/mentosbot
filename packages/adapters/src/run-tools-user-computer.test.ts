@@ -92,6 +92,8 @@ describe("userComputerOwner", () => {
   it("is the bot owner when their own message started the run", () => {
     expect(userComputerOwner(own)).toBe("user-1");
     expect(userComputerOwner({ ...own, trigger: "follow_up" })).toBe("user-1");
+    // A bot shared with teammates never reaches its owner's own computer.
+    expect(userComputerOwner({ ...own, sharedWithTeammates: true })).toBeUndefined();
   });
 
   it.each([

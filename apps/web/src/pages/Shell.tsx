@@ -101,6 +101,7 @@ import { useChatRead } from "./shell/use-chat-read";
 import { useComposerActions } from "./shell/use-composer-actions";
 import { useComposerMentions } from "./shell/use-composer-mentions";
 import { useComputerControls, useComputerState } from "./shell/use-computer";
+import { useMessageAuthorName } from "./shell/use-message-author";
 import { useMessageJump } from "./shell/use-message-jump";
 import { useMobileSidebar } from "./shell/use-mobile-sidebar";
 import { useReadAloud } from "./shell/use-read-aloud";
@@ -614,6 +615,7 @@ function SpaceShell() {
       status: run.status,
     };
   });
+  const resolveMessageAuthor = useMessageAuthorName(active, userId);
   const resolveTranscriptMemberName = useCallback(
     (botId: string | undefined) => memberName(transcriptMembers, botId),
     [transcriptMembers],
@@ -1162,6 +1164,7 @@ function SpaceShell() {
               onJumpToMessage={jumpToReplyMessage}
               onOpenPeerMessages={openPeerMessages}
               memberName={resolveTranscriptMemberName}
+              authorName={resolveMessageAuthor}
               peerBot={resolveTranscriptBot}
               onRefresh={refreshActiveThread}
               onBotChanged={refreshBots}

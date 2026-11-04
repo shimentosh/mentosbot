@@ -83,6 +83,7 @@ export const Transcript = memo(function Transcript({
   onJumpToMessage,
   onOpenPeerMessages,
   memberName,
+  authorName,
   peerBot,
   onRefresh,
   onBotChanged,
@@ -131,6 +132,8 @@ export const Transcript = memo(function Transcript({
   onJumpToMessage: (messageId: string) => void;
   onOpenPeerMessages: (peer: { peerBotId: string; peerBotName: string }) => void;
   memberName?: (botId: string | undefined) => string | undefined;
+  /** Who wrote a person's message in a shared chat, when it was not the viewer. */
+  authorName?: (message: ThreadMessage) => string | undefined;
   peerBot: (
     botId: string,
   ) => { name?: string; color: string; status?: string; avatarSet?: BotAvatarSet } | undefined;
@@ -593,6 +596,7 @@ export const Transcript = memo(function Transcript({
                             : undefined
                       }
                       memberName={memberName}
+                      authorName={authorName?.(message)}
                       peerBot={peerBot}
                       replyParent={
                         message.replyToMessageId

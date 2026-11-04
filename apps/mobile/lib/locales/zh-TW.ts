@@ -1354,6 +1354,10 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   Organization: "組織",
   "Delete organization": "刪除組織",
   "Type {name} to confirm": "輸入 {name} 以確認",
+  Everyone: "所有人",
+  "No bots yet": "還沒有機器人",
+  "Show bots of": "顯示誰的機器人",
+  "Show earlier": "顯示更早的訊息",
 };
 
 export const PEER_MESSAGE_FORMS = { other: "與{peer}的 {count} 則訊息" };

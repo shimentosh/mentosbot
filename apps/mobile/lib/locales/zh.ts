@@ -1356,6 +1356,10 @@ export const ZH_MESSAGES: Record<string, string> = {
   Organization: "组织",
   "Delete organization": "删除组织",
   "Type {name} to confirm": "输入 {name} 以确认",
+  Everyone: "所有人",
+  "No bots yet": "还没有机器人",
+  "Show bots of": "显示谁的机器人",
+  "Show earlier": "显示更早的消息",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

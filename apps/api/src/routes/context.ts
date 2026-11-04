@@ -46,6 +46,7 @@ import { createModelConnector, prepareAllowedThinkingLevels } from "../model-cre
 import type { RouterDeps } from "../router.js";
 import { createRoutineAnnouncer } from "../routines.js";
 import { procedureSecurityEvent } from "../security-audit.js";
+import { sharedBotActor } from "../shared-bot-access.js";
 import { createTaughtSkillsService } from "../taught-skills.js";
 import { meDto } from "./shared.js";
 
@@ -83,6 +84,8 @@ export function createRouterContext(deps: RouterDeps) {
     signal?: AbortSignal;
     /** Re-runs the request's auth so a long-lived stream notices sign-out and revocation. */
     stillAuthorized?: () => Promise<boolean>;
+    /** The teammate behind a request about a bot shared with them; `actor` is then its owner. */
+    sharedBy?: Actor;
   }>();
   const repos = createRepos(deps.prisma, {
     phoneCallsEnabled: deps.env?.phoneCallsEnabled,
@@ -370,6 +373,14 @@ export function createRouterContext(deps: RouterDeps) {
       const event = procedureSecurityEvent(path, input, context.actor);
       if (event) await recordSecurityEvent(event);
       return result;
+    })
+    // A bot shared with the caller runs as its owner for the procedures sharing allows.
+    .use(async ({ context, next, path }, input) => {
+      const owner = await sharedBotActor(deps.prisma, context.actor, path, input);
+      if (!owner) return next();
+      return asTenant(owner, () =>
+        next({ context: { ...context, actor: owner, sharedBy: context.actor } }),
+      );
     });
 
   const callsEnabled = authed.use(async ({ next }) => {
