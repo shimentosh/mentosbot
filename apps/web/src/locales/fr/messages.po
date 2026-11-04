@@ -1672,6 +1672,7 @@ msgstr "Confirmez que l'URL est accessible depuis cette session du navigateur, p
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -2786,6 +2787,7 @@ msgstr "Désactivé"
 msgid "Discard recording"
 msgstr "Supprimer l’enregistrement"
 
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -5585,6 +5587,7 @@ msgstr "samedi"
 
 #: src/components/ApprovalRulesSettings.tsx
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
@@ -5613,6 +5616,7 @@ msgid "Save to Vault"
 msgstr "Enregistrer dans le coffre"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
@@ -5801,6 +5805,10 @@ msgstr "Envoyer le lien de réinitialisation"
 msgid "Send with Enter"
 msgstr "Envoyer avec Entrée"
 
+#: src/components/NetworkExitDialog.tsx
+msgid "Send your computers' browsers through a network of your own."
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5856,6 +5864,10 @@ msgstr "Paramètres : Utilisation"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "Configuration terminée"
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Setup guide"
+msgstr ""
 
 #: src/pages/model-settings/compatible-model-fields.tsx
 msgid "Setup help"
@@ -7209,6 +7221,10 @@ msgstr "Votre carte est débitée aujourd’hui de la différence au prorata."
 #: src/pages/Shell.tsx
 msgid "Your computer's disk is nearly full. Free up space by removing build output and caches you no longer need."
 msgstr "Le disque de votre ordinateur est presque plein. Libérez de l’espace en supprimant les fichiers de build et les caches dont vous n’avez plus besoin."
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Your computers' browsers use this network when they start."
+msgstr ""
 
 #: src/components/AccountDataSettings.tsx
 msgid "Your data"

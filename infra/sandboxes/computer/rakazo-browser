@@ -436,6 +436,11 @@ fi
 # WebGL still needs SwiftShader: --disable-software-rasterizer blocks it, and
 # current Chromium allows that fallback only with --enable-unsafe-swiftshader.
 FLAGS="--test-type --no-sandbox --disable-dev-shm-usage --disable-gpu --enable-unsafe-swiftshader --no-first-run --no-default-browser-check --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic --restore-last-session --start-maximized --remote-debugging-address=127.0.0.1 --remote-debugging-port=$DEBUG_PORT"
+# The owner's own network, when they chose one: the supervisor sets only the proxy address.
+# WebRTC may then use UDP only through the proxy, so it cannot reveal the computer's address.
+if [ -n "${RAKAZO_BROWSER_PROXY:-}" ]; then
+  FLAGS="$FLAGS --proxy-server=$RAKAZO_BROWSER_PROXY --force-webrtc-ip-handling-policy=disable_non_proxied_udp"
+fi
 if [ "$USER_DATA_DIR_SET" -eq 0 ]; then
   exec "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@"
 fi

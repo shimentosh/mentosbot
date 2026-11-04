@@ -63,6 +63,17 @@ import {
 } from "./computer-spec.js";
 import { EgressNotEnforced, verifyRestrictedEgress } from "./egress-probe.js";
 import { assertComputerHomeWritable } from "./home-ownership.js";
+import type { NetworkExit } from "./network-exit.js";
+import {
+  computerNetworkExitSettings,
+  DEFAULT_NETWORK_EXIT_IMAGE,
+  NETWORK_EXIT_BOT_LABEL,
+  NETWORK_EXIT_LABEL,
+  NetworkExitSchema,
+  networkExitContainerName,
+  networkExitContainerOptions,
+  networkExitFingerprint,
+} from "./network-exit.js";
 import type { ScreenAssignment } from "./supervisor-logic.js";
 import {
   assertRequestIdentity,
@@ -117,6 +128,9 @@ const computerContext =
   process.env.RAKAZO_COMPUTER_CONTEXT ??
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../computer");
 const ensureComputerImage = computerImageEnsurer(docker, COMPUTER_IMAGE, computerContext);
+const NETWORK_EXIT_IMAGE =
+  process.env.SANDBOX_NETWORK_EXIT_IMAGE?.trim() || DEFAULT_NETWORK_EXIT_IMAGE;
+const ensureNetworkExitImage = computerImageEnsurer(docker, NETWORK_EXIT_IMAGE, computerContext);
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const dataDir = path.resolve(repositoryRoot, process.env.DATA_DIR ?? "./data");
 let supervisorInfo: Docker.ContainerInspectInfo | undefined;
@@ -224,8 +238,11 @@ app.post("/computers", async (c) => {
       botId: z.string().min(1),
       homePath: z.string().min(1),
       spaceId: z.string().min(1),
+      networkExit: NetworkExitSchema.optional(),
     })
     .parse(await c.req.json());
+  const networkExit = body.networkExit;
+  const exitSettings = computerNetworkExitSettings(networkExit);
   try {
     assertRequestIdentity(c.req.header("x-rakazo-bot-id"), c.req.header("x-rakazo-space-id"), {
       botId: body.botId,
@@ -242,6 +259,14 @@ app.post("/computers", async (c) => {
       );
       const networkMode = computerNetworkName(body.botId, runtimeInfo);
       const networkOwner = computerNetworkOwnerFor(dataDir, runtimeInfo);
+      // The exit joins the computer's own network, so no other computer can reach it.
+      if (networkExit && networkMode !== computerNetworkNameFor(body.botId)) {
+        return c.json(
+          { error: "Routing a computer through its owner's network needs per-computer networks" },
+          400,
+        );
+      }
+      if (networkExit) await ensureNetworkExitImage();
       const serviceHomePath = path.resolve(body.homePath);
       assertBotHomePath(serviceHomePath, body.botId);
       const hostUid = process.getuid?.();
@@ -256,8 +281,11 @@ app.post("/computers", async (c) => {
       }
       const computerUser = runtimeInfo ? COMPUTER_USER : hostComputerUser(hostUid, hostGid);
       const existing = await findBotContainer(body.botId, body.spaceId);
+      // Without an exit before or now, the computer has none to look after.
+      let hadNetworkExit = false;
       if (existing) {
         const info = await existing.inspect();
+        hadNetworkExit = Boolean(info.Config.Labels?.[NETWORK_EXIT_LABEL]);
         const desired = await docker.getImage(COMPUTER_IMAGE).inspect();
         const controlPublishOk = controlPortPublicationMatches(
           info.HostConfig.PortBindings,
@@ -301,6 +329,9 @@ app.post("/computers", async (c) => {
           computerDnsMatches(info.HostConfig.Dns, computerDns) &&
           // So are host mounts: an added, changed or removed one replaces the computer.
           computerMountsMatch(info, computerMounts) &&
+          // So is the owner's network: the browser's proxy is part of its environment.
+          (info.Config.Labels?.[NETWORK_EXIT_LABEL] ?? undefined) ===
+            networkExitFingerprint(networkExit) &&
           controlPublishOk &&
           (!storage.homeVolume || homeVolumeMatches(info.HostConfig.Mounts, storage.homeVolume)) &&
           // A computer that cannot rejoin its network is replaced below instead.
@@ -308,6 +339,7 @@ app.post("/computers", async (c) => {
             (await reconnectBotComputer(existing, body.botId, networkOwner, Boolean(endpoint))))
         ) {
           const started = !info.State.Running;
+          if (networkExit) await syncNetworkExit(body.botId, networkMode, networkExit);
           if (started) await existing.start();
           return c.json({
             id: existing.id,
@@ -364,6 +396,8 @@ app.post("/computers", async (c) => {
           publishControlPort: controlViaLoopback,
           dns: computerDns,
           mounts: computerMounts,
+          env: exitSettings.env,
+          labels: exitSettings.labels,
         });
         let container: Docker.Container | undefined;
         const removeNamedComputer = () =>
@@ -392,11 +426,14 @@ app.post("/computers", async (c) => {
             () => docker.createContainer(options),
             removeNamedComputer,
           );
+          if (networkExit || hadNetworkExit)
+            await syncNetworkExit(body.botId, networkMode, networkExit);
           await container.start();
         } catch (error) {
           // Never force removal: a lost start response may hide a running computer.
           // Docker also refuses network removal while any endpoint is attached.
           await container?.remove().catch(() => undefined);
+          if (networkExit) await removeNetworkExit(body.botId).catch(() => undefined);
           await createdNetwork?.remove().catch(() => undefined);
           throw error;
         }
@@ -1173,26 +1210,34 @@ app.post("/computers/:id/stop", async (c) => {
   const botId = c.req.header("x-rakazo-bot-id");
   try {
     const { container } = await managedContainer(id, botId, c.req.header("x-rakazo-space-id"));
-    await withComputerScreenLock(id, async () => {
-      const info = await container.inspect();
-      if (info.State.Running) {
-        try {
-          // Every profile on the home volume, not only screens still held in memory.
-          const checkpoint = await runContainerCommand(container, [
-            "bash",
-            "-c",
-            quiesceBrowserProfilesCommand(),
-          ]);
-          if (checkpoint.code !== 0)
-            throw new Error(checkpoint.stderr || "bot browsers failed to stop");
-        } finally {
-          // Failed profiles remain on the durable home for recovery after restart.
-          await container.stop();
-          clearComputerScreenRegistry(computerScreens, computerScreenBoots, id);
+    try {
+      await withComputerScreenLock(id, async () => {
+        const info = await container.inspect();
+        if (info.State.Running) {
+          try {
+            // Every profile on the home volume, not only screens still held in memory.
+            const checkpoint = await runContainerCommand(container, [
+              "bash",
+              "-c",
+              quiesceBrowserProfilesCommand(),
+            ]);
+            if (checkpoint.code !== 0)
+              throw new Error(checkpoint.stderr || "bot browsers failed to stop");
+          } finally {
+            // Failed profiles remain on the durable home for recovery after restart.
+            await container.stop();
+            clearComputerScreenRegistry(computerScreens, computerScreenBoots, id);
+          }
         }
-      }
-      clearComputerScreenRegistry(computerScreens, computerScreenBoots, id);
-    });
+        clearComputerScreenRegistry(computerScreens, computerScreenBoots, id);
+      });
+    } finally {
+      // Started again with the computer, even after a stop that failed part way.
+      if (botId)
+        await removeNetworkExit(botId).catch((error) => {
+          getLogger().error("computer network exit removal failed", error);
+        });
+    }
     if (botId && screenNetworkMode !== "internal") {
       await reclaimComputerNetwork(container, botId).catch((error) => {
         getLogger().error("computer network reclaim failed", error);
@@ -1222,6 +1267,7 @@ app.delete("/computers/:id", async (c) => {
         });
         clearComputerScreenRegistry(computerScreens, computerScreenBoots, id);
       });
+      await removeNetworkExit(botId);
       if (screenNetworkMode !== "internal") {
         await removeBotNetwork(botId);
       }
@@ -1911,6 +1957,54 @@ async function reclaimComputerNetwork(container: Docker.Container, botId: string
     const computer = await container.inspect();
     if (computer.State.Running || !(await inspectNetworkIfPresent(name))) return;
     await removeUnusedComputerNetwork(name, computer.Id);
+  });
+}
+
+/**
+ * Keeps the computer's exit container matching its owner's network: replaced when the exit
+ * changed, removed when there is none. Only a container this supervisor made for the bot is
+ * touched.
+ */
+async function syncNetworkExit(
+  botId: string,
+  networkMode: string | undefined,
+  exit: NetworkExit | undefined,
+) {
+  const name = networkExitContainerName(botId);
+  const current = docker.getContainer(name);
+  const info = await current.inspect().catch((error) => {
+    if ((error as { statusCode?: number })?.statusCode === 404) return undefined;
+    throw error;
+  });
+  // A container this supervisor did not make for the bot is never touched.
+  if (info && info.Config.Labels?.[NETWORK_EXIT_BOT_LABEL] !== botId) {
+    if (!exit) return;
+    throw new Error(`${name} exists but was not made for this computer`);
+  }
+  const wanted = networkExitFingerprint(exit);
+  if (
+    info &&
+    wanted &&
+    info.Config.Labels?.[NETWORK_EXIT_LABEL] === wanted &&
+    info.HostConfig.NetworkMode === networkMode
+  ) {
+    if (!info.State.Running) await current.start();
+    return;
+  }
+  if (info) await current.remove({ force: true });
+  if (!exit || !networkMode) return;
+  const created = await docker.createContainer(
+    networkExitContainerOptions({ botId, image: NETWORK_EXIT_IMAGE, networkMode, exit }),
+  );
+  await created.start();
+}
+
+async function removeNetworkExit(botId: string) {
+  const current = docker.getContainer(networkExitContainerName(botId));
+  const info = await current.inspect().catch(() => undefined);
+  if (info?.Config.Labels?.[NETWORK_EXIT_BOT_LABEL] !== botId) return;
+  await current.remove({ force: true }).catch((error) => {
+    if ((error as { statusCode?: number })?.statusCode !== 404) throw error;
   });
 }
 

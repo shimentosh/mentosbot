@@ -5,6 +5,7 @@ import type {
   ConnectionCatalogItem,
   IntegrationCatalogResult,
   IntegrationCatalogSurface,
+  NetworkExitDescriptor,
   PluginMarketplaceEntry,
 } from "@rakazo/contracts";
 import {
@@ -55,7 +56,7 @@ import {
   Spinner,
 } from "@rakazo/ui-web";
 import { queryOptions, skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { IntegrationSetup } from "../components/integrations/IntegrationSetup";
@@ -77,6 +78,7 @@ import {
   reachesOtherSpaces,
   useOwnSpaces,
 } from "../components/integrations/space-availability";
+import { NetworkExitDialog, useNetworkExit } from "../components/NetworkExitDialog";
 import { connectedAppMarks } from "../lib/connected-apps";
 import { optionalCatalogFeedProbe } from "../lib/optional-catalog-feed";
 import { useSpaceQueries } from "../lib/query";
@@ -164,6 +166,8 @@ export function PluginsOverlay({
   const [catalogFeedPending, setCatalogFeedPending] = useState(false);
   const [catalogFeedSearched, setCatalogFeedSearched] = useState(false);
   const [view, setView] = useState<OverlayView>("browse");
+  const networkExit = useNetworkExit();
+  const [networkExitChoice, setNetworkExitChoice] = useState<NetworkExitDescriptor | null>(null);
   // Where a source form returns: the domain search that prefilled it, or browse.
   const [sourceBack, setSourceBack] = useState<OverlayView>("browse");
   const [plugin, setPlugin] = useState<PluginSelection | null>(null);
@@ -1039,6 +1043,15 @@ export function PluginsOverlay({
               <Trans>Manage MCP servers</Trans>
             </DropdownMenuItem>
           ) : null}
+          {networkExit?.providers.length ? <DropdownMenuSeparator /> : null}
+          {networkExit?.providers.map((provider) => (
+            <DropdownMenuItem key={provider.id} onClick={() => setNetworkExitChoice(provider)}>
+              {provider.displayName}
+              {networkExit.connection?.provider === provider.id ? (
+                <Check aria-label={t`Connected`} className="ml-auto" />
+              ) : null}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -1499,331 +1512,342 @@ export function PluginsOverlay({
   }
 
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <DialogContent
-        showCloseButton={false}
-        className="flex h-[760px] max-h-[calc(100%-2rem)] w-[1080px] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-2xl bg-card p-0 sm:max-w-[1080px]"
+    <>
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) onClose();
+        }}
       >
-        <DialogHeader className="flex-row items-start justify-between px-8 pt-7">
-          <DialogTitle className="text-heading2 text-foreground">
-            <Trans>Integrations</Trans>
-          </DialogTitle>
-          <div className="flex items-center gap-2">
-            {browsing && connectedCount > 0 ? (
-              <Button
-                variant="ghost"
-                className="-my-1 h-9 gap-2.5 px-2.5 text-[14px] text-muted-foreground"
-                onClick={() => setView("manage")}
-              >
-                <span aria-hidden className="flex -space-x-1.5">
-                  {connectedMarks.map((mark) => (
-                    <span key={mark.key} className="rounded-[9px] ring-2 ring-card">
-                      {mark.logo ? (
-                        <img
-                          src={mark.logo}
-                          alt=""
-                          className="h-6 w-6 rounded-lg bg-favicon-plate object-contain p-0.5"
-                        />
-                      ) : (
-                        <span className="grid h-6 w-6 place-items-center rounded-lg border border-border/60 bg-favicon-plate text-[11px] font-semibold text-foreground">
-                          {mark.name[0]?.toUpperCase()}
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </span>
-                <Plural value={connectedCount} one="# connected" other="# connected" />
-                <ChevronRight />
-              </Button>
-            ) : null}
-            {browsing || view === "manage" ? renderAddMenu() : null}
-            <DialogClose
-              render={<Button variant="ghost" size="icon-sm" aria-label={t`Close integrations`} />}
-            >
-              <X />
-            </DialogClose>
-          </div>
-        </DialogHeader>
-
-        {browsing ? (
-          <div className="space-y-4 px-8 pt-4">
-            <Input
-              disabled={loading}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setVisibleCount(CONNECTION_CATALOG_PAGE_SIZE);
-              }}
-              aria-label={t`Search apps`}
-              placeholder={t`Search apps`}
-              className="h-11 rounded-xl px-4 md:text-[15px]"
-            />
-            {categories.length >= 2 || category ? (
-              <div className="flex flex-wrap gap-2" data-testid="integration-categories">
-                {[null, ...categories.slice(0, CHIP_COUNT)].map((name) => (
-                  <Button
-                    key={name ?? "all"}
-                    type="button"
-                    size="sm"
-                    variant={category === name ? "default" : "secondary"}
-                    aria-pressed={category === name}
-                    className="h-8 rounded-full px-3.5 text-[13px]"
-                    onClick={() => {
-                      setCategory(name);
-                      setPluginCount(PLUGIN_PAGE_SIZE);
-                    }}
-                  >
-                    {name ? categoryLabel(name) : <Trans>All</Trans>}
-                  </Button>
-                ))}
-                {categories.length > CHIP_COUNT ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={
-                            category && !categories.slice(0, CHIP_COUNT).includes(category)
-                              ? "default"
-                              : "secondary"
-                          }
-                          className="h-8 rounded-full px-3.5 text-[13px]"
-                        />
-                      }
-                    >
-                      {category && !categories.slice(0, CHIP_COUNT).includes(category) ? (
-                        categoryLabel(category)
-                      ) : (
-                        <Trans>More</Trans>
-                      )}
-                      <ChevronDown />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-auto">
-                      {categories.slice(CHIP_COUNT).map((name) => (
-                        <DropdownMenuItem
-                          key={name}
-                          onClick={() => {
-                            setCategory(name);
-                            setPluginCount(PLUGIN_PAGE_SIZE);
-                          }}
-                        >
-                          {categoryLabel(name)}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {loading ? (
-          <div className="grid flex-1 place-items-center" aria-busy="true">
-            <Spinner
-              className="size-5 text-muted-foreground"
-              aria-label={t`Loading integrations…`}
-            />
-          </div>
-        ) : null}
-
-        <div
-          id="integration-list"
-          hidden={loading}
-          className="rk-scroll flex-1 overflow-y-auto px-8 py-6"
+        <DialogContent
+          showCloseButton={false}
+          className="flex h-[760px] max-h-[calc(100%-2rem)] w-[1080px] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-2xl bg-card p-0 sm:max-w-[1080px]"
         >
-          {catalogError || loadError ? (
-            <div className="mb-4 flex items-center gap-3">
-              <p className="text-sm text-destructive">{catalogError ?? loadError}</p>
-              {!catalogLoaded || (loadError && !catalogError) ? (
-                <Button variant="outline" size="sm" onClick={() => void integrations.refetch()}>
-                  <Trans>Retry</Trans>
+          <DialogHeader className="flex-row items-start justify-between px-8 pt-7">
+            <DialogTitle className="text-heading2 text-foreground">
+              <Trans>Integrations</Trans>
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              {browsing && connectedCount > 0 ? (
+                <Button
+                  variant="ghost"
+                  className="-my-1 h-9 gap-2.5 px-2.5 text-[14px] text-muted-foreground"
+                  onClick={() => setView("manage")}
+                >
+                  <span aria-hidden className="flex -space-x-1.5">
+                    {connectedMarks.map((mark) => (
+                      <span key={mark.key} className="rounded-[9px] ring-2 ring-card">
+                        {mark.logo ? (
+                          <img
+                            src={mark.logo}
+                            alt=""
+                            className="h-6 w-6 rounded-lg bg-favicon-plate object-contain p-0.5"
+                          />
+                        ) : (
+                          <span className="grid h-6 w-6 place-items-center rounded-lg border border-border/60 bg-favicon-plate text-[11px] font-semibold text-foreground">
+                            {mark.name[0]?.toUpperCase()}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </span>
+                  <Plural value={connectedCount} one="# connected" other="# connected" />
+                  <ChevronRight />
                 </Button>
+              ) : null}
+              {browsing || view === "manage" ? renderAddMenu() : null}
+              <DialogClose
+                render={
+                  <Button variant="ghost" size="icon-sm" aria-label={t`Close integrations`} />
+                }
+              >
+                <X />
+              </DialogClose>
+            </div>
+          </DialogHeader>
+
+          {browsing ? (
+            <div className="space-y-4 px-8 pt-4">
+              <Input
+                disabled={loading}
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setVisibleCount(CONNECTION_CATALOG_PAGE_SIZE);
+                }}
+                aria-label={t`Search apps`}
+                placeholder={t`Search apps`}
+                className="h-11 rounded-xl px-4 md:text-[15px]"
+              />
+              {categories.length >= 2 || category ? (
+                <div className="flex flex-wrap gap-2" data-testid="integration-categories">
+                  {[null, ...categories.slice(0, CHIP_COUNT)].map((name) => (
+                    <Button
+                      key={name ?? "all"}
+                      type="button"
+                      size="sm"
+                      variant={category === name ? "default" : "secondary"}
+                      aria-pressed={category === name}
+                      className="h-8 rounded-full px-3.5 text-[13px]"
+                      onClick={() => {
+                        setCategory(name);
+                        setPluginCount(PLUGIN_PAGE_SIZE);
+                      }}
+                    >
+                      {name ? categoryLabel(name) : <Trans>All</Trans>}
+                    </Button>
+                  ))}
+                  {categories.length > CHIP_COUNT ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                              category && !categories.slice(0, CHIP_COUNT).includes(category)
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="h-8 rounded-full px-3.5 text-[13px]"
+                          />
+                        }
+                      >
+                        {category && !categories.slice(0, CHIP_COUNT).includes(category) ? (
+                          categoryLabel(category)
+                        ) : (
+                          <Trans>More</Trans>
+                        )}
+                        <ChevronDown />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-auto">
+                        {categories.slice(CHIP_COUNT).map((name) => (
+                          <DropdownMenuItem
+                            key={name}
+                            onClick={() => {
+                              setCategory(name);
+                              setPluginCount(PLUGIN_PAGE_SIZE);
+                            }}
+                          >
+                            {categoryLabel(name)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
 
-          {plugin ? (
-            <PluginDetail
-              key={plugin.installedSource}
-              selection={plugin}
-              installs={pluginInstalls}
-              servers={mcpServers}
-              assigned={assigned}
-              activeBotId={activeBotId}
-              managed={managedLink(plugin)}
-              onBack={() => setPlugin(null)}
-              onChanged={refresh}
-            />
-          ) : detailItem ? (
-            renderDetail(detailItem)
-          ) : view === "manage" ? (
-            renderManage()
-          ) : view === "github" ? (
-            renderGithubImport()
-          ) : view === "source" ? (
-            renderSourceForm()
-          ) : view === "domain" ? (
-            renderDomainSearch()
-          ) : view === "browseMcp" ? (
-            renderBrowseMcp()
-          ) : (
-            <>
-              {catalogLoaded && showFeatured && !category ? (
-                <div className="mb-6" data-testid="featured-connectors">
-                  {catalog.length === 0 ? (
-                    plugins.length ? null : (
-                      <p className="text-[13.5px] leading-6 text-muted-foreground/80">
-                        <Trans>Configure a plugin catalog on the server to connect apps.</Trans>
-                      </p>
-                    )
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {featuredTiles.map((tile) => {
-                        const item = tile.item;
-                        const key = item ? catalogItemKey(item) : tile.id;
-                        const disabled = tile.missing || !item;
-                        if (item && !tile.missing) {
-                          // Featured is the stable hit target for connection-tile-* in E2E.
-                          return renderCatalogTile(item, tile.label, item.logo, {
-                            tileTestId: true,
-                          });
-                        }
-                        return (
-                          <div
-                            key={key}
-                            className={`flex min-w-0 items-center gap-3 rounded-xl px-2.5 py-2 ${
-                              disabled ? "opacity-70" : ""
-                            }`}
-                          >
-                            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent text-sm font-semibold text-foreground">
-                              {tile.label[0]}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-[15px] font-medium text-foreground">
-                                {tile.label}
-                              </div>
-                              {disabled ? (
-                                <div className="truncate text-[12.5px] text-muted-foreground">
-                                  <Trans>Not in the plugin catalog</Trans>
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : null}
+          {loading ? (
+            <div className="grid flex-1 place-items-center" aria-busy="true">
+              <Spinner
+                className="size-5 text-muted-foreground"
+                aria-label={t`Loading integrations…`}
+              />
+            </div>
+          ) : null}
 
-              {catalogLoaded &&
-              catalog.length === 0 &&
-              !showFeatured &&
-              !pluginMatches.length &&
-              !brandMatches.length ? (
-                <p className="text-muted-foreground/80">
-                  <Trans>No managed app catalog is configured on this deployment.</Trans>
-                </p>
-              ) : null}
-              {catalogLoaded &&
-              visible.length === 0 &&
-              !showFeatured &&
-              !pluginMatches.length &&
-              !brandMatches.length ? (
-                <p className="text-muted-foreground/80">
-                  <Trans>No apps match your search.</Trans>
-                </p>
-              ) : null}
-              {showFeatured ? (
-                <>
-                  {renderPluginSections()}
-                  {catalogLoaded && catalog.length > 0 && !category ? (
-                    <SectionHeading as="h2" className="mt-8 mb-2 px-2.5">
-                      <Trans>More apps</Trans>
-                    </SectionHeading>
-                  ) : null}
-                  {visible.length > 0 && !category ? (
-                    <div className="grid grid-cols-2 gap-2">
-                      {rendered.map((item) =>
-                        renderCatalogTile(item, item.name, item.logo, {
-                          // Avoid duplicate connection-tile-* ids while featured is also shown.
-                          tileTestId: !showFeatured,
-                        }),
-                      )}
-                    </div>
-                  ) : null}
-                  {rendered.length < visible.length && !category ? (
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          setVisibleCount((count) => count + CONNECTION_CATALOG_PAGE_SIZE)
-                        }
-                      >
-                        <Trans>Show more</Trans>
-                      </Button>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  {strongMatches.length > 0 && !category ? (
-                    <div className="mb-2 grid grid-cols-2 gap-2">
-                      {strongMatches.map((item) =>
-                        renderCatalogTile(item, item.name, item.logo, { tileTestId: true }),
-                      )}
-                    </div>
-                  ) : null}
-                  {renderPluginSections()}
-                  {rendered.length > 0 && !category ? (
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {rendered.map((item) =>
-                        renderCatalogTile(item, item.name, item.logo, { tileTestId: true }),
-                      )}
-                    </div>
-                  ) : null}
-                  {rendered.length < weakMatches.length && !category ? (
-                    <div className="mt-4 flex justify-center">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          setVisibleCount((count) => count + CONNECTION_CATALOG_PAGE_SIZE)
-                        }
-                      >
-                        <Trans>Show more</Trans>
-                      </Button>
-                    </div>
-                  ) : null}
-                </>
-              )}
-              {catalogLoaded && !category ? (
-                <div className="mt-10 flex justify-center">
-                  <a
-                    href={SUBMIT_PLUGIN_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"
-                  >
-                    <Trans>Submit a plugin</Trans>
-                    <ArrowUpRight size={14} />
-                  </a>
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div
+            id="integration-list"
+            hidden={loading}
+            className="rk-scroll flex-1 overflow-y-auto px-8 py-6"
+          >
+            {catalogError || loadError ? (
+              <div className="mb-4 flex items-center gap-3">
+                <p className="text-sm text-destructive">{catalogError ?? loadError}</p>
+                {!catalogLoaded || (loadError && !catalogError) ? (
+                  <Button variant="outline" size="sm" onClick={() => void integrations.refetch()}>
+                    <Trans>Retry</Trans>
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {plugin ? (
+              <PluginDetail
+                key={plugin.installedSource}
+                selection={plugin}
+                installs={pluginInstalls}
+                servers={mcpServers}
+                assigned={assigned}
+                activeBotId={activeBotId}
+                managed={managedLink(plugin)}
+                onBack={() => setPlugin(null)}
+                onChanged={refresh}
+              />
+            ) : detailItem ? (
+              renderDetail(detailItem)
+            ) : view === "manage" ? (
+              renderManage()
+            ) : view === "github" ? (
+              renderGithubImport()
+            ) : view === "source" ? (
+              renderSourceForm()
+            ) : view === "domain" ? (
+              renderDomainSearch()
+            ) : view === "browseMcp" ? (
+              renderBrowseMcp()
+            ) : (
+              <>
+                {catalogLoaded && showFeatured && !category ? (
+                  <div className="mb-6" data-testid="featured-connectors">
+                    {catalog.length === 0 ? (
+                      plugins.length ? null : (
+                        <p className="text-[13.5px] leading-6 text-muted-foreground/80">
+                          <Trans>Configure a plugin catalog on the server to connect apps.</Trans>
+                        </p>
+                      )
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {featuredTiles.map((tile) => {
+                          const item = tile.item;
+                          const key = item ? catalogItemKey(item) : tile.id;
+                          const disabled = tile.missing || !item;
+                          if (item && !tile.missing) {
+                            // Featured is the stable hit target for connection-tile-* in E2E.
+                            return renderCatalogTile(item, tile.label, item.logo, {
+                              tileTestId: true,
+                            });
+                          }
+                          return (
+                            <div
+                              key={key}
+                              className={`flex min-w-0 items-center gap-3 rounded-xl px-2.5 py-2 ${
+                                disabled ? "opacity-70" : ""
+                              }`}
+                            >
+                              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent text-sm font-semibold text-foreground">
+                                {tile.label[0]}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-[15px] font-medium text-foreground">
+                                  {tile.label}
+                                </div>
+                                {disabled ? (
+                                  <div className="truncate text-[12.5px] text-muted-foreground">
+                                    <Trans>Not in the plugin catalog</Trans>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {catalogLoaded &&
+                catalog.length === 0 &&
+                !showFeatured &&
+                !pluginMatches.length &&
+                !brandMatches.length ? (
+                  <p className="text-muted-foreground/80">
+                    <Trans>No managed app catalog is configured on this deployment.</Trans>
+                  </p>
+                ) : null}
+                {catalogLoaded &&
+                visible.length === 0 &&
+                !showFeatured &&
+                !pluginMatches.length &&
+                !brandMatches.length ? (
+                  <p className="text-muted-foreground/80">
+                    <Trans>No apps match your search.</Trans>
+                  </p>
+                ) : null}
+                {showFeatured ? (
+                  <>
+                    {renderPluginSections()}
+                    {catalogLoaded && catalog.length > 0 && !category ? (
+                      <SectionHeading as="h2" className="mt-8 mb-2 px-2.5">
+                        <Trans>More apps</Trans>
+                      </SectionHeading>
+                    ) : null}
+                    {visible.length > 0 && !category ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {rendered.map((item) =>
+                          renderCatalogTile(item, item.name, item.logo, {
+                            // Avoid duplicate connection-tile-* ids while featured is also shown.
+                            tileTestId: !showFeatured,
+                          }),
+                        )}
+                      </div>
+                    ) : null}
+                    {rendered.length < visible.length && !category ? (
+                      <div className="mt-4 flex justify-center">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() =>
+                            setVisibleCount((count) => count + CONNECTION_CATALOG_PAGE_SIZE)
+                          }
+                        >
+                          <Trans>Show more</Trans>
+                        </Button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    {strongMatches.length > 0 && !category ? (
+                      <div className="mb-2 grid grid-cols-2 gap-2">
+                        {strongMatches.map((item) =>
+                          renderCatalogTile(item, item.name, item.logo, { tileTestId: true }),
+                        )}
+                      </div>
+                    ) : null}
+                    {renderPluginSections()}
+                    {rendered.length > 0 && !category ? (
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {rendered.map((item) =>
+                          renderCatalogTile(item, item.name, item.logo, { tileTestId: true }),
+                        )}
+                      </div>
+                    ) : null}
+                    {rendered.length < weakMatches.length && !category ? (
+                      <div className="mt-4 flex justify-center">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() =>
+                            setVisibleCount((count) => count + CONNECTION_CATALOG_PAGE_SIZE)
+                          }
+                        >
+                          <Trans>Show more</Trans>
+                        </Button>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                {catalogLoaded && !category ? (
+                  <div className="mt-10 flex justify-center">
+                    <a
+                      href={SUBMIT_PLUGIN_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground"
+                    >
+                      <Trans>Submit a plugin</Trans>
+                      <ArrowUpRight size={14} />
+                    </a>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {networkExitChoice && networkExit ? (
+        <NetworkExitDialog
+          provider={networkExitChoice}
+          status={networkExit}
+          onClose={() => setNetworkExitChoice(null)}
+        />
+      ) : null}
+    </>
   );
 }

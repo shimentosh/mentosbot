@@ -15,6 +15,7 @@ Organization owners and admins can export it as JSON Lines, and operators can fo
 | `approval.policy.changed` | Approval mode, allow/block rules, or a space setting changed |
 | `credential.created`, `credential.changed`, `credential.deleted`, `credential.revealed` | Model, MCP, connector, voice, memory, vault and bot secrets |
 | `space.created`, `space.renamed`, `space.deleted` | Spaces |
+| `network_exit.connected`, `network_exit.disconnected` | Someone's [own network](./own-network.md) for their computers |
 | `auth.sign_in`, `auth.sign_out`, `auth.password.changed`, `auth.passkey.*`, `auth.session.revoked`, `device.*` | Account security, recorded in each organization the account belongs to |
 | `audit_log.exported` | Someone exported the audit log |
 

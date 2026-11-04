@@ -259,6 +259,18 @@ export interface SandboxCapabilities {
   persistentHome: boolean;
   /** Distinct graphical screens for concurrent Team bots on one computer. */
   multiScreen?: boolean;
+  /** The computer's browser can reach the internet through its owner's own network. */
+  networkExit?: boolean;
+}
+
+/**
+ * Where a computer's browser reaches the internet when its owner routes it through a network of
+ * their own. `provider` names the adapter; credentials never enter the computer itself.
+ */
+export interface NetworkExit {
+  provider: string;
+  settings: Record<string, string>;
+  credentials: Record<string, string>;
 }
 
 export interface ConnectorTool {

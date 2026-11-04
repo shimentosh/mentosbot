@@ -21,6 +21,7 @@ export const DOCS_NAV = [
       { slug: "integrations", label: "Connect apps" },
       { slug: "routines", label: "Routines" },
       { slug: "computer", label: "The bot's computer" },
+      { slug: "own-network", label: "Use your own network" },
       { slug: "memory", label: "Memory" },
       { slug: "skills", label: "Skills" },
       { slug: "approvals", label: "Approvals" },

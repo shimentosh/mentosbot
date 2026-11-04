@@ -8,6 +8,7 @@ import type {
   ComputerObservation,
   ComputerRef,
   ControlLeaseRef,
+  NetworkExit,
   PageBrowserCommand,
   PageBrowserResult,
   PortableFile,
@@ -105,6 +106,7 @@ export class DockerSandboxProvider implements SandboxProvider {
   constructor(
     private readonly supervisorUrl: string,
     supervisorToken?: string,
+    private readonly networkExitFor?: (homeKey: string) => Promise<NetworkExit | undefined>,
   ) {
     this.supervisorToken = supervisorToken ?? resolveSupervisorToken(process.env);
   }
@@ -121,6 +123,7 @@ export class DockerSandboxProvider implements SandboxProvider {
         takeover: true,
         persistentHome: true,
         multiScreen: true,
+        networkExit: Boolean(this.networkExitFor),
       },
     };
   }
@@ -145,6 +148,8 @@ export class DockerSandboxProvider implements SandboxProvider {
     request: { botId: string; homePath: string },
     context: AdapterContext,
   ): Promise<ComputerRef> {
+    // The supervisor runs the network beside the computer, so its credentials never enter it.
+    const networkExit = await this.networkExitFor?.(request.botId);
     const res = await fetch(this.url("/computers"), {
       method: "POST",
       headers: { ...this.headers(context, request.botId), "content-type": "application/json" },
@@ -152,6 +157,7 @@ export class DockerSandboxProvider implements SandboxProvider {
         botId: request.botId,
         homePath: request.homePath,
         spaceId: context.spaceId,
+        ...(networkExit ? { networkExit } : {}),
       }),
       signal: context.signal,
     });
