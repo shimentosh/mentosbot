@@ -70,4 +70,11 @@ export const HI_MESSAGES: Record<string, string> = {
     "आपकी सहेजी गई कंप्यूटर फ़ाइलें {date} को हटा दी जाएँगी, जब तक आप फिर से सदस्यता नहीं लेते।",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "आपकी सहेजी गई कंप्यूटर फ़ाइलें {date} को हटा दी जाएँगी, जब तक आप कोई प्लान नहीं चुनते।",
+  "{inviter} invited you to {team} on Rakazo": "{inviter} ने आपको Rakazo पर {team} में आमंत्रित किया है",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter} ने आपको Rakazo पर {team} से जुड़ने के लिए आमंत्रित किया है।",
+  "Join {team}": "{team} से जुड़ें",
+  "The team's owner can see its chats and activity.": "टीम का मालिक इसकी चैट और गतिविधि देख सकता है।",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "यह आमंत्रण 7 दिनों में समाप्त हो जाएगा। इसे स्वीकार करने के लिए इसी ईमेल पते से साइन इन करें।",
 };

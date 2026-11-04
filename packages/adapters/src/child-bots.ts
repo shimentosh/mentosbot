@@ -104,8 +104,9 @@ export async function spawnBot(
   } catch (error) {
     const existing = await deps.prisma.bot.findUnique({
       where: {
-        spaceId_spawnKey: {
+        spaceId_userId_spawnKey: {
           spaceId: input.spawnedBy.spaceId,
+          userId: input.spawnedBy.userId,
           spawnKey: input.spawnKey,
         },
       },

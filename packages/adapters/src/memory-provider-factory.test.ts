@@ -44,6 +44,14 @@ afterEach(() => {
 });
 
 describe("SpaceMemoryProviderResolver", () => {
+  it("gives a Space's external memory only to the person who connected it", async () => {
+    const { resolver, secrets } = resolverFor(JSON.stringify({ apiKey: "fake-key" }), {
+      provider: "supermemory",
+    });
+    await expect(resolver.resolve("workspace-1", "teammate")).resolves.toBeNull();
+    expect(secrets.load).not.toHaveBeenCalled();
+  });
+
   it.each(["honcho", "supermemory"])(
     "disables %s without loading credentials when local DNS revalidation fails",
     async (provider) => {
@@ -55,7 +63,7 @@ describe("SpaceMemoryProviderResolver", () => {
         allowPrivateEndpoint: true,
       });
 
-      await expect(resolver.resolve("workspace-1")).resolves.toBeNull();
+      await expect(resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
       expect(lookup).toHaveBeenCalled();
       expect(secrets.load).not.toHaveBeenCalled();
     },
@@ -71,7 +79,7 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "http://10.0.0.8:8000",
       allowPrivateEndpoint: false,
     });
-    await expect(notOwner.resolver.resolve("workspace-1")).resolves.toBeNull();
+    await expect(notOwner.resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
     expect(notOwner.secrets.load).not.toHaveBeenCalled();
 
     const publicHost = resolverFor("honcho-admin-token", {
@@ -79,7 +87,7 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "http://203.0.113.10:8000",
       allowPrivateEndpoint: true,
     });
-    await expect(publicHost.resolver.resolve("workspace-1")).resolves.toBeNull();
+    await expect(publicHost.resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
     expect(publicHost.secrets.load).not.toHaveBeenCalled();
 
     const missingUrl = resolverFor("honcho-admin-token", {
@@ -87,7 +95,7 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "",
       allowPrivateEndpoint: true,
     });
-    await expect(missingUrl.resolver.resolve("workspace-1")).resolves.toBeNull();
+    await expect(missingUrl.resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
     expect(missingUrl.secrets.load).not.toHaveBeenCalled();
 
     const owned = resolverFor(JSON.stringify({ apiKey: "honcho-admin-token" }), {
@@ -95,7 +103,7 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "http://10.0.0.8:8000",
       allowPrivateEndpoint: true,
     });
-    const configured = await owned.resolver.resolve("workspace-1");
+    const configured = await owned.resolver.resolve("workspace-1", "config-author");
     expect(configured?.provider.describe().id).toBe("honcho");
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -111,7 +119,7 @@ describe("SpaceMemoryProviderResolver", () => {
         allowPrivateEndpoint,
       });
 
-      await expect(resolver.resolve("workspace-1")).resolves.toBeNull();
+      await expect(resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
       expect(secrets.load).not.toHaveBeenCalled();
       expect(fetchMock).not.toHaveBeenCalled();
     },
@@ -125,7 +133,7 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "http://localhost:6767/memory/",
       allowPrivateEndpoint: true,
     });
-    const configured = await resolver.resolve("workspace-1");
+    const configured = await resolver.resolve("workspace-1", "config-author");
     await configured!.provider.recall(
       { query: "project", scope: "isolated", botId: "bot-1", limit: 1 },
       {
@@ -147,14 +155,14 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "http://127.0.0.1:8123/internal-action#",
       allowPrivateEndpoint: true,
     });
-    await expect(resolver.resolve("workspace-1")).resolves.toBeNull();
+    await expect(resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("loads generic JSON credential payloads", async () => {
     const { resolver } = resolverFor(JSON.stringify({ apiKey: "sm_json_key" }));
 
-    const configured = await resolver.resolve("workspace-1");
+    const configured = await resolver.resolve("workspace-1", "config-author");
 
     expect(configured?.provider.describe().id).toBe("supermemory");
     expect(configured?.defaultScope).toBe("shared");
@@ -163,7 +171,7 @@ describe("SpaceMemoryProviderResolver", () => {
   it("keeps legacy raw Supermemory credentials usable after the schema migration", async () => {
     const { resolver } = resolverFor("sm_legacy_key");
 
-    const configured = await resolver.resolve("workspace-1");
+    const configured = await resolver.resolve("workspace-1", "config-author");
 
     expect(configured?.provider.describe().id).toBe("supermemory");
   });
@@ -174,7 +182,7 @@ describe("SpaceMemoryProviderResolver", () => {
       baseUrl: "http://203.0.113.10:6767",
       allowPrivateEndpoint: true,
     });
-    await expect(resolver.resolve("workspace-1")).resolves.toBeNull();
+    await expect(resolver.resolve("workspace-1", "config-author")).resolves.toBeNull();
     expect(secrets.load).not.toHaveBeenCalled();
 
     await expect(

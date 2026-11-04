@@ -111,6 +111,11 @@ msgstr "{0} GB"
 msgid "{0} handling"
 msgstr ""
 
+#. placeholder {0}: invitation.data.inviterName
+#: src/pages/InvitePage.tsx
+msgid "{0} invited you."
+msgstr ""
+
 #. placeholder {0}: bot.name
 #: src/components/call/IncomingCall.tsx
 msgid "{0} is calling you"
@@ -654,6 +659,10 @@ msgstr ""
 
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Address line 2"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Admin"
 msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
@@ -1228,6 +1237,7 @@ msgstr "이미지를 읽을 수 없음"
 #: src/pages/shell/create-bot-dialog.tsx
 #: src/pages/shell/dialogs.tsx
 #: src/pages/SpaceSettingOverrides.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Cancel"
 msgstr "취소"
 
@@ -1860,6 +1870,7 @@ msgstr "다이어그램 소스 복사"
 #: src/components/InviteDialog.tsx
 #: src/components/pages/PublicPageShell.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Copy link"
 msgstr "링크 복사"
 
@@ -2944,6 +2955,7 @@ msgstr "Bot 정보 수정"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Email"
 msgstr "이메일"
 
@@ -3333,6 +3345,7 @@ msgstr "Git 이벤트"
 msgid "Give a friend {weeks} weeks free"
 msgstr "친구에게 {weeks}주 무료 선물하기"
 
+#: src/pages/InvitePage.tsx
 #: src/pages/NotFound.tsx
 msgid "Go home"
 msgstr "홈으로"
@@ -3631,6 +3644,10 @@ msgstr "간격 단위"
 msgid "Invalid code"
 msgstr "잘못된 코드"
 
+#: src/pages/TeamMembersSettings.tsx
+msgid "Invite"
+msgstr ""
+
 #: src/pages/shell/chat-header.tsx
 msgid "Invite a friend"
 msgstr "친구 초대"
@@ -3642,6 +3659,18 @@ msgstr "친구 초대"
 #: src/components/InviteDialog.tsx
 msgid "Invite link"
 msgstr "초대 링크"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Invite to team"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Invited"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Inviting…"
+msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -3656,6 +3685,10 @@ msgstr ""
 msgid "It may have been deleted, or it belongs to someone else."
 msgstr "삭제되었거나 다른 사람의 페이지일 수 있습니다."
 
+#: src/pages/InvitePage.tsx
+msgid "It may have expired, or it was sent to another email address. Ask for a new one."
+msgstr ""
+
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Its bots and groups are kept and leave the section."
 msgstr "이 섹션의 Bot과 그룹은 유지되며 섹션에서 빠집니다."
@@ -3667,6 +3700,19 @@ msgstr "대화, 파일, 자동 실행이 영구 삭제됩니다. 이 Bot이 만�
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "공유 링크가 더 이상 작동하지 않고 채팅의 카드는 삭제됨으로 표시됩니다. 되돌릴 수 없습니다."
+
+#. placeholder {0}: invitation.data.organizationName
+#: src/pages/InvitePage.tsx
+msgid "Join {0}"
+msgstr ""
+
+#: src/pages/InvitePage.tsx
+msgid "Join team"
+msgstr ""
+
+#: src/pages/InvitePage.tsx
+msgid "Joining…"
+msgstr ""
 
 #: src/pages/shell/transcript.tsx
 msgid "Jump to latest"
@@ -3725,8 +3771,17 @@ msgid "Later"
 msgstr ""
 
 #: src/pages/MessagingSettingsPanel.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Leave"
 msgstr "나가기"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Leave team"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Leave this team?"
+msgstr ""
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Let bots use this computer"
@@ -3868,6 +3923,14 @@ msgstr "낮음"
 msgid "Main model"
 msgstr "기본 모델"
 
+#: src/pages/TeamMembersSettings.tsx
+msgid "Make admin"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Make member"
+msgstr ""
+
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "Manage"
@@ -3879,6 +3942,10 @@ msgstr "관리"
 #: src/pages/SettingsOverlay.tsx
 msgid "Manage {0}"
 msgstr "{0} 관리"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Manage {shown}"
+msgstr ""
 
 #: src/components/ModelCredits.tsx
 #: src/pages/Paywall.tsx
@@ -3970,8 +4037,13 @@ msgid "Medium"
 msgstr "보통"
 
 #: src/lib/identity-display.ts
+#: src/pages/TeamMembersSettings.tsx
 msgid "Member"
 msgstr "멤버"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Members"
+msgstr ""
 
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
@@ -4529,6 +4601,7 @@ msgid "Not in the plugin catalog"
 msgstr "플러그인 카탈로그에 없음"
 
 #: src/components/GitHubStarPrompt.tsx
+#: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "나중에"
@@ -4754,6 +4827,7 @@ msgstr "출력"
 #: src/components/pages/SharePopover.tsx
 #: src/lib/identity-display.ts
 #: src/pages/Board.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Owner"
 msgstr "소유자"
 
@@ -5251,6 +5325,7 @@ msgstr "새로고침"
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Remove"
 msgstr "삭제"
 
@@ -5264,6 +5339,10 @@ msgstr "{0} 삭제"
 #. placeholder {0}: bot.name
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Remove {name}?"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -5494,11 +5573,16 @@ msgstr "서비스 설정을 확인한 뒤 다시 테스트하세요."
 
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/MessagingSettingsPanel.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Revoke"
 msgstr "연결 해제"
 
 #: src/pages/AdminAccessPage.tsx
 msgid "Revoked"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Role"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
@@ -5796,6 +5880,10 @@ msgstr ""
 #: src/pages/Auth.tsx
 msgid "Send reset link"
 msgstr "재설정 링크 보내기"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Send this link to {email}"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
@@ -6411,6 +6499,10 @@ msgstr "선택한 기억 서비스는 현재 빌드에서 사용할 수 없습�
 msgid "The shared link stops working"
 msgstr "공유 링크가 더 이상 작동하지 않음"
 
+#: src/pages/InvitePage.tsx
+msgid "The team's owner can see its chats and activity."
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "The unused difference is credited to your next invoice."
 msgstr "사용하지 않은 차액은 다음 청구서에 적립됩니다."
@@ -6514,6 +6606,10 @@ msgstr ""
 #: src/lib/agent-import-errors.ts
 msgid "This import was already used. Choose the files again."
 msgstr "이미 사용된 가져오기입니다. 파일을 다시 선택하세요."
+
+#: src/pages/InvitePage.tsx
+msgid "This invitation is no longer available"
+msgstr ""
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "this Mac"

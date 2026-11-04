@@ -485,7 +485,7 @@ export async function compactHistory(deps: CompactHistoryDeps, threadId: string)
   // Saving only after the compare-and-set also prevents losing workers from creating duplicates.
   let semanticMemory: ConfiguredMemoryProvider | null = null;
   try {
-    semanticMemory = await deps.memoryProviders.resolve(thread.spaceId);
+    semanticMemory = await deps.memoryProviders.resolve(thread.spaceId, thread.userId);
   } catch (error) {
     getLogger().error("Failed to load semantic memory provider for history compaction", error);
   }

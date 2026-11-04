@@ -73,4 +73,12 @@ export const PT_BR_MESSAGES: Record<string, string> = {
     "Os arquivos salvos do seu computador serão excluídos em {date}, a menos que você assine novamente.",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "Os arquivos salvos do seu computador serão excluídos em {date}, a menos que você escolha um plano.",
+  "{inviter} invited you to {team} on Rakazo": "{inviter} convidou você para {team} no Rakazo",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter} convidou você para entrar em {team} no Rakazo.",
+  "Join {team}": "Entrar em {team}",
+  "The team's owner can see its chats and activity.":
+    "O proprietário da equipe pode ver os chats e a atividade dela.",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "Este convite expira em 7 dias. Entre com este endereço de e-mail para aceitá-lo.",
 };

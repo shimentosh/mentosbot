@@ -22,6 +22,7 @@ import { organizationsQuery, useOrganizations } from "../lib/organizations";
 import { queryClient, useQueryUserId } from "../lib/query";
 import { clearSpaceSelection, rpc, selectSpace } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
+import { TeamMembersSettings } from "./TeamMembersSettings";
 
 /** The organization the app is showing: its name, and, for its owner, renaming and deletion. */
 export function OrganizationSettingsPanel({
@@ -37,7 +38,9 @@ export function OrganizationSettingsPanel({
       key={organization.id}
       organization={organization}
       canDelete={
-        organization.canManage && organizations.filter((each) => each.canManage).length > 1
+        organization.canManage &&
+        organization.memberCount === 1 &&
+        organizations.filter((each) => each.canManage).length > 1
       }
       onBusyChange={onBusyChange}
     />
@@ -133,6 +136,7 @@ function OrganizationSettings({
           ) : null}
         </SettingsRow>
       </SettingsGroup>
+      <TeamMembersSettings organizationId={organization.id} />
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" className="rounded-full" onClick={() => setCreating(true)}>
           <Plus aria-hidden="true" />

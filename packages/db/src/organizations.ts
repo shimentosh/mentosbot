@@ -10,6 +10,7 @@ import {
   normalizeSpaceName,
   SpaceDeletionInProgressError,
 } from "./spaces.js";
+import { teamRole } from "./team.js";
 import { withTransactionRetry } from "./transaction-retry.js";
 
 export const MAX_ORGANIZATIONS_PER_USER = 10;
@@ -104,10 +105,9 @@ export async function listMemberOrganizations(
       id: organization.id,
       name: organization.name,
       defaultSpaceId: organization.spaces[0]!.id,
-      // Phase one manages only organizations their owner has to themselves.
-      canManage:
-        organization._count.members === 1 &&
-        organization.members.some((member) => member.role.includes("owner")),
+      canManage: organization.members.some((member) => teamRole(member.role) === "owner"),
+      role: teamRole(organization.members[0]?.role ?? ""),
+      memberCount: organization._count.members,
       spaceIds: memberships
         .filter((membership) => membership.organizationId === organization.id)
         .map((membership) => membership.spaceId),
@@ -123,7 +123,7 @@ export async function renameOrganization(
   const { count } = await prisma.organization.updateMany({
     where: {
       id: input.organizationId,
-      members: { some: { userId: input.userId, role: OWNER }, every: { userId: input.userId } },
+      members: { some: { userId: input.userId, role: OWNER } },
       ...LIVE,
     },
     data: { name },
