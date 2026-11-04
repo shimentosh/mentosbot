@@ -73,4 +73,13 @@ export const JA_MESSAGES: Record<string, string> = {
     "再登録しない場合、保存されたコンピューターのファイルは{date}に削除されます。",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "プランを選択しない場合、保存されたコンピューターのファイルは{date}に削除されます。",
+  "{inviter} invited you to {team} on Rakazo":
+    "{inviter} さんが Rakazo の {team} にあなたを招待しました",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter} さんが Rakazo の {team} への参加にあなたを招待しました。",
+  "Join {team}": "{team} に参加",
+  "The team's owner can see its chats and activity.":
+    "チームのオーナーはチャットとアクティビティを見ることができます。",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "この招待は 7 日後に期限切れになります。承諾するには、このメールアドレスでサインインしてください。",
 };

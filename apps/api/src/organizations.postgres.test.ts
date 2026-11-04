@@ -171,6 +171,8 @@ describePostgres("organizations (PostgreSQL)", () => {
           defaultSpaceId: ada.spaceId,
           spaceIds: [ada.spaceId],
           canManage: true,
+          role: "owner",
+          memberCount: 1,
         },
         {
           id: work.id,
@@ -178,6 +180,8 @@ describePostgres("organizations (PostgreSQL)", () => {
           defaultSpaceId: work.id,
           spaceIds: [work.id],
           canManage: true,
+          role: "owner",
+          memberCount: 1,
         },
       ],
     });
@@ -234,7 +238,7 @@ describePostgres("organizations (PostgreSQL)", () => {
     });
   });
 
-  it("lists a team organization the user is only a member of, without managing it", async () => {
+  it("lists a team organization the user is only a member of; only its owner manages it", async () => {
     const ada = await signup();
     const grace = await signup();
     const team = await client(grace).organizations.create({ name: "Team" });
@@ -258,11 +262,20 @@ describePostgres("organizations (PostgreSQL)", () => {
       client(ada).organizations.rename({ organizationId: team.id, name: "Mine" }),
     ).rejects.toBeInstanceOf(Error);
 
+    expect(organizations[1]).toMatchObject({ role: "member", memberCount: 2 });
+
     const owner = await client(grace).organizations.list();
-    expect(owner.organizations.find((org) => org.id === team.id)?.canManage).toBe(false);
+    expect(owner.organizations.find((org) => org.id === team.id)).toMatchObject({
+      canManage: true,
+      role: "owner",
+      memberCount: 2,
+    });
     await expect(
       client(grace).organizations.rename({ organizationId: team.id, name: "Ours" }),
-    ).rejects.toBeInstanceOf(Error);
+    ).resolves.toEqual({ id: team.id, name: "Ours" });
+    await expect(
+      client(grace).organizations.remove({ organizationId: team.id }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("lets only the owner rename or delete an organization, and never their last one", async () => {

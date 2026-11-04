@@ -70,4 +70,12 @@ export const HE_MESSAGES: Record<string, string> = {
     "קבצי המחשב השמורים שלך יימחקו ב-{date} אלא אם תחדש את המינוי.",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "קבצי המחשב השמורים שלך יימחקו ב-{date} אלא אם תבחר תוכנית.",
+  "{inviter} invited you to {team} on Rakazo": "{inviter} הזמין אותך ל-{team} ב-Rakazo",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter} הזמין אותך להצטרף ל-{team} ב-Rakazo.",
+  "Join {team}": "הצטרפות ל-{team}",
+  "The team's owner can see its chats and activity.":
+    "הבעלים של הצוות יכול לראות את הצ׳אטים והפעילות שלו.",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "ההזמנה תפוג בעוד 7 ימים. כדי לקבל אותה, יש להתחבר עם כתובת האימייל הזו.",
 };

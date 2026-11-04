@@ -7,6 +7,8 @@ const work = {
   defaultSpaceId: "a1",
   spaceIds: ["a1", "a2"],
   canManage: true,
+  role: "owner" as const,
+  memberCount: 1,
 };
 const home = {
   id: "org-home",
@@ -14,6 +16,8 @@ const home = {
   defaultSpaceId: "b1",
   spaceIds: ["b1", "b2"],
   canManage: true,
+  role: "owner" as const,
+  memberCount: 1,
 };
 
 describe("organizationLandingSpaceId", () => {

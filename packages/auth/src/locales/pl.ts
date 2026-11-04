@@ -72,4 +72,12 @@ export const PL_MESSAGES: Record<string, string> = {
     "Zapisane pliki komputera zostaną usunięte {date}, jeśli nie wznowisz subskrypcji.",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "Zapisane pliki komputera zostaną usunięte {date}, jeśli nie wybierzesz planu.",
+  "{inviter} invited you to {team} on Rakazo": "{inviter} zaprasza Cię do {team} w Rakazo",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter} zaprasza Cię do dołączenia do {team} w Rakazo.",
+  "Join {team}": "Dołącz do {team}",
+  "The team's owner can see its chats and activity.":
+    "Właściciel zespołu widzi jego czaty i aktywność.",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "To zaproszenie wygaśnie za 7 dni. Zaloguj się na ten adres e-mail, aby je przyjąć.",
 };

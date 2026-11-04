@@ -258,6 +258,38 @@ const threadSendWithRoutinesInput = threadSendFields.safeExtend({
 
 const spaceName = z.string().trim().min(1).max(60);
 const organizationName = spaceName;
+export const TeamRoleSchema = z.enum(["owner", "admin", "member"]);
+export type TeamRole = z.infer<typeof TeamRoleSchema>;
+export const InvitableTeamRoleSchema = z.enum(["admin", "member"]);
+export type InvitableTeamRole = z.infer<typeof InvitableTeamRoleSchema>;
+
+export const TeamSchema = z.object({
+  organizationId: Id,
+  /** The signed-in member's role, which decides what they may change. */
+  role: TeamRoleSchema,
+  members: z.array(
+    z.object({
+      userId: Id,
+      name: z.string(),
+      email: z.string(),
+      role: TeamRoleSchema,
+      joinedAt: IsoDate,
+    }),
+  ),
+  /** Pending invitations, shown only to owners and admins. */
+  invitations: z.array(
+    z.object({
+      id: z.string(),
+      email: z.string(),
+      role: InvitableTeamRoleSchema,
+      expiresAt: IsoDate,
+    }),
+  ),
+});
+export type Team = z.infer<typeof TeamSchema>;
+
+const invitationId = z.string().min(20).max(200);
+
 /** Every organization the signed-in user belongs to, and which one the current Space belongs to. */
 export const OrganizationListSchema = z.object({
   activeOrganizationId: Id,
@@ -269,6 +301,9 @@ export const OrganizationListSchema = z.object({
       spaceIds: z.array(Id),
       /** Whether the user owns it, so can rename or delete it. */
       canManage: z.boolean(),
+      role: TeamRoleSchema,
+      /** Only an organization nobody else has joined can be deleted. */
+      memberCount: z.number().int().positive(),
     }),
   ),
 });
@@ -401,6 +436,40 @@ export const appContract = {
     remove: oc
       .input(z.object({ organizationId: Id }))
       .output(z.object({ ok: z.literal(true), activeSpaceId: Id })),
+  },
+  /** People in the current organization, and invitations to join it. */
+  team: {
+    get: oc.input(z.object({ organizationId: Id })).output(TeamSchema),
+    invite: oc
+      .input(
+        z.object({
+          organizationId: Id,
+          email: z.string().trim().toLowerCase().max(254).email(),
+          role: InvitableTeamRoleSchema,
+        }),
+      )
+      .output(z.object({ id: z.string(), emailSent: z.boolean() })),
+    revokeInvitation: oc
+      .input(z.object({ invitationId }))
+      .output(z.object({ ok: z.literal(true) })),
+    /** The invitation as its invited, verified account sees it before joining. */
+    invitation: oc.input(z.object({ invitationId })).output(
+      z.object({
+        organizationName: z.string(),
+        inviterName: z.string(),
+        role: InvitableTeamRoleSchema,
+      }),
+    ),
+    accept: oc
+      .input(z.object({ invitationId }))
+      .output(z.object({ organizationId: Id, defaultSpaceId: Id })),
+    setRole: oc
+      .input(z.object({ organizationId: Id, userId: Id, role: InvitableTeamRoleSchema }))
+      .output(z.object({ ok: z.literal(true) })),
+    /** Removes a member, or, for one's own id, leaves the team. */
+    remove: oc
+      .input(z.object({ organizationId: Id, userId: Id }))
+      .output(z.object({ ok: z.literal(true) })),
   },
   bootstrap: oc.input(z.object({ botId: Id.optional() })).output(AppBootstrapSchema),
   deployment: {
