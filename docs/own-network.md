@@ -41,10 +41,18 @@ back to the server's address. Choose **Tailscale** again to change the exit node
 > This works with the Docker computers of a self-hosted server. Other computer providers don't
 > offer it yet.
 
+## A proxy of your own
+
+If you already run an HTTP proxy, such as an app on your phone or a proxy on your home network,
+choose **Connect apps**, then **+** and **Proxy**. Enter its **Proxy address** as host and port
+(for example `proxy.example.com:8080`) and, if it asks for one, a username and password. The
+address must be reachable from the internet; HTTPS sites go through it as well. For a SOCKS
+proxy, use Tailscale instead.
+
 ## How it stays private
 
-The key is encrypted on the server and never enters the bot's computer. A separate container next
-to the computer holds it and runs the tailnet connection; the computer only gets the address of
+The key or password is encrypted on the server and never enters the bot's computer. A separate
+container next to the computer holds it and runs the connection; the computer only gets the address of
 that container's proxy, and no other computer can reach it. WebRTC is limited to the proxy too, so
 calls and video can't reveal the server's address. Connecting and disconnecting are recorded in
 the [audit log](./self-host-audit-log.md).

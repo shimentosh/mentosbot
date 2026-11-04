@@ -97,7 +97,10 @@ describePostgres("network exit (PostgreSQL)", () => {
     const graceHome = await computerOf(grace);
 
     await expect(client(ada).networkExit.get()).resolves.toEqual({
-      providers: [expect.objectContaining({ id: "tailscale" })],
+      providers: [
+        expect.objectContaining({ id: "tailscale" }),
+        expect.objectContaining({ id: "proxy" }),
+      ],
       connection: null,
     });
     await expect(
@@ -154,6 +157,28 @@ describePostgres("network exit (PostgreSQL)", () => {
     await expect(
       system.secret.count({ where: { userId: ada.userId, kind: "network-exit" } }),
     ).resolves.toBe(0);
+  });
+
+  it("connects a plain proxy too, with its password kept out of what is shown", async () => {
+    const ada = await signup();
+    const home = await computerOf(ada);
+    const connected = await client(ada).networkExit.connect({
+      provider: "proxy",
+      values: { address: "proxy.example.com:8080", username: "me", password: "s3cret" },
+    });
+    expect(connected.connection).toMatchObject({
+      provider: "proxy",
+      values: { address: "proxy.example.com:8080", username: "me" },
+    });
+    expect(JSON.stringify(connected)).not.toContain("s3cret");
+    await expect(loadNetworkExit(system, secrets, home)).resolves.toEqual({
+      provider: "proxy",
+      settings: { address: "proxy.example.com:8080", username: "me" },
+      credentials: { password: "s3cret" },
+    });
+    await expect(
+      client(ada).networkExit.connect({ provider: "proxy", values: { address: "10.0.0.2:3128" } }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("offers nothing where computers can't use it", async () => {

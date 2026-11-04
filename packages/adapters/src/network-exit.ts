@@ -2,6 +2,7 @@ import type { NetworkExit, SecretStore } from "@rakazo/adapter-kit";
 import type { NetworkExitDescriptor } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { runAsSystem } from "@rakazo/db";
+import { proxyNetworkExit } from "./proxy-network-exit.js";
 import { tailscaleNetworkExit } from "./tailscale-network-exit.js";
 
 export interface NetworkExitProvider extends NetworkExitDescriptor {
@@ -12,7 +13,10 @@ export interface NetworkExitProvider extends NetworkExitDescriptor {
   };
 }
 
-export const networkExitProviders: readonly NetworkExitProvider[] = [tailscaleNetworkExit];
+export const networkExitProviders: readonly NetworkExitProvider[] = [
+  tailscaleNetworkExit,
+  proxyNetworkExit,
+];
 
 export function networkExitProvider(id: string): NetworkExitProvider {
   const provider = networkExitProviders.find((entry) => entry.id === id);

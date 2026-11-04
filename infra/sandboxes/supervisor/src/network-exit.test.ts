@@ -7,6 +7,7 @@ import {
   NetworkExitSchema,
   networkExitContainerOptions,
   networkExitFingerprint,
+  squidConfig,
 } from "./network-exit.js";
 
 const exit = {
@@ -73,5 +74,47 @@ describe("computer network exit", () => {
     const moved = { ...exit, settings: { exitNode: "apple-tv" } };
     const rekeyed = { ...exit, credentials: { authKey: "tskey-auth-other-9" } };
     expect(new Set([exit, moved, rekeyed].map(networkExitFingerprint)).size).toBe(3);
+  });
+});
+
+describe("proxy network exit", () => {
+  const exit = {
+    provider: "proxy" as const,
+    settings: { address: "proxy.example.com:8080", username: "me" },
+    credentials: { password: "s3cret" },
+  };
+
+  it("sends everything to the person's proxy and nowhere directly", () => {
+    const config = squidConfig(exit);
+    expect(config).toContain(
+      "cache_peer proxy.example.com parent 8080 0 no-query no-digest default login=me:s3cret",
+    );
+    expect(config).toContain("never_direct allow all");
+    expect(config).toContain("cache deny all");
+  });
+
+  it("keeps the password in the forwarder, never the computer", () => {
+    const settings = computerNetworkExitSettings(exit);
+    expect(settings.env).toEqual(["RAKAZO_BROWSER_PROXY=http://rakazo-network-exit:3128"]);
+    expect(JSON.stringify(settings)).not.toContain("s3cret");
+    const options = networkExitContainerOptions({
+      botId: "b1",
+      image: "squid",
+      networkMode: "rakazo-computer-b1",
+      exit,
+    });
+    expect(options).toMatchObject({
+      User: "proxy",
+      HostConfig: { CapDrop: ["ALL"], ReadonlyRootfs: true, NetworkMode: "rakazo-computer-b1" },
+    });
+    expect(options.Env?.[0]).toContain("login=me:s3cret");
+  });
+
+  it("refuses values that could change the forwarder's configuration", () => {
+    for (const settings of [
+      { address: "proxy.example.com:8080\nhttp_port 9" },
+      { address: "proxy.example.com:8080", username: "me\nnever_direct deny all" },
+    ])
+      expect(NetworkExitSchema.safeParse({ ...exit, settings }).success).toBe(false);
   });
 });

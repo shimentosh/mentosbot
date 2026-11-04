@@ -67,6 +67,7 @@ import type { NetworkExit } from "./network-exit.js";
 import {
   computerNetworkExitSettings,
   DEFAULT_NETWORK_EXIT_IMAGE,
+  DEFAULT_NETWORK_PROXY_IMAGE,
   NETWORK_EXIT_BOT_LABEL,
   NETWORK_EXIT_LABEL,
   NetworkExitSchema,
@@ -128,9 +129,14 @@ const computerContext =
   process.env.RAKAZO_COMPUTER_CONTEXT ??
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../computer");
 const ensureComputerImage = computerImageEnsurer(docker, COMPUTER_IMAGE, computerContext);
-const NETWORK_EXIT_IMAGE =
-  process.env.SANDBOX_NETWORK_EXIT_IMAGE?.trim() || DEFAULT_NETWORK_EXIT_IMAGE;
-const ensureNetworkExitImage = computerImageEnsurer(docker, NETWORK_EXIT_IMAGE, computerContext);
+const NETWORK_EXIT_IMAGES = {
+  tailscale: process.env.SANDBOX_NETWORK_EXIT_IMAGE?.trim() || DEFAULT_NETWORK_EXIT_IMAGE,
+  proxy: process.env.SANDBOX_NETWORK_PROXY_IMAGE?.trim() || DEFAULT_NETWORK_PROXY_IMAGE,
+} as const;
+const networkExitImageEnsurers = {
+  tailscale: computerImageEnsurer(docker, NETWORK_EXIT_IMAGES.tailscale, computerContext),
+  proxy: computerImageEnsurer(docker, NETWORK_EXIT_IMAGES.proxy, computerContext),
+} as const;
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const dataDir = path.resolve(repositoryRoot, process.env.DATA_DIR ?? "./data");
 let supervisorInfo: Docker.ContainerInspectInfo | undefined;
@@ -266,7 +272,7 @@ app.post("/computers", async (c) => {
           400,
         );
       }
-      if (networkExit) await ensureNetworkExitImage();
+      if (networkExit) await networkExitImageEnsurers[networkExit.provider]();
       const serviceHomePath = path.resolve(body.homePath);
       assertBotHomePath(serviceHomePath, body.botId);
       const hostUid = process.getuid?.();
@@ -1994,7 +2000,12 @@ async function syncNetworkExit(
   if (info) await current.remove({ force: true });
   if (!exit || !networkMode) return;
   const created = await docker.createContainer(
-    networkExitContainerOptions({ botId, image: NETWORK_EXIT_IMAGE, networkMode, exit }),
+    networkExitContainerOptions({
+      botId,
+      image: NETWORK_EXIT_IMAGES[exit.provider],
+      networkMode,
+      exit,
+    }),
   );
   await created.start();
 }

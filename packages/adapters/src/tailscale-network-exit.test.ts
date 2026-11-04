@@ -29,6 +29,42 @@ describe("tailscale network exit", () => {
           expect.objectContaining({ key: "exitNode", kind: "text" }),
         ],
       }),
+      expect.objectContaining({
+        id: "proxy",
+        fields: [
+          expect.objectContaining({ key: "address", kind: "text" }),
+          expect.objectContaining({ key: "username", kind: "text", required: false }),
+          expect.objectContaining({ key: "password", kind: "secret", required: false }),
+        ],
+      }),
     ]);
+  });
+});
+
+describe("proxy network exit", () => {
+  const proxy = () => networkExitProvider("proxy");
+
+  it("keeps the password encrypted and the rest shown again", () => {
+    expect(
+      proxy().verify({ address: "proxy.example.com:8080", username: "me", password: "s3cret" }),
+    ).toEqual({
+      settings: { address: "proxy.example.com:8080", username: "me" },
+      credentials: { password: "s3cret" },
+    });
+    expect(proxy().verify({ address: "[2001:db8::1]:3128" }).settings).toEqual({
+      address: "[2001:db8::1]:3128",
+    });
+  });
+
+  it.each([
+    [{ address: "proxy.example.com" }, "host and port"],
+    [{ address: "proxy.example.com:70000" }, "host and port"],
+    [{ address: "localhost:8080" }, "public address"],
+    [{ address: "10.0.0.5:8080" }, "public address"],
+    [{ address: "169.254.169.254:80" }, "public address"],
+    [{ address: "proxy.example.com:8080", username: "me" }, "both a username and a password"],
+    [{ address: "proxy.example.com:8080", username: "me", password: "a b" }, "can't contain"],
+  ])("refuses %j", (values, message) => {
+    expect(() => proxy().verify(values)).toThrow(message);
   });
 });
