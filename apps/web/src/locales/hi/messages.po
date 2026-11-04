@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "{label} के बारे में"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -656,6 +657,7 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "बकेट"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "पाथ में बकेट का नाम"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "साइन इन के विकल्प लोड नहीं ह
 msgid "Could not load skill"
 msgstr "स्किल लोड नहीं हो सकी"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "स्टोरेज सेटिंग्स लोड नहीं हो सकीं"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr ""
@@ -2307,6 +2321,10 @@ msgstr "नियम सहेजा नहीं जा सका"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "स्किल सहेजी नहीं जा सकी"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "स्टोरेज सेटिंग्स सेव नहीं हो सकीं"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "{0} सक्षम करें"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "एंडपॉइंट"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr ""
@@ -3251,6 +3273,10 @@ msgstr "MCP कनेक्शन पूरा हो रहा है…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "संदेश पर जाएं"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "फ़ोल्डर"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5587,6 +5614,7 @@ msgstr "शनिवार"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "वॉल्ट में सहेजें"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr ""
 msgid "Searching…"
 msgstr "खोजा जा रहा है…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "सीक्रेट एक्सेस की"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "सुरक्षा"
@@ -5827,6 +5860,10 @@ msgstr "सर्वर का नाम"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "सर्वर URL"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "सर्वर एनवायरनमेंट द्वारा सेट।"
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "रोक दिया गया।"
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "स्टोरेज"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "एन्क्रिप्टेड रूप में संग्रहीत"
@@ -6285,6 +6327,10 @@ msgstr "वार्षिक पर जाएं"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "वार्षिक पर जाएं?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "स्टोरेज बदला जा रहा है…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

@@ -85,6 +85,15 @@ OBJECT_STORAGE_PREFIX=
 OBJECT_STORAGE_PATH_STYLE=false
 ```
 
+Admins (`RAKAZO_ADMIN_EMAILS`) can instead connect a bucket in **Settings → Storage**. Saving first
+writes, reads back and deletes one small object, then stores the connection encrypted in the
+database. The API and worker notice it within about 15 seconds and restart onto it, the same
+switch as setting `OBJECT_STORAGE_BUCKET` and restarting, so they need a service manager that
+restarts them when they exit (the published Compose files do). Once saved, the bucket, endpoint
+and folder cannot change, because stored homes name objects in that bucket; the keys, region and
+addressing can. `OBJECT_STORAGE_*` in the environment always wins and shows read-only there. The
+endpoint must be a public address; use the environment for a bucket on a private network.
+
 Only the API and worker read these settings. Bot computers never receive the credentials or
 links to stored objects; files still reach them through the server, as before. The settings
 apply to every provider, including Docker computers, which keep mounting their cached home.

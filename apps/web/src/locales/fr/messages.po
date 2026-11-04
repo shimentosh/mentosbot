@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "À propos de {label}"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -656,6 +657,7 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "Parcourir les serveurs MCP"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "Bucket"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "Nom du bucket dans le chemin"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "Impossible de charger les options de connexion"
 msgid "Could not load skill"
 msgstr "Impossible de charger la compétence"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "Impossible de charger les paramètres de stockage"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "Impossible de charger cet artefact."
@@ -2307,6 +2321,10 @@ msgstr "Impossible d'enregistrer la règle"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "Impossible d'enregistrer la compétence"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "Impossible d'enregistrer les paramètres de stockage"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "Activer {0}"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "Point de terminaison"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr ""
@@ -3251,6 +3273,10 @@ msgstr "Finalisation de la connexion MCP…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Aller au message"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "Dossier"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr "Actualisation en cours…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5587,6 +5614,7 @@ msgstr "samedi"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "Enregistrer dans le coffre"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr ""
 msgid "Searching…"
 msgstr "Recherche en cours…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "Clé d'accès secrète"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Sécurité"
@@ -5827,6 +5860,10 @@ msgstr "Nom du serveur"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "URL du serveur"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "Défini par l'environnement du serveur."
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "Arrêté."
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "Stockage"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "Stocké chiffré"
@@ -6285,6 +6327,10 @@ msgstr "Passer à l'annuel"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "Passer à l'annuel ?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "Changement de stockage…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

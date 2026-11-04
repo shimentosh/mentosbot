@@ -27,6 +27,7 @@ import type {
   ProviderCatalogCache,
   PushTokenStore,
   RemoteConnectorDependencies,
+  ResolvedObjectStorage,
   TicketChangeNotifier,
   verifyModelServesAgents,
 } from "@rakazo/adapters";
@@ -47,6 +48,7 @@ import { mcpRoutes } from "./routes/mcp.js";
 import { memoryRoutes } from "./routes/memory.js";
 import { messagingRoutes } from "./routes/messaging.js";
 import { modelsRoutes } from "./routes/models.js";
+import { objectStorageRoutes } from "./routes/object-storage.js";
 import { organizationsRoutes } from "./routes/organizations.js";
 import { pagesRoutes } from "./routes/pages.js";
 import { paymentWalletRoutes } from "./routes/payment-wallet.js";
@@ -78,6 +80,8 @@ export interface RouterDeps {
   memory: MemoryStore;
   memoryProviders: MemoryProviderResolver;
   home: AgentHomeStore;
+  /** The bucket this process stores homes and artifacts in; absent means local disk. */
+  objectStorage?: ResolvedObjectStorage;
   secrets: SecretStore;
   oauthLogins: PiOAuthLogins;
   /** Live Codex catalog seam; defaults to the shared per-process cache. */
@@ -159,6 +163,7 @@ export function createRouter(deps: RouterDeps) {
     ...threadsRoutes(ctx),
     ...computerRoutes(ctx),
     ...computerProviderRoutes(ctx),
+    ...objectStorageRoutes(ctx),
     ...memoryRoutes(ctx),
     ...routinesRoutes(ctx),
     ...boardsRoutes(ctx),

@@ -114,6 +114,8 @@ import {
   ModelCredentialSchema,
   ModelCreditAmountSchema,
   ModelOAuthBeginSchema,
+  ObjectStorageSettingsSchema,
+  ObjectStorageUpdateSchema,
   OPENAI_COMPATIBLE_PROVIDER_ID,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
@@ -424,6 +426,11 @@ export const appContract = {
       get: oc.output(ComputerProviderSettingsSchema),
       update: oc.input(ComputerProviderUpdateSchema).output(ComputerProviderSettingsSchema),
     },
+  },
+  /** Admin choice of the bucket that holds bot homes and artifacts. */
+  objectStorage: {
+    get: oc.output(ObjectStorageSettingsSchema),
+    update: oc.input(ObjectStorageUpdateSchema).output(ObjectStorageSettingsSchema),
   },
   /** Deployment-owner view of the append-only security event log, newest first. */
   security: {

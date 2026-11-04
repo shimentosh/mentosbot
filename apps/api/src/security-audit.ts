@@ -72,6 +72,7 @@ export const AUDITED_PROCEDURES: Record<string, AuditedProcedure> = {
     kind: "computer_provider",
     fields: ["provider"],
   },
+  "objectStorage.update": { type: "credential.changed", kind: "object_storage" },
   "computerProvider.account.update": {
     type: "credential.changed",
     kind: "computer_provider",

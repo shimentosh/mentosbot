@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "O {label}"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr "Identyfikator klucza dostępu"
 
@@ -656,6 +657,7 @@ msgstr "Adres"
 msgid "Address line 2"
 msgstr "Druga linia adresu"
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr "Przeglądaj"
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "Przeglądaj serwery MCP"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "Zasobnik"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "Nazwa zasobnika w ścieżce"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "Nie udało się wczytać opcji logowania"
 msgid "Could not load skill"
 msgstr "Nie udało się wczytać umiejętności"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "Nie udało się wczytać ustawień pamięci masowej"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "Nie udało się wczytać tego artefaktu."
@@ -2307,6 +2321,10 @@ msgstr "Nie udało się zapisać reguły"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "Nie udało się zapisać umiejętności"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "Nie udało się zapisać ustawień pamięci masowej"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "Włącz {0}"
 msgid "End user ID"
 msgstr "Identyfikator użytkownika końcowego"
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "Punkt końcowy"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "Koniec {day}"
@@ -3251,6 +3273,10 @@ msgstr "Kończenie połączenia MCP…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Przejdź do wiadomości"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "Folder"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr "Odświeżanie…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr "Region"
 
@@ -5587,6 +5614,7 @@ msgstr "sobota"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "Zapisz w sejfie"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr "Wyszukiwanie: {0}"
 msgid "Searching…"
 msgstr "Wyszukiwanie…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "Tajny klucz dostępu"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Bezpieczeństwo"
@@ -5827,6 +5860,10 @@ msgstr "Nazwa serwera"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "Adres URL serwera"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "Ustawione przez środowisko serwera."
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "Zatrzymano."
 msgid "Stopping…"
 msgstr "Zatrzymywanie…"
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "Pamięć masowa"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "Zapisane w postaci zaszyfrowanej"
@@ -6285,6 +6327,10 @@ msgstr "Przejdź na plan roczny"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "Przejść na plan roczny?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "Przełączanie pamięci masowej…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

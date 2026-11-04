@@ -90,6 +90,8 @@ import {
   reconcilePurchases,
   removePiUserSessions,
   resolveDeploymentModel,
+  resolveObjectStorage,
+  restartOntoSavedObjectStorage,
   ScriptedAgentRuntime,
   SpaceMemoryProviderResolver,
   StripeBillingProvider,
@@ -101,6 +103,7 @@ import {
   userDeviceForwardSecret,
   userDeviceInternalAddress,
   verifyModelServesAgents,
+  watchObjectStorageSettings,
   withSecretPersistence,
 } from "@rakazo/adapters";
 import { createAuth, isBlockedAuthPath, loopbackTwinOrigins } from "@rakazo/auth";
@@ -417,9 +420,16 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   );
   const memoryProviders = new SpaceMemoryProviderResolver(prisma, secrets);
   const oauthLogins = new PiOAuthLogins(undefined, { prisma, secrets });
-  const home = createAgentHomeStore(env.dataDir, prisma);
+  const objectStorage = await resolveObjectStorage(prisma, secrets);
+  const home = createAgentHomeStore(env.dataDir, prisma, process.env, objectStorage?.config);
   void home.removeStaleStaging().catch((error) => getLogger().error("home staging cleanup", error));
-  const artifacts = createArtifactStore(env.dataDir, prisma);
+  const artifacts = createArtifactStore(env.dataDir, prisma, process.env, objectStorage?.config);
+  const stopObjectStorageWatch = watchObjectStorageSettings(
+    prisma,
+    secrets,
+    objectStorage,
+    restartOntoSavedObjectStorage,
+  );
   const memory = new MarkdownMemoryStore(prisma);
   const mcp = new McpConnector(
     prisma,
@@ -803,6 +813,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     memory,
     memoryProviders,
     home,
+    objectStorage,
     secrets,
     oauthLogins,
     integrationSettings,
@@ -1476,6 +1487,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     backgroundFailures: inMemoryJobs ? () => inMemoryJobs.failureCounts() : undefined,
     handleUpgrade: userDeviceHub?.handleUpgrade,
     stop: async () => {
+      stopObjectStorageWatch();
       // Handlers still running would otherwise query the pool after it ends.
       const requestsSettled = settleWithTimeout(inFlight.settled(), REQUEST_DRAIN_MS);
       // Abort in-flight continueRun boot waits before draining jobs so stop() cannot sit

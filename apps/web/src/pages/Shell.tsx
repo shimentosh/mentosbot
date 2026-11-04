@@ -852,6 +852,7 @@ function SpaceShell() {
     messaging: messagingSurfaceEnabled,
     wallet: Boolean(bootstrapMe?.paymentWalletProvider),
     computer: computersAreUnavailable(bootstrapMe?.sandboxProvider),
+    storage: bootstrapMe?.isAdmin === true,
     billing: bootstrapMe?.billingEnabled === true,
     updates: Boolean(desktopBridge()?.update),
   });

@@ -28,6 +28,7 @@ import {
   packHome,
   unpackHome,
 } from "./home-archive.js";
+import type { S3ObjectStorageConfig } from "./s3-object-storage.js";
 import { objectStorageConfigFromEnv, S3ObjectStorage } from "./s3-object-storage.js";
 
 const HOMES_PREFIX = "homes/";
@@ -661,15 +662,15 @@ export class PrismaAgentHomeRecords implements AgentHomeRecords {
 }
 
 /**
- * The home store for this deployment: object storage when `OBJECT_STORAGE_BUCKET` is set,
- * otherwise homes stay on local disk under `DATA_DIR`, exactly as before.
+ * The home store for this deployment: object storage when a connection is configured (by
+ * `OBJECT_STORAGE_BUCKET` or in Settings), otherwise homes stay on local disk under `DATA_DIR`.
  */
 export function createAgentHomeStore(
   dataDir: string,
   prisma: PrismaClient,
   env: NodeJS.ProcessEnv = process.env,
+  config: S3ObjectStorageConfig | undefined = objectStorageConfigFromEnv(env),
 ): LocalAgentHomeStore {
-  const config = objectStorageConfigFromEnv(env);
   if (!config) return new LocalAgentHomeStore(dataDir);
   const ring = contentEncryptionOf(prisma)?.ring;
   if (!ring) throw new Error("Storing homes in object storage needs content encryption keys");

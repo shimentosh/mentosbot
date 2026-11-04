@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "{label} 정보"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -656,6 +657,7 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "버킷"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "경로에 버킷 이름 사용"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "로그인 옵션을 불러올 수 없습니다"
 msgid "Could not load skill"
 msgstr "스킬을 불러오지 못했습니다"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "저장소 설정을 불러올 수 없습니다"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr ""
@@ -2307,6 +2321,10 @@ msgstr "확인 규칙을 저장하지 못했습니다."
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "스킬을 저장하지 못했습니다"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "저장소 설정을 저장할 수 없습니다"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "{0} 활성화"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "엔드포인트"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr ""
@@ -3251,6 +3273,10 @@ msgstr "MCP 연결을 마무리하는 중…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "메시지 입력란으로 이동"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "폴더"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr "새로고침 중…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5587,6 +5614,7 @@ msgstr "토요일"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "보관함에 저장"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr ""
 msgid "Searching…"
 msgstr "검색 중…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "비밀 액세스 키"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "보안"
@@ -5827,6 +5860,10 @@ msgstr "서버 이름"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "서버 URL"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "서버 환경에서 설정됨."
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "중지되었습니다."
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "저장소"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "암호화해 저장"
@@ -6285,6 +6327,10 @@ msgstr "연간 결제로 전환"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "연간 결제로 전환할까요?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "저장소 전환 중…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

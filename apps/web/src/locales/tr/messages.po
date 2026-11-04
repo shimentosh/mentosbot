@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "{label} hakkında"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr "Erişim anahtarı kimliği"
 
@@ -656,6 +657,7 @@ msgstr "Adres"
 msgid "Address line 2"
 msgstr "Adres satırı 2"
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr "Gözat"
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "MCP sunucularına göz at"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "Kova"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "Yolda kova adı"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "Giriş seçenekleri yüklenemedi"
 msgid "Could not load skill"
 msgstr "Beceri yüklenemedi"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "Depolama ayarları yüklenemedi"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "Bu çıktı yüklenemedi."
@@ -2307,6 +2321,10 @@ msgstr "Kural kaydedilemedi"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "Beceri kaydedilemedi"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "Depolama ayarları kaydedilemedi"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "{0} etkinleştir"
 msgid "End user ID"
 msgstr "Son kullanıcı kimliği"
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "Uç nokta"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "{day} tarihinde sona eriyor"
@@ -3251,6 +3273,10 @@ msgstr "MCP bağlantısı tamamlanıyor…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Mesaja git"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "Klasör"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr "Yenileniyor…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr "Bölge"
 
@@ -5587,6 +5614,7 @@ msgstr "Cumartesi"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "Kasaya kaydet"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr "Ara: {0}"
 msgid "Searching…"
 msgstr "Aranıyor…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "Gizli erişim anahtarı"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Güvenlik"
@@ -5827,6 +5860,10 @@ msgstr "Sunucu adı"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "Sunucu URL'si"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "Sunucu ortamı tarafından ayarlandı."
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "Durduruldu."
 msgid "Stopping…"
 msgstr "Durduruluyor…"
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "Depolama"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "Şifreli saklanıyor"
@@ -6285,6 +6327,10 @@ msgstr "Yıllığa geç"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "Yıllığa geçilsin mi?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "Depolama değiştiriliyor…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

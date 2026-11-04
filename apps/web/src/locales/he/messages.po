@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "על {label}"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -656,6 +657,7 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "עיון בשרתי MCP"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "דלי"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "שם הדלי בנתיב"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "לא ניתן לטעון את אפשרויות ההתחברות"
 msgid "Could not load skill"
 msgstr "לא ניתן לטעון את המיומנות"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "לא ניתן לטעון את הגדרות האחסון"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "לא ניתן לטעון את התוצר הזה."
@@ -2307,6 +2321,10 @@ msgstr "לא ניתן לשמור את הכלל"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "לא ניתן לשמור את המיומנות"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "לא ניתן לשמור את הגדרות האחסון"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "הפעלת {0}"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "נקודת קצה"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "מסתיים ב-{day}"
@@ -3251,6 +3273,10 @@ msgstr "משלים את חיבור ה-MCP…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "מעבר להודעה"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "תיקייה"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr "מרענן…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5587,6 +5614,7 @@ msgstr "שבת"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "שמירה בכספת"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr "חיפוש: {0}"
 msgid "Searching…"
 msgstr "מחפש…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "מפתח גישה סודי"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "אבטחה"
@@ -5827,6 +5860,10 @@ msgstr "שם השרת"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "URL של השרת"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "מוגדר על ידי סביבת השרת."
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "נעצר."
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "אחסון"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "נשמר מוצפן"
@@ -6285,6 +6327,10 @@ msgstr "מעבר לתשלום שנתי"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "לעבור לתשלום שנתי?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "מחליף אחסון…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

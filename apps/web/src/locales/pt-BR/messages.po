@@ -449,6 +449,7 @@ msgid "About {label}"
 msgstr "Sobre {label}"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -656,6 +657,7 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1162,6 +1164,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "Bucket"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "Nome do bucket no caminho"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2144,6 +2154,10 @@ msgstr "Não foi possível carregar as opções de login"
 msgid "Could not load skill"
 msgstr "Não foi possível carregar a habilidade"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "Não foi possível carregar as configurações de armazenamento"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr ""
@@ -2307,6 +2321,10 @@ msgstr "Não foi possível salvar"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "Não foi possível salvar a habilidade"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "Não foi possível salvar as configurações de armazenamento"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -2968,6 +2986,10 @@ msgstr "Ativar {0}"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "Endpoint"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr ""
@@ -3251,6 +3273,10 @@ msgstr "Finalizando conexão MCP…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Ir para a mensagem"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "Pasta"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5209,6 +5235,7 @@ msgid "Refreshing…"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5587,6 +5614,7 @@ msgstr "sábado"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5614,6 +5642,7 @@ msgstr "Salvar no cofre"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5740,6 +5769,10 @@ msgstr ""
 msgid "Searching…"
 msgstr "Pesquisando…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "Chave de acesso secreta"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Segurança"
@@ -5827,6 +5860,10 @@ msgstr "Nome do servidor"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "URL do servidor"
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "Definido pelo ambiente do servidor."
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -6209,6 +6246,11 @@ msgstr "Interrompido."
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "Armazenamento"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "Armazenado criptografado"
@@ -6285,6 +6327,10 @@ msgstr "Mudar para anual"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "Mudar para anual?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "Trocando o armazenamento…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

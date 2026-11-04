@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApprovalRulesSettings } from "../components/ApprovalRulesSettings";
 import { computersAreUnavailable } from "../components/ComputersUnavailableHint";
 import { SETTINGS_CONTENT_WIDTH, SettingsGroup, SettingsRow } from "../components/SettingsRows";
+import { StorageSettingsPanel } from "../components/StorageSettings";
 import { VaultSettings } from "../components/VaultSettings";
 import { canChooseOwnComputer } from "../lib/computer-sandbox";
 import { desktopBridge } from "../lib/desktop";
@@ -51,6 +52,7 @@ export function SettingsOverlay({
   sandboxProvider,
   onSandboxProviderChange,
   canConfigureComputers = false,
+  canConfigureStorage = false,
   messagingEnabled = false,
   paymentWalletProvider = null,
   memoryConfig,
@@ -82,6 +84,8 @@ export function SettingsOverlay({
   onSandboxProviderChange?: (sandboxProvider: string) => void;
   /** Admins choose where new computers run. */
   canConfigureComputers?: boolean;
+  /** Admins choose the bucket that holds bot files. */
+  canConfigureStorage?: boolean;
   messagingEnabled?: boolean;
   /** The wallet this deployment lets bots spend from; none hides Wallet. */
   paymentWalletProvider?: { id: string; name: string } | null;
@@ -108,6 +112,7 @@ export function SettingsOverlay({
   // A section that isn't available yet (billing before its flag loads) shows General until it is.
   const section =
     (requestedSection === "computer" && !showComputer) ||
+    (requestedSection === "storage" && !canConfigureStorage) ||
     (requestedSection === "billing" && !billingEnabled) ||
     (requestedSection === "messaging" && !messagingEnabled) ||
     (requestedSection === "wallet" && !paymentWalletProvider) ||
@@ -148,6 +153,7 @@ export function SettingsOverlay({
     messaging: messagingEnabled,
     wallet: Boolean(paymentWalletProvider),
     computer: showComputer,
+    storage: canConfigureStorage,
     billing: billingEnabled,
     updates: showUpdates,
   });
@@ -423,6 +429,7 @@ export function SettingsOverlay({
                       canConfigureComputers={canConfigureComputers}
                     />
                   ) : null}
+                  {section === "storage" && canConfigureStorage ? <StorageSettingsPanel /> : null}
                   {section === "billing" && billingEnabled ? <BillingSettingsPanel /> : null}
                   {section === "updates" && showUpdates ? <UpdatesSettingsPanel /> : null}
                   {section === "models" ? (
