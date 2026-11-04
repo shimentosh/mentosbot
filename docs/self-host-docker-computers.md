@@ -141,6 +141,16 @@ services:
 Then change `SANDBOX_COMPUTER_EGRESS` from `open` to `restricted` in `.env` and recreate the
 supervisor. Docker Desktop has not been tested this way.
 
+## People's own networks
+
+People can send their computers' browsers through a network of their own
+([Use your own network](./own-network.md)). The supervisor then starts a second container next to
+the computer, on the computer's own network: `docker.io/tailscale/tailscale` for Tailscale or
+`docker.io/ubuntu/squid` for a proxy, each pinned by digest. Set `SANDBOX_NETWORK_EXIT_IMAGE` or
+`SANDBOX_NETWORK_PROXY_IMAGE` to pull them from a mirror. It needs per-computer networks, so it is
+unavailable with `SANDBOX_SCREEN_NETWORK=internal`, and works with restricted egress, since it only
+reaches public addresses.
+
 ## Shared host folders
 
 `SANDBOX_COMPUTER_MOUNTS` mounts host directories into every bot computer (Docker sandboxes

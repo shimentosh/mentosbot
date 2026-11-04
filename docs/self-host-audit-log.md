@@ -16,6 +16,7 @@ Organization owners and admins can export it as JSON Lines, and operators can fo
 | `credential.created`, `credential.changed`, `credential.deleted`, `credential.revealed` | Model, MCP, connector, voice, memory, vault and bot secrets |
 | `space.created`, `space.renamed`, `space.deleted` | Spaces |
 | `team.member.invited`, `team.invitation.revoked`, `team.member.joined`, `team.member.role_changed`, `team.member.removed`, `team.member.left`, `team.bot.viewed`, `team.bot.screen_viewed`, `team.bot.shared`, `team.bot.unshared` | [Team](./teams.md) membership |
+| `network_exit.connected`, `network_exit.disconnected` | Someone's [own network](./own-network.md) for their computers |
 | `auth.sign_in`, `auth.sign_out`, `auth.password.changed`, `auth.passkey.*`, `auth.session.revoked`, `device.*` | Account security, recorded in each organization the account belongs to |
 | `audit_log.exported` | Someone exported the audit log |
 

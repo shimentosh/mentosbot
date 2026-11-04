@@ -1698,6 +1698,7 @@ msgstr "請確認此瀏覽器工作階段可以存取該 URL，然後重新測�
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -2814,6 +2815,7 @@ msgstr "已停用"
 msgid "Discard recording"
 msgstr "捨棄錄製內容"
 
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -5699,6 +5701,7 @@ msgstr "週六"
 
 #: src/components/ApprovalRulesSettings.tsx
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
@@ -5727,6 +5730,7 @@ msgid "Save to Vault"
 msgstr "儲存到保管庫"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
@@ -5923,6 +5927,10 @@ msgstr ""
 msgid "Send with Enter"
 msgstr "按 Enter 傳送"
 
+#: src/components/NetworkExitDialog.tsx
+msgid "Send your computers' browsers through a network of your own."
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5978,6 +5986,10 @@ msgstr "設定：用量"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "設定完成"
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Setup guide"
+msgstr ""
 
 #: src/pages/model-settings/compatible-model-fields.tsx
 msgid "Setup help"
@@ -7366,6 +7378,10 @@ msgstr "今天將從你的卡片扣除按比例計算的差額。"
 #: src/pages/Shell.tsx
 msgid "Your computer's disk is nearly full. Free up space by removing build output and caches you no longer need."
 msgstr "電腦的磁碟快滿了。請刪除不再需要的建置輸出和快取，以釋放空間。"
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Your computers' browsers use this network when they start."
+msgstr ""
 
 #: src/components/AccountDataSettings.tsx
 msgid "Your data"

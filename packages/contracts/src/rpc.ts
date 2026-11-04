@@ -114,6 +114,8 @@ import {
   ModelCredentialSchema,
   ModelCreditAmountSchema,
   ModelOAuthBeginSchema,
+  NetworkExitConnectSchema,
+  NetworkExitStatusSchema,
   OPENAI_COMPATIBLE_PROVIDER_ID,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
@@ -531,6 +533,12 @@ export const appContract = {
       get: oc.output(ComputerProviderSettingsSchema),
       update: oc.input(ComputerProviderUpdateSchema).output(ComputerProviderSettingsSchema),
     },
+  },
+  /** The signed-in person's own network for their computers' browsers in the current Space. */
+  networkExit: {
+    get: oc.output(NetworkExitStatusSchema),
+    connect: oc.input(NetworkExitConnectSchema).output(NetworkExitStatusSchema),
+    disconnect: oc.output(NetworkExitStatusSchema),
   },
   /** Deployment-owner view of the append-only security event log, newest first. */
   security: {

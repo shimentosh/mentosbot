@@ -1697,6 +1697,7 @@ msgstr "이 브라우저 세션에서 URL에 연결할 수 있는지 확인한 �
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -2813,6 +2814,7 @@ msgstr "비활성화됨"
 msgid "Discard recording"
 msgstr ""
 
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -5698,6 +5700,7 @@ msgstr "토요일"
 
 #: src/components/ApprovalRulesSettings.tsx
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
@@ -5726,6 +5729,7 @@ msgid "Save to Vault"
 msgstr "보관함에 저장"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
@@ -5922,6 +5926,10 @@ msgstr ""
 msgid "Send with Enter"
 msgstr "Enter 키로 전송"
 
+#: src/components/NetworkExitDialog.tsx
+msgid "Send your computers' browsers through a network of your own."
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5977,6 +5985,10 @@ msgstr "설정: 사용량"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "설정 완료"
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Setup guide"
+msgstr ""
 
 #: src/pages/model-settings/compatible-model-fields.tsx
 msgid "Setup help"
@@ -7365,6 +7377,10 @@ msgstr "오늘 일할 계산된 차액이 카드로 청구됩니다."
 #: src/pages/Shell.tsx
 msgid "Your computer's disk is nearly full. Free up space by removing build output and caches you no longer need."
 msgstr "컴퓨터 디스크가 거의 가득 찼습니다. 더 이상 필요 없는 빌드 출력과 캐시를 삭제해 공간을 확보하세요."
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Your computers' browsers use this network when they start."
+msgstr ""
 
 #: src/components/AccountDataSettings.tsx
 msgid "Your data"

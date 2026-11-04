@@ -1697,6 +1697,7 @@ msgstr "Bevestig dat de URL vanuit deze browsersessie bereikbaar is en test daar
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -2813,6 +2814,7 @@ msgstr "Uitgeschakeld"
 msgid "Discard recording"
 msgstr "Opname weggooien"
 
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -5698,6 +5700,7 @@ msgstr "zaterdag"
 
 #: src/components/ApprovalRulesSettings.tsx
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
@@ -5726,6 +5729,7 @@ msgid "Save to Vault"
 msgstr "Opslaan in kluis"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
@@ -5922,6 +5926,10 @@ msgstr ""
 msgid "Send with Enter"
 msgstr "Verzenden met Enter"
 
+#: src/components/NetworkExitDialog.tsx
+msgid "Send your computers' browsers through a network of your own."
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5977,6 +5985,10 @@ msgstr "Instellingen: gebruik"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "Instellen voltooid"
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Setup guide"
+msgstr ""
 
 #: src/pages/model-settings/compatible-model-fields.tsx
 msgid "Setup help"
@@ -7365,6 +7377,10 @@ msgstr "Je kaart wordt vandaag belast met het naar rato berekende verschil."
 #: src/pages/Shell.tsx
 msgid "Your computer's disk is nearly full. Free up space by removing build output and caches you no longer need."
 msgstr "De schijf van je computer is bijna vol. Maak ruimte vrij door build-uitvoer en caches te verwijderen die je niet meer nodig hebt."
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Your computers' browsers use this network when they start."
+msgstr ""
 
 #: src/components/AccountDataSettings.tsx
 msgid "Your data"

@@ -1,4 +1,4 @@
-import type { ComputerRef, SandboxProvider } from "@rakazo/adapter-kit";
+import type { ComputerRef, NetworkExit, SandboxProvider } from "@rakazo/adapter-kit";
 import { SandboxKind } from "@rakazo/contracts";
 import { BoatSandboxProvider } from "./boat-sandbox.js";
 import { BoxdSandboxProvider } from "./boxd-sandbox.js";
@@ -16,6 +16,8 @@ import { NovitaSandboxProvider } from "./novita-sandbox.js";
 import { RailwaySandboxProvider } from "./railway-sandbox.js";
 
 export interface SandboxProviderOptions {
+  /** The network a computer's owner routes its browser through, for providers that can. */
+  networkExitFor?: (homeKey: string) => Promise<NetworkExit | undefined>;
   hostComputerUrl?: string;
   hostComputerToken?: string;
   supervisorUrl?: string;
@@ -207,6 +209,7 @@ export async function createSandboxProvider(
       return new DockerSandboxProvider(
         opts.supervisorUrl ?? "http://127.0.0.1:7091",
         opts.supervisorToken,
+        opts.networkExitFor,
       );
     case "desktop":
       assertHostCommandsAllowed();

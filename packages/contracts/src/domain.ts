@@ -1813,6 +1813,32 @@ export const ComputerProviderDescriptorSchema = z.object({
   capabilities: z.object({ perAccount: z.boolean() }),
 });
 export type ComputerProviderDescriptor = z.infer<typeof ComputerProviderDescriptorSchema>;
+/** A network of the person's own that their computers' browsers reach the internet through. */
+export const NetworkExitDescriptorSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  fields: z.array(ComputerProviderFieldSchema),
+  /** Where setting the network up is explained. */
+  helpUrl: z.string().url().optional(),
+});
+export type NetworkExitDescriptor = z.infer<typeof NetworkExitDescriptorSchema>;
+export const NetworkExitStatusSchema = z.object({
+  /** Empty when this server's computers can't use one. */
+  providers: z.array(NetworkExitDescriptorSchema),
+  /** The signed-in person's connection in this Space; secret values are never returned. */
+  connection: z
+    .object({
+      provider: z.string(),
+      values: z.record(z.string(), z.string()),
+      updatedAt: z.string().datetime({ offset: true }),
+    })
+    .nullable(),
+});
+export type NetworkExitStatus = z.infer<typeof NetworkExitStatusSchema>;
+export const NetworkExitConnectSchema = z.object({
+  provider: z.string().trim().min(1).max(64),
+  values: z.record(z.string().max(64), z.string().trim().max(4096)),
+});
 export const ComputerProviderSettingsSchema = z.object({
   provider: z.string(),
   defaultProvider: z.string(),

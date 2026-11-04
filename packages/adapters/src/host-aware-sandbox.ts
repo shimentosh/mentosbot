@@ -28,6 +28,7 @@ import {
 } from "./configured-sandbox.js";
 import { assertHostCommandsAllowed, DesktopSandboxProvider } from "./desktop-sandbox.js";
 import { HostComputerSandbox } from "./host-computer-sandbox.js";
+import { loadNetworkExit } from "./network-exit.js";
 import type { SandboxProviderOptions } from "./sandbox-factory.js";
 import { createSandboxProvider } from "./sandbox-factory.js";
 
@@ -70,7 +71,10 @@ export async function createRunSandbox(
 
 async function createBaseRunSandbox(
   kind: string,
-  opts: SandboxProviderOptions & { prisma?: PrismaClient },
+  opts: SandboxProviderOptions & {
+    prisma?: PrismaClient;
+    secrets?: Pick<SecretStore, "load" | "onChange">;
+  },
 ): Promise<SandboxProvider> {
   if (kind === "desktop") {
     assertHostCommandsAllowed();
@@ -80,8 +84,13 @@ async function createBaseRunSandbox(
     });
   }
   const prisma = opts.prisma;
+  const { secrets } = opts;
   const primary = await createSandboxProvider(kind, {
     ...opts,
+    networkExitFor:
+      prisma && secrets
+        ? (homeKey) => loadNetworkExit(prisma, secrets, homeKey)
+        : opts.networkExitFor,
     referenceInUse: prisma
       ? async (computer) =>
           (await runAsSystem("check whether another computer shares a provider resource", () =>

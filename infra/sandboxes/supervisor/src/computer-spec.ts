@@ -552,6 +552,9 @@ export interface ComputerCreateInput {
   publishControlPort?: boolean;
   dns?: string[];
   mounts?: ComputerMount[];
+  /** Added by features the computer was made for, such as its owner's own network. */
+  env?: string[];
+  labels?: Record<string, string>;
 }
 
 interface PointerInput {
@@ -583,12 +586,14 @@ export function containerCreateOptions(input: ComputerCreateInput) {
       "NPM_CONFIG_PREFIX=/home/rakazo/.local",
       "PIP_USER=1",
       ...(input.controlToken ? [`RAKAZO_COMPUTER_CONTROL_TOKEN=${input.controlToken}`] : []),
+      ...(input.env ?? []),
     ],
     Labels: {
       "rakazo.managed": "true",
       "rakazo.botId": input.botId,
       "rakazo.spaceId": input.spaceId,
       ...(input.mounts?.length ? { [MOUNT_SOURCES_LABEL]: mountSourcesLabel(input.mounts) } : {}),
+      ...input.labels,
     },
     ExposedPorts: ports.ExposedPorts,
     HostConfig: {
