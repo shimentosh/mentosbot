@@ -43,7 +43,9 @@ const USER_COMPUTER_UNAVAILABLE =
 
 /**
  * Whose own computer this run may reach: the person whose message started it, when they own the
- * bot. Routines, webhooks, channels, other bots and other people's messages reach no one's.
+ * bot. Routines, webhooks, channels, other bots and other people's messages reach no one's, and
+ * neither does a bot shared with teammates: they share its chat, so they could steer the run or
+ * answer its approval cards.
  */
 export function userComputerOwner(input: {
   trigger: string;
@@ -51,7 +53,9 @@ export function userComputerOwner(input: {
   messagingChannelRun: boolean;
   runUserId: string;
   botUserId: string;
+  sharedWithTeammates?: boolean;
 }): string | undefined {
+  if (input.sharedWithTeammates) return undefined;
   if (input.trigger !== "user" && input.trigger !== "follow_up") return undefined;
   if (input.sourceRole !== "user" || input.messagingChannelRun) return undefined;
   return input.runUserId === input.botUserId ? input.runUserId : undefined;

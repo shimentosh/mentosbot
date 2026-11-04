@@ -467,6 +467,8 @@ export const ThreadMessageSchema = z.object({
   runId: Id.optional(),
   /** Set when the message was sent from a live voice call; groups one call's transcript. */
   callId: z.string().optional(),
+  /** A teammate who wrote it in a shared bot's chat; unset for the bot's owner. */
+  authorUserId: Id.optional(),
   createdAt: z.string(),
 });
 export type ThreadMessage = z.infer<typeof ThreadMessageSchema>;

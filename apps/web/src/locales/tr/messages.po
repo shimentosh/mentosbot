@@ -453,6 +453,11 @@ msgstr "Yaklaşık {kb} KB hafıza artık bota ulaşmıyor."
 msgid "About {label}"
 msgstr "{label} hakkında"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr "Erişim anahtarı kimliği"
@@ -1129,6 +1134,7 @@ msgid "Bot models"
 msgstr "Bot modelleri"
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "Bot ekranı"
 
@@ -1201,6 +1207,14 @@ msgstr "Arıyor…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "Çağrılar"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -1469,6 +1483,7 @@ msgstr "Temizleniyor…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "Kapat"
@@ -2160,6 +2175,7 @@ msgid "Could not load this artifact."
 msgstr "Bu çıktı yüklenemedi."
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "Bu sohbet yüklenemedi."
 
@@ -3095,6 +3111,10 @@ msgstr "Her ay"
 msgid "Every week"
 msgstr "Her hafta"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
 msgstr "Executor belirteci"
@@ -3879,6 +3899,7 @@ msgstr "Ses sağlayıcıları yükleniyor…"
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "Yükleniyor…"
@@ -4507,6 +4528,10 @@ msgstr "Henüz üye yok"
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "{peerBotName} ile henüz mesaj yok."
+
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
@@ -5364,6 +5389,10 @@ msgstr "Değişiklik tetikleyicisini kaldır"
 msgid "Remove from every space?"
 msgstr "Her alandan kaldırılsın mı?"
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Git olayını kaldır"
@@ -5752,6 +5781,10 @@ msgstr "Zamanlanmış rutinler"
 msgid "Scopes (optional)"
 msgstr "Kapsamlar (isteğe bağlı)"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr ""
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "Ekran bağlı değil"
@@ -5961,6 +5994,7 @@ msgstr "Şekil {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "Paylaş"
 
@@ -5982,6 +6016,10 @@ msgstr "Ortak"
 msgid "Shared memory"
 msgstr "Ortak hafıza"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -5994,6 +6032,14 @@ msgstr "Tümünü göster"
 #: src/pages/shell/sidebar-header.tsx
 msgid "Show bots"
 msgstr "Botları göster"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "Show list"
@@ -6280,6 +6326,11 @@ msgstr "Durdur"
 msgid "Stop computer"
 msgstr "Bilgisayarı durdur"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "Seslendirmeyi durdur"
@@ -6404,6 +6455,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Öğretme sürüyor. Yeni mesaj göndermeden önce öğretmeyi durdur."
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "Takım"
 
@@ -6451,6 +6503,10 @@ msgstr "Bot dosyayı kullanabilir ama resmi göremez."
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
 msgstr "Tarayıcı mikrofonu sürekli bırakıyor. Tekrar denemek için dikteyi yeniden başlat."
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "The connection timed out."
@@ -6527,6 +6583,10 @@ msgstr "Bu kayıtlı ayarlar okunamıyor. Kaldırıp yeniden ekle."
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "Arkadaşın {weeks} hafta ücretsiz kullanır."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

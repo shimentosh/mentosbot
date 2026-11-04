@@ -141,6 +141,10 @@ export const BotSchema = z.object({
   webhookConfigured: z.boolean(),
   /** Present when created with an idempotency key (e.g. onboarding:first). */
   spawnKey: z.string().nullable(),
+  /** Set when a teammate shared the bot with the signed-in person: it runs as its owner. */
+  share: z
+    .object({ level: z.enum(["chat", "manage"]), ownerUserId: Id, ownerName: z.string() })
+    .optional(),
   /** The bot is ringing the user right now. */
   incomingCall: z
     .object({

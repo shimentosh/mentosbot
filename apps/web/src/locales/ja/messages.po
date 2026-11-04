@@ -453,6 +453,11 @@ msgstr ""
 msgid "About {label}"
 msgstr "{label}について"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr ""
@@ -1129,6 +1134,7 @@ msgid "Bot models"
 msgstr "ボットのモデル"
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "ボットの画面"
 
@@ -1201,6 +1207,14 @@ msgstr "発信中…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "呼び出し"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -1469,6 +1483,7 @@ msgstr "クリア中…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "閉じる"
@@ -2160,6 +2175,7 @@ msgid "Could not load this artifact."
 msgstr "このアーティファクトを読み込めませんでした。"
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "このチャットを読み込めませんでした。"
 
@@ -3095,6 +3111,10 @@ msgstr "毎月"
 msgid "Every week"
 msgstr "毎週"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
 msgstr "実行トークン"
@@ -3879,6 +3899,7 @@ msgstr "音声プロバイダーを読み込み中…"
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "読み込み中…"
@@ -4507,6 +4528,10 @@ msgstr "メンバーはまだいません"
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "{peerBotName}とのメッセージはまだありません。"
+
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
@@ -5364,6 +5389,10 @@ msgstr "変更トリガーを削除"
 msgid "Remove from every space?"
 msgstr ""
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Gitイベントを削除"
@@ -5752,6 +5781,10 @@ msgstr "スケジュール済みのルーティン"
 msgid "Scopes (optional)"
 msgstr "スコープ（任意）"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr ""
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "画面が接続されていません"
@@ -5961,6 +5994,7 @@ msgstr "形 {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "共有"
 
@@ -5982,6 +6016,10 @@ msgstr "共有"
 msgid "Shared memory"
 msgstr "共有メモリ"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -5994,6 +6032,14 @@ msgstr "すべて表示"
 #: src/pages/shell/sidebar-header.tsx
 msgid "Show bots"
 msgstr "ボットを表示"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "Show list"
@@ -6280,6 +6326,11 @@ msgstr "停止"
 msgid "Stop computer"
 msgstr ""
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "読み上げを停止"
@@ -6404,6 +6455,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "ティーチング中です。新しいメッセージを送信する前にティーチングを停止してください。"
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "チーム"
 
@@ -6450,6 +6502,10 @@ msgstr "ボットはファイルを利用できますが、画像の内容は見
 
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
 msgstr ""
 
 #: src/lib/model-connection-preflight.ts
@@ -6527,6 +6583,10 @@ msgstr "保存された設定を読み取れません。削除してから再度
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "友だちは{weeks}週間無料で使えます。"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

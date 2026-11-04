@@ -453,6 +453,11 @@ msgstr "About {kb} KB of memory no longer reaches the bot."
 msgid "About {label}"
 msgstr "About {label}"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr "Access for {0}"
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr "Access key ID"
@@ -1129,6 +1134,7 @@ msgid "Bot models"
 msgstr "Bot models"
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "Bot screen"
 
@@ -1201,6 +1207,14 @@ msgstr "Calling…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "Calls"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr "Can chat"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr "Can manage"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -1469,6 +1483,7 @@ msgstr "Clearing…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "Close"
@@ -2160,6 +2175,7 @@ msgid "Could not load this artifact."
 msgstr "Could not load this artifact."
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "Could not load this chat."
 
@@ -3095,6 +3111,10 @@ msgstr "Every month"
 msgid "Every week"
 msgstr "Every week"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr "Everyone"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
 msgstr "Executor token"
@@ -3879,6 +3899,7 @@ msgstr "Loading voice providers…"
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "Loading…"
@@ -4507,6 +4528,10 @@ msgstr "No members yet"
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "No messages with {peerBotName} yet."
+
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr "No messages yet."
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
@@ -5364,6 +5389,10 @@ msgstr "Remove change trigger"
 msgid "Remove from every space?"
 msgstr "Remove from every space?"
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr "Remove from my list"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Remove Git event"
@@ -5752,6 +5781,10 @@ msgstr "Scheduled routines"
 msgid "Scopes (optional)"
 msgstr "Scopes (optional)"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr "Screen"
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "Screen not connected"
@@ -5961,6 +5994,7 @@ msgstr "Shape {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "Share"
 
@@ -5982,6 +6016,10 @@ msgstr "Shared"
 msgid "Shared memory"
 msgstr "Shared memory"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr "Shared with"
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -5994,6 +6032,14 @@ msgstr "Show all"
 #: src/pages/shell/sidebar-header.tsx
 msgid "Show bots"
 msgstr "Show bots"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr "Show bots of"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
+msgstr "Show earlier"
 
 #: src/pages/Artifacts.tsx
 msgid "Show list"
@@ -6280,6 +6326,11 @@ msgstr "Stop"
 msgid "Stop computer"
 msgstr "Stop computer"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr "Stop sharing with {0}"
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "Stop speaking"
@@ -6404,6 +6455,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Teaching in progress. Stop teaching before sending a new message."
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "Team"
 
@@ -6451,6 +6503,10 @@ msgstr "The bot can use the file but won't see the picture."
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
 msgstr "The browser keeps dropping the microphone. Start dictation again to retry."
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
+msgstr "The computer isn't running."
 
 #: src/lib/model-connection-preflight.ts
 msgid "The connection timed out."
@@ -6527,6 +6583,10 @@ msgstr "These saved settings can't be read. Remove it and add it again."
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "They get {weeks} weeks free."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr "They use it with your apps, memory and saved sign-ins."
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

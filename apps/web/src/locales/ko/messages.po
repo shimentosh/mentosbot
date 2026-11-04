@@ -453,6 +453,11 @@ msgstr ""
 msgid "About {label}"
 msgstr "{label} 정보"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr ""
@@ -1129,6 +1134,7 @@ msgid "Bot models"
 msgstr ""
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "Bot 화면"
 
@@ -1201,6 +1207,14 @@ msgstr ""
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "호출"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -1469,6 +1483,7 @@ msgstr "비우는 중…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "닫기"
@@ -2160,6 +2175,7 @@ msgid "Could not load this artifact."
 msgstr ""
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "이 채팅을 불러오지 못했습니다."
 
@@ -3095,6 +3111,10 @@ msgstr "매월"
 msgid "Every week"
 msgstr "매주"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
 msgstr "Executor 토큰"
@@ -3879,6 +3899,7 @@ msgstr "음성 서비스를 불러오는 중…"
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "불러오는 중…"
@@ -4507,6 +4528,10 @@ msgstr ""
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "{peerBotName}와의 메시지가 아직 없습니다."
+
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
@@ -5364,6 +5389,10 @@ msgstr "변경 트리거 제거"
 msgid "Remove from every space?"
 msgstr ""
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr ""
@@ -5752,6 +5781,10 @@ msgstr ""
 msgid "Scopes (optional)"
 msgstr "범위 (선택 사항)"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr ""
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "화면이 연결되지 않음"
@@ -5961,6 +5994,7 @@ msgstr ""
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "공유"
 
@@ -5982,6 +6016,10 @@ msgstr "함께 사용"
 msgid "Shared memory"
 msgstr "공유 기억"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -5993,6 +6031,14 @@ msgstr ""
 
 #: src/pages/shell/sidebar-header.tsx
 msgid "Show bots"
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
 msgstr ""
 
 #: src/pages/Artifacts.tsx
@@ -6280,6 +6326,11 @@ msgstr "중지"
 msgid "Stop computer"
 msgstr ""
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "읽기 중지"
@@ -6404,6 +6455,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "작업을 가르치는 중입니다. 새 메시지를 보내려면 먼저 가르치기를 종료하세요."
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "팀 공용"
 
@@ -6450,6 +6502,10 @@ msgstr "Bot은 파일을 사용할 수 있지만 이미지는 볼 수 없습니�
 
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
 msgstr ""
 
 #: src/lib/model-connection-preflight.ts
@@ -6527,6 +6583,10 @@ msgstr ""
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "친구는 {weeks}주 동안 무료로 사용해요."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

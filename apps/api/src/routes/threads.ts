@@ -237,7 +237,9 @@ export function threadsRoutes(ctx: RouterContext) {
           void follow.return(undefined).catch(() => {});
         }
       }),
-      send: authed.threads.send.handler(({ context, input }) => send(context.actor, input)),
+      send: authed.threads.send.handler(({ context, input }) =>
+        send(context.actor, { ...input, authorUserId: context.sharedBy?.userId }),
+      ),
       sendWithRoutines: authed.threads.sendWithRoutines.handler(async ({ context, input }) => {
         const { actor } = context;
         // The same checks as routines/testRun, all before anything is written.

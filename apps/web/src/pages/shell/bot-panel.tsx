@@ -50,6 +50,7 @@ import { lazyComponent } from "../../lib/preload-recovery";
 import { useSpaceQueries } from "../../lib/query";
 import { errorText } from "../../lib/user-error";
 import { AvatarStudioPopover } from "./avatar-studio-popover";
+import { BotShareSection } from "./bot-share-section";
 import { ChatModelPicker } from "./chat-model-picker";
 
 const ScratchpadSection = lazyComponent(() =>
@@ -603,6 +604,7 @@ export function BotSettings({
               />
             </div>
           </section>
+          <BotShareSection bot={bot} />
           <ErrorBoundary fallback={<SectionLoadFailed />}>
             <Suspense fallback={null}>
               <ScratchpadSection botId={bot.id} />

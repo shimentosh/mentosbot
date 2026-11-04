@@ -24,6 +24,7 @@ model AiDataConsent {
 model User {
   aiDataConsents AiDataConsent[]
   pages          Page[]
+  botAccess      BotAccess[]
   id                          String                       @id
   name                        String
   email                       String
@@ -770,6 +771,7 @@ model Bot {
   dailyCheckIns Boolean @default(true)
   fleetManagement        Boolean @default(true)
   routines          Routine[]
+  access            BotAccess[]
   scratchpadItems   ScratchpadItem[]
   taughtSkills      TaughtSkill[]
   memoryDocuments   MemoryDocument[]
@@ -913,6 +915,8 @@ model Message {
   replies          Message[] @relation("MessageReplies")
   runId            String?
   clientNonce      String?
+  /// Who wrote a person's message when it was not the bot's owner: a teammate it is shared with.
+  authorUserId     String?
   /// Blind-index search tokens for the encrypted blocks; NULL until the row is encrypted.
   searchTokens     Int[]
   sourceRuns            Run[]             @relation("RunSourceMessage")
@@ -1677,6 +1681,23 @@ model UsageRecord {
 
   @@index([spaceId, userId, createdAt])
   @@map("usage_records")
+}
+
+/// A teammate a bot is shared with. The bot still runs as its owner, with the owner's apps,
+/// memory and credentials; "chat" lets the teammate use it, "manage" also lets them change it.
+model BotAccess {
+  id              String   @id @default(cuid())
+  botId           String
+  bot             Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level           String
+  grantedByUserId String
+  createdAt       DateTime @default(now())
+
+  @@unique([botId, userId])
+  @@index([userId])
+  @@map("bot_access")
 }
 
 model NotificationPreference {
