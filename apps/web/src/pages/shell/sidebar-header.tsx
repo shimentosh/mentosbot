@@ -1,12 +1,14 @@
 import { useLingui } from "@lingui/react/macro";
 import type { Bot } from "@rakazo/contracts";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@rakazo/ui-web";
-import { Bell, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
+import { History, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import { IconTooltip } from "../../components/IconTooltip";
 import { desktopBridge } from "../../lib/desktop";
 import type { Panel } from "../../lib/right-panel-state";
+import { selectedSpaceId } from "../../lib/rpc";
 import { WindowChrome } from "../WindowChrome";
 import { BotCreatePicker } from "./bot-picker";
+import { NotificationBell } from "./notification-bell";
 
 export function SidebarHeader({
   mini = false,
@@ -23,6 +25,7 @@ export function SidebarHeader({
   navigate,
   setNewSpaceOpen,
   setCreateBotOpen,
+  openSpaceChat,
 }: {
   mini?: boolean;
   createMenuOpen: boolean;
@@ -38,6 +41,7 @@ export function SidebarHeader({
   navigate: (path: string) => void;
   setNewSpaceOpen: (open: boolean) => void;
   setCreateBotOpen: (open: boolean) => void;
+  openSpaceChat: (spaceId: string, path: string) => void;
 }) {
   const { t } = useLingui();
   const hasWindowChrome = Boolean(desktopBridge());
@@ -63,6 +67,17 @@ export function SidebarHeader({
             </Button>
           </IconTooltip>
         ) : null}
+        <NotificationBell
+          bots={bots}
+          onOpenChat={(spaceId, path) => {
+            setMobileSidebarOpen(false);
+            if (spaceId === selectedSpaceId()) navigate(path);
+            else openSpaceChat(spaceId, path);
+          }}
+          onShowActivity={() => {
+            if (!activityMode) toggleActivityMode();
+          }}
+        />
         <IconTooltip label={t`Activity`}>
           <Button
             variant="ghost"
@@ -73,13 +88,7 @@ export function SidebarHeader({
             onClick={toggleActivityMode}
             className={`app-no-drag ${activityMode ? "bg-accent text-foreground" : "text-muted-foreground"}`}
           >
-            {/* A filled bell marks Activity on, so on and hovered never look alike. */}
-            <Bell
-              size={15}
-              strokeWidth={1.8}
-              fill={activityMode ? "currentColor" : "none"}
-              aria-hidden="true"
-            />
+            <History size={15} strokeWidth={activityMode ? 2.4 : 1.8} aria-hidden="true" />
           </Button>
         </IconTooltip>
         <IconTooltip label={toggleLabel}>

@@ -742,6 +742,7 @@ async function showApprovalCard(ctx: RunContext, call: ToolCall, card: ApprovalC
   }
   await notifyRun(deps, run, {
     kind: "help",
+    need: "approval",
     title: `${displayName(bot.name, "Bot")} needs approval`,
     body: `Review before ${name}`,
     botId: bot.id,

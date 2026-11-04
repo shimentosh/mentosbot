@@ -174,6 +174,14 @@ msgstr "{count, plural, one {{peer} के साथ # संदेश} other {{
 msgid "{count, plural, one {# row} other {# rows}}"
 msgstr "{count, plural, one {# पंक्ति} other {# पंक्तियाँ}}"
 
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Failed # time} other {Failed # times}}"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Finished # task} other {Finished # tasks}}"
+msgstr ""
+
 #: src/lib/billing.ts
 msgid "{count} days"
 msgstr ""
@@ -682,6 +690,10 @@ msgstr ""
 #: src/components/ModelCredits.tsx
 msgid "All {credit} goes to model usage."
 msgstr "पूरे {credit} मॉडल उपयोग में जाते हैं।"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "All activity"
+msgstr ""
 
 #: src/components/integrations/agent-access.tsx
 #: src/pages/Artifacts.tsx
@@ -3150,6 +3162,7 @@ msgstr "असफल"
 
 #: src/components/SubagentCard.tsx
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Failed"
 msgstr "विफल"
 
@@ -3238,6 +3251,10 @@ msgstr "सब्सक्रिप्शन साइन-इन पूरा �
 #: src/components/CloudAgentCard.tsx
 msgid "finished"
 msgstr "पूर्ण"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Finished"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -3376,6 +3393,10 @@ msgstr "पहले कॉल समाप्त करें, फिर स्
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "कॉल समाप्त करें, फिर स्क्रीन पर कोड डालें।"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Has a question"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -4272,7 +4293,16 @@ msgstr "नियंत्रण लेना ज़रूरी"
 #: src/lib/roster-status.ts
 #: src/pages/shell/computer-overlay.tsx
 #: src/pages/shell/message-view.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Needs you"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs you on the screen"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs your approval"
 msgstr ""
 
 #: src/pages/shell/import-status.ts
@@ -4551,8 +4581,17 @@ msgid "Nothing remembered yet"
 msgstr "अभी तक कुछ याद नहीं किया गया"
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Notifications"
 msgstr "सूचनाएं"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, {needs} need you"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, new"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Number"
@@ -5105,6 +5144,7 @@ msgid "Received"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Recent"
 msgstr "हाल के"
 
@@ -7192,6 +7232,10 @@ msgstr "जब वे नए कार्ड से अपना ट्राय
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "नियंत्रण आपके पास है"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "You're all caught up"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

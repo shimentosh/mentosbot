@@ -178,6 +178,34 @@ export const ChatAlertSchema = z.object({
 });
 export type ChatAlert = z.infer<typeof ChatAlertSchema>;
 
+/** One line in the bell: what a bot asked for, finished or failed, and where it happened. */
+export const InboxEntrySchema = z.object({
+  id: z.string(),
+  kind: z.enum(["approval", "answer", "takeover", "completion", "failure"]),
+  spaceId: Id,
+  spaceName: z.string(),
+  bot: z.object({
+    id: Id,
+    name: z.string(),
+    color: z.string(),
+    avatarSet: BotAvatarSetSchema,
+  }),
+  threadId: Id,
+  groupId: Id.nullable(),
+  at: z.string().datetime({ offset: true }),
+  read: z.boolean(),
+});
+export type InboxEntry = z.infer<typeof InboxEntrySchema>;
+export const InboxSchema = z.object({
+  /** The Space the request came from, whose entries need no Space name. */
+  spaceId: Id,
+  /** Runs waiting on the person right now; each leaves once answered. */
+  needsYou: z.array(InboxEntrySchema),
+  recent: z.array(InboxEntrySchema),
+  unread: z.number().int().nonnegative(),
+});
+export type Inbox = z.infer<typeof InboxSchema>;
+
 export const ReorderBotsInput = z.object({
   botIds: z
     .array(Id)

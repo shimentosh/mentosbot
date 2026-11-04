@@ -24,6 +24,7 @@ model AiDataConsent {
 model User {
   aiDataConsents AiDataConsent[]
   pages          Page[]
+  inboxNotifications InboxNotification[]
   id                          String                       @id
   name                        String
   email                       String
@@ -448,6 +449,7 @@ model Space {
   artifacts                   Artifact[]
   pages                       Page[]
   notificationPreferences     NotificationPreference[]
+  inboxNotifications          InboxNotification[]
   computers                   Computer[]
   computerRuns                ComputerRun[]
   externalEffects             ExternalEffect[]
@@ -770,6 +772,7 @@ model Bot {
   dailyCheckIns Boolean @default(true)
   fleetManagement        Boolean @default(true)
   routines          Routine[]
+  inboxNotifications InboxNotification[]
   scratchpadItems   ScratchpadItem[]
   taughtSkills      TaughtSkill[]
   memoryDocuments   MemoryDocument[]
@@ -869,6 +872,7 @@ model ChatGroupMember {
 model Thread {
   id                          String     @id @default(cuid())
   spaceId                     String
+  inboxNotifications          InboxNotification[]
   space                       Space      @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   botId                       String?    @unique
   bot                         Bot?       @relation(fields: [botId], references: [id], onDelete: Cascade)
@@ -1677,6 +1681,30 @@ model UsageRecord {
 
   @@index([spaceId, userId, createdAt])
   @@map("usage_records")
+}
+
+/// What a person's bell lists: a bot that finished, failed, or asked for something. Content stays
+/// in the chat; this only points at it, and whether a request is still open comes from its run.
+model InboxNotification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spaceId   String
+  space     Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  botId     String
+  bot       Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
+  threadId  String
+  thread    Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  groupId   String?
+  runId     String?
+  /// "approval", "answer", "takeover", "completion" or "failure".
+  kind      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([runId])
+  @@map("inbox_notifications")
 }
 
 model NotificationPreference {

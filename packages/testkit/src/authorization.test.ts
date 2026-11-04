@@ -268,6 +268,8 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["organizations/create", { name: "Nope" }],
       ["organizations/rename", { organizationId: "missing-organization", name: "Nope" }],
       ["organizations/remove", { organizationId: "missing-organization" }],
+      ["inbox/list"],
+      ["inbox/markRead"],
       ["bots/list"],
       ["bots/listArchived"],
       ["bots/get", { botId: "missing-bot" }],

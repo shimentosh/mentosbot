@@ -175,6 +175,14 @@ msgstr "{count, plural, other {與{peer}的 # 則訊息}}"
 msgid "{count, plural, one {# row} other {# rows}}"
 msgstr "{count, plural, one {# 列} other {# 列}}"
 
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Failed # time} other {Failed # times}}"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "{count, plural, one {Finished # task} other {Finished # tasks}}"
+msgstr ""
+
 #: src/lib/billing.ts
 msgid "{count} days"
 msgstr "{count} 天"
@@ -683,6 +691,10 @@ msgstr ""
 #: src/components/ModelCredits.tsx
 msgid "All {credit} goes to model usage."
 msgstr "全部 {credit} 都用於模型用量。"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "All activity"
+msgstr ""
 
 #: src/components/integrations/agent-access.tsx
 #: src/pages/Artifacts.tsx
@@ -3151,6 +3163,7 @@ msgstr "失敗"
 
 #: src/components/SubagentCard.tsx
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Failed"
 msgstr "失敗"
 
@@ -3239,6 +3252,10 @@ msgstr "請完成訂閱登入，然後重新測試。"
 #: src/components/CloudAgentCard.tsx
 msgid "finished"
 msgstr "已完成"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Finished"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -3377,6 +3394,10 @@ msgstr "請先結束通話，再輸入螢幕上的驗證碼。"
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "請結束通話，再輸入螢幕上的驗證碼。"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Has a question"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -4273,8 +4294,17 @@ msgstr "需要接管"
 #: src/lib/roster-status.ts
 #: src/pages/shell/computer-overlay.tsx
 #: src/pages/shell/message-view.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Needs you"
 msgstr "需要你處理"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs you on the screen"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Needs your approval"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Needs: {names}"
@@ -4552,8 +4582,17 @@ msgid "Nothing remembered yet"
 msgstr "尚無記憶"
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Notifications"
 msgstr "通知"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, {needs} need you"
+msgstr ""
+
+#: src/pages/shell/notification-bell.tsx
+msgid "Notifications, new"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Number"
@@ -5106,6 +5145,7 @@ msgid "Received"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/shell/notification-bell.tsx
 msgid "Recent"
 msgstr "最近"
 
@@ -7193,6 +7233,10 @@ msgstr "對方用新卡開始試用後，你將獲得一個月免費。"
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "你已接管"
+
+#: src/pages/shell/notification-bell.tsx
+msgid "You're all caught up"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

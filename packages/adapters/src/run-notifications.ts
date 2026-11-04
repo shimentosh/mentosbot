@@ -8,7 +8,7 @@ import {
   truncatePlainText,
 } from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
-import { countUnreadInboxChats } from "@rakazo/db";
+import { countUnreadInboxChats, recordInboxNotification, runAsTenant } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import type { ExecutorDeps } from "./executor-deps.js";
 import { notificationIdentity } from "./notification-identity.js";
@@ -64,6 +64,7 @@ export async function notifyRun(
     threadId: string;
     trigger: string;
     routineId?: string | null;
+    id?: string;
   },
   message: NotificationMessage,
   options: { retryOnFailure?: boolean } = {},
@@ -79,6 +80,7 @@ export async function notifyRun(
     getLogger().error("notification preference lookup", error);
     return null;
   });
+  await recordForBell(deps.prisma, run, message, notice);
   if (!notice?.enabled) return;
   publishChatAlert(deps.events, run, message, notice.groupId);
   if (!deps.notifications) return;
@@ -114,6 +116,37 @@ export async function notifyRun(
       if (options.retryOnFailure) throw error;
       getLogger().error("run notification", error);
     });
+}
+
+/**
+ * The bell lists every request a run makes of its person, whatever the bot's alert setting, since
+ * the run waits for it; finished and failed work only when that setting would alert. A failure to
+ * record never holds up the run or its push.
+ */
+async function recordForBell(
+  prisma: PrismaClient,
+  run: { spaceId: string; userId: string; botId: string; threadId: string; id?: string },
+  message: NotificationMessage,
+  notice: { enabled: boolean; groupId: string | null } | null,
+) {
+  const asks = message.kind === "help" || message.kind === "takeover";
+  if (!notice || (!asks && !notice.enabled)) return;
+  const kind = message.kind === "help" ? (message.need ?? "answer") : message.kind;
+  try {
+    await runAsTenant({ spaceId: run.spaceId, userId: run.userId }, () =>
+      recordInboxNotification(prisma, {
+        userId: run.userId,
+        spaceId: run.spaceId,
+        botId: message.botId,
+        threadId: message.threadId,
+        groupId: notice.groupId,
+        runId: message.runId ?? run.id ?? null,
+        kind,
+      }),
+    );
+  } catch (error) {
+    getLogger().error("bell notification record", error);
+  }
 }
 
 /** Open apps alert from the same message. Not awaited, so it never holds up the push. */
