@@ -790,7 +790,7 @@ model Bot {
 
   externalConversations ExternalConversation[]
 
-  @@unique([spaceId, spawnKey])
+  @@unique([spaceId, userId, spawnKey])
   @@index([spaceId, userId, archivedAt, pinned, updatedAt])
   @@index([sectionId])
   @@index([computerId])

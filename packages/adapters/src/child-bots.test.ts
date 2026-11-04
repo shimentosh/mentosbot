@@ -115,8 +115,9 @@ describe("spawned bot creation", () => {
 
     expect(findUnique).toHaveBeenCalledWith({
       where: {
-        spaceId_spawnKey: {
+        spaceId_userId_spawnKey: {
           spaceId: "workspace-1",
+          userId: expect.any(String),
           spawnKey: "tool-call-1",
         },
       },

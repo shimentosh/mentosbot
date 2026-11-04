@@ -20,7 +20,8 @@ team**. Inviting the same address again replaces the earlier link, and **Revoke*
 | Member | Use the organization and see who is on the team |
 
 Each person has their own bots and chats. Joining a team doesn't show anyone the bots you already
-have.
+have. An external [memory](./memory.md) provider connected to a space serves only the bots of the
+person who connected it.
 
 ## Remove someone or leave
 

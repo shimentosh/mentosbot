@@ -16,9 +16,12 @@ import {
   asSystem,
   bootstrapUserSpace,
   createDb,
+  createRepos,
+  crossSpaceCommunicationAllowed,
   IsolationError,
   installAuditEventStore,
   requireMembership,
+  runAsTenant,
 } from "@rakazo/db";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { RouterDeps } from "./router.js";
@@ -323,6 +326,40 @@ describePostgres("team membership (PostgreSQL)", () => {
         where: { organizationId: owner.spaceId, action: "team.member.removed" },
       }),
     ).resolves.toBe(1);
+  });
+
+  it("keeps teammates' bots apart in the shared Space", async () => {
+    const owner = await signup();
+    const member = await join(owner);
+    const repos = createRepos(system);
+    const first = { description: "", instructions: "", notifyOnFinish: false };
+
+    // Each person's onboarding creates their own first bot, even in a Space someone already has one in.
+    const ownerBot = await runAsTenant(owner, () =>
+      repos.createBot(owner, { ...first, name: "Owner's", spawnKey: "onboarding:first" }),
+    );
+    const memberBot = await runAsTenant(member, () =>
+      repos.createBot(member, { ...first, name: "Member's", spawnKey: "onboarding:first" }),
+    );
+    expect(memberBot.id).not.toBe(ownerBot.id);
+    await expect(
+      runAsTenant(member, () =>
+        repos.createBot(member, { ...first, name: "Again", spawnKey: "onboarding:first" }),
+      ),
+    ).resolves.toMatchObject({ id: memberBot.id });
+
+    // Sharing a Space is not sharing an owner: a bot that turned off talking to other people's
+    // bots stays off.
+    await expect(crossSpaceCommunicationAllowed(system, ownerBot.id, memberBot.id)).resolves.toBe(
+      true,
+    );
+    await system.bot.update({
+      where: { id: memberBot.id },
+      data: { crossSpaceCommunication: false },
+    });
+    await expect(crossSpaceCommunicationAllowed(system, ownerBot.id, memberBot.id)).resolves.toBe(
+      false,
+    );
   });
 
   it("lets a member leave on their own", async () => {

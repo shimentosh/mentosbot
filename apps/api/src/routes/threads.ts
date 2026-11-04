@@ -346,10 +346,12 @@ export function threadsRoutes(ctx: RouterContext) {
         });
         const [configuredMemory] = await Promise.all([
           target.kind === "bot"
-            ? deps.memoryProviders.resolve(context.actor.spaceId).catch((error) => {
-                getLogger().error("semantic memory resolution after thread clear failed", error);
-                return null;
-              })
+            ? deps.memoryProviders
+                .resolve(context.actor.spaceId, context.actor.userId)
+                .catch((error) => {
+                  getLogger().error("semantic memory resolution after thread clear failed", error);
+                  return null;
+                })
             : Promise.resolve(null),
           Promise.all(
             cancelledRunIds.map((runId) =>
