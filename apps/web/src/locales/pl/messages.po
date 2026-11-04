@@ -1134,6 +1134,7 @@ msgid "Bot models"
 msgstr "Modele botów"
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "Ekran bota"
 
@@ -5780,6 +5781,10 @@ msgstr "Zaplanowane rutyny"
 msgid "Scopes (optional)"
 msgstr "Zakresy (opcjonalnie)"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr "Ekran"
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "Ekran nie jest połączony"
@@ -6498,6 +6503,10 @@ msgstr "Bot może użyć pliku, ale nie zobaczy obrazu."
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
 msgstr "Przeglądarka ciągle traci dostęp do mikrofonu. Uruchom dyktowanie ponownie."
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
+msgstr "Komputer nie jest uruchomiony."
 
 #: src/lib/model-connection-preflight.ts
 msgid "The connection timed out."

@@ -1,19 +1,30 @@
 import type { Actor, Bot } from "@rakazo/contracts";
 import type { BotAccessLevel, createRepos, PrismaClient } from "@rakazo/db";
-import { listSharedBots, runAsSystem, runAsTenant, sharedBotOwner } from "@rakazo/db";
+import {
+  listSharedBots,
+  recordAuditEvent,
+  runAsSystem,
+  runAsTenant,
+  sharedBotOwner,
+  teamBotForOwner,
+} from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
+
+/** What a procedure needs: reading it, using it, or changing it. */
+export type BotNeed = "view" | BotAccessLevel;
 
 /**
  * The procedures a teammate may call on a bot shared with them, and the access each needs. Anything
  * missing here stays the owner's alone: archiving, deleting, exporting and sharing settings
  * outside the team routes. A shared request runs as the bot's owner, so it reaches what the bot
- * reaches; `chat` is using the bot, `manage` is changing it or its computer.
+ * reaches; `view` is reading its chat, files and screen, `chat` is using the bot, `manage` is
+ * changing it or its computer. A team's owner may view every teammate's bot.
  */
-export const SHARED_BOT_PROCEDURES: Readonly<Record<string, BotAccessLevel>> = {
-  "threads.head": "chat",
-  "threads.get": "chat",
-  "threads.messages": "chat",
-  "threads.subscribe": "chat",
+export const SHARED_BOT_PROCEDURES: Readonly<Record<string, BotNeed>> = {
+  "threads.head": "view",
+  "threads.get": "view",
+  "threads.messages": "view",
+  "threads.subscribe": "view",
   "threads.send": "chat",
   "threads.stop": "chat",
   "threads.react": "chat",
@@ -21,17 +32,19 @@ export const SHARED_BOT_PROCEDURES: Readonly<Record<string, BotAccessLevel>> = {
   "threads.followUp": "chat",
   "threads.markRead": "chat",
   "threads.markUnread": "chat",
-  "bots.get": "chat",
-  "routines.list": "chat",
-  "skills.list": "chat",
-  "memory.list": "chat",
-  "computer.status": "chat",
+  "bots.get": "view",
+  "routines.list": "view",
+  "skills.list": "view",
+  "memory.list": "view",
+  "computer.status": "view",
   "computer.boot": "chat",
-  "computer.screenUrl": "chat",
-  "computer.heartbeat": "chat",
-  "computer.files": "chat",
-  "computer.readFile": "chat",
-  "computer.downloadFile": "chat",
+  "computer.screenUrl": "view",
+  "computer.heartbeat": "view",
+  "computer.files": "view",
+  "computer.readFile": "view",
+  "computer.downloadFile": "view",
+  "artifacts.get": "view",
+  "artifacts.list": "view",
   "bots.update": "manage",
   "computer.stop": "manage",
   "computer.reset": "manage",
@@ -64,9 +77,39 @@ export async function sharedBotActor(
   if (!need || !botId) return undefined;
   // Failing closed: without an answer the request stays the caller's own, and the caller's own
   // checks refuse a bot that isn't theirs.
-  const owner = await runAsSystem("check a bot shared with a teammate", () =>
-    sharedBotOwner(prisma, { userId: actor.userId, spaceId: actor.spaceId, botId, need }),
-  ).catch((error: unknown) => {
+  const owner = await runAsSystem("check a bot shared with a teammate", async () => {
+    const shared = await sharedBotOwner(prisma, {
+      userId: actor.userId,
+      spaceId: actor.spaceId,
+      botId,
+      need,
+    });
+    if (shared || need !== "view") return shared;
+    const bot = await prisma.bot.findUnique({ where: { id: botId }, select: { userId: true } });
+    if (!bot || bot.userId === actor.userId) return null;
+    // The team's owner reads every teammate's bot, and nothing more.
+    const overseen = await teamBotForOwner(prisma, {
+      userId: actor.userId,
+      spaceId: actor.spaceId,
+      botId,
+    }).catch(() => null);
+    if (!overseen) return null;
+    const user = await prisma.user.findUnique({
+      where: { id: overseen.ownerUserId },
+      select: { email: true },
+    });
+    if (!user) return null;
+    // Watching a teammate's screen is recorded, like opening their chat.
+    if (path.join(".") === "computer.screenUrl")
+      await recordAuditEvent({
+        action: "team.bot.screen_viewed",
+        actor: { type: "user", id: actor.userId },
+        spaceId: actor.spaceId,
+        target: { type: "bot", id: overseen.id, label: overseen.name },
+        metadata: { botOwner: overseen.ownerUserId },
+      });
+    return { ownerUserId: overseen.ownerUserId, ownerEmail: user.email, level: "view" as const };
+  }).catch((error: unknown) => {
     getLogger().warn("shared bot lookup failed", { error });
     return null;
   });

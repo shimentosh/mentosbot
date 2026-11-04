@@ -16,12 +16,15 @@ import {
   Spinner,
 } from "@rakazo/ui-web";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { ChevronDown, Paperclip, XIcon } from "lucide-react";
+import { ChevronDown, Monitor, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ArtifactFileCard } from "../../components/ArtifactFileCard";
+import { embeddableScreenUrl, screenIframeSandbox } from "../../lib/computer-screen";
 import { useOrganizations } from "../../lib/organizations";
 import { queryClient, useQueryUserId } from "../../lib/query";
 import { rpc, selectedSpaceId } from "../../lib/rpc";
 import { TRANSCRIPT_CONTENT_PADDING } from "../../lib/transcript-layout";
+import { ArtifactImage } from "./message-cards";
 
 /** The members a filter can pick, in the order their bots appear. */
 export function teamMembers(bots: readonly TeamBot[]) {
@@ -145,6 +148,7 @@ function TeamBotsHeader({
 /** A teammate's bot's chat to read, newest at the bottom, older pages on request. */
 function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
   const { t } = useLingui();
+  const [watching, setWatching] = useState(false);
   const pages = useInfiniteQuery(
     {
       queryKey: ["team-bot-messages", bot.id],
@@ -173,11 +177,22 @@ function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
               {personName(bot.owner)}
             </span>
           </DialogTitle>
+          <Button
+            variant={watching ? "secondary" : "ghost"}
+            size="icon-sm"
+            aria-label={t`Screen`}
+            aria-pressed={watching}
+            onClick={() => setWatching((current) => !current)}
+          >
+            <Monitor />
+          </Button>
           <DialogClose aria-label={t`Close`} render={<Button variant="ghost" size="icon-sm" />}>
             <XIcon />
           </DialogClose>
         </div>
+        {watching ? <TeamBotScreen botId={bot.id} /> : null}
         <div
+          hidden={watching}
           className={`rk-scroll flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto py-4 ${TRANSCRIPT_CONTENT_PADDING}`}
         >
           {pages.isPending ? (
@@ -216,20 +231,73 @@ function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
   );
 }
 
+/** The bot's computer screen, to watch only: input stays with the bot and its owner. */
+function TeamBotScreen({ botId }: { botId: string }) {
+  const { t } = useLingui();
+  const status = useQuery(
+    {
+      queryKey: ["team-bot-computer", botId],
+      queryFn: () => rpc.computer.status({ botId }),
+    },
+    queryClient,
+  );
+  const running = status.data?.state === "running";
+  const screen = useQuery(
+    {
+      queryKey: ["team-bot-screen", botId],
+      queryFn: () => rpc.computer.screenUrl({ botId }),
+      enabled: running,
+    },
+    queryClient,
+  );
+  const url = embeddableScreenUrl(screen.data?.url ?? null);
+  if (status.isPending || (running && screen.isPending))
+    return (
+      <div className="grid flex-1 place-items-center">
+        <Spinner aria-label={t`Loading…`} />
+      </div>
+    );
+  if (!running || !url)
+    return (
+      <p className="m-auto text-[13px] text-muted-foreground">
+        <Trans>The computer isn't running.</Trans>
+      </p>
+    );
+  return (
+    <iframe
+      title={t`Bot screen`}
+      src={url}
+      sandbox={screenIframeSandbox(url)}
+      className="min-h-0 flex-1 border-0 bg-black"
+      style={{ pointerEvents: "none" }}
+    />
+  );
+}
+
 function ReadOnlyMessage({ message, bot }: { message: ThreadMessage; bot: TeamBot }) {
   const fromPerson = message.role === "user";
   const parts = message.blocks.flatMap((block, index) => {
     if (block.kind === "text" || block.kind === "ask")
       return block.text.trim() ? [<ChatMarkdown key={index}>{block.text}</ChatMarkdown>] : [];
-    if (block.kind === "file" || block.kind === "image")
+    if (block.kind === "image")
       return [
-        <span
+        <ArtifactImage
           key={index}
-          className="mt-1 inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-1 text-[12.5px] text-muted-foreground"
-        >
-          <Paperclip size={12} aria-hidden="true" />
-          {block.name}
-        </span>,
+          target={{ botId: bot.id }}
+          artifactId={block.artifactId}
+          name={block.name}
+        />,
+      ];
+    if (block.kind === "file")
+      return [
+        <ArtifactFileCard
+          key={index}
+          target={{ botId: bot.id }}
+          artifactId={block.artifactId}
+          name={block.name}
+          mimeType={block.mimeType}
+          size={block.size}
+        />,
       ];
     return [];
   });

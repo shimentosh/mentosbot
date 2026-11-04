@@ -619,7 +619,8 @@ export class BotShareError extends Error {
   }
 }
 
-const satisfies = (level: string, need: BotAccessLevel) => need === "chat" || level === "manage";
+const satisfies = (level: string, need: BotAccessLevel | "view") =>
+  need === "view" || need === "chat" || level === "manage";
 
 /**
  * Whether a teammate may use someone else's bot for a request, and as whom it then runs: the
@@ -628,7 +629,7 @@ const satisfies = (level: string, need: BotAccessLevel) => need === "chat" || le
  */
 export async function sharedBotOwner(
   prisma: Db,
-  input: { userId: string; spaceId: string; botId: string; need: BotAccessLevel },
+  input: { userId: string; spaceId: string; botId: string; need: BotAccessLevel | "view" },
 ): Promise<{ ownerUserId: string; ownerEmail: string; level: BotAccessLevel } | null> {
   const access = await prisma.botAccess.findUnique({
     where: { botId_userId: { botId: input.botId, userId: input.userId } },

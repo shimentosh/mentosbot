@@ -102,6 +102,12 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     // Reading only: the owner gets no composer for a teammate's bot.
     await expect(chat.getByRole("textbox")).toHaveCount(0);
     await captureScreenshot(page, testInfo, "team-bot-chat");
+    // The owner can watch the bot's screen too, and only watch it.
+    await chat.getByRole("button", { name: "Screen" }).click();
+    await expect(
+      chat.getByText("The computer isn't running.").or(chat.locator("iframe")),
+    ).toBeVisible();
+    await chat.getByRole("button", { name: "Screen" }).click();
     await page.keyboard.press("Escape");
 
     // The owner shares their own bot with the teammate, from its settings.

@@ -1134,6 +1134,7 @@ msgid "Bot models"
 msgstr ""
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "बॉट स्क्रीन"
 
@@ -5780,6 +5781,10 @@ msgstr ""
 msgid "Scopes (optional)"
 msgstr "स्कोप (वैकल्पिक)"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr ""
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "स्क्रीन कनेक्ट नहीं है"
@@ -6497,6 +6502,10 @@ msgstr "बॉट फ़ाइल का उपयोग कर सकता ह
 
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
 msgstr ""
 
 #: src/lib/model-connection-preflight.ts

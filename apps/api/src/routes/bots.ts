@@ -312,8 +312,8 @@ export function botsRoutes(ctx: RouterContext) {
           const shared = (await listBotsSharedWith(deps.prisma, repos, context.sharedBy)).find(
             (bot) => bot.id === input.botId,
           );
-          if (!shared) throw new IsolationError();
-          return shared;
+          // Otherwise the team's owner is reading it, as its own owner sees it.
+          if (shared) return shared;
         }
         const found = (await repos.listBots(context.actor)).find((bot) => bot.id === input.botId);
         if (!found) throw new IsolationError();

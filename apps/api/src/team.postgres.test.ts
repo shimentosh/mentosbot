@@ -419,8 +419,8 @@ describePostgres("team membership (PostgreSQL)", () => {
     await expect(client(grace).team.botMessages({ botId: bot.id })).rejects.toBeInstanceOf(
       IsolationError,
     );
-    // Reading is all the owner gets: the chat itself stays the bot owner's.
-    await expect(client(owner).threads.messages({ botId: bot.id })).rejects.toBeInstanceOf(
+    // Reading is all the owner gets: using the chat stays the bot owner's.
+    await expect(client(owner).threads.markRead({ botId: bot.id })).rejects.toBeInstanceOf(
       IsolationError,
     );
 
@@ -510,6 +510,36 @@ describePostgres("team membership (PostgreSQL)", () => {
         },
       }),
     ).resolves.toBe(6);
+  });
+
+  it("lets the team's owner read a teammate's bot, its files and screen, but not use it", async () => {
+    const owner = await signup();
+    const ada = await join(owner);
+    const grace = await join(owner);
+    const bot = await runAsTenant(ada, () =>
+      createRepos(prisma).createBot(ada, {
+        name: "Ada's researcher",
+        description: "",
+        instructions: "",
+        notifyOnFinish: false,
+      }),
+    );
+    await expect(client(owner).bots.get({ botId: bot.id })).resolves.toMatchObject({ id: bot.id });
+    await expect(client(owner).threads.messages({ botId: bot.id })).resolves.toMatchObject({
+      threadId: bot.threadId,
+    });
+    await expect(client(owner).artifacts.list({ botId: bot.id })).resolves.toEqual([]);
+    // Using or changing it stays with its owner.
+    await expect(
+      client(owner).bots.update({ botId: bot.id, name: "Mine now" }),
+    ).rejects.toBeInstanceOf(IsolationError);
+    await expect(client(owner).threads.markRead({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
+    // Teammates get no such view.
+    await expect(client(grace).threads.messages({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
   });
 
   it("lets a member leave on their own", async () => {
