@@ -8,7 +8,7 @@ vi.mock("../../lib/organizations", () => ({ useOrganizations: () => ({}) }));
 vi.mock("../../lib/query", () => ({ queryClient: {}, useQueryUserId: () => null }));
 vi.mock("../../lib/rpc", () => ({ rpc: {}, selectedSpaceId: () => null }));
 
-const { teamMembers } = await import("./team-bots");
+const { teamMembers } = await import("@rakazo/core");
 
 const bot = (id: string, userId: string, name: string): TeamBot => ({
   id,

@@ -1381,6 +1381,10 @@ export const JA_MESSAGES: Record<string, string> = {
   Organization: "組織",
   "Delete organization": "組織を削除",
   "Type {name} to confirm": "確認のため {name} と入力",
+  Everyone: "全員",
+  "No bots yet": "まだボットがありません",
+  "Show bots of": "表示するボットの持ち主",
+  "Show earlier": "以前のメッセージを表示",
 };
 
 export const PEER_MESSAGE_FORMS = { other: "{peer}とのメッセージ{count}件" };
