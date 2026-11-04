@@ -1348,6 +1348,10 @@ export const NL_MESSAGES: Record<string, string> = {
   Organization: "Organisatie",
   "Delete organization": "Organisatie verwijderen",
   "Type {name} to confirm": "Typ {name} om te bevestigen",
+  Everyone: "Iedereen",
+  "No bots yet": "Nog geen bots",
+  "Show bots of": "Bots tonen van",
+  "Show earlier": "Eerdere tonen",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

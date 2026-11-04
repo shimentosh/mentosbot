@@ -1,6 +1,7 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import type { TeamBot, ThreadMessage } from "@rakazo/contracts";
+import { filterTeamBots, teamMembers, teamPersonName } from "@rakazo/core";
 import {
   BotAvatar,
   Button,
@@ -26,15 +27,6 @@ import { rpc, selectedSpaceId } from "../../lib/rpc";
 import { TRANSCRIPT_CONTENT_PADDING } from "../../lib/transcript-layout";
 import { ArtifactImage } from "./message-cards";
 
-/** The members a filter can pick, in the order their bots appear. */
-export function teamMembers(bots: readonly TeamBot[]) {
-  const seen = new Map<string, TeamBot["owner"]>();
-  for (const bot of bots) if (!seen.has(bot.owner.userId)) seen.set(bot.owner.userId, bot.owner);
-  return [...seen.values()];
-}
-
-const personName = (owner: TeamBot["owner"]) => owner.name.trim() || owner.email;
-
 /**
  * For a team's owner: every teammate's bot in this Space, filterable by member. Each opens its
  * chat to read; nothing here acts as the teammate.
@@ -57,9 +49,7 @@ export function TeamBotsSection() {
   const [open, setOpen] = useState<TeamBot | null>(null);
   const members = useMemo(() => teamMembers(bots), [bots]);
   if (!overseeing || bots.length === 0) return null;
-  const shown = bots.filter(
-    (bot) => !bot.archived && (member === "all" || bot.owner.userId === member),
-  );
+  const shown = filterTeamBots(bots, member);
   return (
     <section className="px-3 pt-3" data-testid="team-bots">
       <TeamBotsHeader members={members} member={member} onMember={setMember} />
@@ -81,7 +71,7 @@ export function TeamBotsSection() {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] text-foreground">{bot.name}</span>
                 <span className="block truncate text-[11.5px] text-muted-foreground">
-                  {personName(bot.owner)}
+                  {teamPersonName(bot.owner)}
                 </span>
               </span>
             </button>
@@ -121,7 +111,7 @@ function TeamBotsHeader({
               />
             }
           >
-            <span className="truncate">{chosen ? personName(chosen) : t`Everyone`}</span>
+            <span className="truncate">{chosen ? teamPersonName(chosen) : t`Everyone`}</span>
             <ChevronDown aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -134,7 +124,7 @@ function TeamBotsHeader({
               </DropdownMenuRadioItem>
               {members.map((each) => (
                 <DropdownMenuRadioItem key={each.userId} value={each.userId}>
-                  {personName(each)}
+                  {teamPersonName(each)}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -174,7 +164,7 @@ function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
           <DialogTitle className="min-w-0 flex-1 truncate text-[14px] font-medium">
             {bot.name}
             <span className="ml-2 text-[12.5px] font-normal text-muted-foreground">
-              {personName(bot.owner)}
+              {teamPersonName(bot.owner)}
             </span>
           </DialogTitle>
           <Button
@@ -308,7 +298,7 @@ function ReadOnlyMessage({ message, bot }: { message: ThreadMessage; bot: TeamBo
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${fromPerson ? "bg-accent" : "bg-muted"}`}
       >
         <div className="mb-1 text-[12px] font-medium text-muted-foreground" dir="auto">
-          {fromPerson ? personName(bot.owner) : bot.name}
+          {fromPerson ? teamPersonName(bot.owner) : bot.name}
         </div>
         <div className="text-[14px] leading-[1.5] text-foreground/90" dir="auto">
           {parts}
