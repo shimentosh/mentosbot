@@ -15,7 +15,7 @@
     "id": "inbox",
     "title": "Inbox",
     "flow": "flows/inbox.yaml",
-    "screens": ["index", "artifacts"]
+    "screens": ["index", "artifacts", "notifications"]
   },
   {
     "id": "thread",

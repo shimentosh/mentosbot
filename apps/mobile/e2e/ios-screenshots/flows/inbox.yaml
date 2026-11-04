@@ -19,6 +19,14 @@ name: Inbox
     timeout: 3000
 - takeScreenshot: 02-activity
 - tapOn: "Activity"
+- tapOn: "Notifications"
+- extendedWaitUntil:
+    visible: ".*Needs you.*|.*Recent.*|.*You're all caught up.*"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 02b-notifications
+- back
 - openLink: "rakazo:///artifacts"
 - extendedWaitUntil:
     visible: ".*launch-notes.txt.*|.*No artifacts yet.*|.*Artifacts.*"
