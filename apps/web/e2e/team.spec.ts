@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { captureScreenshot, completeOnboarding, openUserSettings, rpc, signup } from "./helpers";
+import {
+  activeBotId,
+  captureScreenshot,
+  completeOnboarding,
+  openBotPanelTab,
+  openUserSettings,
+  rpc,
+  signup,
+} from "./helpers";
 
 type OrganizationList = {
   organizations: Array<{ id: string; role: string; memberCount: number; defaultSpaceId: string }>;
@@ -46,6 +54,7 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
   await expect(dialog).toHaveCount(0);
   await expect(members.getByText(invitee)).toBeVisible();
   await captureScreenshot(page, testInfo, "team-members");
+  await settings.getByRole("button", { name: "Close user settings" }).click();
 
   const invitation = await latestEmail(page, invitee, /invited you to/);
   const inviteUrl = firstLink(invitation);
@@ -93,6 +102,35 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     // Reading only: the owner gets no composer for a teammate's bot.
     await expect(chat.getByRole("textbox")).toHaveCount(0);
     await captureScreenshot(page, testInfo, "team-bot-chat");
+    await page.keyboard.press("Escape");
+
+    // The owner shares their own bot with the teammate, from its settings.
+    const ownerBotId = activeBotId(page);
+    await openBotPanelTab(page, "Advanced");
+    const shareSection = page.getByTestId("bot-share");
+    await shareSection.getByRole("button", { name: "Share" }).click();
+    await page.getByRole("menuitem", { name: "Team Member" }).click();
+    await expect(shareSection.getByLabel("Access for Team Member")).toHaveValue("chat");
+    await captureScreenshot(page, testInfo, "bot-share-section");
+
+    // The teammate finds it in their sidebar and talks to it; it runs as the owner's bot.
+    await teammate.goto(`/app/${ownerBotId}`);
+    await expect(teammate.getByPlaceholder(/Message/)).toBeVisible();
+    await teammate.getByPlaceholder(/Message/).fill("hello from your teammate");
+    await teammate.keyboard.press("Enter");
+    await expect(teammate.getByTestId("message-bot-bubble").last()).toBeVisible();
+    await captureScreenshot(teammate, testInfo, "shared-bot-teammate");
+
+    // The owner's chat shows who wrote it.
+    await page.reload();
+    const fromTeammate = page
+      .getByTestId("message-user-bubble")
+      .filter({ hasText: "hello from your teammate" });
+    await expect(fromTeammate).toBeVisible();
+    await expect(
+      page.getByTestId("transcript").getByText("Team Member", { exact: true }),
+    ).toBeVisible();
+    await captureScreenshot(page, testInfo, "shared-bot-owner");
   } finally {
     await context.close();
   }

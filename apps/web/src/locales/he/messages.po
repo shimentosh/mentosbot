@@ -453,6 +453,11 @@ msgstr ""
 msgid "About {label}"
 msgstr "על {label}"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr ""
@@ -1201,6 +1206,14 @@ msgstr ""
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "קריאות"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -5375,6 +5388,10 @@ msgstr ""
 msgid "Remove from every space?"
 msgstr ""
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "הסרת אירוע Git"
@@ -5972,6 +5989,7 @@ msgstr ""
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "שיתוף"
 
@@ -5992,6 +6010,10 @@ msgstr "משותף"
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "זיכרון משותף"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6299,6 +6321,11 @@ msgstr "עצירה"
 msgid "Stop computer"
 msgstr ""
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "הפסקת ההקראה"
@@ -6547,6 +6574,10 @@ msgstr "לא ניתן לקרוא את ההגדרות השמורות. יש להס
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "הם מקבלים {weeks} שבועות בחינם."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

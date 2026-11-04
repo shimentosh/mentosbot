@@ -453,6 +453,11 @@ msgstr ""
 msgid "About {label}"
 msgstr "关于{label}"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr ""
@@ -1201,6 +1206,14 @@ msgstr "正在呼叫…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "调用"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -5375,6 +5388,10 @@ msgstr "移除变化触发器"
 msgid "Remove from every space?"
 msgstr "从所有工作区移除？"
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "移除 Git 事件"
@@ -5972,6 +5989,7 @@ msgstr "形状 {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "共享"
 
@@ -5992,6 +6010,10 @@ msgstr "共享"
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "共享记忆"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6299,6 +6321,11 @@ msgstr "停止"
 msgid "Stop computer"
 msgstr "停止电脑"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "停止朗读"
@@ -6547,6 +6574,10 @@ msgstr "这些已保存的设置读不出来。请移除后再添加一次。"
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "对方可免费使用 {weeks} 周。"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

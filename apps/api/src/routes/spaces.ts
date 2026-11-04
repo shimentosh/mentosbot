@@ -25,6 +25,7 @@ import {
 import { otherSpaceOfBot } from "../bot-space.js";
 import type { RouterDeps } from "../router.js";
 import { listRoutinesDto } from "../routines.js";
+import { listBotsSharedWith } from "../shared-bot-access.js";
 import { deleteSpaceWithContent } from "../space-deletion.js";
 import { resolveThreadTarget, threadSnapshot } from "../thread-target.js";
 import type { RouterContext } from "./context.js";
@@ -271,7 +272,10 @@ async function memberSpaceNavigation(
     contentBots,
     contentGroups,
   ] = await Promise.all([
-    repos.listBots(actor),
+    // A teammate's bots shared with this person sit beside their own.
+    Promise.all([repos.listBots(actor), listBotsSharedWith(deps.prisma, repos, actor)]).then(
+      ([own, shared]) => [...own, ...shared],
+    ),
     groupRepos.listGroups(actor),
     repos.listSpaceBotsForSpaces(actor, inactiveSpaceIds),
     groupRepos.listSpaceGroupsForSpaces(actor, inactiveSpaceIds),

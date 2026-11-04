@@ -498,6 +498,13 @@ export async function removeTeamMember(
           update: { role: "owner" },
         });
       }
+      // Bots shared with them in the team are no longer theirs to use.
+      await tx.botAccess.deleteMany({
+        where: {
+          userId: input.memberUserId,
+          bot: { space: { organizationId: input.organizationId } },
+        },
+      });
       // Space memberships go with the member row by cascade.
       await tx.member.delete({ where: { id: target.id } });
       await tx.session.updateMany({
@@ -601,4 +608,186 @@ export async function teamBotForOwner(
   });
   if (!bot?.thread) throw new IsolationError();
   return { id: bot.id, name: bot.name, ownerUserId: bot.userId, threadId: bot.thread.id };
+}
+
+export type BotAccessLevel = "chat" | "manage";
+
+export class BotShareError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BotShareError";
+  }
+}
+
+const satisfies = (level: string, need: BotAccessLevel) => need === "chat" || level === "manage";
+
+/**
+ * Whether a teammate may use someone else's bot for a request, and as whom it then runs: the
+ * bot's owner, so it keeps the owner's apps, memory and credentials. Both people must still be in
+ * the Space, and the bot not archived.
+ */
+export async function sharedBotOwner(
+  prisma: Db,
+  input: { userId: string; spaceId: string; botId: string; need: BotAccessLevel },
+): Promise<{ ownerUserId: string; ownerEmail: string; level: BotAccessLevel } | null> {
+  const access = await prisma.botAccess.findUnique({
+    where: { botId_userId: { botId: input.botId, userId: input.userId } },
+    select: {
+      level: true,
+      bot: {
+        select: {
+          userId: true,
+          spaceId: true,
+          archivedAt: true,
+          space: {
+            select: {
+              deletingAt: true,
+              memberships: {
+                where: { userId: { in: [input.userId] } },
+                select: { userId: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!access || !satisfies(access.level, input.need)) return null;
+  const { bot } = access;
+  if (bot.spaceId !== input.spaceId || bot.archivedAt || bot.space.deletingAt) return null;
+  if (bot.userId === input.userId || bot.space.memberships.length === 0) return null;
+  const ownerStillIn = await prisma.spaceMember.count({
+    where: { spaceId: bot.spaceId, userId: bot.userId },
+  });
+  if (!ownerStillIn) return null;
+  const owner = await prisma.user.findUnique({
+    where: { id: bot.userId },
+    select: { email: true },
+  });
+  if (!owner) return null;
+  return {
+    ownerUserId: bot.userId,
+    ownerEmail: owner.email,
+    level: access.level === "manage" ? "manage" : "chat",
+  };
+}
+
+async function shareableBot(prisma: Db, input: { userId: string; spaceId: string; botId: string }) {
+  const bot = await prisma.bot.findFirst({
+    where: { id: input.botId, spaceId: input.spaceId, archivedAt: null },
+    select: { id: true, name: true, userId: true },
+  });
+  if (!bot) throw new IsolationError();
+  if (bot.userId === input.userId) return bot;
+  // Someone the bot is shared with to manage may share it on, never more than they have.
+  if (!(await sharedBotOwner(prisma, { ...input, need: "manage" }))) throw new IsolationError();
+  return bot;
+}
+
+export async function listBotAccess(
+  prisma: PrismaClient,
+  input: { userId: string; spaceId: string; botId: string },
+) {
+  await shareableBot(prisma, input);
+  const rows = await prisma.botAccess.findMany({
+    where: { botId: input.botId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: { level: true, user: { select: { id: true, name: true, email: true } } },
+  });
+  return rows.map((row) => ({
+    userId: row.user.id,
+    name: row.user.name,
+    email: row.user.email,
+    level: (row.level === "manage" ? "manage" : "chat") as BotAccessLevel,
+  }));
+}
+
+export async function shareBot(
+  prisma: PrismaClient,
+  input: {
+    userId: string;
+    spaceId: string;
+    botId: string;
+    memberUserId: string;
+    level: BotAccessLevel;
+  },
+) {
+  const bot = await shareableBot(prisma, input);
+  if (input.memberUserId === bot.userId) throw new BotShareError("That person owns this bot");
+  const inSpace = await prisma.spaceMember.count({
+    where: { spaceId: input.spaceId, userId: input.memberUserId },
+  });
+  if (!inSpace) throw new BotShareError("Only people on the team can be given a bot");
+  await prisma.botAccess.upsert({
+    where: { botId_userId: { botId: bot.id, userId: input.memberUserId } },
+    create: {
+      botId: bot.id,
+      userId: input.memberUserId,
+      level: input.level,
+      grantedByUserId: input.userId,
+    },
+    update: { level: input.level, grantedByUserId: input.userId },
+  });
+  return bot;
+}
+
+export async function unshareBot(
+  prisma: PrismaClient,
+  input: { userId: string; spaceId: string; botId: string; memberUserId: string },
+) {
+  // Anyone may give back a bot shared with them.
+  if (input.memberUserId !== input.userId) await shareableBot(prisma, input);
+  const removed = await prisma.botAccess.deleteMany({
+    where: { botId: input.botId, userId: input.memberUserId, bot: { spaceId: input.spaceId } },
+  });
+  return removed.count > 0;
+}
+
+/** Bots others share with this person in a Space, for their sidebar. */
+export async function listSharedBots(
+  prisma: PrismaClient,
+  input: { userId: string; spaceId: string },
+) {
+  const rows = await prisma.botAccess.findMany({
+    where: {
+      userId: input.userId,
+      bot: {
+        spaceId: input.spaceId,
+        archivedAt: null,
+        space: { memberships: { some: { userId: input.userId } } },
+      },
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    select: {
+      level: true,
+      bot: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          avatarSet: true,
+          userId: true,
+        },
+      },
+    },
+  });
+  const owners = await prisma.user.findMany({
+    where: { id: { in: [...new Set(rows.map((row) => row.bot.userId))] } },
+    select: { id: true, name: true, email: true },
+  });
+  const ownerById = new Map(owners.map((owner) => [owner.id, owner]));
+  return rows.flatMap((row) => {
+    const owner = ownerById.get(row.bot.userId);
+    if (!owner) return [];
+    return [
+      {
+        id: row.bot.id,
+        name: row.bot.name,
+        color: row.bot.color,
+        avatarSet: row.bot.avatarSet,
+        owner: { userId: owner.id, name: owner.name, email: owner.email },
+        level: (row.level === "manage" ? "manage" : "chat") as BotAccessLevel,
+      },
+    ];
+  });
 }

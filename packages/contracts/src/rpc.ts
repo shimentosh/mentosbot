@@ -290,6 +290,16 @@ export type Team = z.infer<typeof TeamSchema>;
 
 const invitationId = z.string().min(20).max(200);
 
+export const BotAccessLevelSchema = z.enum(["chat", "manage"]);
+export type BotAccessLevel = z.infer<typeof BotAccessLevelSchema>;
+export const BotAccessEntrySchema = z.object({
+  userId: Id,
+  name: z.string(),
+  email: z.string(),
+  level: BotAccessLevelSchema,
+});
+export type BotAccessEntry = z.infer<typeof BotAccessEntrySchema>;
+
 /** A teammate's bot as the team's owner oversees it. */
 export const TeamBotSchema = z.object({
   id: Id,
@@ -485,6 +495,15 @@ export const appContract = {
     botMessages: oc
       .input(z.object({ botId: Id, before: z.number().int().nonnegative().optional() }))
       .output(ThreadMessagePageSchema),
+    /** Who a bot is shared with, for its owner or someone who manages it. */
+    botAccess: oc.input(z.object({ botId: Id })).output(z.array(BotAccessEntrySchema)),
+    shareBot: oc
+      .input(z.object({ botId: Id, userId: Id, level: BotAccessLevelSchema }))
+      .output(z.array(BotAccessEntrySchema)),
+    /** Stops sharing a bot with someone, or, for one's own id, gives it back. */
+    unshareBot: oc
+      .input(z.object({ botId: Id, userId: Id }))
+      .output(z.object({ ok: z.literal(true) })),
     /** Removes a member, or, for one's own id, leaves the team. */
     remove: oc
       .input(z.object({ organizationId: Id, userId: Id }))

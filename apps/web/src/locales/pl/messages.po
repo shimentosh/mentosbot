@@ -453,6 +453,11 @@ msgstr "Około {kb} KB pamięci nie dociera już do bota."
 msgid "About {label}"
 msgstr "O {label}"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr "Dostęp dla: {0}"
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr "Identyfikator klucza dostępu"
@@ -1201,6 +1206,14 @@ msgstr "Dzwonienie…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "Połączenia"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr "Może rozmawiać"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr "Może zarządzać"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -5375,6 +5388,10 @@ msgstr "Usuń wyzwalacz zmiany"
 msgid "Remove from every space?"
 msgstr "Usunąć ze wszystkich przestrzeni?"
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr "Usuń z mojej listy"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Usuń zdarzenie Git"
@@ -5972,6 +5989,7 @@ msgstr "Kształt {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "Udostępnij"
 
@@ -5992,6 +6010,10 @@ msgstr "Udostępnione"
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "Wspólna pamięć"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr "Udostępniono"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6299,6 +6321,11 @@ msgstr "Zatrzymaj"
 msgid "Stop computer"
 msgstr "Zatrzymaj komputer"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr "Przestań udostępniać: {0}"
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "Zatrzymaj odczytywanie"
@@ -6547,6 +6574,10 @@ msgstr "Nie można odczytać zapisanych ustawień. Usuń ten element i dodaj go 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "Otrzymają {weeks} tyg. za darmo."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr "Korzystają z niego z Twoimi aplikacjami, pamięcią i zapisanymi logowaniami."
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx

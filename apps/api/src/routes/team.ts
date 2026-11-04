@@ -4,10 +4,12 @@ import { emailLocale, teamInviteEmail } from "@rakazo/auth";
 import {
   AlreadyTeamMemberError,
   acceptTeamInvitation,
+  BotShareError,
   InvalidInvitationEmailError,
   InvitationLimitError,
   InvitationUnavailableError,
   inviteToTeam,
+  listBotAccess,
   listDepartingMemberBots,
   listTeam,
   listTeamBots,
@@ -18,8 +20,10 @@ import {
   runAsSystem,
   runAsTenant,
   setTeamMemberRole,
+  shareBot,
   TeamPermissionError,
   teamBotForOwner,
+  unshareBot,
 } from "@rakazo/db";
 import { loadMessagePage } from "../thread-message-pages.js";
 import type { RouterContext } from "./context.js";
@@ -205,6 +209,60 @@ export function teamRoutes(ctx: RouterContext) {
         // The Space is the owner's own, so the tenant scope already reads its chats.
         return loadMessagePage(deps.prisma, bot.threadId, input.before, THREAD_MESSAGE_PAGE_SIZE);
       }),
+      botAccess: authed.team.botAccess.handler(({ context, input }) =>
+        runAsSystem("list who a bot is shared with", () =>
+          listBotAccess(deps.prisma, {
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            botId: input.botId,
+          }),
+        ),
+      ),
+      shareBot: authed.team.shareBot.handler(({ context, input }) =>
+        runAsSystem("share a bot with a teammate", async () => {
+          const scope = { userId: context.actor.userId, spaceId: context.actor.spaceId };
+          let bot: Awaited<ReturnType<typeof shareBot>>;
+          try {
+            bot = await shareBot(deps.prisma, {
+              ...scope,
+              botId: input.botId,
+              memberUserId: input.userId,
+              level: input.level,
+            });
+          } catch (error) {
+            if (error instanceof BotShareError)
+              throw new ORPCError("BAD_REQUEST", { message: error.message });
+            throw error;
+          }
+          await recordAuditEvent({
+            action: "team.bot.shared",
+            actor: { type: "user", id: context.actor.userId },
+            spaceId: context.actor.spaceId,
+            target: { type: "bot", id: bot.id, label: bot.name },
+            metadata: { with: input.userId, level: input.level },
+          });
+          return listBotAccess(deps.prisma, { ...scope, botId: input.botId });
+        }),
+      ),
+      unshareBot: authed.team.unshareBot.handler(({ context, input }) =>
+        runAsSystem("stop sharing a bot with a teammate", async () => {
+          const removed = await unshareBot(deps.prisma, {
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            botId: input.botId,
+            memberUserId: input.userId,
+          });
+          if (removed)
+            await recordAuditEvent({
+              action: "team.bot.unshared",
+              actor: { type: "user", id: context.actor.userId },
+              spaceId: context.actor.spaceId,
+              target: { type: "bot", id: input.botId },
+              metadata: { with: input.userId },
+            });
+          return { ok: true as const };
+        }),
+      ),
       remove: authed.team.remove.handler(({ context, input }) =>
         runAsSystem("remove a team member", async () => {
           const target = {

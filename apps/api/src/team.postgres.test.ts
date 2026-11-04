@@ -433,6 +433,85 @@ describePostgres("team membership (PostgreSQL)", () => {
     });
   });
 
+  it("shares a bot with chosen teammates, at the access it was given and no further", async () => {
+    const owner = await signup();
+    const ada = await join(owner);
+    const grace = await join(owner);
+    const bot = await runAsTenant(owner, () =>
+      createRepos(prisma).createBot(owner, {
+        name: "Shared helper",
+        description: "",
+        instructions: "",
+        notifyOnFinish: false,
+      }),
+    );
+    const listedFor = async (actor: Actor) =>
+      (await client(actor).bots.list()).filter((each) => each.id === bot.id);
+
+    // Not shared: invisible and unreadable.
+    await expect(listedFor(ada)).resolves.toEqual([]);
+    await expect(client(ada).threads.messages({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
+
+    await expect(
+      client(owner).team.shareBot({ botId: bot.id, userId: ada.userId, level: "chat" }),
+    ).resolves.toEqual([expect.objectContaining({ userId: ada.userId, level: "chat" })]);
+    await expect(listedFor(ada)).resolves.toEqual([
+      expect.objectContaining({
+        id: bot.id,
+        share: { level: "chat", ownerUserId: owner.userId, ownerName: expect.any(String) },
+      }),
+    ]);
+    await expect(client(ada).bots.get({ botId: bot.id })).resolves.toMatchObject({
+      share: { level: "chat" },
+    });
+    await expect(client(ada).threads.messages({ botId: bot.id })).resolves.toMatchObject({
+      threadId: bot.threadId,
+    });
+    // Using it is not managing it: no sharing it on, and others still see nothing.
+    await expect(
+      client(ada).team.shareBot({ botId: bot.id, userId: grace.userId, level: "chat" }),
+    ).rejects.toBeInstanceOf(IsolationError);
+    await expect(client(ada).team.botAccess({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
+    await expect(listedFor(grace)).resolves.toEqual([]);
+
+    // Managing it lets them share it on.
+    await client(owner).team.shareBot({ botId: bot.id, userId: ada.userId, level: "manage" });
+    await client(ada).team.shareBot({ botId: bot.id, userId: grace.userId, level: "chat" });
+    await expect(listedFor(grace)).resolves.toHaveLength(1);
+
+    // Only teammates, and never the owner, can be given it.
+    const outsider = await signup();
+    await expect(
+      client(owner).team.shareBot({ botId: bot.id, userId: outsider.userId, level: "chat" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      client(ada).team.shareBot({ botId: bot.id, userId: owner.userId, level: "chat" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+    // Giving it back, taking it away, and leaving the team all end access.
+    await client(grace).team.unshareBot({ botId: bot.id, userId: grace.userId });
+    await expect(listedFor(grace)).resolves.toEqual([]);
+    await client(owner).team.unshareBot({ botId: bot.id, userId: ada.userId });
+    await expect(client(ada).threads.messages({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
+    await client(owner).team.shareBot({ botId: bot.id, userId: ada.userId, level: "chat" });
+    await client(owner).team.remove({ organizationId: owner.spaceId, userId: ada.userId });
+    await expect(system.botAccess.count({ where: { userId: ada.userId } })).resolves.toBe(0);
+    await expect(
+      system.auditEvent.count({
+        where: {
+          organizationId: owner.spaceId,
+          action: { in: ["team.bot.shared", "team.bot.unshared"] },
+        },
+      }),
+    ).resolves.toBe(6);
+  });
+
   it("lets a member leave on their own", async () => {
     const owner = await signup();
     const member = await join(owner);

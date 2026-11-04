@@ -1291,7 +1291,13 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           (run.trigger === "user" || run.trigger === "follow_up") && run.sourceMessageId
             ? await deps.prisma.message.findUnique({
                 where: { id: run.sourceMessageId },
-                select: { clientNonce: true, role: true, blocks: true, threadId: true },
+                select: {
+                  clientNonce: true,
+                  role: true,
+                  blocks: true,
+                  threadId: true,
+                  authorUserId: true,
+                },
               })
             : null;
         // Calls carry no schema flag: the sending client encodes them in the clientNonce.
@@ -1310,13 +1316,21 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
         const pageBrowserAllowed =
           graphical && browser.describe().capabilities.page && !heldForTakeover;
         const disabledBuiltinTools = disabledBuiltinToolSet(bot.disabledBuiltinTools);
-        const userComputerOwnerId = userComputerOwner({
+        const ownComputerOwnerId = userComputerOwner({
           trigger: run.trigger,
           sourceRole: sourceMessage?.role,
           messagingChannelRun: nonOwnerChatRun,
           runUserId: run.userId,
           botUserId: bot.userId,
+          sharedWithTeammates: Boolean(sourceMessage?.authorUserId),
         });
+        // Asked only when the run could reach the owner's own computer at all.
+        const userComputerOwnerId =
+          ownComputerOwnerId &&
+          deps.userDevices &&
+          (await deps.prisma.botAccess.count({ where: { botId: bot.id } })) > 0
+            ? undefined
+            : ownComputerOwnerId;
         let userComputer: UserComputerState;
         let userComputerScreen = false;
         if (

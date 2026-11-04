@@ -26,6 +26,15 @@ spaces to a team, so nothing in it is out of the owner's sight. Joining a team d
 the bots you already have elsewhere. An external [memory](./memory.md) provider connected to a space serves only the bots of the
 person who connected it.
 
+## Share a bot
+
+Open a bot's settings and, under **Advanced**, choose **Share** next to **Shared with**, then a
+teammate. **Can chat** lets them talk to the bot and see its chat, files and screen; **Can manage**
+also lets them change its settings, take control of its computer and share it on. The bot still runs
+as yours, with your connected apps, memory and saved sign-ins, and its chat shows who wrote each
+message. A bot you share never uses your own computer from the desktop app. Choose **×** to stop
+sharing; someone can also remove a shared bot from their list.
+
 ## Remove someone or leave
 
 Choose the menu next to a person, then **Remove**. Their bots in the team are archived, which stops

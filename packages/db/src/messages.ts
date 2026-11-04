@@ -66,6 +66,8 @@ export interface CreateThreadMessageInput {
   replyQuote?: string;
   runId?: string;
   clientNonce?: string;
+  /** A teammate's message in a shared bot's chat; unset for the bot's owner. */
+  authorUserId?: string;
   markUnread?: boolean;
   /** Terminal echo after the run is already cancelled. Every other write stays rejected. */
   allowCancelledRun?: boolean;
@@ -108,6 +110,7 @@ export async function createThreadMessageInTransaction(
       replyQuote: input.replyQuote,
       runId: input.runId,
       clientNonce: input.clientNonce,
+      authorUserId: input.authorUserId,
     },
   });
 }

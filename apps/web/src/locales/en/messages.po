@@ -453,6 +453,11 @@ msgstr "About {kb} KB of memory no longer reaches the bot."
 msgid "About {label}"
 msgstr "About {label}"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr "Access for {0}"
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr "Access key ID"
@@ -1201,6 +1206,14 @@ msgstr "Calling…"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Calls"
 msgstr "Calls"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr "Can chat"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr "Can manage"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
@@ -5375,6 +5388,10 @@ msgstr "Remove change trigger"
 msgid "Remove from every space?"
 msgstr "Remove from every space?"
 
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
+msgstr "Remove from my list"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
 msgstr "Remove Git event"
@@ -5972,6 +5989,7 @@ msgstr "Shape {0}"
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "Share"
 
@@ -5992,6 +6010,10 @@ msgstr "Shared"
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "Shared memory"
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr "Shared with"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6299,6 +6321,11 @@ msgstr "Stop"
 msgid "Stop computer"
 msgstr "Stop computer"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr "Stop sharing with {0}"
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "Stop speaking"
@@ -6547,6 +6574,10 @@ msgstr "These saved settings can't be read. Remove it and add it again."
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "They get {weeks} weeks free."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr "They use it with your apps, memory and saved sign-ins."
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx
