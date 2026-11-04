@@ -508,3 +508,97 @@ export async function removeTeamMember(
     }),
   );
 }
+
+const ACTIVE = new Set(["queued", "leased", "running", "waiting_input", "waiting_takeover"]);
+
+export interface TeamBotRow {
+  id: string;
+  name: string;
+  color: string;
+  avatarSet: string;
+  owner: { userId: string; name: string; email: string };
+  status: string;
+  lastActivityAt: Date;
+  archived: boolean;
+}
+
+/** The owner's own role check for a Space they are in, or nothing for anyone else. */
+async function teamOwnerOfSpace(prisma: Db, input: { userId: string; spaceId: string }) {
+  const space = await prisma.space.findFirst({
+    where: {
+      id: input.spaceId,
+      deletingAt: null,
+      memberships: { some: { userId: input.userId } },
+      organization: { members: { some: { userId: input.userId, role: { contains: "owner" } } } },
+    },
+    select: { id: true, organizationId: true },
+  });
+  return space;
+}
+
+/**
+ * Every teammate's bots in a Space, for the team's owner to oversee. Anyone else gets an empty
+ * list rather than an error, since the sidebar asks on every Space.
+ */
+export async function listTeamBots(
+  prisma: PrismaClient,
+  input: { userId: string; spaceId: string },
+): Promise<TeamBotRow[]> {
+  const space = await teamOwnerOfSpace(prisma, input);
+  if (!space) return [];
+  const bots = await prisma.bot.findMany({
+    where: { spaceId: space.id, userId: { not: input.userId } },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    take: 500,
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      avatarSet: true,
+      archivedAt: true,
+      updatedAt: true,
+      userId: true,
+      runs: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true, createdAt: true } },
+    },
+  });
+  const owners = await prisma.user.findMany({
+    where: { id: { in: [...new Set(bots.map((bot) => bot.userId))] } },
+    select: { id: true, name: true, email: true },
+  });
+  const ownerById = new Map(owners.map((owner) => [owner.id, owner]));
+  return bots.flatMap((bot) => {
+    const owner = ownerById.get(bot.userId);
+    if (!owner) return [];
+    return [
+      {
+        id: bot.id,
+        name: bot.name,
+        color: bot.color,
+        avatarSet: bot.avatarSet,
+        owner: { userId: owner.id, name: owner.name, email: owner.email },
+        // The latest run says what the bot is doing now; a finished one leaves it idle.
+        status: ACTIVE.has(bot.runs[0]?.status ?? "") ? bot.runs[0]!.status : "idle",
+        lastActivityAt: bot.runs[0]?.createdAt ?? bot.updatedAt,
+        archived: bot.archivedAt !== null,
+      },
+    ];
+  });
+}
+
+/**
+ * A teammate's bot the team's owner may read, in a Space the owner is in. Only reading: every
+ * other path still requires the bot's own owner.
+ */
+export async function teamBotForOwner(
+  prisma: PrismaClient,
+  input: { userId: string; spaceId: string; botId: string },
+) {
+  const space = await teamOwnerOfSpace(prisma, input);
+  if (!space) throw new IsolationError();
+  const bot = await prisma.bot.findFirst({
+    where: { id: input.botId, spaceId: space.id, userId: { not: input.userId } },
+    select: { id: true, name: true, userId: true, thread: { select: { id: true } } },
+  });
+  if (!bot?.thread) throw new IsolationError();
+  return { id: bot.id, name: bot.name, ownerUserId: bot.userId, threadId: bot.thread.id };
+}

@@ -281,6 +281,8 @@ describeWithDatabase("API authorization and resource isolation", () => {
         { organizationId: "missing-organization", userId: "missing-user", role: "admin" },
       ],
       ["team/remove", { organizationId: "missing-organization", userId: "missing-user" }],
+      ["team/bots"],
+      ["team/botMessages", { botId: "missing-bot" }],
       ["bots/list"],
       ["bots/listArchived"],
       ["bots/get", { botId: "missing-bot" }],

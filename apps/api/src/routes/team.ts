@@ -10,6 +10,7 @@ import {
   inviteToTeam,
   listDepartingMemberBots,
   listTeam,
+  listTeamBots,
   previewTeamInvitation,
   recordAuditEvent,
   removeTeamMember,
@@ -18,9 +19,11 @@ import {
   runAsTenant,
   setTeamMemberRole,
   TeamPermissionError,
+  teamBotForOwner,
 } from "@rakazo/db";
+import { loadMessagePage } from "../thread-message-pages.js";
 import type { RouterContext } from "./context.js";
-import { computerContext } from "./shared.js";
+import { computerContext, THREAD_MESSAGE_PAGE_SIZE } from "./shared.js";
 
 export function teamRoutes(ctx: RouterContext) {
   const { deps, authed } = ctx;
@@ -168,6 +171,40 @@ export function teamRoutes(ctx: RouterContext) {
           return { ok: true as const };
         }),
       ),
+      bots: authed.team.bots.handler(({ context }) =>
+        runAsSystem("list teammates' bots for the team's owner", async () =>
+          (
+            await listTeamBots(deps.prisma, {
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+            })
+          ).map((bot) => ({
+            ...bot,
+            avatarSet: bot.avatarSet === "rakazo" ? ("rakazo" as const) : ("organic" as const),
+            lastActivityAt: bot.lastActivityAt.toISOString(),
+          })),
+        ),
+      ),
+      botMessages: authed.team.botMessages.handler(async ({ context, input }) => {
+        const bot = await runAsSystem("check the team's owner may read a teammate's bot", () =>
+          teamBotForOwner(deps.prisma, {
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            botId: input.botId,
+          }),
+        );
+        // Opening the chat is recorded, so overseeing a teammate's work is never silent.
+        if (input.before === undefined)
+          await recordAuditEvent({
+            action: "team.bot.viewed",
+            actor: { type: "user", id: context.actor.userId },
+            spaceId: context.actor.spaceId,
+            target: { type: "bot", id: bot.id, label: bot.name },
+            metadata: { botOwner: bot.ownerUserId },
+          });
+        // The Space is the owner's own, so the tenant scope already reads its chats.
+        return loadMessagePage(deps.prisma, bot.threadId, input.before, THREAD_MESSAGE_PAGE_SIZE);
+      }),
       remove: authed.team.remove.handler(({ context, input }) =>
         runAsSystem("remove a team member", async () => {
           const target = {

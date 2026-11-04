@@ -59,6 +59,13 @@ export class CannotRenameSpaceAsNonOwnerError extends Error {
   }
 }
 
+export class SpaceCreationNotAllowedError extends Error {
+  constructor() {
+    super("Only the team's owner can add spaces");
+    this.name = "SpaceCreationNotAllowedError";
+  }
+}
+
 export class SpaceDeletionInProgressError extends Error {
   constructor() {
     super("Space deletion is already in progress");
@@ -158,6 +165,19 @@ export async function createSpaceForMember(
           select: { organizationId: true },
         });
         if (!currentMembership) throw new IsolationError();
+        // Everything a team does is in Spaces its owner can see, so only the owner adds them;
+        // members keep their own work in their own organization.
+        const member = await tx.member.findUnique({
+          where: {
+            organizationId_userId: {
+              organizationId: currentMembership.organizationId,
+              userId: input.userId,
+            },
+          },
+          select: { role: true },
+        });
+        if (!member?.role.split(",").some((role) => role.trim() === "owner"))
+          throw new SpaceCreationNotAllowedError();
         await lockOrganizationSpaces(tx, currentMembership.organizationId);
         const deleting = await tx.space.count({
           where: {

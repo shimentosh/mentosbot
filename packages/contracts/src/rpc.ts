@@ -290,6 +290,19 @@ export type Team = z.infer<typeof TeamSchema>;
 
 const invitationId = z.string().min(20).max(200);
 
+/** A teammate's bot as the team's owner oversees it. */
+export const TeamBotSchema = z.object({
+  id: Id,
+  name: z.string(),
+  color: z.string(),
+  avatarSet: BotAvatarSetSchema,
+  owner: z.object({ userId: Id, name: z.string(), email: z.string() }),
+  status: z.string(),
+  lastActivityAt: IsoDate,
+  archived: z.boolean(),
+});
+export type TeamBot = z.infer<typeof TeamBotSchema>;
+
 /** Every organization the signed-in user belongs to, and which one the current Space belongs to. */
 export const OrganizationListSchema = z.object({
   activeOrganizationId: Id,
@@ -466,6 +479,12 @@ export const appContract = {
     setRole: oc
       .input(z.object({ organizationId: Id, userId: Id, role: InvitableTeamRoleSchema }))
       .output(z.object({ ok: z.literal(true) })),
+    /** Teammates' bots in the current Space, for its team's owner; empty for anyone else. */
+    bots: oc.output(z.array(TeamBotSchema)),
+    /** A page of a teammate's bot's chat, read only, for the team's owner. */
+    botMessages: oc
+      .input(z.object({ botId: Id, before: z.number().int().nonnegative().optional() }))
+      .output(ThreadMessagePageSchema),
     /** Removes a member, or, for one's own id, leaves the team. */
     remove: oc
       .input(z.object({ organizationId: Id, userId: Id }))

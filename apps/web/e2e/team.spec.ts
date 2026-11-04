@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { captureScreenshot, completeOnboarding, openUserSettings, rpc, signup } from "./helpers";
 
 type OrganizationList = {
-  organizations: Array<{ id: string; role: string; memberCount: number }>;
+  organizations: Array<{ id: string; role: string; memberCount: number; defaultSpaceId: string }>;
 };
 
 type SentEmail = { to: string; subject: string; text: string; html: string };
@@ -70,9 +70,29 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     await teammate.waitForURL(/\/app/);
 
     const { organizations } = await rpc<OrganizationList>(teammate, "organizations/list", {});
-    expect(organizations.find((organization) => organization.role === "member")).toMatchObject({
-      memberCount: 2,
+    const team = organizations.find((organization) => organization.role === "member")!;
+    expect(team).toMatchObject({ memberCount: 2 });
+
+    // A bot the teammate makes in the team shows up for the owner, to read.
+    const created = await teammate.request.post("/rpc/bots/create", {
+      data: {
+        json: { name: "Research helper", description: "", instructions: "", notifyOnFinish: false },
+      },
+      headers: { "x-rakazo-space-id": team.defaultSpaceId },
     });
+    expect(created.ok()).toBe(true);
+    await page.reload();
+    const teamBots = page.getByTestId("team-bots");
+    const helper = teamBots.getByRole("button", { name: /Research helper/ });
+    await expect(helper).toBeVisible();
+    await expect(helper).toContainText("Team Member");
+    await captureScreenshot(page, testInfo, "team-bots-sidebar");
+    await helper.click();
+    const chat = page.getByTestId("team-bot-chat");
+    await expect(chat.getByRole("heading", { name: /Research helper/ })).toBeVisible();
+    // Reading only: the owner gets no composer for a teammate's bot.
+    await expect(chat.getByRole("textbox")).toHaveCount(0);
+    await captureScreenshot(page, testInfo, "team-bot-chat");
   } finally {
     await context.close();
   }

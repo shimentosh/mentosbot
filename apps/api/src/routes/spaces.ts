@@ -15,6 +15,7 @@ import {
   runAsSystem,
   runAsTenant,
   SPACE_DELETION_CLAIM_TIMEOUT_MS,
+  SpaceCreationNotAllowedError,
   SpaceDeletionInProgressError,
   SpaceLimitError,
   SpaceNotFoundError,
@@ -78,6 +79,9 @@ export function spacesRoutes(ctx: RouterContext) {
             }
             if (error instanceof SpaceDeletionInProgressError) {
               throw new ORPCError("CONFLICT", { message: error.message });
+            }
+            if (error instanceof SpaceCreationNotAllowedError) {
+              throw new ORPCError("FORBIDDEN", { message: error.message });
             }
             throw error;
           }

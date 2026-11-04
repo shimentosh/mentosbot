@@ -19,8 +19,11 @@ team**. Inviting the same address again replaces the earlier link, and **Revoke*
 | Admin | Invite and remove members |
 | Member | Use the organization and see who is on the team |
 
-Each person has their own bots and chats. Joining a team doesn't show anyone the bots you already
-have. An external [memory](./memory.md) provider connected to a space serves only the bots of the
+Each person has their own bots and chats, and teammates don't see each other's. The team's owner
+sees every teammate's bot under **Team** in the sidebar, can filter it by person, and can open a
+bot's chat to read it; every chat they open is recorded in the audit log. Only the owner adds
+spaces to a team, so nothing in it is out of the owner's sight. Joining a team doesn't show anyone
+the bots you already have elsewhere. An external [memory](./memory.md) provider connected to a space serves only the bots of the
 person who connected it.
 
 ## Remove someone or leave

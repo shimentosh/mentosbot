@@ -1469,6 +1469,7 @@ msgstr "Clearing…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "Close"
@@ -2160,6 +2161,7 @@ msgid "Could not load this artifact."
 msgstr "Could not load this artifact."
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "Could not load this chat."
 
@@ -3095,6 +3097,10 @@ msgstr "Every month"
 msgid "Every week"
 msgstr "Every week"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr "Everyone"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
 msgstr "Executor token"
@@ -3879,6 +3885,7 @@ msgstr "Loading voice providers…"
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "Loading…"
@@ -4507,6 +4514,10 @@ msgstr "No members yet"
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "No messages with {peerBotName} yet."
+
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr "No messages yet."
 
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
@@ -5995,6 +6006,14 @@ msgstr "Show all"
 msgid "Show bots"
 msgstr "Show bots"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr "Show bots of"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
+msgstr "Show earlier"
+
 #: src/pages/Artifacts.tsx
 msgid "Show list"
 msgstr "Show list"
@@ -6404,6 +6423,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Teaching in progress. Stop teaching before sending a new message."
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "Team"
 

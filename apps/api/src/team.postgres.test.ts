@@ -302,7 +302,22 @@ describePostgres("team membership (PostgreSQL)", () => {
   it("removing a member stops their work, keeps their bots and hands their Spaces to the owner", async () => {
     const owner = await signup();
     const member = await join(owner);
-    const side = await client(member).spaces.create({ name: "Side" });
+    // A Space a member made before only owners could add them: the member owns it.
+    const side = await client(owner).spaces.create({ name: "Side" });
+    await system.spaceMember.create({
+      data: {
+        id: `side-${member.userId}`,
+        spaceId: side.id,
+        organizationId: owner.spaceId,
+        userId: member.userId,
+        role: "owner",
+        createdAt: new Date(),
+      },
+    });
+    await system.spaceMember.updateMany({
+      where: { spaceId: side.id, userId: owner.userId },
+      data: { role: "member" },
+    });
     const bot = await system.bot.create({
       data: { spaceId: owner.spaceId, userId: member.userId, name: "Helper", color: "blue" },
     });
@@ -360,6 +375,62 @@ describePostgres("team membership (PostgreSQL)", () => {
     await expect(crossSpaceCommunicationAllowed(system, ownerBot.id, memberBot.id)).resolves.toBe(
       false,
     );
+  });
+
+  it("lets the team's owner see and read every teammate's bot, and nobody else", async () => {
+    const owner = await signup();
+    const ada = await join(owner);
+    const grace = await join(owner);
+    const bot = await system.bot.create({
+      data: { spaceId: owner.spaceId, userId: ada.userId, name: "Ada's helper", color: "blue" },
+    });
+    const thread = await system.thread.create({
+      data: { spaceId: owner.spaceId, userId: ada.userId, botId: bot.id },
+    });
+    await system.message.create({
+      data: {
+        threadId: thread.id,
+        seq: 1,
+        role: "user",
+        blocks: [{ kind: "text", text: "hello" }],
+      },
+    });
+
+    const listed = await client(owner).team.bots();
+    expect(listed).toEqual([
+      expect.objectContaining({
+        id: bot.id,
+        name: "Ada's helper",
+        owner: expect.objectContaining({ userId: ada.userId }),
+        status: "idle",
+        archived: false,
+      }),
+    ]);
+    const page = await client(owner).team.botMessages({ botId: bot.id });
+    expect(JSON.stringify(page)).toContain("hello");
+    await expect(
+      system.auditEvent.count({
+        where: { organizationId: owner.spaceId, action: "team.bot.viewed", targetId: bot.id },
+      }),
+    ).resolves.toBe(1);
+
+    // Teammates see none of each other's bots, here or through the owner's view.
+    await expect(client(grace).team.bots()).resolves.toEqual([]);
+    await expect(client(grace).team.botMessages({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
+    // Reading is all the owner gets: the chat itself stays the bot owner's.
+    await expect(client(owner).threads.messages({ botId: bot.id })).rejects.toBeInstanceOf(
+      IsolationError,
+    );
+
+    // Members keep their own work in their own organization; the team's Spaces are the owner's.
+    await expect(client(ada).spaces.create({ name: "Hidden" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(client(owner).spaces.create({ name: "Projects" })).resolves.toMatchObject({
+      name: "Projects",
+    });
   });
 
   it("lets a member leave on their own", async () => {
