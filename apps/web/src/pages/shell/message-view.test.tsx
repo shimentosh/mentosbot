@@ -117,7 +117,7 @@ it("keeps a received peer marker off the user's side while user replies align to
     { kind: "bot_message_received", fromBotId: "peer", fromBotName: "Atlas", text: "Done." },
   ]);
   const chip = container.querySelector('[data-testid="peer-receipt-chip"]');
-  expect(chip?.textContent).toBe("Message from Atlas");
+  expect(chip?.textContent).toBe("Message from AtlasDone.");
   expect(chip?.closest(".items-end")).toBeNull();
 
   renderView("user", [{ kind: "text", text: "Thanks." }]);
@@ -287,10 +287,41 @@ it("opens one counted peer line without an inline reply toggle", () => {
     },
   );
   const line = container.querySelector<HTMLButtonElement>('[data-testid="peer-receipt-chip"]');
-  expect(line?.getAttribute("aria-label")).toBe("3 messages with Researcher");
+  expect(line?.textContent).toBe("3 messages with ResearcherRequest");
   expect(container.querySelector('[data-testid="peer-replies-toggle"]')).toBeNull();
   act(() => line?.click());
+  expect(open).not.toHaveBeenCalled();
+  const openButton = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="Open Researcher"]',
+  );
+  act(() => openButton?.click());
   expect(open).toHaveBeenCalledWith({ peerBotId: "peer", peerBotName: "Researcher" });
+});
+
+it("shows a group handoff as a card with nothing to open", () => {
+  renderView(
+    "bot",
+    [{ kind: "handoff", fromBotId: "atlas", toBotId: "ledger", text: "Budget check" }],
+    {
+      artifactTarget: { groupId: "group" },
+      memberName: (botId) => (botId === "atlas" ? "Atlas" : "Ledger"),
+    },
+  );
+  const card = container.querySelector('[data-testid="peer-message-card"]');
+  expect(card?.textContent).toBe("Atlas handed off to LedgerBudget check");
+  expect(card?.querySelector('button[aria-label^="Open"]')).toBeNull();
+});
+
+it("opens no exchange from a group chat, which has no thread of its own to read it from", () => {
+  renderView(
+    "bot",
+    [{ kind: "bot_message_sent", toBotId: "peer", toBotName: "Researcher", text: "Request" }],
+    { artifactTarget: { groupId: "group" } },
+  );
+  expect(container.querySelector('[data-testid="peer-receipt-chip"]')?.textContent).toBe(
+    "Messaged ResearcherRequest",
+  );
+  expect(container.querySelector('button[aria-label^="Open"]')).toBeNull();
 });
 
 it("sends a settings Undo through the chat's space client", async () => {

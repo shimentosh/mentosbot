@@ -214,6 +214,10 @@ msgstr ""
 msgid "{days}d ago"
 msgstr "{days}d atrás"
 
+#: src/pages/shell/message-view.tsx
+msgid "{from} handed off to {to}"
+msgstr "{from} passou para {to}"
+
 #: src/components/markdown-copy.tsx
 msgid "{from}–{to} of {total} rows"
 msgstr "{from}–{to} de {total} linhas"
@@ -2923,10 +2927,6 @@ msgstr ""
 msgid "Docker limits access to your computer for added security. Using {hostLabel} lets bots work with your local files and tools."
 msgstr "O Docker limita o acesso ao seu computador para maior segurança. Usar {hostLabel} permite que os bots trabalhem com seus arquivos e ferramentas locais."
 
-#: src/components/SidebarFooter.tsx
-msgid "Docs"
-msgstr "Documentação"
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Document changed. Reopen to edit the latest version."
 msgstr "O documento mudou. Reabra para editar a versão mais recente."
@@ -3045,10 +3045,6 @@ msgstr "Endpoint"
 
 #: src/lib/billing.ts
 msgid "Ends {day}"
-msgstr ""
-
-#: src/components/GitHubStarPrompt.tsx
-msgid "Enjoying Rakazo?"
 msgstr ""
 
 #: src/lib/user-error.ts
@@ -3404,10 +3400,6 @@ msgstr ""
 #: src/pages/SettingsOverlay.tsx
 msgid "General"
 msgstr "Geral"
-
-#: src/components/SidebarFooter.tsx
-msgid "Get the mobile app"
-msgstr "Baixar o aplicativo móvel"
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
@@ -4707,7 +4699,6 @@ msgstr "Fora do catálogo do Rakazo"
 msgid "Not in the plugin catalog"
 msgstr ""
 
-#: src/components/GitHubStarPrompt.tsx
 #: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
@@ -4814,6 +4805,7 @@ msgstr ""
 msgid "Only you"
 msgstr "Só você"
 
+#: src/components/ai/CollaborationMarker.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
@@ -4829,6 +4821,7 @@ msgid "Open {0}"
 msgstr ""
 
 #: src/pages/shell/import-setup-card.tsx
+#: src/pages/shell/message-view.tsx
 msgid "Open {name}"
 msgstr "Abrir {name}"
 
@@ -6412,10 +6405,6 @@ msgstr ""
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO está temporariamente indisponível. Tente novamente."
-
-#: src/components/GitHubStarPrompt.tsx
-msgid "Star on GitHub"
-msgstr ""
 
 #: src/pages/shell/computer-overlay.tsx
 msgid "Start"

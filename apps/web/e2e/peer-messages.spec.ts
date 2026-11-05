@@ -56,26 +56,27 @@ test("shows peer lines in transcript and opens view-only peer chat", async ({ pa
   );
   await expect(chip.locator(".rakazo-organic-avatar")).toBeVisible();
   await expect(chip).not.toContainText("{peer}");
-  // User bubble still contains the phrase; peer body must not appear outside the chip.
-  await expect(chip).not.toContainText("peer-exchange-alpha");
-  // Only the user's ask and Chief's own relay of Researcher's result carry the phrase.
+  // The card's one-line excerpt is what Chief sent; tapping it reads the whole message in place.
+  await expect(chip).toContainText("peer-exchange-alpha");
+  // Besides the excerpt, only the user's ask and Chief's own relay carry the phrase.
   await expect(transcript.getByText(/^Here's what Researcher found: /)).toBeVisible({
     timeout: 60_000,
   });
-  await expect(transcript.getByText("peer-exchange-alpha")).toHaveCount(2);
-  const assertChipCentered = async () => {
+  await expect(transcript.getByText("peer-exchange-alpha")).toHaveCount(3);
+  const card = transcript.getByTestId("peer-message-card").filter({ has: chip });
+  const assertCardCentered = async (narrow: boolean) => {
     const transcriptBox = await transcript.boundingBox();
-    const chipBox = await chip.boundingBox();
+    const cardBox = await card.boundingBox();
     expect(transcriptBox).not.toBeNull();
-    expect(chipBox).not.toBeNull();
-    const chipCenter = chipBox!.x + chipBox!.width / 2;
+    expect(cardBox).not.toBeNull();
+    const cardCenter = cardBox!.x + cardBox!.width / 2;
     const transcriptCenter = transcriptBox!.x + transcriptBox!.width / 2;
-    expect(Math.abs(chipCenter - transcriptCenter)).toBeLessThanOrEqual(8);
-    // Stay under 75% of the transcript width so the chip cannot become a full-width bar.
-    expect(chipBox!.width).toBeLessThan(transcriptBox!.width * 0.75);
+    expect(Math.abs(cardCenter - transcriptCenter)).toBeLessThanOrEqual(8);
+    // On a wide transcript the card stays compact instead of becoming a full-width bar.
+    if (narrow) expect(cardBox!.width).toBeLessThan(transcriptBox!.width * 0.75);
   };
 
-  await assertChipCentered();
+  await assertCardCentered(true);
   await expect(composer).toBeVisible();
   await captureScreenshot(page, testInfo, "peer-chip-desktop");
 
@@ -83,12 +84,18 @@ test("shows peer lines in transcript and opens view-only peer chat", async ({ pa
   await chip.scrollIntoViewIfNeeded();
   await expect(chip).toBeVisible();
   await expect(composer).toBeVisible();
-  await assertChipCentered();
+  await assertCardCentered(false);
   await captureScreenshot(page, testInfo, "peer-chip-mobile");
 
-  await chip.focus();
-  await expect(chip).toBeFocused();
-  await chip.press("Enter");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-expanded", "true");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-expanded", "false");
+
+  const open = card.getByRole("button", { name: "Open Researcher" });
+  await open.focus();
+  await expect(open).toBeFocused();
+  await open.press("Enter");
   const view = page.getByTestId("peer-conversation-view");
   await expect(view).toBeVisible();
   await expect(view.getByRole("heading", { name: /Chief\s*Researcher/ })).toBeVisible();
@@ -199,8 +206,8 @@ test("shows peer lines in transcript and opens view-only peer chat", async ({ pa
       },
     });
   });
-  await chip.scrollIntoViewIfNeeded();
-  await chip.click();
+  await open.scrollIntoViewIfNeeded();
+  await open.click();
   await expect(view).toBeVisible();
   const avatarsLeft = await view
     .getByRole("heading")
@@ -274,10 +281,9 @@ test(
       testInfo,
     );
 
-    const line = transcript.getByTestId("peer-receipt-chip").filter({ hasText: "Chief" }).first();
     await expect(transcript.getByTestId("peer-replies-toggle")).toHaveCount(0);
     await captureScreenshot(page, testInfo, "peer-line-folded");
-    await line.click();
+    await transcript.getByRole("button", { name: "Open Chief" }).first().click();
     const view = page.getByTestId("peer-conversation-view");
     await expect(view).toBeVisible();
     await expect(view.getByText(foldedReplyText).first()).toBeVisible();

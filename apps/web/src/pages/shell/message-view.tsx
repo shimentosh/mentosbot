@@ -14,7 +14,7 @@ import { UserRound } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { ArtifactFileCard } from "../../components/ArtifactFileCard";
 import { AskCard } from "../../components/AskCard";
-import { CollaborationMarker } from "../../components/ai/CollaborationMarker";
+import { PeerMessageCard } from "../../components/ai/CollaborationMarker";
 import { CloudAgentCard } from "../../components/CloudAgentCard";
 import { PageBlockCard } from "../../components/pages/PageBlockCard";
 import { SubagentCard } from "../../components/SubagentCard";
@@ -342,15 +342,16 @@ export const MessageView = memo(function MessageView({
             const from = memberName?.(block.fromBotId) ?? t`bot`;
             const to = memberName?.(block.toBotId) ?? t`bot`;
             return (
-              <div
+              <PeerMessageCard
                 key={i}
-                className="flex items-center justify-center gap-2 py-1 text-[13.5px] text-muted-foreground"
-              >
-                <span>
-                  ↪ {to} ← {from}
-                </span>
-                <span>{block.text}</span>
-              </div>
+                direction="handoff"
+                peerName={to}
+                color={peerBot(block.toBotId)?.color ?? FALLBACK_BOT_COLOR}
+                avatarSet={peerBot(block.toBotId)?.avatarSet}
+                identity={block.toBotId}
+                label={t`${from} handed off to ${to}`}
+                text={block.text}
+              />
             );
           }
           if (block.kind === "bot_message_sent" || block.kind === "bot_message_received") {
@@ -371,15 +372,26 @@ export const MessageView = memo(function MessageView({
                 : sent
                   ? t`Messaged ${peer}`
                   : t`Message from ${peer}`;
+            // The exchange is read from this bot's own chat, so a group chat has nothing to open.
+            const ownBotId = "botId" in artifactTarget ? artifactTarget.botId : undefined;
+            // Named so the label reuses the translated "Open {name}".
+            const name = peer;
             return (
-              <CollaborationMarker
+              <PeerMessageCard
                 key={i}
+                direction={count > 1 ? "exchange" : sent ? "sent" : "received"}
                 peerName={peer}
                 color={peerBot(peerBotId)?.color ?? FALLBACK_BOT_COLOR}
                 avatarSet={peerBot(peerBotId)?.avatarSet}
                 identity={peerBotId}
                 label={label}
-                onClick={() => onOpenPeerMessages({ peerBotId, peerBotName: peer })}
+                text={block.text}
+                openLabel={t`Open ${name}`}
+                onOpen={
+                  ownBotId && ownBotId !== peerBotId
+                    ? () => onOpenPeerMessages({ peerBotId, peerBotName: peer })
+                    : undefined
+                }
               />
             );
           }

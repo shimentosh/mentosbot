@@ -136,7 +136,7 @@ tags:
 - assertNotVisible: "Update from Writer: The fixture launch note is drafted."
 - takeScreenshot: "15e-thread-peer-folded"
 - tapOn:
-    id: "peer-receipt-line"
+    id: "peer-message-open"
 - assertVisible: "Draft the fixture launch note."
 - assertVisible: "Close"
 - takeScreenshot: "15f-thread-peer-chat"

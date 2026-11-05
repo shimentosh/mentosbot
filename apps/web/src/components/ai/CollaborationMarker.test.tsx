@@ -1,28 +1,92 @@
+// @vitest-environment jsdom
+import type { ReactNode } from "react";
+import { act } from "react";
+import type { Root } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-import { ActiveBotGlyph, CollaborationMarker } from "./CollaborationMarker";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ActiveBotGlyph, PeerMessageCard } from "./CollaborationMarker";
 
-describe("collaboration transcript markers", () => {
-  it("shows a centred peer event with its avatar and full label", () => {
-    const html = renderToString(
-      <CollaborationMarker
-        peerName="Research"
+vi.mock("@lingui/react/macro", () => ({
+  Trans: ({ children }: { children: ReactNode }) => children,
+}));
+
+let container: HTMLDivElement;
+let root: Root;
+beforeEach(() => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  window.matchMedia ??= ((query: string) => ({
+    matches: false,
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  })) as unknown as typeof window.matchMedia;
+  container = document.createElement("div");
+  document.body.append(container);
+  root = createRoot(container);
+});
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+  vi.unstubAllGlobals();
+});
+
+function renderCard(props: Partial<Parameters<typeof PeerMessageCard>[0]> = {}) {
+  act(() =>
+    root.render(
+      <PeerMessageCard
+        direction="sent"
+        peerName="KODI · COO"
         color="#14B8A6"
-        identity="research"
-        label="Message from Research"
-        onClick={() => undefined}
+        identity="kodi"
+        label="Messaged KODI · COO"
+        text={"Post **published**:\n\nhttps://example.test/post"}
+        {...props}
       />,
-    );
+    ),
+  );
+  return {
+    toggle: container.querySelector<HTMLButtonElement>('[data-testid="peer-receipt-chip"]')!,
+    open: container.querySelector<HTMLButtonElement>('button[aria-label^="Open"]'),
+  };
+}
 
-    expect(html).toContain('data-testid="peer-receipt-chip"');
-    expect(html).toContain('aria-label="Message from Research"');
-    expect(html).toContain('class="flex min-w-0 max-w-full justify-center py-1"');
-    expect(html).toContain('class="inline-flex max-w-full');
-    expect(html).toContain("truncate font-medium");
-    expect(html).toContain("rakazo-organic-avatar");
-    expect(html).toContain("Message from Research");
-    expect(html).not.toContain("{peer}");
-    expect(html).not.toContain("peer-replies-toggle");
+describe("peer message card", () => {
+  it("names the other bot in its color with a one-line excerpt", () => {
+    const { toggle } = renderCard();
+    expect(toggle.textContent).toBe("Messaged KODI · COOPost published: https://example.test/post");
+    expect(toggle.querySelector(".rakazo-organic-avatar")).not.toBeNull();
+    expect(toggle.querySelector("span.font-medium")?.getAttribute("style")).toContain("color");
+    expect(toggle.querySelector(".truncate.text-foreground\\/75")).not.toBeNull();
+  });
+
+  it("expands to the whole message and collapses again", () => {
+    const { toggle } = renderCard();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    act(() => toggle.click());
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const card = container.querySelector('[data-testid="peer-message-card"]')!;
+    expect(card.querySelector("strong")?.textContent).toBe("published");
+    expect(toggle.textContent).toBe("Messaged KODI · COO");
+    act(() => toggle.click());
+    expect(card.querySelector("strong")).toBeNull();
+  });
+
+  it("opens the exchange only when given somewhere to go", () => {
+    const onOpen = vi.fn();
+    const { open, toggle } = renderCard({ onOpen, openLabel: "Open KODI · COO" });
+    expect(open?.textContent).toBe("Open");
+    act(() => open?.click());
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+    expect(renderCard({ onOpen: undefined }).open).toBeNull();
+  });
+
+  it("stays a plain line when there is nothing to expand", () => {
+    const { toggle } = renderCard({ text: "  " });
+    expect(toggle.disabled).toBe(true);
+    expect(toggle.hasAttribute("aria-expanded")).toBe(false);
   });
 
   it("animates the active bot glyph from its run status", () => {
