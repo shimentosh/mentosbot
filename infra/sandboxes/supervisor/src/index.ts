@@ -68,8 +68,10 @@ import {
   computerNetworkExitSettings,
   DEFAULT_NETWORK_EXIT_IMAGE,
   DEFAULT_NETWORK_PROXY_IMAGE,
+  DEFAULT_NETWORK_RELAY_IMAGE,
   NETWORK_EXIT_BOT_LABEL,
   NETWORK_EXIT_LABEL,
+  NETWORK_EXIT_RELAY_LABEL,
   NetworkExitSchema,
   networkExitContainerName,
   networkExitContainerOptions,
@@ -132,10 +134,12 @@ const ensureComputerImage = computerImageEnsurer(docker, COMPUTER_IMAGE, compute
 const NETWORK_EXIT_IMAGES = {
   tailscale: process.env.SANDBOX_NETWORK_EXIT_IMAGE?.trim() || DEFAULT_NETWORK_EXIT_IMAGE,
   proxy: process.env.SANDBOX_NETWORK_PROXY_IMAGE?.trim() || DEFAULT_NETWORK_PROXY_IMAGE,
+  device: process.env.SANDBOX_NETWORK_RELAY_IMAGE?.trim() || DEFAULT_NETWORK_RELAY_IMAGE,
 } as const;
 const networkExitImageEnsurers = {
   tailscale: computerImageEnsurer(docker, NETWORK_EXIT_IMAGES.tailscale, computerContext),
   proxy: computerImageEnsurer(docker, NETWORK_EXIT_IMAGES.proxy, computerContext),
+  device: computerImageEnsurer(docker, NETWORK_EXIT_IMAGES.device, computerContext),
 } as const;
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 const dataDir = path.resolve(repositoryRoot, process.env.DATA_DIR ?? "./data");
@@ -1991,26 +1995,30 @@ async function syncNetworkExit(
     if (!exit) return;
     throw new Error(`${name} exists but was not made for this computer`);
   }
+  const options =
+    exit && networkMode
+      ? networkExitContainerOptions({
+          botId,
+          image: NETWORK_EXIT_IMAGES[exit.provider],
+          networkMode,
+          exit,
+        })
+      : undefined;
   const wanted = networkExitFingerprint(exit);
   if (
     info &&
     wanted &&
     info.Config.Labels?.[NETWORK_EXIT_LABEL] === wanted &&
+    info.Config.Labels?.[NETWORK_EXIT_RELAY_LABEL] ===
+      options?.Labels?.[NETWORK_EXIT_RELAY_LABEL] &&
     info.HostConfig.NetworkMode === networkMode
   ) {
     if (!info.State.Running) await current.start();
     return;
   }
   if (info) await current.remove({ force: true });
-  if (!exit || !networkMode) return;
-  const created = await docker.createContainer(
-    networkExitContainerOptions({
-      botId,
-      image: NETWORK_EXIT_IMAGES[exit.provider],
-      networkMode,
-      exit,
-    }),
-  );
+  if (!options) return;
+  const created = await docker.createContainer(options);
   await created.start();
 }
 

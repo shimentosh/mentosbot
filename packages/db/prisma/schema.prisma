@@ -156,20 +156,22 @@ model EmailSend {
 }
 
 model UserDevice {
-  id          String                 @id @default(cuid())
-  userId      String
-  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  platform    String
-  tokenHash   String                 @unique
+  id           String                 @id @default(cuid())
+  userId       String
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  platform     String
+  tokenHash    String                 @unique
   /// The session that paired it. Ending that session revokes the device.
-  sessionId   String?
-  createdAt   DateTime               @default(now())
-  lastSeenAt  DateTime?
-  revokedAt   DateTime?
+  sessionId    String?
+  createdAt    DateTime               @default(now())
+  lastSeenAt   DateTime?
+  revokedAt    DateTime?
   /// Who revoked it: "owner", "device" or "session" (its sign-in ended). Null when unknown.
-  revokedBy   String?
-  connections UserDeviceConnection[]
+  revokedBy    String?
+  /// Its owner's computers send their browsers' traffic out through it while it is connected.
+  routeTraffic Boolean                @default(false)
+  connections  UserDeviceConnection[]
 
   @@index([userId, revokedAt])
   @@map("user_devices")

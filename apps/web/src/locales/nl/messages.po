@@ -5736,6 +5736,10 @@ msgstr ""
 msgid "Rotate key"
 msgstr "Sleutel roteren"
 
+#: src/components/ComputerDeviceSettings.tsx
+msgid "Route bot browsing through this computer"
+msgstr ""
+
 #: src/lib/identity-display.ts
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/use-routine-editor.ts

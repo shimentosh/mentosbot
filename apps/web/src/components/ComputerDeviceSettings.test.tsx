@@ -58,21 +58,27 @@ afterEach(async () => {
   delete window.rakazoDesktop;
 });
 
-const laptop = { deviceId: "d1", name: "Laptop", connected: true };
-const desk = { deviceId: "d2", name: "Desk PC", connected: false };
+const laptop = { deviceId: "d1", name: "Laptop", connected: true, routeTraffic: false };
+const desk = { deviceId: "d2", name: "Desk PC", connected: false, routeTraffic: false };
+
+function listed(...devices: (typeof laptop)[]) {
+  return { devices, canRouteTraffic: false };
+}
 
 function desktopWith(device: NonNullable<RakazoDesktop["device"]>) {
   window.rakazoDesktop = { platform: "darwin", device } as RakazoDesktop;
 }
 
 it("stays hidden without any computer", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed());
   await act(async () => root.render(<ComputerDeviceSettings />));
   expect(host.innerHTML).toBe("");
 });
 
 it("lists computers with their status and removes one", async () => {
-  vi.mocked(listUserDevices).mockResolvedValueOnce([laptop, desk]).mockResolvedValueOnce([laptop]);
+  vi.mocked(listUserDevices)
+    .mockResolvedValueOnce(listed(laptop, desk))
+    .mockResolvedValueOnce(listed(laptop));
   vi.mocked(removeUserDevice).mockResolvedValue();
   await act(async () => root.render(<ComputerDeviceSettings />));
   expect(host.textContent).toContain("LaptopConnected");
@@ -87,7 +93,7 @@ it("lists computers with their status and removes one", async () => {
 });
 
 it("turns this computer on and off through the desktop app only", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed());
   const state = { deviceId: null, name: "Laptop", allowed: false };
   const device = {
     state: vi.fn(async () => state),
@@ -102,15 +108,47 @@ it("turns this computer on and off through the desktop app only", async () => {
   expect(host.textContent).toContain("Let bots use this computer");
   expect(toggle.checked).toBe(false);
 
-  vi.mocked(listUserDevices).mockResolvedValue([laptop]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed(laptop));
   await act(async () => toggle.click());
   expect(device.setAllowed).toHaveBeenCalledWith(true);
   expect(toggle.checked).toBe(true);
   expect(host.textContent).toContain("LaptopConnected");
 });
 
+it("routes bot browsing through this computer only where the server can", async () => {
+  const routed = { ...laptop };
+  const device = {
+    state: vi.fn(async () => ({ deviceId: "d1", name: "Laptop", allowed: false })),
+    setAllowed: vi.fn(),
+    setRouteTraffic: vi.fn(async (routeTraffic: boolean) => {
+      routed.routeTraffic = routeTraffic;
+      return null;
+    }),
+  };
+  desktopWith(device);
+  vi.mocked(listUserDevices).mockImplementation(async () => listed(routed));
+  await act(async () => root.render(<ComputerDeviceSettings />));
+  expect(host.querySelector('[data-testid="route-traffic-toggle"]')).toBeNull();
+
+  await act(async () => root.unmount());
+  root = createRoot(host);
+  vi.mocked(listUserDevices).mockImplementation(async () => ({
+    devices: [routed],
+    canRouteTraffic: true,
+  }));
+  await act(async () => root.render(<ComputerDeviceSettings />));
+  const toggle = host.querySelector<HTMLInputElement>('[data-testid="route-traffic-toggle"]')!;
+  expect(host.textContent).toContain("Route bot browsing through this computer");
+  expect(toggle.checked).toBe(false);
+
+  await act(async () => toggle.click());
+  expect(device.setRouteTraffic).toHaveBeenCalledWith(true);
+  expect(toggle.checked).toBe(true);
+  expect(device.setAllowed).not.toHaveBeenCalled();
+});
+
 it("reports a failed removal", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([laptop]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed(laptop));
   vi.mocked(removeUserDevice).mockRejectedValue(new Error("offline"));
   await act(async () => root.render(<ComputerDeviceSettings />));
   await act(async () =>
@@ -120,14 +158,14 @@ it("reports a failed removal", async () => {
 });
 
 it("shows every connected computer as connected", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([laptop, { ...desk, connected: true }]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed(laptop, { ...desk, connected: true }));
   await act(async () => root.render(<ComputerDeviceSettings />));
   expect(host.textContent).toContain("LaptopConnected");
   expect(host.textContent).toContain("Desk PCConnected");
 });
 
 it("stays off and reports it when turning this computer on fails", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed());
   const device = {
     state: vi.fn(async () => ({ deviceId: null, name: "Laptop", allowed: false })),
     setAllowed: vi.fn(async () => {
@@ -144,7 +182,7 @@ it("stays off and reports it when turning this computer on fails", async () => {
 });
 
 it("turns this computer on and off for the app-managed local server", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed());
   const me = { canChooseHostComputer: true, computerHost: "docker" };
   vi.mocked(rpc.me).mockImplementation(async () => me as Awaited<ReturnType<typeof rpc.me>>);
   const computer = {
@@ -177,7 +215,7 @@ it("turns this computer on and off for the app-managed local server", async () =
 });
 
 it("stays hidden on a server that does not run bots on this computer", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed());
   vi.mocked(rpc.me).mockResolvedValue({
     canChooseHostComputer: false,
     computerHost: null,
@@ -192,7 +230,7 @@ it("stays hidden on a server that does not run bots on this computer", async () 
 });
 
 it("keeps the local switch when a later profile read fails", async () => {
-  vi.mocked(listUserDevices).mockResolvedValue([]);
+  vi.mocked(listUserDevices).mockResolvedValue(listed());
   vi.mocked(rpc.me)
     .mockResolvedValueOnce({ canChooseHostComputer: true, computerHost: "this-mac" } as Awaited<
       ReturnType<typeof rpc.me>

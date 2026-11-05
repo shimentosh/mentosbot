@@ -5,8 +5,10 @@ import {
   USER_DEVICE_DISCONNECT_PATH,
   USER_DEVICE_FORWARD_PATH,
   USER_DEVICE_LIMIT,
+  USER_DEVICE_NOTIFY_PATH,
   userDeviceDisconnectBody,
   userDeviceForwardBody,
+  userDeviceNotifyBody,
   validUserDeviceForwardSecret,
 } from "@rakazo/adapters";
 import type { UserDeviceList, UserDevicePairResponse } from "@rakazo/contracts";
@@ -14,8 +16,10 @@ import {
   USER_DEVICE_CONNECT_PATH,
   USER_DEVICE_PAIR_PATH,
   USER_DEVICE_PATH,
+  USER_DEVICE_ROUTE_TRAFFIC_PATH,
   USER_DEVICE_SESSION_PATH,
   userDevicePairRequest,
+  userDeviceRouteTrafficRequest,
 } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { recordSecurityEvent, runAsSystem } from "@rakazo/db";
@@ -32,6 +36,8 @@ export interface UserDeviceRouteDeps {
   forwardSecret: string;
   session: (request: Request) => Promise<{ userId: string; sessionId: string } | null>;
   trustedOrigin: (origin: string) => boolean;
+  /** Computers here reach a device over a public origin and run beside a relay of their own. */
+  canRouteTraffic: () => boolean;
 }
 
 type DeviceStore = { prisma: PrismaClient; devices: UserDevices };
@@ -158,6 +164,7 @@ export function mountUserDeviceRoutes(app: Hono, deps: UserDeviceRouteDeps) {
     await deps.devices.releaseSignedOut(session.userId);
     return c.json({
       devices: await deps.devices.list(session.userId),
+      canRouteTraffic: deps.canRouteTraffic(),
     } satisfies UserDeviceList);
   });
 
@@ -194,6 +201,27 @@ export function mountUserDeviceRoutes(app: Hono, deps: UserDeviceRouteDeps) {
     return c.body(null, 204);
   });
 
+  // Only the device itself turns this on: its owner's computers then browse from its network.
+  app.put(USER_DEVICE_ROUTE_TRAFFIC_PATH, async (c) => {
+    const device = await deps.hub.authenticate(c.req.header("authorization"));
+    if (!device) return c.json({ error: "Unauthorized" }, 401);
+    const body = await readBoundedBody(c.req.raw, 256);
+    const input = userDeviceRouteTrafficRequest.safeParse(parseJson(body ?? ""));
+    if (!input.success) return c.json({ error: "Invalid request" }, 400);
+    await runAsSystem("set whether a user device routes traffic", () =>
+      prisma.userDevice.updateMany({
+        where: { id: device.id, revokedAt: null },
+        data: { routeTraffic: input.data.routeTraffic },
+      }),
+    );
+    await recordSecurityEvent({
+      type: "device.route_traffic.changed",
+      userId: device.userId,
+      metadata: { deviceId: device.id, routeTraffic: input.data.routeTraffic },
+    });
+    return c.body(null, 204);
+  });
+
   // Registered before `:deviceId` so "self" is never read as an id.
   app.delete(`${USER_DEVICE_PATH}/self`, async (c) => {
     const device = await deps.hub.authenticate(c.req.header("authorization"));
@@ -218,6 +246,16 @@ export function mountUserDeviceRoutes(app: Hono, deps: UserDeviceRouteDeps) {
     if (!input.success) return c.json({ error: "Invalid request" }, 400);
     const { request, ...route } = input.data;
     return deps.hub.stream(route, request, c.req.raw.signal);
+  });
+
+  app.post(USER_DEVICE_NOTIFY_PATH, async (c) => {
+    if (!validUserDeviceForwardSecret(deps.forwardSecret, c.req.header("authorization")))
+      return c.json({ error: "Unauthorized" }, 401);
+    const body = await readBoundedBody(c.req.raw, 4096);
+    const input = userDeviceNotifyBody.safeParse(parseJson(body ?? ""));
+    if (!input.success) return c.json({ error: "Invalid request" }, 400);
+    const { message, ...route } = input.data;
+    return deps.hub.notify(route, message) ? c.body(null, 204) : c.body(null, 409);
   });
 
   app.post(USER_DEVICE_DISCONNECT_PATH, async (c) => {

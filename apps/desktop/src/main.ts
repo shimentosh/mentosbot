@@ -1580,6 +1580,12 @@ app.whenReady().then(async () => {
     await userDevices?.setAllowed(origin, allowed);
     return deviceState(remoteDeviceOrigin(event));
   });
+  ipcMain.handle("desktop.device.setRouteTraffic", async (event, routeTraffic: unknown) => {
+    const origin = remoteDeviceOrigin(event);
+    if (origin === null || typeof routeTraffic !== "boolean") return null;
+    await userDevices?.setRouteTraffic(origin, routeTraffic);
+    return deviceState(remoteDeviceOrigin(event));
+  });
   ipcMain.handle(
     "desktop.locale.set",
     createLocaleHandler(

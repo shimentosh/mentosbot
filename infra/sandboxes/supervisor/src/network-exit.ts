@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type Docker from "dockerode";
 import { z } from "zod";
 import { containerNameFor } from "./computer-spec.js";
@@ -28,9 +30,16 @@ const ProxyExitSchema = z.object({
   }),
   credentials: z.object({ password: z.string().regex(PROXY_WORD).optional() }),
 });
+// The owner's own device, reached through the Rakazo server at `url` with the computer's token.
+const DeviceExitSchema = z.object({
+  provider: z.literal("device"),
+  settings: z.object({ url: z.url({ protocol: /^https$/ }).max(2048) }),
+  credentials: z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{1,1024}\.[A-Za-z0-9_-]{43}$/) }),
+});
 export const NetworkExitSchema = z.discriminatedUnion("provider", [
   TailscaleExitSchema,
   ProxyExitSchema,
+  DeviceExitSchema,
 ]);
 export type NetworkExit = z.infer<typeof NetworkExitSchema>;
 
@@ -40,7 +49,17 @@ export const DEFAULT_NETWORK_EXIT_IMAGE =
 /** Canonical's Squid, pinned by digest; override for mirrors with SANDBOX_NETWORK_PROXY_IMAGE. */
 export const DEFAULT_NETWORK_PROXY_IMAGE =
   "docker.io/ubuntu/squid:6.6-24.04_beta@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029";
+/** Node, as the supervisor's own image; override for mirrors with SANDBOX_NETWORK_RELAY_IMAGE. */
+export const DEFAULT_NETWORK_RELAY_IMAGE =
+  "docker.io/library/node:24.22.1-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205";
+/** Run as given in the relay container: it needs nothing but Node's built-ins. */
+export const DEVICE_RELAY_SCRIPT = readFileSync(
+  fileURLToPath(new URL("./device-exit-relay.mjs", import.meta.url)),
+  "utf8",
+);
 export const NETWORK_EXIT_LABEL = "rakazo.network-exit";
+/** Which relay script a device relay runs, so a new release replaces it. */
+export const NETWORK_EXIT_RELAY_LABEL = "rakazo.network-exit.relay";
 /**
  * The exit container's owner. Deliberately not `rakazo.botId`: lookups by that label must only
  * ever find the computer itself.
@@ -53,9 +72,9 @@ const FORWARDER_PORT = 3128;
 
 /** Where the computer's browser sends its traffic for each kind of exit. */
 export function networkExitProxy(exit: NetworkExit): string {
-  return exit.provider === "proxy"
-    ? `http://${NETWORK_EXIT_ALIAS}:${FORWARDER_PORT}`
-    : `socks5://${NETWORK_EXIT_ALIAS}:${NETWORK_EXIT_PROXY_PORT}`;
+  return exit.provider === "tailscale"
+    ? `socks5://${NETWORK_EXIT_ALIAS}:${NETWORK_EXIT_PROXY_PORT}`
+    : `http://${NETWORK_EXIT_ALIAS}:${FORWARDER_PORT}`;
 }
 
 /** Changes whenever anything about the exit does, so a computer and its exit are replaced together. */
@@ -97,6 +116,27 @@ export function networkExitContainerOptions(input: {
       EndpointsConfig: { [input.networkMode]: { Aliases: [NETWORK_EXIT_ALIAS] } },
     },
   };
+  if (input.exit.provider === "device") {
+    return {
+      ...shared,
+      Labels: {
+        ...shared.Labels,
+        [NETWORK_EXIT_RELAY_LABEL]: createHash("sha256")
+          .update(DEVICE_RELAY_SCRIPT)
+          .digest("hex")
+          .slice(0, 32),
+      },
+      // The token lives only in this container's environment, never the computer's.
+      User: "node",
+      Entrypoint: ["node", "--input-type=module", "-e"],
+      Cmd: [DEVICE_RELAY_SCRIPT],
+      Env: [
+        `RAKAZO_EXIT_URL=${input.exit.settings.url}`,
+        `RAKAZO_EXIT_TOKEN=${input.exit.credentials.token}`,
+      ],
+      HostConfig: { ...isolated, Tmpfs: { "/tmp": "rw,noexec,nosuid,size=16m" } },
+    };
+  }
   if (input.exit.provider === "proxy") {
     return {
       ...shared,

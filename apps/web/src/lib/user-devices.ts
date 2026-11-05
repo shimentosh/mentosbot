@@ -1,16 +1,15 @@
 import { t } from "@lingui/core/macro";
-import type { UserDeviceSummary } from "@rakazo/contracts";
+import type { UserDeviceList } from "@rakazo/contracts";
 import { USER_DEVICE_PATH, userDeviceListSchema } from "@rakazo/contracts";
 import { readBoundedJsonResponse } from "@rakazo/core";
 
-export async function listUserDevices(): Promise<UserDeviceSummary[]> {
+export async function listUserDevices(): Promise<UserDeviceList> {
   const response = await fetch(USER_DEVICE_PATH, { signal: AbortSignal.timeout(8_000) });
   // Servers without user devices have no such route.
-  if (response.status === 404) return [];
+  if (response.status === 404) return { devices: [], canRouteTraffic: false };
   if (!response.ok) throw new Error(t`Could not load`);
   try {
-    return userDeviceListSchema.parse(await readBoundedJsonResponse<unknown>(response, 64 * 1024))
-      .devices;
+    return userDeviceListSchema.parse(await readBoundedJsonResponse<unknown>(response, 64 * 1024));
   } catch {
     throw new Error(t`Could not load`);
   }

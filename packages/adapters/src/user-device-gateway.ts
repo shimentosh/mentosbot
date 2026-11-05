@@ -18,17 +18,20 @@ import {
 import type {
   UserDevice,
   UserDeviceGateway,
+  UserDeviceNotice,
   UserDeviceRevokeReason,
 } from "./user-device-protocol.js";
 import {
   USER_DEVICE_REVOKED_HEADER,
   userDeviceClientMessage,
+  userDeviceNotice,
   userDeviceRevokeReason,
 } from "./user-device-protocol.js";
 
 /** Internal API endpoints other processes forward to. Not under /api, so the public proxy never routes them. */
 export const USER_DEVICE_FORWARD_PATH = "/internal/user-devices/request";
 export const USER_DEVICE_DISCONNECT_PATH = "/internal/user-devices/disconnect";
+export const USER_DEVICE_NOTIFY_PATH = "/internal/user-devices/notify";
 export const USER_DEVICE_OFFLINE_MESSAGE =
   "Your computer is not connected. Open the Rakazo desktop app.";
 const DISCONNECTED_MESSAGE = "Your computer disconnected. Check the result before retrying.";
@@ -382,6 +385,18 @@ export class UserDeviceHub {
     }
   }
 
+  /** Sends a message that expects no reply on this route's socket; false when it is not held here. */
+  notify(route: UserDeviceRoute, message: UserDeviceNotice): boolean {
+    const entry = this.live.get(route.deviceId);
+    if (!entry || !this.holds(route)) return false;
+    try {
+      entry.socket.send(JSON.stringify(message));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** NDJSON stream of frames for a forwarded request; a failure becomes an error frame. */
   stream(route: UserDeviceRoute, request: HostComputerRequest, signal: AbortSignal): Response {
     if (!this.holds(route)) return new Response(null, { status: 409 });
@@ -563,6 +578,7 @@ export class UserDevices implements UserDeviceGateway {
         select: {
           id: true,
           name: true,
+          routeTraffic: true,
           connections: {
             where: { heartbeatAt: { gt: new Date(Date.now() - STALE_AFTER_MS) } },
             select: { deviceId: true },
@@ -574,7 +590,35 @@ export class UserDevices implements UserDeviceGateway {
       deviceId: device.id,
       name: device.name,
       connected: device.connections.length > 0,
+      routeTraffic: device.routeTraffic,
     }));
+  }
+
+  /**
+   * Asks one of the user's connected devices that routes traffic to carry a connection. False
+   * when it is not connected or the message could not be delivered.
+   */
+  async tunnel(userId: string, message: UserDeviceNotice, deviceId: string): Promise<boolean> {
+    const route = await this.route(userId, deviceId, true);
+    if (!route) return false;
+    const target = { deviceId: route.deviceId, userId, connectionId: route.connectionId };
+    if (this.deps.hub?.holds(target)) return this.deps.hub.notify(target, message);
+    try {
+      const response = await this.fetch(new URL(USER_DEVICE_NOTIFY_PATH, route.address), {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${this.deps.forwardSecret}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ ...target, message }),
+        redirect: "error",
+        signal: AbortSignal.timeout(5_000),
+      });
+      await response.body?.cancel();
+      return response.status === 204;
+    } catch {
+      return false;
+    }
   }
 
   async pairedSince(userId: string): Promise<Date | null> {
@@ -631,12 +675,12 @@ export class UserDevices implements UserDeviceGateway {
       .catch((error) => getLogger().warn("user device disconnect forward failed", { error }));
   }
 
-  private async route(userId: string, deviceId?: string) {
+  private async route(userId: string, deviceId?: string, routeTraffic?: true) {
     const connection = await runAsSystem("find a user's connected device", () =>
       this.deps.prisma.userDeviceConnection.findFirst({
         where: {
           heartbeatAt: { gt: new Date(Date.now() - STALE_AFTER_MS) },
-          device: { userId, revokedAt: null },
+          device: { userId, revokedAt: null, ...(routeTraffic ? { routeTraffic } : {}) },
           ...(deviceId ? { deviceId } : {}),
         },
         orderBy: { connectedAt: "desc" },
@@ -687,6 +731,13 @@ export class UserDevices implements UserDeviceGateway {
 export const userDeviceDisconnectBody = z.object({
   deviceId: z.string().min(1).max(64),
   reason: userDeviceRevokeReason.optional(),
+});
+
+export const userDeviceNotifyBody = z.object({
+  deviceId: z.string().min(1).max(64),
+  userId: z.string().min(1).max(128),
+  connectionId: z.string().min(1).max(64),
+  message: userDeviceNotice,
 });
 
 export const userDeviceForwardBody = z.object({
