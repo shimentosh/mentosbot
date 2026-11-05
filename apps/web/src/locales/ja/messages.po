@@ -2923,10 +2923,6 @@ msgstr "Dockerは設定されていますが、コンピューターが応答し
 msgid "Docker limits access to your computer for added security. Using {hostLabel} lets bots work with your local files and tools."
 msgstr "Dockerはセキュリティ強化のため、コンピューターへのアクセスを制限します。{hostLabel}を使用すると、ボットがローカルのファイルやツールを扱えるようになります。"
 
-#: src/components/SidebarFooter.tsx
-msgid "Docs"
-msgstr "ドキュメント"
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Document changed. Reopen to edit the latest version."
 msgstr "ドキュメントが変更されました。最新版を編集するには開き直してください。"
@@ -3046,10 +3042,6 @@ msgstr "エンドポイント"
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "{day}に終了"
-
-#: src/components/GitHubStarPrompt.tsx
-msgid "Enjoying Rakazo?"
-msgstr ""
 
 #: src/lib/user-error.ts
 msgid "Enter a password"
@@ -3404,10 +3396,6 @@ msgstr ""
 #: src/pages/SettingsOverlay.tsx
 msgid "General"
 msgstr "一般"
-
-#: src/components/SidebarFooter.tsx
-msgid "Get the mobile app"
-msgstr "モバイルアプリを入手"
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
@@ -4707,7 +4695,6 @@ msgstr "Rakazoのカタログにありません"
 msgid "Not in the plugin catalog"
 msgstr "プラグインカタログにありません"
 
-#: src/components/GitHubStarPrompt.tsx
 #: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
@@ -6412,10 +6399,6 @@ msgstr ""
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSOは一時的に利用できません。もう一度お試しください。"
-
-#: src/components/GitHubStarPrompt.tsx
-msgid "Star on GitHub"
-msgstr ""
 
 #: src/pages/shell/computer-overlay.tsx
 msgid "Start"
