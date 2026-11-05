@@ -4,6 +4,7 @@ import type { RunContext } from "./run-context.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
   userComputerCwd,
+  userComputerFolder,
   userComputerGate,
   userComputerOwner,
   userComputerShell,
@@ -12,8 +13,19 @@ import type { UserDeviceGateway } from "./user-device-protocol.js";
 
 const environment = { platform: "darwin", home: "/Users/fake", shell: "/bin/zsh" };
 
-function setup(execute: (signal: AbortSignal) => AsyncIterable<unknown>, secrets: string[] = []) {
+type Folder = { deviceId: string; path: string };
+
+function setup(
+  execute: (signal: AbortSignal) => AsyncIterable<unknown>,
+  secrets: string[] = [],
+  folder?: Folder,
+) {
   const controller = new AbortController();
+  const botFolder = {
+    findUnique: vi.fn(async () => folder ?? null),
+    upsert: vi.fn(async () => ({})),
+    deleteMany: vi.fn(async () => ({ count: 1 })),
+  };
   const requests: HostComputerRequest[] = [];
   const signals: AbortSignal[] = [];
   const deviceIds: (string | undefined)[] = [];
@@ -35,8 +47,9 @@ function setup(execute: (signal: AbortSignal) => AsyncIterable<unknown>, secrets
     },
   };
   const ctx = {
-    deps: { userDevices: gateway },
+    deps: { userDevices: gateway, prisma: { botFolder } },
     bot: { id: "bot-1" },
+    run: { spaceId: "space-1" },
     runId: "run-1",
     source: { userComputerOwner: "user-1" },
     context: { signal: controller.signal },
@@ -50,7 +63,7 @@ function setup(execute: (signal: AbortSignal) => AsyncIterable<unknown>, secrets
       observer: { onShellStillRunning },
       finish: async (result: unknown) => result,
     }) as unknown as ToolCall;
-  return { ctx, call, controller, requests, signals, deviceIds, onShellStillRunning };
+  return { ctx, call, controller, requests, signals, deviceIds, onShellStillRunning, botFolder };
 }
 
 describe("userComputerGate", () => {
@@ -123,6 +136,17 @@ describe("userComputerCwd", () => {
     expect(
       userComputerCwd({ platform: "win32", home: "C:\\Users\\fake", shell: "pwsh" }, "code"),
     ).toBe("C:\\Users\\fake\\code");
+  });
+
+  it("starts from the project folder when there is one", () => {
+    const folder = "/Users/fake/Projects/site";
+    expect(userComputerCwd(environment, undefined, folder)).toBe(folder);
+    expect(userComputerCwd(environment, "src", folder)).toBe(`${folder}/src`);
+    expect(userComputerCwd(environment, "~", folder)).toBe("/Users/fake");
+    expect(userComputerCwd(environment, "~/notes", folder)).toBe("/Users/fake/notes");
+    expect(() => userComputerCwd(environment, "../../..", folder)).toThrow(
+      "inside the user's home folder",
+    );
   });
 });
 
@@ -203,5 +227,81 @@ describe("userComputerShell", () => {
     controller.abort();
     await expect(pending).rejects.toThrow("aborted");
     expect(signals.every((signal) => signal.aborted)).toBe(true);
+  });
+});
+
+describe("userComputerShell with a project folder", () => {
+  const exit = async function* () {
+    yield { type: "exit", code: 0 };
+  };
+
+  it("runs in the folder on the connected computer", async () => {
+    const { ctx, call, requests } = setup(exit, [], {
+      deviceId: "device-1",
+      path: "/Users/fake/Projects/site",
+    });
+    await userComputerShell(ctx, call({ command: "ls" }));
+    expect(requests.at(-1)).toMatchObject({ command: { cwd: "/Users/fake/Projects/site" } });
+  });
+
+  it("ignores a folder on another computer", async () => {
+    const { ctx, call, requests } = setup(exit, [], {
+      deviceId: "device-2",
+      path: "/Users/fake/Projects/site",
+    });
+    await userComputerShell(ctx, call({ command: "ls" }));
+    expect(requests.at(-1)).toMatchObject({ command: { cwd: "/Users/fake" } });
+  });
+});
+
+describe("userComputerFolder", () => {
+  const exitWith = (code: number) =>
+    async function* () {
+      yield { type: "exit", code };
+    };
+
+  it("saves a folder found on the connected computer, passing its path as a variable", async () => {
+    const { ctx, call, requests, botFolder } = setup(exitWith(0));
+    const result = await userComputerFolder(ctx, call({ path: "~/Projects/it's mine" }));
+    expect(result).toEqual({ ok: true, folder: "/Users/fake/Projects/it's mine" });
+    const check = requests.at(-1) as Extract<HostComputerRequest, { method: "execute" }>;
+    expect(check.command.env).toEqual({ RAKAZO_PROJECT_FOLDER: "/Users/fake/Projects/it's mine" });
+    expect(check.command.argv.join(" ")).not.toContain("it's mine");
+    expect(botFolder.upsert).toHaveBeenCalledWith({
+      where: { botId_userId: { botId: "bot-1", userId: "user-1" } },
+      create: {
+        botId: "bot-1",
+        userId: "user-1",
+        spaceId: "space-1",
+        deviceId: "device-1",
+        path: "/Users/fake/Projects/it's mine",
+      },
+      update: { deviceId: "device-1", path: "/Users/fake/Projects/it's mine" },
+    });
+  });
+
+  it("refuses a folder that is not there", async () => {
+    const { ctx, call, botFolder } = setup(exitWith(1));
+    expect(await userComputerFolder(ctx, call({ path: "~/missing" }))).toEqual({
+      error: "There is no folder at /Users/fake/missing on the user's computer.",
+    });
+    expect(botFolder.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each(["/tmp", "~", "~/"])("refuses %s without asking the computer", async (path) => {
+    const { ctx, call, requests, botFolder } = setup(exitWith(0));
+    const result = (await userComputerFolder(ctx, call({ path }))) as { error: string };
+    expect(result.error).toMatch(/inside the user's home folder/);
+    expect(requests.some((request) => request.method === "execute")).toBe(false);
+    expect(botFolder.upsert).not.toHaveBeenCalled();
+  });
+
+  it("clears the folder for an empty path", async () => {
+    const { ctx, call, requests, botFolder } = setup(exitWith(0));
+    expect(await userComputerFolder(ctx, call({ path: " " }))).toEqual({ ok: true, folder: null });
+    expect(botFolder.deleteMany).toHaveBeenCalledWith({
+      where: { botId: "bot-1", userId: "user-1" },
+    });
+    expect(requests).toEqual([]);
   });
 });

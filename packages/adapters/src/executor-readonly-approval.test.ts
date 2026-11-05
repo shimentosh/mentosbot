@@ -106,9 +106,12 @@ function fixture({
   userDevices,
   botUserId = "user-1",
   sharedWith = 0,
+  folder,
   batch,
   browser,
 }: {
+  /** The bot's project folder on the run starter's computer. */
+  folder?: { deviceId: string; path: string; device: { name: string } };
   /** A page browser on a graphical computer, so browser_act and computer_act are offered. */
   browser?: BrowserProvider;
 
@@ -448,6 +451,10 @@ function fixture({
     },
     taughtSkill: { findMany: vi.fn(async () => []), findFirst: vi.fn(async () => null) },
     botAccess: { count: vi.fn(async () => sharedWith) },
+    botFolder: {
+      findUnique: vi.fn(async () => folder ?? null),
+      upsert: vi.fn(async () => ({})),
+    },
     chatGroup: { findMany: vi.fn(async () => []) },
     botSection: { findMany: vi.fn(async () => []) },
     vaultCredential: { findMany: vi.fn(async () => []) },
@@ -3247,6 +3254,28 @@ describe("user_computer_shell", () => {
     expect(gateway.connected).toHaveBeenCalledWith("user-1");
   });
 
+  it("names the project folder on the connected computer, or says its computer is away", async () => {
+    const { gateway } = devices();
+    const path = "/Users/fake/Projects/site";
+    const here = fixture({
+      ...ownRun,
+      userDevices: gateway,
+      folder: { deviceId: "device-1", path, device: { name: "Laptop" } },
+    });
+    await here.run();
+    expect(here.offeredTools()).toContain("user_computer_folder");
+    expect(here.instructions()).toContain(`Your project folder there is "${path}"`);
+    const away = fixture({
+      ...ownRun,
+      userDevices: gateway,
+      folder: { deviceId: "device-2", path, device: { name: "Studio Mac" } },
+    });
+    await away.run();
+    expect(away.instructions()).toContain(
+      `Your project folder is "${path}" on their computer "Studio Mac", which is not connected.`,
+    );
+  });
+
   it("is never offered on a bot shared with teammates, whose chat they share", async () => {
     const { gateway } = devices();
     const f = fixture({ ...ownRun, userDevices: gateway, sharedWith: 1 });
@@ -3384,6 +3413,43 @@ describe("user_computer_shell", () => {
     });
     expect(f.results.at(-1)).toEqual({ stdout: "pi.local\n", stderr: "", code: 0 });
     expect(f.effects.map((effect) => effect.status)).toEqual(["completed", "completed"]);
+  });
+
+  it("asks before setting a project folder, then saves it once the folder is found", async () => {
+    const { gateway, requests } = devices();
+    const f = fixture({ ...ownRun, userDevices: gateway });
+    f.setCalls([
+      { name: "user_computer_folder", args: { path: "~/Projects/site" }, executionId: "call-1" },
+    ]);
+    await f.run();
+    expect(requests).toEqual([]);
+    expect(f.pauseRunForInput.mock.calls[0]).toEqual([
+      expect.objectContaining({
+        blocks: [
+          expect.objectContaining({
+            kind: "ask",
+            text: "Work in this folder on your computer?",
+            detail: "~/Projects/site",
+            actions: [
+              { id: "allow", label: "Allow" },
+              { id: "deny", label: "Deny" },
+            ],
+          }),
+        ],
+      }),
+    ]);
+
+    f.effects[0]!.status = "approved";
+    await f.run();
+    expect(f.results.at(-1)).toEqual({ ok: true, folder: "/Users/fake/Projects/site" });
+    expect(f.prisma.botFolder.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          deviceId: "device-1",
+          path: "/Users/fake/Projects/site",
+        }),
+      }),
+    );
   });
 
   it("asks again after the computer is removed and paired again", async () => {

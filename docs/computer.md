@@ -61,3 +61,11 @@ rest of that space, in any chat, until you remove the computer from the same lis
 > [!WARNING]
 > A bot with access to your computer can read your files and run programs as you. Only turn it on
 > for a computer you would let your bots use unattended.
+
+### Project folder
+
+Ask a bot to work in a folder on your computer, such as a code or content project, and it keeps
+that folder as its project folder. Its commands start there, and it follows the folder's
+`AGENTS.md` or `CLAUDE.md` and uses the skills in `.claude/skills` or `.agents/skills`. The folder
+must be inside your home folder. A bot asks before setting one, and each person has their own. Ask
+the bot to stop using it to clear it.

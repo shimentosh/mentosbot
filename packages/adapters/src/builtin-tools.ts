@@ -472,7 +472,7 @@ export const builtinAgentTools: ConnectorTool[] = [
   {
     name: "user_computer_shell",
     description:
-      "Run a command on the user's own computer. Use only when the task needs their local files, credentials, or network. cwd defaults to their home folder and must stay inside it.",
+      "Run a command on the user's own computer. Use only when the task needs their local files, credentials, or network. cwd defaults to your project folder there, or their home folder, and must stay inside their home folder.",
     inputSchema: {
       type: "object",
       properties: {
@@ -480,6 +480,18 @@ export const builtinAgentTools: ConnectorTool[] = [
         cwd: { type: "string" },
       },
       required: ["command"],
+    },
+  },
+  {
+    name: "user_computer_folder",
+    description:
+      "Set your project folder on the user's computer, only when they ask: your commands there start in it. An existing folder inside their home folder; an empty path clears it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", maxLength: 4096 },
+      },
+      required: ["path"],
     },
   },
   {

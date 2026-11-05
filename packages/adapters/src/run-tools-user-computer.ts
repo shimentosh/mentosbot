@@ -19,6 +19,7 @@ import {
 } from "./shell-command-stream.js";
 import {
   USER_COMPUTER_ACT_TOOL,
+  USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
@@ -28,6 +29,7 @@ import {
 
 export {
   USER_COMPUTER_ACT_TOOL,
+  USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
@@ -118,15 +120,22 @@ export async function userComputerGate(
 
 const SCREEN_APPROVAL_PAGE = 200;
 
-/** The working directory on the user's computer: their home or a folder inside it. */
-export function userComputerCwd(environment: HostComputerEnvironment, cwd: unknown): string {
+/**
+ * The working directory on the user's computer: their home or a folder inside it. A relative
+ * path, or none, starts from `base` (the bot's project folder there) when given.
+ */
+export function userComputerCwd(
+  environment: HostComputerEnvironment,
+  cwd: unknown,
+  base?: string,
+): string {
   const paths = environment.platform === "win32" ? path.win32 : path.posix;
   const requested = typeof cwd === "string" ? cwd.trim() : "";
-  if (!requested || requested === "~") return environment.home;
+  if (requested === "~") return environment.home;
   const expanded = /^~[\\/]/.test(requested)
     ? paths.join(environment.home, requested.slice(2))
     : requested;
-  const resolved = paths.resolve(environment.home, expanded);
+  const resolved = paths.resolve(environment.home, base ?? "", expanded);
   const relative = paths.relative(environment.home, resolved);
   if (relative === ".." || relative.startsWith(`..${paths.sep}`) || paths.isAbsolute(relative))
     throw new Error("cwd must be inside the user's home folder; cd elsewhere within the command");
@@ -146,6 +155,15 @@ async function connectedUserComputer(ctx: RunContext) {
   const devices = ctx.deps.userDevices;
   const device = owner && devices ? await devices.connected(owner).catch(() => null) : null;
   return owner && devices && device ? { owner, devices, deviceId: device.deviceId } : undefined;
+}
+
+/** This bot's project folder for the user, when it is on the computer that is connected. */
+async function projectFolder(ctx: RunContext, owner: string, deviceId: string) {
+  const folder = await ctx.deps.prisma.botFolder.findUnique({
+    where: { botId_userId: { botId: ctx.bot.id, userId: owner } },
+    select: { deviceId: true, path: true },
+  });
+  return folder?.deviceId === deviceId ? folder.path : undefined;
 }
 
 export async function userComputerShell(ctx: RunContext, call: ToolCall) {
@@ -177,7 +195,11 @@ export async function userComputerShell(ctx: RunContext, call: ToolCall) {
           runId,
           command: {
             argv: nativeShellCommandArgv(command, environment),
-            cwd: userComputerCwd(environment, call.args.cwd),
+            cwd: userComputerCwd(
+              environment,
+              call.args.cwd,
+              await projectFolder(ctx, owner, deviceId),
+            ),
             timeoutMs: sandboxCommandTimeoutMs(),
           },
         },
@@ -198,6 +220,82 @@ export async function userComputerShell(ctx: RunContext, call: ToolCall) {
       ctx.secrets,
     );
     return call.finish({ error: `The user's computer did not finish the command: ${reason}` });
+  }
+}
+
+const FOLDER_VARIABLE = "RAKAZO_PROJECT_FOLDER";
+const FOLDER_CHECK_TIMEOUT_MS = 30_000;
+
+/** Sets or clears this bot's project folder for the user, once the folder is found there. */
+export async function userComputerFolder(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { owner, devices, deviceId } = connected;
+  const { bot, runId, run } = ctx;
+  const requested = typeof call.args.path === "string" ? call.args.path.trim() : "";
+  if (!requested) {
+    await ctx.deps.prisma.botFolder.deleteMany({ where: { botId: bot.id, userId: owner } });
+    return call.finish({ ok: true, folder: null });
+  }
+  const { signal } = ctx.context;
+  try {
+    await lastValue(
+      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
+    );
+    const environment = await lastValue(
+      devices.request<HostComputerEnvironment>(
+        owner,
+        { method: "environment", botId: bot.id, runId },
+        signal,
+        deviceId,
+      ),
+    );
+    let folder: string;
+    try {
+      folder = userComputerCwd(environment, requested);
+    } catch {
+      return call.finish({ error: "The folder must be inside the user's home folder." });
+    }
+    if (folder === environment.home)
+      return call.finish({ error: "Pick a folder inside the user's home folder." });
+    // The path reaches the shell as a variable, never as command text.
+    const check =
+      environment.platform === "win32"
+        ? `if (Test-Path -LiteralPath $env:${FOLDER_VARIABLE} -PathType Container) { exit 0 } else { exit 1 }`
+        : `test -d "$${FOLDER_VARIABLE}"`;
+    let exitCode: number | undefined;
+    for await (const event of devices.request<ProcessEvent>(
+      owner,
+      {
+        method: "execute",
+        botId: bot.id,
+        runId,
+        command: {
+          argv: nativeShellCommandArgv(check, environment),
+          cwd: environment.home,
+          env: { [FOLDER_VARIABLE]: folder },
+          timeoutMs: FOLDER_CHECK_TIMEOUT_MS,
+        },
+      },
+      signal,
+      deviceId,
+    ))
+      if (event.type === "exit") exitCode = event.code;
+    if (exitCode !== 0)
+      return call.finish({ error: `There is no folder at ${folder} on the user's computer.` });
+    await ctx.deps.prisma.botFolder.upsert({
+      where: { botId_userId: { botId: bot.id, userId: owner } },
+      create: { botId: bot.id, userId: owner, spaceId: run.spaceId, deviceId, path: folder },
+      update: { deviceId, path: folder },
+    });
+    return call.finish({ ok: true, folder });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "folder check failed",
+      ctx.secrets,
+    );
+    return call.finish({ error: `The user's computer did not answer: ${reason}` });
   }
 }
 

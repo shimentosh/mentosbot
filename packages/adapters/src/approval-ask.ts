@@ -136,6 +136,25 @@ export function buildApprovalAskBlock(
       ],
     };
   }
+  if (toolName === "user_computer_folder") {
+    const folder = String(args.path ?? "").trim();
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: folder ? "Work in this folder on your computer?" : "Stop using the project folder?",
+      ...(folder
+        ? {
+            detail: truncate(redactSecrets(folder, secrets), MAX_APPROVAL_DETAIL_LENGTH),
+            detailFormat: "code" as const,
+          }
+        : {}),
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
   if (toolName === "user_computer_shell") {
     const cwd = typeof args.cwd === "string" && args.cwd.trim() ? `cd ${args.cwd.trim()}\n` : "";
     return {

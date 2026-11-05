@@ -78,6 +78,7 @@ model User {
   signupSurvey                SignupSurvey?
   computerRuns                ComputerRun[]
   devices                     UserDevice[]
+  botFolders                  BotFolder[]
 
   @@unique([email])
   @@map("user")
@@ -172,9 +173,31 @@ model UserDevice {
   /// Its owner's computers send their browsers' traffic out through it while it is connected.
   routeTraffic Boolean                @default(false)
   connections  UserDeviceConnection[]
+  botFolders   BotFolder[]
 
   @@index([userId, revokedAt])
   @@map("user_devices")
+}
+
+/// The folder on a person's computer a bot works in for them: its commands there start in it.
+/// One per person, so a teammate can point a shared bot at their own copy.
+model BotFolder {
+  botId     String
+  bot       Bot        @relation(fields: [botId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spaceId   String
+  space     Space      @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  deviceId  String
+  device    UserDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  path      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@id([botId, userId])
+  @@index([deviceId])
+  @@index([spaceId])
+  @@map("bot_folders")
 }
 
 model UserDeviceConnection {
@@ -449,6 +472,7 @@ model Space {
   capabilities                CapabilityInstall[]
   memoryDocuments             MemoryDocument[]
   semanticMemories            SemanticMemory[]
+  botFolders                  BotFolder[]
   agentHomes                  AgentHome[]
   browserProfiles             BrowserProfile[]
   artifacts                   Artifact[]
@@ -786,6 +810,7 @@ model Bot {
   taughtSkills      TaughtSkill[]
   memoryDocuments   MemoryDocument[]
   semanticMemories  SemanticMemory[]
+  folders           BotFolder[]
   agentHome         AgentHome?
   browserProfile    BrowserProfile?
   artifacts         Artifact[]

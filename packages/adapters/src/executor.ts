@@ -144,6 +144,7 @@ import type {
 } from "./run-context.js";
 import { restoreTurnCheckpointEffects, settleRunningHelpers } from "./run-context.js";
 import { APPROVED_EFFECT_REPLAY_ORDER, buildApprovalContinuation } from "./run-effects.js";
+import type { UserComputerFolder } from "./run-instructions.js";
 import {
   BOT_DIRECTORY_LIMIT,
   dockerComputerToolInstruction,
@@ -1333,6 +1334,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
             : ownComputerOwnerId;
         let userComputer: UserComputerState;
         let userComputerScreen = false;
+        let userComputerFolder: UserComputerFolder | undefined;
         if (
           userComputerOwnerId &&
           deps.userDevices &&
@@ -1343,6 +1345,17 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
             userComputer = "connected";
             // The macOS and Windows desktops fetch a screen driver; Linux has none yet.
             userComputerScreen = device.platform === "darwin" || device.platform === "win32";
+            const folder = await deps.prisma.botFolder.findUnique({
+              where: { botId_userId: { botId: bot.id, userId: userComputerOwnerId } },
+              select: { path: true, deviceId: true, device: { select: { name: true } } },
+            });
+            if (folder)
+              userComputerFolder = {
+                path: folder.path,
+                ...(folder.deviceId === device.deviceId
+                  ? {}
+                  : { otherComputer: folder.device.name }),
+              };
           } else userComputer = "offline";
         }
         const builtins = [
@@ -1871,6 +1884,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                 offeredFleetTools: offeredFleetTools(strategicBuiltins),
                 followUpsOffered: followUpsOffered(strategicBuiltins, ownerStartedRun),
                 userComputer,
+                userComputerFolder,
               })
                 .filter((instruction): instruction is string => Boolean(instruction))
                 .join("\n\n"),

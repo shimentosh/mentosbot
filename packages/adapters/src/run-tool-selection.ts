@@ -127,7 +127,8 @@ export function selectBuiltinToolsForRun(options: {
           "generate_video",
         ].includes(tool.name)) &&
       (options.voiceCall || tool.name !== "end_call") &&
-      (options.userComputer || tool.name !== "user_computer_shell") &&
+      (options.userComputer ||
+        (tool.name !== "user_computer_shell" && tool.name !== "user_computer_folder")) &&
       ((options.userComputer && options.userComputerScreen) ||
         !USER_COMPUTER_SCREEN_TOOLS.has(tool.name)) &&
       // Already on a call, or reached through a messaging channel that cannot ring.

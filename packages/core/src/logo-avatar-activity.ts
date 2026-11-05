@@ -74,6 +74,7 @@ const COMPUTER_TOOLS = new Set([
   "browser_snapshot",
   "browser_act",
   "user_computer_shell",
+  "user_computer_folder",
   "user_computer_observe",
   "user_computer_act",
   "shell",
