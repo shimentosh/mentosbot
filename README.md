@@ -234,7 +234,7 @@ saving returns to the previous instance. For development automation, set `RAKAZO
 the shell somewhere else without changing the saved instance, or `RAKAZO_FORCE_SETUP=1` to run
 setup again.
 
-Mobile build and release instructions live in [docs/mobile-release.md](./docs/mobile-release.md).
+Building the team's desktop and Android apps is covered in [docs/internal-builds.md](./docs/internal-builds.md).
 
 ## UI language
 
@@ -287,8 +287,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development workflow and test m
 - [Apps and clients](./docs/self-host-clients.md)
 - [Billing](./docs/self-host-billing.md)
 - [Computer runtime and isolation](./docs/computer-runtime.md)
-- [Desktop releases](./docs/desktop-release.md)
-- [Mobile releases](./docs/mobile-release.md)
+- [Internal app builds](./docs/internal-builds.md)
 - [Performance testing](./docs/performance.md)
 - [Bots that manage bots](./docs/fleet-management.md)
 

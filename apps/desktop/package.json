@@ -1,6 +1,6 @@
 {
   "name": "@rakazo/desktop",
-  "productName": "Rakazo",
+  "productName": "Mentosbot",
   "version": "0.8.0",
   "author": {
     "name": "Rakazo"
@@ -38,7 +38,7 @@
     "yaml": "2.9.1"
   },
   "build": {
-    "appId": "dev.rakazo.desktop",
+    "appId": "com.mentosbot.desktop",
     "directories": {
       "output": "out",
       "buildResources": "assets"
@@ -68,6 +68,7 @@
     "mac": {
       "icon": "../../packages/ui-tokens/assets/Rakazo.icon",
       "category": "public.app-category.productivity",
+      "identity": "-",
       "x64ArchFiles": "{**/node_modules/@koromix/koffi-darwin-*/darwin_*/koffi.node,**/node_modules/@oxc-parser/binding-darwin-*/parser.darwin-*.node}",
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
@@ -90,10 +91,9 @@
         }
       ],
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
-      "notarize": true
+      "notarize": false
     },
     "dmg": {
       "title": "${productName}",
@@ -123,8 +123,7 @@
       "icon": "assets/icon.ico",
       "target": [
         "nsis"
-      ],
-      "verifyUpdateCodeSignature": true
+      ]
     },
     "linux": {
       "executableName": "rakazo",
@@ -133,12 +132,6 @@
         "AppImage"
       ]
     },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "elie222",
-        "repo": "rakazo"
-      }
-    ]
+    "publish": null
   }
 }

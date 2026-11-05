@@ -1,4 +1,4 @@
-appId: com.rakazo.app
+appId: com.mentosbot.app
 name: Auth
 ---
 - runFlow: ../subflows/launch-app.yaml
