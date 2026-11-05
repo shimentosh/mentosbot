@@ -90,7 +90,7 @@ async function createBaseRunSandbox(
     ...opts,
     networkExitFor:
       prisma && secrets
-        ? (homeKey) => loadNetworkExit(prisma, secrets, homeKey)
+        ? (homeKey) => loadNetworkExit(prisma, secrets, homeKey, opts.deviceExit)
         : opts.networkExitFor,
     referenceInUse: prisma
       ? async (computer) =>
@@ -147,7 +147,7 @@ async function createBaseRunSandbox(
       byId: (id) => findComputerServer(prisma, id),
     },
     secrets,
-    { networkExitFor: (homeKey) => loadNetworkExit(prisma, secrets, homeKey) },
+    { networkExitFor: (homeKey) => loadNetworkExit(prisma, secrets, homeKey, opts.deviceExit) },
   );
 }
 

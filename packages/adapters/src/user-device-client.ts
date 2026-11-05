@@ -1,6 +1,7 @@
 import { USER_DEVICE_CONNECT_PATH } from "@rakazo/contracts";
 import { secureHttpOrigin } from "@rakazo/contracts/network-host";
 import WebSocket from "ws";
+import { createDeviceTunnels } from "./device-tunnel.js";
 import type { HostComputerFrame } from "./host-computer-protocol.js";
 import { HOST_COMPUTER_MAX_BYTES } from "./host-computer-protocol.js";
 import type { HostComputerCall } from "./host-computer-runner.js";
@@ -43,6 +44,8 @@ export function startUserDeviceClient(options: UserDeviceClientOptions) {
   const retry = options.retryMs ?? { min: 1_000, max: 60_000 };
   const runner = createHostComputerRunner({ root: options.root, screen: options.screen });
   runner.setEnabled(true);
+  // The server asks for these only after this device turned on routing its owner's traffic.
+  const tunnels = createDeviceTunnels({ serverUrl: options.serverUrl, token: options.token });
   const url = new URL(USER_DEVICE_CONNECT_PATH, options.serverUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   let stopped = false;
@@ -56,6 +59,7 @@ export function startUserDeviceClient(options: UserDeviceClientOptions) {
     stopped = true;
     clearTimeout(reconnectTimer);
     runner.close();
+    tunnels.closeAll();
     socket?.terminate();
   }
 
@@ -157,6 +161,10 @@ export function startUserDeviceClient(options: UserDeviceClientOptions) {
       }
       if (message.type === "revoked") {
         revoked(message.reason);
+        return;
+      }
+      if (message.type === "tunnel") {
+        tunnels.carry(message);
         return;
       }
       if (message.type === "cancel") {

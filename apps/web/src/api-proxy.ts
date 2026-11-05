@@ -1,10 +1,17 @@
 import { isIP } from "node:net";
-import { USER_DEVICE_CONNECT_PATH } from "@rakazo/contracts/user-devices";
+import {
+  USER_DEVICE_CONNECT_PATH,
+  USER_DEVICE_EXIT_PATH,
+  USER_DEVICE_TUNNEL_PATH,
+} from "@rakazo/contracts/user-devices";
 import type { ProxyOptions } from "vite";
 import { appendForwardedFor } from "./forwarded-for.js";
 
-/** Vite treats a proxy key starting with `^` as a pattern for the request's path and query. */
-export const DEVICE_SOCKET = `^${USER_DEVICE_CONNECT_PATH}(?:\\?|$)`;
+/**
+ * Vite treats a proxy key starting with `^` as a pattern for the request's path and query: the
+ * device socket, a computer relay's sockets, and the device's tunnel sockets.
+ */
+export const DEVICE_SOCKET = `^(?:${[USER_DEVICE_CONNECT_PATH, USER_DEVICE_EXIT_PATH, USER_DEVICE_TUNNEL_PATH].join("|")})(?:\\?|$)`;
 
 /**
  * What the web server forwards to the API, in development and in `vite preview` deployments.
@@ -42,8 +49,8 @@ export function apiProxy(
   });
   return {
     "/api": options(false),
-    // A user's own computer keeps its device socket open here, the API's only upgrade. Vite
-    // matches other keys as prefixes, so this one is anchored to the exact path.
+    // A user's own computer keeps its device socket open here, with the API's only upgrades.
+    // Vite matches other keys as prefixes, so this one is anchored to the exact paths.
     [DEVICE_SOCKET]: options(true),
     "/rpc": options(false),
     // Native app domain association, served by the API from deployment settings.

@@ -21,6 +21,7 @@ export const SECURITY_EVENT_TYPES = [
   "device.paired",
   "device.tied",
   "device.revoked",
+  "device.route_traffic.changed",
   "deployment.settings.changed",
   "approval.decided",
   "approval.policy.changed",

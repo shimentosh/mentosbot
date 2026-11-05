@@ -75,6 +75,8 @@ describe("desktop preload bridge", () => {
     await bridge.device?.state();
     await bridge.device?.setAllowed(true);
     expect(invoke).toHaveBeenCalledWith("desktop.device.setAllowed", true);
+    await bridge.device?.setRouteTraffic?.(true);
+    expect(invoke).toHaveBeenCalledWith("desktop.device.setRouteTraffic", true);
     await bridge.locale?.set("es-CL");
     expect(invoke).toHaveBeenCalledWith("desktop.locale.set", "es-CL");
     await bridge.oauth.open?.("https://provider.example.com/authorize");
@@ -93,6 +95,7 @@ describe("desktop preload bridge", () => {
       "desktop.badge.set",
       "desktop.device.state",
       "desktop.device.setAllowed",
+      "desktop.device.setRouteTraffic",
       "desktop.locale.set",
       "desktop.oauth.open",
       "desktop.oauth.cancel",

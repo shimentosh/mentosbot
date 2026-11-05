@@ -46,6 +46,7 @@ import {
   createWebProvider,
   databaseCapacityBackoffMs,
   deploymentModelUsageLookup,
+  deviceExitOrigin,
   ExpoPushProvider,
   GraphileJobPublisher,
   homeStorageSweeper,
@@ -167,6 +168,10 @@ async function main() {
     supervisorUrl: process.env.SANDBOX_SUPERVISOR_URL ?? "http://127.0.0.1:7091",
     supervisorToken: sandboxProvider === "docker" ? resolveSupervisorToken(process.env) : undefined,
     dataDir,
+    deviceExit:
+      process.env.USER_DEVICES_ENABLED !== "false"
+        ? deviceExitOrigin(process.env.WEB_ORIGIN, resolveEncryptionKey(process.env))
+        : undefined,
     prisma,
     secrets,
   });

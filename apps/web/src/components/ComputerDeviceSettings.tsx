@@ -8,7 +8,15 @@ import { rpc } from "../lib/rpc";
 import { listUserDevices, removeUserDevice } from "../lib/user-devices";
 import { SettingsGroup, SettingsRow } from "./SettingsRows";
 
-type ThisComputer = { allowed: boolean; setAllowed: (allowed: boolean) => Promise<unknown> };
+type ThisComputer = {
+  allowed: boolean;
+  setAllowed: (allowed: boolean) => Promise<unknown>;
+  /** A remote server's paired device, when this desktop release can route traffic. */
+  routing?: {
+    deviceId: string | null;
+    setRouteTraffic: (routeTraffic: boolean) => Promise<unknown>;
+  };
+};
 
 /** A remote server pairs this computer; the app-managed local stack runs bots on it directly. */
 async function thisComputerAccess(
@@ -16,7 +24,15 @@ async function thisComputerAccess(
 ): Promise<ThisComputer | null> {
   const device = desktop?.device;
   const paired = await device?.state().catch(() => null);
-  if (device && paired) return { allowed: paired.allowed, setAllowed: device.setAllowed };
+  if (device && paired)
+    return {
+      allowed: paired.allowed,
+      setAllowed: device.setAllowed,
+      routing: device.setRouteTraffic && {
+        deviceId: paired.deviceId,
+        setRouteTraffic: device.setRouteTraffic,
+      },
+    };
   const computer = desktop?.computer;
   if (!computer?.managesHostChoice) return null;
   const me = await rpc.me();
@@ -31,10 +47,12 @@ export function ComputerDeviceSettings() {
   const { t } = useLingui();
   const desktop = desktopBridge();
   const [devices, setDevices] = useState<UserDeviceSummary[]>([]);
+  const [canRouteTraffic, setCanRouteTraffic] = useState(false);
   const [thisComputer, setThisComputer] = useState<ThisComputer | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const switchId = useId();
+  const routeSwitchId = useId();
 
   const load = useCallback(async () => {
     const [listed, local] = await Promise.all([
@@ -42,7 +60,10 @@ export function ComputerDeviceSettings() {
       // A failed profile read keeps the last known switch rather than hiding it.
       thisComputerAccess(desktop).catch(() => undefined),
     ]);
-    if (listed) setDevices(listed);
+    if (listed) {
+      setDevices(listed.devices);
+      setCanRouteTraffic(listed.canRouteTraffic);
+    }
     if (local !== undefined) setThisComputer(local);
   }, [desktop]);
 
@@ -65,6 +86,11 @@ export function ComputerDeviceSettings() {
 
   if (devices.length === 0 && !thisComputer) return null;
 
+  const routing = canRouteTraffic ? thisComputer?.routing : undefined;
+  const routesTraffic =
+    routing?.deviceId != null &&
+    devices.some((device) => device.deviceId === routing.deviceId && device.routeTraffic);
+
   return (
     <SettingsGroup title={<Trans>Computers</Trans>} data-testid="computer-devices">
       {thisComputer ? (
@@ -82,6 +108,26 @@ export function ComputerDeviceSettings() {
               disabled={pending}
               onCheckedChange={(allowed) =>
                 void run(() => thisComputer.setAllowed(allowed), t`Could not change`)
+              }
+            />
+          }
+        />
+      ) : null}
+      {routing ? (
+        <SettingsRow
+          label={
+            <Label htmlFor={routeSwitchId} className="text-[14px] font-normal text-foreground">
+              <Trans>Route bot browsing through this computer</Trans>
+            </Label>
+          }
+          control={
+            <Switch
+              id={routeSwitchId}
+              data-testid="route-traffic-toggle"
+              checked={routesTraffic}
+              disabled={pending}
+              onCheckedChange={(routeTraffic) =>
+                void run(() => routing.setRouteTraffic(routeTraffic), t`Could not change`)
               }
             />
           }

@@ -145,11 +145,15 @@ supervisor. Docker Desktop has not been tested this way.
 
 People can send their computers' browsers through a network of their own
 ([Use your own network](./own-network.md)). The supervisor then starts a second container next to
-the computer, on the computer's own network: `docker.io/tailscale/tailscale` for Tailscale or
-`docker.io/ubuntu/squid` for a proxy, each pinned by digest. Set `SANDBOX_NETWORK_EXIT_IMAGE` or
-`SANDBOX_NETWORK_PROXY_IMAGE` to pull them from a mirror. It needs per-computer networks, so it is
-unavailable with `SANDBOX_SCREEN_NETWORK=internal`, and works with restricted egress, since it only
-reaches public addresses.
+the computer, on the computer's own network: `docker.io/tailscale/tailscale` for Tailscale,
+`docker.io/ubuntu/squid` for a proxy, or `docker.io/library/node` running a small relay when an
+owner's desktop app routes their traffic, each pinned by digest. Set `SANDBOX_NETWORK_EXIT_IMAGE`,
+`SANDBOX_NETWORK_PROXY_IMAGE` or `SANDBOX_NETWORK_RELAY_IMAGE` to pull them from a mirror. It needs
+per-computer networks, so it is unavailable with `SANDBOX_SCREEN_NETWORK=internal`, and works with
+restricted egress, since it only reaches public addresses.
+
+The relay reaches the server at `WEB_ORIGIN`, so desktop routing is offered only when that is an
+HTTPS address the computers can reach. The API and the worker both read it.
 
 ## Shared host folders
 

@@ -199,6 +199,43 @@ describe("remote computer access", () => {
     });
   });
 
+  it("routes traffic with the device token alone, pairing first even after host access was declined", async () => {
+    await saveDeviceConsent(userData, origin, { consent: "declined", userId: null });
+    const confirm = vi.fn(async () => true);
+    const { access, requests, clients } = setup({ confirm });
+    await access.select(origin);
+    expect(clients).toHaveLength(0);
+
+    await access.setRouteTraffic(origin, true);
+    expect(clients).toMatchObject([{ origin, token: "device-token" }]);
+    const route = requests.at(-1)!;
+    expect(route.url).toBe(`${origin}/api/devices/self/route-traffic`);
+    expect(route.init).toMatchObject({
+      method: "PUT",
+      credentials: "omit",
+      headers: { authorization: "Bearer device-token" },
+    });
+    expect(JSON.parse(String(route.init.body))).toEqual({ routeTraffic: true });
+    // Routing grants no host access: requests still need this computer's own consent.
+    expect(await clients[0]!.authorize()).toBe(false);
+    expect(confirm).not.toHaveBeenCalled();
+
+    await access.setRouteTraffic(other, true);
+    expect(requests.at(-1)).toBe(route);
+  });
+
+  it("reports a refused routing change", async () => {
+    const { access } = setup({
+      fetch: async (url) =>
+        url.endsWith("/api/devices/pair")
+          ? Response.json({ deviceId: "device-1", token: "device-token" })
+          : new Response(null, { status: 401 }),
+    });
+    await access.select(origin);
+    await access.pair();
+    await expect(access.setRouteTraffic(origin, false)).rejects.toThrow("Could not change routing");
+  });
+
   it("asks once on the first request, keeps the answer, and lets waiting requests share it", async () => {
     let answer: (allowed: boolean) => void = () => undefined;
     const confirm = vi.fn(() => new Promise<boolean>((resolve) => (answer = resolve)));

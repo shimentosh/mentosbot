@@ -7,6 +7,21 @@ Only the browser on each bot's computer uses it. Web search and page reads that 
 computer still come from the server. Each person's network serves only their own computers, never a
 teammate's.
 
+## Your desktop app
+
+In the Rakazo desktop app, open **Settings → General** and turn on **Route bot browsing through
+this computer**. While the app is open and connected, your computers' browsers reach websites
+from that computer's internet connection. When none of your desktops is online, they go out from
+the server as usual.
+
+Only that computer can turn it on, and it reaches only public addresses: bots can't use it to
+open pages on your home network or router. A computer that's already running picks up the change
+the next time it starts.
+
+> [!NOTE]
+> This needs a server reached over HTTPS and its Docker computers. A Tailscale or proxy connection
+> in the same space takes its place.
+
 ## Tailscale
 
 Your computers join your tailnet and leave through an exit node you choose, such as a phone or a
