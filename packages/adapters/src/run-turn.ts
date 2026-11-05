@@ -920,7 +920,7 @@ export async function completeRun(ctx: RunContext) {
       botMessageOutcome.intent,
     ).catch((error) => getLogger().error("bot message result return", error));
   }
-  const notifyBody = completionNotificationPreview(text);
+  const notifyBody = completionNotificationPreview(text, ctx.state.reply.cardPreview);
   if (runSendsFinishNotification(run.trigger) && notifyBody && !completed.continuationRunId) {
     await notifyRun(deps, run, {
       kind: "completion",

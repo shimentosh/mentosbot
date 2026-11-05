@@ -120,6 +120,7 @@ export function selectBuiltinToolsForRun(options: {
       (!isBackgroundRunTrigger(options.trigger) ||
         ![
           "message_user",
+          "show_card",
           "message_bot",
           "handoff_to_bot",
           "message_agent",

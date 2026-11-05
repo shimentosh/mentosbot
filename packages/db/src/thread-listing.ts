@@ -1,4 +1,10 @@
-import { ACTIVE_RUN_STATUSES, BACKGROUND_RUN_TRIGGERS, plainTextFromMarkdown } from "@rakazo/core";
+import { CardBlock } from "@rakazo/contracts";
+import {
+  ACTIVE_RUN_STATUSES,
+  BACKGROUND_RUN_TRIGGERS,
+  cardPreviewText,
+  plainTextFromMarkdown,
+} from "@rakazo/core";
 
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
@@ -70,6 +76,8 @@ export async function withLatestBotRuns<T extends { thread: { id: string } | nul
 export function previewFromBlocks(blocks: unknown): string {
   const rows = Array.isArray(blocks) ? blocks : [];
   for (const block of rows) {
+    const card = CardBlock.safeParse(block);
+    if (card.success) return cardPreviewText(card.data);
     if (
       block &&
       typeof block === "object" &&

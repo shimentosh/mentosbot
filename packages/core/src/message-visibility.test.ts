@@ -227,6 +227,16 @@ describe("user-visible messages", () => {
     expect(transcript.folded.get("received")).toEqual([pageReply]);
   });
 
+  it("folds status-card peer replies under their received marker", () => {
+    const cardReply = message("card_reply", "run-peer", [
+      { kind: "card", title: "Email sent", lines: [] },
+    ]);
+    const transcript = foldPeerReplies([received, cardReply], { includePeerReceipts: true });
+
+    expect(transcript.messages).toEqual([received]);
+    expect(transcript.folded.get("received")).toEqual([cardReply]);
+  });
+
   it("keeps chart-only relays inline", () => {
     const relayReceipt = { ...received, replyToMessageId: "sent" };
     const chartReply = message("chart_reply", "run-peer", [

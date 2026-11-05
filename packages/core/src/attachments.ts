@@ -7,6 +7,7 @@ import {
   isAllowedAttachmentMimeType,
   isAttachmentImageMimeType,
 } from "@rakazo/contracts";
+import { cardPlainText } from "./status-card.js";
 
 export class AttachmentValidationError extends Error {
   constructor(message: string) {
@@ -169,6 +170,8 @@ export function blocksToAgentHistoryText(blocks: MessageBlock[]): string {
     .map((block) => {
       if (block.kind === "text") return block.text;
       if (block.kind === "chart") return `[chart: ${block.name}]`;
+      // The bot sees the card it showed, links included, so a later turn can refer back to it.
+      if (block.kind === "card") return `[card: ${cardPlainText(block).replaceAll("\n", "; ")}]`;
       if (block.kind === "image") return `[image: ${block.name}]`;
       // The id lets a later turn, or another chat, update this page instead of making a new one.
       if (block.kind === "page") {

@@ -8,7 +8,12 @@ import type {
 import { runContinueJob } from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
 import { ATTACHMENT_MAX_COUNT, AutomatedSenderPoliciesSchema } from "@rakazo/contracts";
-import { botMessageMaxHops, messageBlockForArtifact, promptTextForAttachments } from "@rakazo/core";
+import {
+  botMessageMaxHops,
+  cardPlainText,
+  messageBlockForArtifact,
+  promptTextForAttachments,
+} from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
 import { clearEndedRunState, teamChatRunClientNonce } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
@@ -112,7 +117,33 @@ export function teamChatResponseText(
     .map((block) => block.text)
     .join("")
     .trim();
-  return text || (allowSilence ? "" : `${botName} completed the request without a written reply.`);
+  // Status cards the run showed go first, as plain text.
+  const cards = blocks
+    .filter((block): block is Extract<MessageBlock, { kind: "card" }> => block.kind === "card")
+    .map(cardPlainText)
+    .filter(Boolean);
+  const content = [...cards, text].filter(Boolean).join("\n\n");
+  return (
+    content || (allowSilence ? "" : `${botName} completed the request without a written reply.`)
+  );
+}
+
+/** The run's final reply, with the status cards it showed earlier in their own messages. */
+async function teamChatRunResponseBlocks(
+  prisma: PrismaClient,
+  runId: string,
+): Promise<MessageBlock[]> {
+  const messages = await prisma.message.findMany({
+    where: { runId, role: "bot" },
+    orderBy: { seq: "asc" },
+    select: { blocks: true },
+  });
+  const blocksOf = (message: { blocks: unknown } | undefined) =>
+    Array.isArray(message?.blocks) ? (message.blocks as MessageBlock[]) : [];
+  const cards = messages
+    .slice(0, -1)
+    .flatMap((message) => blocksOf(message).filter((block) => block.kind === "card"));
+  return [...cards, ...blocksOf(messages.at(-1))];
 }
 
 export function teamChatAmbientPrompt(input: {
@@ -983,15 +1014,8 @@ export class TeamChatBridge {
         await this.markTeamChatMirrored(run.id);
         continue;
       }
-      const response =
-        run.status === "completed"
-          ? await this.deps.prisma.message.findFirst({
-              where: { runId: run.id, role: "bot" },
-              orderBy: { seq: "desc" },
-              select: { blocks: true },
-            })
-          : null;
-      const blocks = Array.isArray(response?.blocks) ? (response.blocks as MessageBlock[]) : [];
+      const blocks =
+        run.status === "completed" ? await teamChatRunResponseBlocks(this.deps.prisma, run.id) : [];
       const content =
         run.status === "failed"
           ? `${target.name} could not complete the delegated request. Open Rakazo for details.`
@@ -1429,12 +1453,7 @@ export class TeamChatBridge {
     externalConversation: { conversationId: string };
   }): Promise<void> {
     if (!message.runId) throw new Error("Completed team chat message has no run");
-    const response = await this.deps.prisma.message.findFirst({
-      where: { runId: message.runId, role: "bot" },
-      orderBy: { seq: "desc" },
-      select: { blocks: true },
-    });
-    const blocks = Array.isArray(response?.blocks) ? (response.blocks as MessageBlock[]) : [];
+    const blocks = await teamChatRunResponseBlocks(this.deps.prisma, message.runId);
     const content = teamChatResponseText(blocks, this.target?.name, message.kind === "ambient");
     if (!content) {
       await this.markDelivered(message.id, "silent");

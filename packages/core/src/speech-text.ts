@@ -223,6 +223,7 @@ export function narrateTool(toolName: string): string | null {
     [/^remember$/, "writing a memory"],
     [/^save_shared_memory$/, "saving shared memory"],
     [/^attach_file$/, "attaching a file"],
+    [/^show_card$/, "showing a card"],
     [/^request_takeover$/, "asking you to take over"],
   ];
   for (const [pattern, phrase] of verbs) {
@@ -247,7 +248,9 @@ export function speechFromBlocks(blocks: MessageBlock[]): string {
         return block.result || `${block.name} finished`;
       }
       if (block.kind === "card") {
-        return block.lines.map((line) => `${line.k}: ${line.v}`).join(". ");
+        return [block.title, ...block.lines.map((line) => `${line.k}: ${line.v}`)]
+          .filter(Boolean)
+          .join(". ");
       }
       return "";
     })

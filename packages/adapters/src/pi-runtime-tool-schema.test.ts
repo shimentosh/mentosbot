@@ -1,4 +1,6 @@
 import {
+  CARD_FIELD_LIMIT,
+  CARD_TITLE_MAX_LENGTH,
   FLEET_TOOL_NAMES,
   TICKET_COMMENT_MAX_LENGTH,
   TICKET_DESCRIPTION_MAX_LENGTH,
@@ -67,6 +69,20 @@ describe("jsonSchemaParameters", () => {
         parseConnectorToolArgs(schema, { ...base, [field]: "x".repeat(limit + 1) }),
       ).toThrow();
     }
+  });
+
+  it("keeps show_card's caps on the model wire", () => {
+    const tool = builtinAgentTools.find((entry) => entry.name === "show_card")!;
+    const wire = JSON.parse(JSON.stringify(parametersFor(tool)));
+    expect(wire).toMatchObject({
+      required: ["title"],
+      properties: {
+        title: { maxLength: CARD_TITLE_MAX_LENGTH },
+        status: { enum: ["done", "pending", "failed", "info"] },
+        fields: { maxItems: CARD_FIELD_LIMIT },
+        links: { maxItems: 2 },
+      },
+    });
   });
 
   it("exposes fields from a locally referenced allOf branch", () => {

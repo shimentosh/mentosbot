@@ -47,6 +47,12 @@ describe("team chat bridge", () => {
     ];
     expect(teamChatResponseText(blocks)).toBe("The plan is ready.");
     expect(teamChatResponseText([])).toBe("Bot completed the request without a written reply.");
+    expect(
+      teamChatResponseText([
+        { kind: "card", title: "Email sent", lines: [{ k: "To", v: "Pat" }] },
+        { kind: "text", text: "Sent." },
+      ]),
+    ).toBe("✓ Email sent\nTo: Pat\n\nSent.");
   });
 
   it("keeps deferred messages outside reconciliation until routine routing resolves them", async () => {
@@ -2461,11 +2467,24 @@ describe("team chat bridge", () => {
       run: { findMany: vi.fn(async () => []) },
       artifact: { findMany: vi.fn(async () => [artifact]) },
       message: {
-        findMany: vi.fn(async () => [{ blocks: transcriptBlocks }]),
+        findMany: vi.fn(async ({ where }: { where?: { role?: string } } = {}) =>
+          where?.role === "bot"
+            ? [
+                {
+                  blocks: [
+                    {
+                      kind: "card",
+                      title: "Plan shared",
+                      lines: [],
+                      links: [{ label: "Open", url: "https://docs.example.test/plan" }],
+                    },
+                  ],
+                },
+                { blocks: [{ kind: "text", text: "The launch plan is ready." }] },
+              ]
+            : [{ blocks: transcriptBlocks }],
+        ),
         findUnique: vi.fn(async () => null),
-        findFirst: vi.fn(async () => ({
-          blocks: [{ kind: "text", text: "The launch plan is ready." }],
-        })),
       },
     } as unknown as PrismaClient;
 
@@ -2595,7 +2614,7 @@ describe("team chat bridge", () => {
       expect.objectContaining({
         conversationId: "C-1",
         replyThreadId: "100.1",
-        content: "The launch plan is ready.",
+        content: "✓ Plan shared\nhttps://docs.example.test/plan\n\nThe launch plan is ready.",
       }),
     ]);
     expect(records[0]).toMatchObject({ status: "delivered" });

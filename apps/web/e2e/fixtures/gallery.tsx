@@ -83,6 +83,17 @@ const conversation: Scenario = {
         ],
       },
     ]),
+    bot([
+      {
+        kind: "card",
+        title: "Report shared",
+        lines: [
+          { k: "With", v: "Finance team" },
+          { k: "Time", v: "9:12 AM" },
+        ],
+        links: [{ label: "Open report", url: "https://example.test/report" }],
+      },
+    ]),
     bot([{ kind: "meta", text: "Reminder set for Monday 8:30" }]),
     say(
       "| Metric | Q2 | Q3 |\n| --- | ---: | ---: |\n| Revenue | 1.2M | 1.4M |\n| Churn | 3.1% | 2.7% |\n\n```ts\nconst growth = (q3 - q2) / q2;\n```",

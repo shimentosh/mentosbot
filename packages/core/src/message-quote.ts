@@ -7,6 +7,7 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { blocksToAgentHistoryText } from "./attachments.js";
 import { replyAttachment } from "./message-replies.js";
+import { cardPreviewText } from "./status-card.js";
 
 const markdownParser = unified().use(remarkParse).use(remarkGfm);
 /** Past this much source text in one message, quote derivation refuses to run. */
@@ -157,7 +158,7 @@ function replyBlockText(block: MessageBlock): string {
     case "choice":
       return block.question;
     case "card":
-      return block.lines.map((line) => `${line.k}: ${line.v}`).join(", ");
+      return cardPreviewText(block);
     case "steps":
       return block.steps.map((step) => step.label).join(", ");
     case "voice_call":
