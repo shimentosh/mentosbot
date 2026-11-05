@@ -1,7 +1,20 @@
 import path from "node:path";
 import type { AgentToolExecutionResult, ProcessEvent } from "@rakazo/adapter-kit";
-import { redactSecrets, sandboxCommandTimeoutMs } from "@rakazo/core";
+import {
+  MAX_SANDBOX_COMMAND_TIMEOUT_MS,
+  redactSecrets,
+  sandboxCommandTimeoutMs,
+} from "@rakazo/core";
 import { z } from "zod";
+import type { CodingAgentCli } from "./coding-agent-cli.js";
+import {
+  AGENT_SESSION_VARIABLE,
+  AGENT_TASK_VARIABLE,
+  codingAgentReader,
+  codingAgentScript,
+  NO_CODING_AGENT_EXIT,
+} from "./coding-agent-cli.js";
+import { claudeCodeCli } from "./coding-agent-cli-claude-code.js";
 import type { HostComputerEnvironment } from "./host-computer-protocol.js";
 import type {
   HostScreenAction,
@@ -19,6 +32,7 @@ import {
 } from "./shell-command-stream.js";
 import {
   USER_COMPUTER_ACT_TOOL,
+  USER_COMPUTER_AGENT_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
@@ -29,6 +43,7 @@ import {
 
 export {
   USER_COMPUTER_ACT_TOOL,
+  USER_COMPUTER_AGENT_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
@@ -88,7 +103,13 @@ export async function userComputerGate(
   };
   if (!USER_COMPUTER_SCREEN_TOOLS.has(name)) {
     const allowed = await deps.prisma.externalEffect.findFirst({
-      where: { ...where, kind: USER_COMPUTER_SHELL_TOOL },
+      where: {
+        ...where,
+        kind:
+          name === USER_COMPUTER_SHELL_TOOL
+            ? USER_COMPUTER_SHELL_TOOL
+            : { in: [USER_COMPUTER_SHELL_TOOL, name] },
+      },
       select: { id: true },
     });
     return allowed ? "allow" : "ask";
@@ -297,6 +318,102 @@ export async function userComputerFolder(ctx: RunContext, call: ToolCall) {
     );
     return call.finish({ error: `The user's computer did not answer: ${reason}` });
   }
+}
+
+/** Coding agents tried in order on the user's computer; the first one installed runs. */
+const CODING_AGENTS: readonly CodingAgentCli[] = [claudeCodeCli];
+const AGENT_STEPS_SHOWN = 30;
+const AGENT_ERROR_TAIL = 2_000;
+
+/**
+ * Hands a task to the coding agent installed on the user's computer, in this bot's project
+ * folder there, and waits for its answer (up to the longest command time).
+ */
+export async function userComputerAgent(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { owner, devices, deviceId } = connected;
+  const task = typeof call.args.task === "string" ? call.args.task.trim() : "";
+  if (!task) return call.finish({ error: "task must say what the coding agent should do." });
+  const session = typeof call.args.session === "string" ? call.args.session.trim() : "";
+  const folder = await projectFolder(ctx, owner, deviceId);
+  if (!folder)
+    return call.finish({
+      error: "Set your project folder on the user's computer first with user_computer_folder.",
+    });
+  const { bot, runId } = ctx;
+  const { signal } = ctx.context;
+  const reader = codingAgentReader(CODING_AGENTS);
+  let stderr = "";
+  let exitCode: number | undefined;
+  try {
+    await lastValue(
+      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
+    );
+    const environment = await lastValue(
+      devices.request<HostComputerEnvironment>(
+        owner,
+        { method: "environment", botId: bot.id, runId },
+        signal,
+        deviceId,
+      ),
+    );
+    for await (const event of devices.request<ProcessEvent>(
+      owner,
+      {
+        method: "execute",
+        botId: bot.id,
+        runId,
+        command: {
+          argv: nativeShellCommandArgv(
+            codingAgentScript(environment, Boolean(session), CODING_AGENTS),
+            environment,
+          ),
+          cwd: folder,
+          env: {
+            [AGENT_TASK_VARIABLE]: task,
+            ...(session ? { [AGENT_SESSION_VARIABLE]: session } : {}),
+          },
+          timeoutMs: MAX_SANDBOX_COMMAND_TIMEOUT_MS,
+        },
+      },
+      signal,
+      deviceId,
+    )) {
+      if (event.type === "stdout") reader.write(event.data);
+      else if (event.type === "stderr") stderr = (stderr + event.data).slice(-AGENT_ERROR_TAIL);
+      else exitCode = event.code;
+    }
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "the coding agent stopped",
+      ctx.secrets,
+    );
+    return call.finish({ error: `The user's computer did not finish: ${reason}` });
+  }
+  const outcome = reader.end();
+  if (exitCode === NO_CODING_AGENT_EXIT && outcome.result === undefined)
+    return call.finish({
+      error:
+        "No coding agent is installed on the user's computer. Tell them to install one and sign in to it in their terminal.",
+    });
+  const redact = (text: string) => redactSecrets(text, ctx.secrets);
+  const steps = outcome.steps.slice(-AGENT_STEPS_SHOWN).map(redact);
+  if (outcome.result === undefined)
+    return call.finish({
+      error: `The coding agent stopped without an answer (exit code ${exitCode ?? "unknown"}).`,
+      ...(stderr.trim() ? { output: redact(stderr.trim()) } : {}),
+      ...(outcome.session ? { session: outcome.session } : {}),
+      steps,
+    });
+  return call.finish({
+    result: redact(outcome.result),
+    ...(outcome.session ? { session: outcome.session } : {}),
+    ...(outcome.failed ? { failed: true } : {}),
+    ...(outcome.denied.length ? { denied: outcome.denied } : {}),
+    steps,
+  });
 }
 
 const screenActions = z.array(hostScreenAction).min(1).max(HOST_SCREEN_MAX_ACTIONS);

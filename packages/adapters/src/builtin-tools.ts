@@ -483,6 +483,19 @@ export const builtinAgentTools: ConnectorTool[] = [
     },
   },
   {
+    name: "user_computer_agent",
+    description:
+      "Hand a task to the coding agent on the user's computer. It works in your project folder there with the project's own instructions and skills, and returns its answer, the steps it took and a session id. Pass session to continue that work, for example with the user's reply to its question. Use it for multi-step work in the project; it can run for up to an hour.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        task: { type: "string" },
+        session: { type: "string" },
+      },
+      required: ["task"],
+    },
+  },
+  {
     name: "user_computer_folder",
     description:
       "Set your project folder on the user's computer, only when they ask: your commands there start in it. An existing folder inside their home folder; an empty path clears it.",

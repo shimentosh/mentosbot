@@ -3,6 +3,7 @@ import type { HostComputerRequest } from "./host-computer-protocol.js";
 import type { RunContext } from "./run-context.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
+  userComputerAgent,
   userComputerCwd,
   userComputerFolder,
   userComputerGate,
@@ -91,6 +92,30 @@ describe("userComputerGate", () => {
       userComputerGate(ctx, false, "user_computer_observe", { app: "Notes" }),
     ).resolves.toBe("ask");
   });
+});
+
+describe("userComputerGate for commands", () => {
+  it.each([
+    ["user_computer_shell", "user_computer_shell"],
+    ["user_computer_agent", { in: ["user_computer_shell", "user_computer_agent"] }],
+    ["user_computer_folder", { in: ["user_computer_shell", "user_computer_folder"] }],
+  ])(
+    "lets an approved shell cover %s, and only its own approval cover itself",
+    async (name, kind) => {
+      const findFirst = vi.fn(async () => ({ id: "effect-1" }));
+      const ctx = {
+        deps: {
+          userDevices: { pairedSince: async () => new Date(0) },
+          prisma: { externalEffect: { findFirst } },
+        },
+        run: { spaceId: "space-1", userId: "user-1" },
+      } as unknown as RunContext;
+      await expect(userComputerGate(ctx, false, name, {})).resolves.toBe("allow");
+      expect(findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ kind }) }),
+      );
+    },
+  );
 });
 
 describe("userComputerOwner", () => {
@@ -303,5 +328,83 @@ describe("userComputerFolder", () => {
       where: { botId: "bot-1", userId: "user-1" },
     });
     expect(requests).toEqual([]);
+  });
+});
+
+describe("userComputerAgent", () => {
+  const folder = { deviceId: "device-1", path: "/Users/fake/Projects/site" };
+  const agentOutput = (...lines: unknown[]) =>
+    async function* () {
+      yield {
+        type: "stdout",
+        data: `rakazo-coding-agent 0\n${lines.map((line) => JSON.stringify(line)).join("\n")}\n`,
+      };
+      yield { type: "exit", code: 0 };
+    };
+
+  it("runs the agent in the project folder and returns its answer and session", async () => {
+    const { ctx, call, requests } = setup(
+      agentOutput(
+        {
+          type: "assistant",
+          session_id: "s-1",
+          message: { content: [{ type: "tool_use", name: "Bash", input: { command: "ls" } }] },
+        },
+        { type: "result", session_id: "s-1", is_error: false, result: "Done: token=sk-fake" },
+      ),
+      ["sk-fake"],
+      folder,
+    );
+    const result = await userComputerAgent(ctx, call({ task: "make the video", session: "s-0" }));
+    expect(result).toEqual({
+      result: "Done: token=[redacted]",
+      session: "s-1",
+      steps: ["Bash: ls"],
+    });
+    const run = requests.at(-1) as Extract<HostComputerRequest, { method: "execute" }>;
+    expect(run.command).toMatchObject({
+      cwd: "/Users/fake/Projects/site",
+      env: { RAKAZO_AGENT_TASK: "make the video", RAKAZO_AGENT_SESSION: "s-0" },
+      timeoutMs: 60 * 60_000,
+    });
+    expect(run.command.argv.join(" ")).not.toContain("make the video");
+  });
+
+  it("needs a project folder on the connected computer", async () => {
+    const { ctx, call, requests } = setup(agentOutput(), [], { ...folder, deviceId: "device-2" });
+    expect(await userComputerAgent(ctx, call({ task: "build" }))).toEqual({
+      error: "Set your project folder on the user's computer first with user_computer_folder.",
+    });
+    expect(requests).toEqual([]);
+  });
+
+  it("says when no coding agent is installed", async () => {
+    const { ctx, call } = setup(
+      async function* () {
+        yield { type: "exit", code: 127 };
+      },
+      [],
+      folder,
+    );
+    expect(await userComputerAgent(ctx, call({ task: "build" }))).toMatchObject({
+      error: expect.stringContaining("No coding agent is installed"),
+    });
+  });
+
+  it("reports an agent that stopped without an answer, with its error output", async () => {
+    const { ctx, call } = setup(
+      async function* () {
+        yield { type: "stdout", data: "rakazo-coding-agent 0\n" };
+        yield { type: "stderr", data: "Not signed in\n" };
+        yield { type: "exit", code: 1 };
+      },
+      [],
+      folder,
+    );
+    expect(await userComputerAgent(ctx, call({ task: "build" }))).toEqual({
+      error: "The coding agent stopped without an answer (exit code 1).",
+      output: "Not signed in",
+      steps: [],
+    });
   });
 });

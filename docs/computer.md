@@ -69,3 +69,10 @@ that folder as its project folder. Its commands start there, and it follows the 
 `AGENTS.md` or `CLAUDE.md` and uses the skills in `.claude/skills` or `.agents/skills`. The folder
 must be inside your home folder. A bot asks before setting one, and each person has their own. Ask
 the bot to stop using it to clear it.
+
+With a project folder set, a bot can hand bigger jobs to the coding agent installed on that
+computer (for example a command-line coding assistant you have signed in to in your terminal). The
+agent works in the folder with the project's own instructions, can run for up to an hour, and
+answers the bot, which keeps the same agent session going with your replies. The bot asks before it
+first hands work to the agent in a space; **Allow in this space** covers the rest of that space.
+Anything the agent would need a person to approve is refused, not left waiting.

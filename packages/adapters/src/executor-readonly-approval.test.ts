@@ -3264,6 +3264,7 @@ describe("user_computer_shell", () => {
     });
     await here.run();
     expect(here.offeredTools()).toContain("user_computer_folder");
+    expect(here.offeredTools()).toContain("user_computer_agent");
     expect(here.instructions()).toContain(`Your project folder there is "${path}"`);
     const away = fixture({
       ...ownRun,
@@ -3271,6 +3272,7 @@ describe("user_computer_shell", () => {
       folder: { deviceId: "device-2", path, device: { name: "Studio Mac" } },
     });
     await away.run();
+    expect(away.offeredTools()).not.toContain("user_computer_agent");
     expect(away.instructions()).toContain(
       `Your project folder is "${path}" on their computer "Studio Mac", which is not connected.`,
     );

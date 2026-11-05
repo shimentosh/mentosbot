@@ -33,6 +33,7 @@ export const BUILTIN_TOOL_NAMES = [
   "shell",
   "user_computer_shell",
   "user_computer_folder",
+  "user_computer_agent",
   "user_computer_observe",
   "user_computer_act",
   "open_path",

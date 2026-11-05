@@ -136,6 +136,19 @@ export function buildApprovalAskBlock(
       ],
     };
   }
+  if (toolName === "user_computer_agent") {
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: "Let the coding agent on your computer work on this?",
+      detail: truncate(redactSecrets(String(args.task ?? ""), secrets), MAX_APPROVAL_DETAIL_LENGTH),
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow in this space" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
   if (toolName === "user_computer_folder") {
     const folder = String(args.path ?? "").trim();
     return {
