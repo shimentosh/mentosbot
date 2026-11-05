@@ -135,21 +135,16 @@ describe("server image publish workflow", () => {
       // biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
       expect(concurrency["cancel-in-progress"]).toBe("${{ github.event_name == 'pull_request' }}");
     }
-    for (const job of [
-      workflow.jobs["build-depot"],
-      workflow.jobs.publish,
-    ]) {
+    for (const job of [workflow.jobs["build-depot"], workflow.jobs.publish]) {
       expect(job?.concurrency?.queue).toBe("max");
       expect(job?.concurrency?.["cancel-in-progress"]).toBe(false);
     }
   });
 
   it("lets only the newest waiting main revision replace a queued one, never a running one", () => {
-    const locks = [
-      "static-checks",
-      "unit-tests-shard",
-      "test-integration-shard",
-    ].map((name) => ci.jobs[name]?.concurrency);
+    const locks = ["static-checks", "unit-tests-shard", "test-integration-shard"].map(
+      (name) => ci.jobs[name]?.concurrency,
+    );
     expect(new Set(locks.map((lock) => lock?.group)).size).toBe(locks.length);
     for (const lock of locks) {
       expect(lock?.group).toMatch(/main/);
@@ -158,11 +153,7 @@ describe("server image publish workflow", () => {
     }
     // Release prerequisites start with their run, so they reach these locks in push order and an
     // older revision cannot replace a newer one that is already waiting.
-    for (const name of [
-      "static-checks",
-      "unit-tests-shard",
-      "test-integration-shard",
-    ]) {
+    for (const name of ["static-checks", "unit-tests-shard", "test-integration-shard"]) {
       expect(ci.jobs[name]?.needs, name).toBeUndefined();
     }
   });

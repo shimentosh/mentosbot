@@ -2940,6 +2940,7 @@ msgstr "還沒有帳號？"
 
 #: src/components/AccountDataSettings.tsx
 #: src/components/ChoiceAsk.tsx
+#: src/components/StatusCard.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -3232,6 +3233,7 @@ msgstr "極高"
 msgid "failed"
 msgstr "失敗"
 
+#: src/components/StatusCard.tsx
 #: src/components/SubagentCard.tsx
 #: src/pages/ActivityList.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -5089,6 +5091,7 @@ msgstr ""
 msgid "Paused"
 msgstr "已暫停"
 
+#: src/components/StatusCard.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/PluginSubmissionsPanel.tsx

@@ -266,9 +266,7 @@ describe("ask history", () => {
       { id: "choice-2", label: "Not now" },
     ];
     const draft = { kind: "ask" as const, text: "Post this?", preview: "Hello", actions };
-    expect(blocksToAgentHistoryText([draft])).toBe(
-      "Post this?\n\nHello\n\n1. Post\n2. Not now",
-    );
+    expect(blocksToAgentHistoryText([draft])).toBe("Post this?\n\nHello\n\n1. Post\n2. Not now");
     expect(
       blocksToAgentHistoryText([
         { ...draft, status: "answered", answer: "choice-1", answers: ["choice-1"] },

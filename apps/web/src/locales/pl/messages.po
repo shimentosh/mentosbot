@@ -2939,6 +2939,7 @@ msgstr "Nie masz konta?"
 
 #: src/components/AccountDataSettings.tsx
 #: src/components/ChoiceAsk.tsx
+#: src/components/StatusCard.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -3231,6 +3232,7 @@ msgstr "Bardzo wysoki"
 msgid "failed"
 msgstr "błąd"
 
+#: src/components/StatusCard.tsx
 #: src/components/SubagentCard.tsx
 #: src/pages/ActivityList.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -5088,6 +5090,7 @@ msgstr "Wstrzymaj"
 msgid "Paused"
 msgstr "Wstrzymano"
 
+#: src/components/StatusCard.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
