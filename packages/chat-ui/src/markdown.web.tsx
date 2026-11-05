@@ -869,11 +869,15 @@ export const ChatMarkdown = memo(function ChatMarkdown({
   );
 });
 
-export type { ChatMarkdownProps, LinkFavicons } from "./markdown";
+export type { ChatMarkdownProps, LinkFavicons, LinkPreviews } from "./markdown";
 export {
   LinkFaviconsContext,
+  LinkPreviewsContext,
+  linkPreviewSite,
+  linkPreviewUrls,
   RemoteImagesContext,
   useLinkFavicon,
+  useLinkPreview,
   withBlockMentions,
 } from "./markdown";
 export type { MarkdownCopy } from "./markdown-copy";

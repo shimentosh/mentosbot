@@ -24,7 +24,7 @@ import type { RouterContext } from "./context.js";
 const EXPORT_MESSAGE_PAGE_SIZE = 500;
 
 export function contentRoutes(ctx: RouterContext) {
-  const { deps, repos, favicons, groupRepos, authed } = ctx;
+  const { deps, repos, favicons, linkPreviews, groupRepos, authed } = ctx;
   return {
     artifacts: {
       list: authed.artifacts.list.handler(async ({ context, input }) => {
@@ -261,6 +261,12 @@ export function contentRoutes(ctx: RouterContext) {
     },
     links: {
       favicon: authed.links.favicon.handler(async ({ input }) => favicons.favicon(input.origin)),
+      preview: authed.links.preview.handler(async ({ context, input }) =>
+        // The app's own pages are never previewed: they are its sign-in shell, not content.
+        isOwnOrigin(input.url, deps.env?.webOrigin)
+          ? { preview: null }
+          : linkPreviews.preview(input.url, context.actor.userId),
+      ),
     },
     runs: {
       list: authed.runs.list.handler(async ({ context, input }) => ({
@@ -268,6 +274,15 @@ export function contentRoutes(ctx: RouterContext) {
       })),
     },
   };
+}
+
+function isOwnOrigin(url: string, webOrigin: string | undefined): boolean {
+  if (!webOrigin) return false;
+  try {
+    return new URL(url).origin === new URL(webOrigin).origin;
+  } catch {
+    return false;
+  }
 }
 
 /** Valid UTF-8 stays readable text; anything else is base64 so the bytes survive the JSON. */

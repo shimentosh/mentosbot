@@ -1,6 +1,7 @@
 /// <reference path="./linkify-it.d.ts" />
 
-import type { MessageBlock } from "@rakazo/contracts";
+import type { LinkPreview, MessageBlock } from "@rakazo/contracts";
+import { LINK_PREVIEW_URL_MAX_LENGTH } from "@rakazo/contracts";
 import { urlSite } from "@rakazo/core/egress";
 import LinkifyIt from "linkify-it";
 import type { ReactNode } from "react";
@@ -451,96 +452,232 @@ export const LinkFaviconsContext = createContext<LinkFavicons | null>(null);
 /** True while a reply streams: a half-written autolink host must not be looked up. */
 export const LinkFaviconsPausedContext = createContext(false);
 
-// One answer per API endpoint and origin for the session, shared by links on screen.
-const linkFavicons = new Map<string, string | null>();
-const pendingFavicons = new Set<string>();
+/** Where link previews come from: the Rakazo API, which reads and caches each linked page. */
+export type LinkPreviews = {
+  /** Cache scope for the API serving these answers. */
+  endpoint?: string;
+  /** `retry` means the server was too busy to look, not that the page has no preview. */
+  load(url: string): Promise<{ preview: LinkPreview | null; retry?: boolean }>;
+};
+
+export const LinkPreviewsContext = createContext<LinkPreviews | null>(null);
+
+type LookupAnswer<T> = { value: T | null; retry?: boolean };
+
 // A failed lookup (an older server without the procedure, or no connection) is not asked again
 // by every link that mounts, but is retried after a while so a brief outage does not last all day.
-const FAILED_FAVICON_RETRY_MS = 5 * 60 * 1000;
-const failedFavicons = new Map<string, number>();
+const FAILED_LOOKUP_RETRY_MS = 5 * 60 * 1000;
 // A busy server is asked again a few times, a little later, while the link stays on screen.
-const BUSY_FAVICON_RETRY_MS = 10_000;
-const BUSY_FAVICON_ATTEMPTS = 3;
-const busyFaviconRetries = new Map<string, ReturnType<typeof setTimeout>>();
-// How many links to each origin are on screen; a busy retry stops once none are.
-const mountedFaviconLinks = new Map<string, number>();
-const faviconListeners = new Set<() => void>();
+const BUSY_LOOKUP_RETRY_MS = 10_000;
+const BUSY_LOOKUP_ATTEMPTS = 3;
 
-function setLinkFavicon(origin: string, icon: string | null) {
-  linkFavicons.set(origin, icon);
-  for (const listener of faviconListeners) listener();
-}
+/**
+ * One answer per API endpoint and subject for the session, shared by every link on screen that
+ * asks about the same subject: site icons by origin, previews by URL. Past `maxValues`, the oldest
+ * answers no link on screen shows are forgotten, and asked for again if one comes back.
+ */
+function linkLookup<Source extends { endpoint?: string }, T>(
+  ask: (source: Source, subject: string) => Promise<LookupAnswer<T>>,
+  maxValues = Number.POSITIVE_INFINITY,
+) {
+  const values = new Map<string, T | null>();
+  const pending = new Set<string>();
+  const failed = new Map<string, number>();
+  const busyRetries = new Map<string, ReturnType<typeof setTimeout>>();
+  // How many links to each subject are on screen; a busy retry stops once none are.
+  const mounted = new Map<string, number>();
+  const listeners = new Set<() => void>();
 
-function subscribeLinkFavicons(listener: () => void) {
-  faviconListeners.add(listener);
-  return () => {
-    faviconListeners.delete(listener);
+  const setValue = (key: string, value: T | null) => {
+    values.delete(key);
+    values.set(key, value);
+    for (const old of values.keys()) {
+      if (values.size <= maxValues) break;
+      if (!mounted.has(old)) values.delete(old);
+    }
+    for (const listener of listeners) listener();
+  };
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+  // The subject stays pending across busy retries, so links that mount meanwhile do not ask too.
+  const request = (source: Source, subject: string, key: string, attempt: number) => {
+    pending.add(key);
+    ask(source, subject).then(
+      (answer) => {
+        const shown = mounted.has(key);
+        if (answer.retry && shown && attempt < BUSY_LOOKUP_ATTEMPTS) {
+          const retry = () => {
+            busyRetries.delete(key);
+            request(source, subject, key, attempt + 1);
+          };
+          busyRetries.set(key, setTimeout(retry, BUSY_LOOKUP_RETRY_MS));
+          return;
+        }
+        pending.delete(key);
+        // A busy answer for links no longer on screen is dropped; the next one to mount asks.
+        if (answer.retry && shown) failed.set(key, Date.now());
+        else if (!answer.retry) setValue(key, answer.value);
+      },
+      () => {
+        pending.delete(key);
+        failed.set(key, Date.now());
+      },
+    );
+  };
+
+  /** The answer once the API has one, and a way to drop a value that turns out unusable. */
+  return function useLookup(
+    source: Source | null,
+    subject: string | undefined,
+    paused: boolean,
+  ): { value: T | null; unusable: () => void } {
+    const key = JSON.stringify([source?.endpoint ?? "", subject]);
+    const snapshot = () => (subject ? (values.get(key) ?? null) : null);
+    const value = useSyncExternalStore(subscribe, snapshot, snapshot);
+    useEffect(() => {
+      if (!subject) return;
+      mounted.set(key, (mounted.get(key) ?? 0) + 1);
+      return () => {
+        const left = (mounted.get(key) ?? 1) - 1;
+        if (left > 0) {
+          mounted.set(key, left);
+          return;
+        }
+        mounted.delete(key);
+        const retry = busyRetries.get(key);
+        if (retry === undefined) return;
+        clearTimeout(retry);
+        busyRetries.delete(key);
+        pending.delete(key);
+      };
+    }, [key, subject]);
+    useEffect(() => {
+      if (!source || paused || !subject) return;
+      if (values.has(key) || pending.has(key)) return;
+      if (Date.now() - (failed.get(key) ?? -Infinity) < FAILED_LOOKUP_RETRY_MS) return;
+      request(source, subject, key, 1);
+    }, [source, paused, subject, key]);
+    return {
+      value,
+      unusable: () => {
+        if (subject) setValue(key, null);
+      },
+    };
   };
 }
 
-/** The origin stays pending across busy retries, so links that mount meanwhile do not ask too. */
-function requestLinkFavicon(source: LinkFavicons, origin: string, key: string, attempt: number) {
-  pendingFavicons.add(key);
-  source.load(origin).then(
-    (answer) => {
-      const shown = mountedFaviconLinks.has(key);
-      if (answer.retry && shown && attempt < BUSY_FAVICON_ATTEMPTS) {
-        const retry = () => {
-          busyFaviconRetries.delete(key);
-          requestLinkFavicon(source, origin, key, attempt + 1);
-        };
-        busyFaviconRetries.set(key, setTimeout(retry, BUSY_FAVICON_RETRY_MS));
-        return;
-      }
-      pendingFavicons.delete(key);
-      // A busy answer for links no longer on screen is dropped; the next one to mount asks.
-      if (answer.retry && shown) failedFavicons.set(key, Date.now());
-      else if (!answer.retry) setLinkFavicon(key, answer.icon);
-    },
-    () => {
-      pendingFavicons.delete(key);
-      failedFavicons.set(key, Date.now());
-    },
-  );
-}
+const useFaviconLookup = linkLookup<LinkFavicons, string>(async (source, origin) => {
+  const answer = await source.load(origin);
+  return { value: answer.icon, retry: answer.retry };
+});
 
 /** The icon for a link once the API has one, and a way to drop an image that turns out unusable. */
 export function useLinkFavicon(href: string): { icon: string | null; unusable: () => void } {
   const source = useContext(LinkFaviconsContext);
   const paused = useContext(LinkFaviconsPausedContext);
-  const origin = linkFaviconOrigin(href);
-  const key = JSON.stringify([source?.endpoint ?? "", origin]);
-  const snapshot = () => (origin ? (linkFavicons.get(key) ?? null) : null);
-  const icon = useSyncExternalStore(subscribeLinkFavicons, snapshot, snapshot);
-  useEffect(() => {
-    if (!origin) return;
-    mountedFaviconLinks.set(key, (mountedFaviconLinks.get(key) ?? 0) + 1);
-    return () => {
-      const left = (mountedFaviconLinks.get(key) ?? 1) - 1;
-      if (left > 0) {
-        mountedFaviconLinks.set(key, left);
-        return;
-      }
-      mountedFaviconLinks.delete(key);
-      const retry = busyFaviconRetries.get(key);
-      if (retry === undefined) return;
-      clearTimeout(retry);
-      busyFaviconRetries.delete(key);
-      pendingFavicons.delete(key);
-    };
-  }, [key, origin]);
-  useEffect(() => {
-    if (!source || paused || !origin) return;
-    if (linkFavicons.has(key) || pendingFavicons.has(key)) return;
-    if (Date.now() - (failedFavicons.get(key) ?? -Infinity) < FAILED_FAVICON_RETRY_MS) return;
-    requestLinkFavicon(source, origin, key, 1);
-  }, [source, paused, origin, key]);
-  return {
-    icon,
-    unusable: () => {
-      if (origin) setLinkFavicon(key, null);
+  const { value, unusable } = useFaviconLookup(source, linkFaviconOrigin(href), paused);
+  return { icon: value, unusable };
+}
+
+// Previews carry an image each, so a long session keeps only the most recent ones.
+const MAX_REMEMBERED_PREVIEWS = 200;
+
+const usePreviewLookup = linkLookup<LinkPreviews, LinkPreview>(async (source, url) => {
+  const answer = await source.load(url);
+  return { value: answer.preview, retry: answer.retry };
+}, MAX_REMEMBERED_PREVIEWS);
+
+/** The preview for a link once the API has one; null while it loads and when there is none. */
+export function useLinkPreview(url: string): LinkPreview | null {
+  return usePreviewLookup(useContext(LinkPreviewsContext), url, false).value;
+}
+
+/** The site a card names: the page's own name for its site, else the link's host without www. */
+export function linkPreviewSite(url: string, preview: Pick<LinkPreview, "siteName">): string {
+  return preview.siteName ?? httpUrl(url)?.hostname.replace(/^www\./i, "") ?? url;
+}
+
+/** At most this many links in one message get a card, so a list of links stays a list. */
+export const MAX_LINK_PREVIEWS = 2;
+
+const LINKED_IMAGE = /\[!\[[^\]\n]*\]\([^)\n]*\)\]\([^)\n]*\)/g;
+const IMAGE = /!\[[^\]\n]*\]\([^)\n]*\)/g;
+const MARKDOWN_LINK = /\[((?:\\.|[^\\\]\n])*)\]\(\s*<?([^\s()<>]+)>?(?:\s+"[^"\n]*")?\s*\)/g;
+
+/** A link a card may show: http(s), no credentials, short enough, not to the app itself. */
+function previewableLink(href: string, appOrigin: string | null | undefined): string | undefined {
+  const safe = sanitizeMarkdownUrl(href);
+  const url = safe ? httpUrl(safe) : undefined;
+  if (!url || url.username || url.password || url.href.length > LINK_PREVIEW_URL_MAX_LENGTH) {
+    return undefined;
+  }
+  if (appOrigin) {
+    try {
+      if (url.origin === new URL(appOrigin).origin) return undefined;
+    } catch {
+      // An unreadable app origin matches nothing.
+    }
+  }
+  return url.href;
+}
+
+/**
+ * Links in markdown whose whole address the reader sees, in order: bare URLs, and links whose label
+ * is the address itself. Other labelled links are blanked so their address is not found again.
+ */
+function visibleMarkdownLinks(prose: string): string[] {
+  const found: { index: number; href: string }[] = [];
+  const masked = prose.replace(
+    MARKDOWN_LINK,
+    (match: string, label: string, href: string, index: number) => {
+      if (comparableUrl(label) === comparableUrl(href)) found.push({ index, href });
+      return " ".repeat(match.length);
     },
+  );
+  for (const match of plainTextLinkify.match(masked) ?? []) {
+    found.push({ index: match.index, href: match.url });
+  }
+  return found.sort((a, b) => a.index - b.index).map((link) => link.href);
+}
+
+/**
+ * Links in a message that get a preview card, in order: only those whose full address the reader
+ * sees, so a bare URL (in a sentence or alone) or a link labelled with its own address. A card makes
+ * the server fetch the link before anyone taps it, so a link behind other words never gets one;
+ * neither do images or anything in code. `plain` reads a user's literal text, where every explicit
+ * URL is bare. Web and mobile both use this one rule.
+ */
+export function linkPreviewUrls(
+  texts: readonly string[],
+  options: { plain?: boolean; appOrigin?: string | null } = {},
+): string[] {
+  const links: string[] = [];
+  const seen = new Set<string>();
+  const add = (href: string) => {
+    const link = previewableLink(href, options.appOrigin);
+    const key = link?.replace(/#.*$/, "");
+    if (!link || !key || seen.has(key) || links.length >= MAX_LINK_PREVIEWS) return;
+    seen.add(key);
+    links.push(link);
   };
+  for (const text of texts) {
+    if (options.plain) {
+      for (const part of plainTextLinkParts(text)) if (part.type === "link") add(part.href);
+      continue;
+    }
+    const prose = text
+      .split(CODE)
+      .filter((_, index) => index % 2 === 0)
+      .join("\n")
+      .replace(LINKED_IMAGE, " ")
+      .replace(IMAGE, " ");
+    for (const href of visibleMarkdownLinks(prose)) add(href);
+  }
+  return links;
 }
 
 export function closeUnterminatedFence(markdown: string): string {

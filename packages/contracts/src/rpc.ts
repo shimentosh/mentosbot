@@ -168,6 +168,7 @@ import {
   IntegrationProviderConfigSchema,
   IntegrationSetupStateSchema,
 } from "./integration-settings.js";
+import { LINK_PREVIEW_URL_MAX_LENGTH, LinkPreviewSchema } from "./link-preview.js";
 import { ModelHeadersSchema } from "./model-headers.js";
 import { ModelRoleSchema, ModelRoleUpdateSchema, ModelRoleViewSchema } from "./model-roles.js";
 import {
@@ -1574,6 +1575,13 @@ export const appContract = {
       // The longest origin: a scheme, a 253-character host name and a port.
       .input(z.object({ origin: z.string().max("https://".length + 253 + ":65535".length) }))
       .output(z.object({ icon: z.string().nullable(), retry: z.boolean().optional() })),
+    /**
+     * A card's title, description, site name and image for one http(s) link, read and cached by
+     * the server. `retry` means the server was too busy to look; the page may still have one.
+     */
+    preview: oc
+      .input(z.object({ url: z.string().max(LINK_PREVIEW_URL_MAX_LENGTH) }))
+      .output(z.object({ preview: LinkPreviewSchema.nullable(), retry: z.boolean().optional() })),
   },
   runs: {
     list: oc.input(z.object({ filter: z.enum(["active", "recent"]) })).output(RunsListOutputSchema),

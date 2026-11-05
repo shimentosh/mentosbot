@@ -1,4 +1,4 @@
-import { markdownCodeBlocks } from "@rakazo/chat-ui/native";
+import { linkPreviewUrls, markdownCodeBlocks } from "@rakazo/chat-ui/native";
 import type { BotAvatarSet, LoginFieldInput, MessageReaction } from "@rakazo/contracts";
 import { canReactToThreadMessage, MESSAGE_REACTIONS } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
@@ -9,7 +9,12 @@ import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import { Platform, View } from "react-native";
 import Animated, { useReducedMotion, ZoomIn } from "react-native-reanimated";
 import type { MobileBot, MobileMessage, MobileSnapshot } from "../../lib/api";
-import { blockText, copyableMobileMessageText, selectableMobileMessageText } from "../../lib/api";
+import {
+  blockText,
+  copyableMobileMessageText,
+  currentApiBase,
+  selectableMobileMessageText,
+} from "../../lib/api";
 import type { MobileArtifactTarget } from "../../lib/artifact-open";
 import { canDoubleTapReact } from "../../lib/double-tap";
 import { useI18n } from "../../lib/i18n";
@@ -28,6 +33,7 @@ import { MessageContextMenu } from "../message-context-menu";
 import { ReplyLine } from "../reply-line";
 import { TimeSeparator } from "../time-separator";
 import { UnreadDivider } from "../unread-divider";
+import { LinkPreviewCards } from "./link-preview-cards";
 import type { MessageActionProps } from "./message-bubble";
 import { MessageBubble } from "./message-bubble";
 
@@ -363,6 +369,17 @@ export const MessageRow = memo(function MessageRow({
     hasLike,
     optimisticLike,
   ]);
+  // A streaming reply gets no cards: a half-written address must not be looked up.
+  const previewUrls = useMemo(
+    () =>
+      message.id.startsWith("progress:")
+        ? []
+        : linkPreviewUrls(
+            message.blocks.flatMap((block) => (block.kind === "text" ? [block.text] : [])),
+            { plain: message.role === "user", appOrigin: currentApiBase() },
+          ),
+    [message.id, message.blocks, message.role],
+  );
   const layout = messageRowLayout(message.blocks, { activityBotId, inGroup, columnWidth });
   return (
     <View
@@ -454,6 +471,7 @@ export const MessageRow = memo(function MessageRow({
               />
             </ThreadReadOnlyContext.Provider>
           </MessageContextMenu>
+          <LinkPreviewCards urls={previewUrls} end={message.role === "user"} />
           {displayedReactions.size > 0 ? (
             <View
               style={{

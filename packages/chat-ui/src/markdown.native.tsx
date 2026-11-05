@@ -1817,11 +1817,16 @@ const layout = StyleSheet.create({
   },
 });
 
-export type { ChatMarkdownProps, LinkFavicons } from "./markdown";
+export type { ChatMarkdownProps, LinkFavicons, LinkPreviews } from "./markdown";
 export {
   LinkFaviconsContext,
+  LinkPreviewsContext,
+  linkPreviewSite,
+  linkPreviewUrls,
   plainTextLinkParts,
   RemoteImagesContext,
+  useLinkFavicon,
+  useLinkPreview,
   withBlockMentions,
 } from "./markdown";
 export { MarkdownLinkPromptProvider } from "./markdown-link-prompt";

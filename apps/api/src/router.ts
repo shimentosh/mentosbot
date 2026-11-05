@@ -17,6 +17,7 @@ import type {
   ConnectorRegistry,
   FaviconResolver,
   IntegrationProviderSettings,
+  LinkPreviewResolver,
   McpConnector,
   McpOAuthBroker,
   MemoryProviderResolver,
@@ -97,6 +98,8 @@ export interface RouterDeps {
   modelConnectionCheck?: typeof verifyModelServesAgents;
   /** Site icons for links; defaults to the per-process cache that fetches them. */
   favicons?: FaviconResolver;
+  /** Previews for links in messages; defaults to the per-process cache that reads them. */
+  linkPreviews?: LinkPreviewResolver;
   /** Detached refresh for an expired bearer, so the live catalog never refreshes inline. */
   refreshExpiredModelCredential?: (
     scope: { userId: string; spaceId: string },

@@ -1,7 +1,8 @@
-import type { LinkFavicons } from "@rakazo/chat-ui/native";
+import type { LinkFavicons, LinkPreviews } from "@rakazo/chat-ui/native";
 import {
   CodeCopyButtonContext,
   LinkFaviconsContext,
+  LinkPreviewsContext,
   MarkdownLinkPromptProvider,
   MermaidDiagramContext,
   RemoteImagesContext,
@@ -52,7 +53,7 @@ import { AvatarScreenFocus } from "../lib/avatar-life";
 import { installClientUpdates, watchForegroundUpdates } from "../lib/client-update";
 import { bootstrapI18n, useI18n } from "../lib/i18n";
 import { startIncomingCalls } from "../lib/incoming-calls";
-import { loadLinkFavicon } from "../lib/link-favicons";
+import { loadLinkFavicon, loadLinkPreview } from "../lib/link-favicons";
 import {
   configureForegroundNotifications,
   resumeLiveNotifications,
@@ -228,6 +229,10 @@ function ChatContentProviders({
     () => ({ endpoint, load: (origin) => loadLinkFavicon(origin, endpoint), globe: <LinkGlobe /> }),
     [endpoint],
   );
+  const linkPreviews = useMemo<LinkPreviews>(
+    () => ({ endpoint, load: (url) => loadLinkPreview(url, endpoint) }),
+    [endpoint],
+  );
   const session = useSyncExternalStore(subscribeSessionGeneration, currentReadySessionGeneration);
   const trustedSites = useTrustedLinkSites();
   const router = useRouter();
@@ -252,11 +257,13 @@ function ChatContentProviders({
     >
       <RemoteImagesContext.Provider value={loadRemoteImages}>
         <LinkFaviconsContext.Provider value={linkFavicons}>
-          <MermaidDiagramContext.Provider value={MermaidDiagram}>
-            <CodeCopyButtonContext.Provider value={CodeCopyButton}>
-              <OpenPageContext.Provider value={openPage}>{children}</OpenPageContext.Provider>
-            </CodeCopyButtonContext.Provider>
-          </MermaidDiagramContext.Provider>
+          <LinkPreviewsContext.Provider value={linkPreviews}>
+            <MermaidDiagramContext.Provider value={MermaidDiagram}>
+              <CodeCopyButtonContext.Provider value={CodeCopyButton}>
+                <OpenPageContext.Provider value={openPage}>{children}</OpenPageContext.Provider>
+              </CodeCopyButtonContext.Provider>
+            </MermaidDiagramContext.Provider>
+          </LinkPreviewsContext.Provider>
         </LinkFaviconsContext.Provider>
       </RemoteImagesContext.Provider>
     </MarkdownLinkPromptProvider>

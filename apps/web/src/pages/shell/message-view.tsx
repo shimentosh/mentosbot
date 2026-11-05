@@ -1,6 +1,11 @@
 import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { ChatMarkdown, LinkifiedText, withBlockMentions } from "@rakazo/chat-ui/web";
+import {
+  ChatMarkdown,
+  LinkifiedText,
+  linkPreviewUrls,
+  withBlockMentions,
+} from "@rakazo/chat-ui/web";
 import type {
   BotAvatarSet,
   LoginFieldInput,
@@ -41,6 +46,7 @@ import { ReplyLine } from "./chat-context";
 import { FALLBACK_BOT_COLOR, previewMessageText } from "./chat-shared";
 import type { ImportSetupTarget } from "./import-setup-card";
 import { ImportSetupCard } from "./import-setup-card";
+import { LinkPreviewCards } from "./link-preview-cards";
 import {
   AppConnectCard,
   ArtifactImage,
@@ -162,6 +168,18 @@ export const MessageView = memo(function MessageView({
       ))}
     </div>
   ) : null;
+  // A streaming reply gets no cards: a half-written address must not be looked up.
+  const previewUrls = useMemo(
+    () =>
+      isLive
+        ? []
+        : linkPreviewUrls(
+            message.blocks.flatMap((block) => (block.kind === "text" ? [block.text] : [])),
+            { plain: message.role === "user", appOrigin: window.location.origin },
+          ),
+    [isLive, message.blocks, message.role],
+  );
+  const linkCards = <LinkPreviewCards urls={previewUrls} end={message.role === "user"} />;
   const visibleNarrationBlocks = renderableMessageBlocks(blocks, showToolActivity);
   const renderMention = useCallback(
     (id: string) => {
@@ -312,6 +330,7 @@ export const MessageView = memo(function MessageView({
           </div>
           {hoverActions}
         </div>
+        {linkCards}
         {pageCards}
       </>
     );
@@ -673,6 +692,7 @@ export const MessageView = memo(function MessageView({
         })}
         {hoverAnchorIndex === -1 ? hoverActions : null}
       </div>
+      {linkCards}
       {pageCards}
     </>
   );

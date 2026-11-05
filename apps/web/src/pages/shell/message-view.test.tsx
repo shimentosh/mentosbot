@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import type { LinkPreviews } from "@rakazo/chat-ui/web";
+import { LinkPreviewsContext } from "@rakazo/chat-ui/web";
 import type { ThreadMessage } from "@rakazo/contracts";
 import type { ComponentProps, ReactNode } from "react";
 import { act } from "react";
@@ -314,4 +316,98 @@ it("sends a settings Undo through the chat's space client", async () => {
   const undo = [...container.querySelectorAll("button")].find((b) => b.textContent === "Undo");
   await act(async () => undo?.click());
   expect(spaceRpc.bots.update).toHaveBeenCalledTimes(1);
+});
+
+const preview = {
+  title: "A post",
+  description: "What it says",
+  siteName: "Example",
+  image: "data:image/jpeg;base64,AAAA",
+};
+
+function renderWithPreviews(load: LinkPreviews["load"], blocks: ThreadMessage["blocks"], id = "m") {
+  act(() =>
+    root.render(
+      <LinkPreviewsContext.Provider value={{ load }}>
+        <MessageView
+          rpc={rpc}
+          artifactTarget={{ botId: "parent" }}
+          canAnswer={false}
+          canDismiss={false}
+          message={{
+            id,
+            threadId: "thread",
+            seq: 1,
+            role: "bot",
+            createdAt: new Date().toISOString(),
+            blocks,
+          }}
+          onAnswer={vi.fn()}
+          onOpenBot={vi.fn()}
+          onOpenPeerMessages={vi.fn()}
+          peerBot={existingBot}
+          onRefresh={vi.fn()}
+          onBotChanged={vi.fn()}
+          onAddRoutine={vi.fn()}
+          voiceReady={false}
+          speaking={false}
+          onSpeak={vi.fn()}
+          onOpenComputer={vi.fn()}
+          showToolActivity={false}
+          onReply={vi.fn()}
+          onMarkUnread={vi.fn()}
+          onReact={vi.fn()}
+        />
+      </LinkPreviewsContext.Provider>,
+    ),
+  );
+}
+
+it("draws a card for a link a reply shares once the server has read it", async () => {
+  const load = vi.fn<LinkPreviews["load"]>(async () => ({ preview }));
+  renderWithPreviews(load, [{ kind: "text", text: "Posted: https://site.example.test/post/1" }]);
+  await act(async () => undefined);
+  expect(load).toHaveBeenCalledWith("https://site.example.test/post/1");
+  const card = container.querySelector<HTMLAnchorElement>('[data-testid="link-preview"]');
+  expect(card?.href).toBe("https://site.example.test/post/1");
+  expect(card?.textContent).toContain("A post");
+  expect(card?.textContent).toContain("What it says");
+  expect(card?.textContent).toContain("Example");
+  expect(card?.querySelector("img")?.getAttribute("src")).toBe(preview.image);
+});
+
+it("never looks up a link whose address is hidden behind its label", async () => {
+  const load = vi.fn<LinkPreviews["load"]>(async () => ({ preview }));
+  renderWithPreviews(load, [
+    { kind: "text", text: "[Read the post](https://hidden.example.test/post?ref=1)" },
+  ]);
+  await act(async () => undefined);
+  expect(load).not.toHaveBeenCalled();
+  expect(container.querySelector('[data-testid="link-preview"]')).toBeNull();
+});
+
+it("draws nothing while the page is read, or when it has no preview", async () => {
+  let answer!: (value: { preview: null }) => void;
+  const load = vi.fn<LinkPreviews["load"]>(
+    () =>
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+  );
+  renderWithPreviews(load, [{ kind: "text", text: "https://none.example.test/a" }]);
+  expect(load).toHaveBeenCalledTimes(1);
+  expect(container.querySelector('[data-testid="link-preview"]')).toBeNull();
+  await act(async () => answer({ preview: null }));
+  expect(container.querySelector('[data-testid="link-preview"]')).toBeNull();
+});
+
+it("looks nothing up while a reply is still streaming", async () => {
+  const load = vi.fn<LinkPreviews["load"]>(async () => ({ preview }));
+  renderWithPreviews(
+    load,
+    [{ kind: "progress", text: "Posted: https://stream.example.test/po" }],
+    "progress:run",
+  );
+  await act(async () => undefined);
+  expect(load).not.toHaveBeenCalled();
 });

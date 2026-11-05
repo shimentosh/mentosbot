@@ -573,6 +573,7 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["spaceSettings/overrides"],
       ["spaceSettings/setOverride"],
       ["links/favicon"],
+      ["links/preview"],
       ["runs/list"],
       ["paymentWallet/status"],
       ["paymentWallet/connect"],

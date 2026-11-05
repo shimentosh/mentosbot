@@ -8,6 +8,7 @@ import {
   connectedModelSeesImages,
   connectionServesModel,
   createFaviconResolver,
+  createLinkPreviewResolver,
   decisionModelCatalog,
   deploymentModelRole,
   findConnectedModelCredential,
@@ -109,6 +110,7 @@ export function createRouterContext(deps: RouterDeps) {
     codexCatalog,
   );
   const favicons = deps.favicons ?? createFaviconResolver();
+  const linkPreviews = deps.linkPreviews ?? createLinkPreviewResolver();
   const refreshExpiredCredential =
     deps.refreshExpiredModelCredential ??
     ((scope: { userId: string; spaceId: string }, secretId: string, provider: string) =>
@@ -421,6 +423,7 @@ export function createRouterContext(deps: RouterDeps) {
     codexCatalog,
     connectModelCredential,
     favicons,
+    linkPreviews,
     refreshExpiredCredential,
     botModelValidation,
     removeBot,
