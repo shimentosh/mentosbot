@@ -1,9 +1,15 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { HostComputerRequest } from "./host-computer-protocol.js";
 import type { RunContext } from "./run-context.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
   userComputerAgent,
+  userComputerAttach,
+  userComputerAttachScript,
   userComputerCwd,
   userComputerFolder,
   userComputerGate,
@@ -11,6 +17,19 @@ import {
   userComputerShell,
 } from "./run-tools-user-computer.js";
 import type { UserDeviceGateway } from "./user-device-protocol.js";
+
+const attached = vi.hoisted(() => ({
+  calls: [] as Array<{ filePath: string; bytes: Uint8Array }>,
+}));
+vi.mock("./thread-artifacts.js", () => ({
+  attachWorkspaceFileToThread: vi.fn(
+    async (_deps: unknown, input: { filePath: string; bytes: Uint8Array }) => {
+      attached.calls.push(input);
+      return { artifactId: "artifact-1", block: { kind: "file" } };
+    },
+  ),
+}));
+vi.mock("./run-messages.js", () => ({ publishMessage: vi.fn(async () => undefined) }));
 
 const environment = { platform: "darwin", home: "/Users/fake", shell: "/bin/zsh" };
 
@@ -48,9 +67,15 @@ function setup(
     },
   };
   const ctx = {
-    deps: { userDevices: gateway, prisma: { botFolder } },
+    deps: {
+      userDevices: gateway,
+      prisma: { botFolder },
+      artifacts: {},
+      maxUploadSizeBytes: 1024 * 1024,
+    },
     bot: { id: "bot-1" },
-    run: { spaceId: "space-1" },
+    run: { id: "run-1", spaceId: "space-1", userId: "user-1" },
+    thread: { groupId: null },
     runId: "run-1",
     source: { userComputerOwner: "user-1" },
     context: { signal: controller.signal },
@@ -62,6 +87,7 @@ function setup(
       name: "user_computer_shell",
       args,
       observer: { onShellStillRunning },
+      executionId: "call-1",
       finish: async (result: unknown) => result,
     }) as unknown as ToolCall;
   return { ctx, call, controller, requests, signals, deviceIds, onShellStillRunning, botFolder };
@@ -406,5 +432,85 @@ describe("userComputerAgent", () => {
       output: "Not signed in",
       steps: [],
     });
+  });
+});
+
+describe("userComputerAttachScript", () => {
+  it.skipIf(process.platform === "win32")(
+    "prints the file as base64 and refuses a missing or oversized file",
+    () => {
+      const directory = mkdtempSync(join(tmpdir(), "attach-"));
+      try {
+        const file = join(directory, "it's a clip $(x).mp4");
+        const bytes = Buffer.from(Array.from({ length: 3000 }, (_, index) => index % 256));
+        writeFileSync(file, bytes);
+        const run = (path: string, max: number) =>
+          spawnSync("/bin/sh", ["-c", userComputerAttachScript({ platform: "darwin" })], {
+            encoding: "utf8",
+            env: {
+              PATH: "/usr/bin:/bin",
+              RAKAZO_ATTACH_FILE: path,
+              RAKAZO_ATTACH_MAX: String(max),
+            },
+          });
+        const sent = run(file, 3000);
+        expect(sent.status).toBe(0);
+        expect(Buffer.from(sent.stdout, "base64").equals(bytes)).toBe(true);
+        expect(run(file, 2999).status).toBe(65);
+        expect(run(join(directory, "missing.mp4"), 3000).status).toBe(66);
+      } finally {
+        rmSync(directory, { recursive: true });
+      }
+    },
+  );
+});
+
+describe("userComputerAttach", () => {
+  const folder = { deviceId: "device-1", path: "/Users/fake/Projects/site" };
+
+  it("sends a file from the project folder to the chat", async () => {
+    attached.calls.length = 0;
+    const content = Buffer.from("fake video bytes");
+    const encoded = content.toString("base64");
+    const { ctx, call, requests } = setup(
+      async function* () {
+        yield { type: "stdout", data: `${encoded.slice(0, 5)}\n` };
+        yield { type: "stdout", data: encoded.slice(5) };
+        yield { type: "exit", code: 0 };
+      },
+      [],
+      folder,
+    );
+    expect(await userComputerAttach(ctx, call({ path: "renders/reel.mp4" }))).toEqual({
+      ok: true,
+      artifactId: "artifact-1",
+      path: "/Users/fake/Projects/site/renders/reel.mp4",
+    });
+    const run = requests.at(-1) as Extract<HostComputerRequest, { method: "execute" }>;
+    expect(run.command.env).toEqual({
+      RAKAZO_ATTACH_FILE: "/Users/fake/Projects/site/renders/reel.mp4",
+      RAKAZO_ATTACH_MAX: "1048576",
+    });
+    expect(Buffer.from(attached.calls[0]!.bytes).equals(content)).toBe(true);
+  });
+
+  it.each([
+    [66, "There is no file at /Users/fake/clip.mp4 on the user's computer."],
+    [65, "/Users/fake/clip.mp4 is larger than the 1 MiB attachment limit."],
+  ])("explains exit %i", async (code, error) => {
+    const { ctx, call } = setup(async function* () {
+      yield { type: "exit", code };
+    });
+    expect(await userComputerAttach(ctx, call({ path: "~/clip.mp4" }))).toEqual({ error });
+  });
+
+  it("refuses a type the chat cannot show without asking the computer", async () => {
+    const { ctx, call, requests } = setup(async function* () {
+      yield { type: "exit", code: 0 };
+    });
+    expect(await userComputerAttach(ctx, call({ path: "~/tool.exe" }))).toMatchObject({
+      error: "unsupported attachment type",
+    });
+    expect(requests).toEqual([]);
   });
 });

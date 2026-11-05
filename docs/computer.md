@@ -76,3 +76,8 @@ agent works in the folder with the project's own instructions, can run for up to
 answers the bot, which keeps the same agent session going with your replies. The bot asks before it
 first hands work to the agent in a space; **Allow in this space** covers the rest of that space.
 Anything the agent would need a person to approve is refused, not left waiting.
+
+A bot can also send a file from your computer to the chat, such as a video rendered there. It goes
+through the server into [artifact storage](./self-host-storage.md#shared-storage-migration), so with
+object storage connected it is kept in your bucket, encrypted. Files over `MAX_UPLOAD_SIZE_MB`
+(10 MB by default) are refused; raise it on the server for longer videos.

@@ -43,6 +43,7 @@ const APPROVAL_REQUIRED_BUILTIN_TOOLS = new Set([
   "user_computer_shell",
   "user_computer_folder",
   "user_computer_agent",
+  "user_computer_attach",
   "user_computer_observe",
   "user_computer_act",
   "create_group",

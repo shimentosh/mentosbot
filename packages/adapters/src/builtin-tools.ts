@@ -483,6 +483,20 @@ export const builtinAgentTools: ConnectorTool[] = [
     },
   },
   {
+    name: "user_computer_attach",
+    description:
+      "Send a file from the user's own computer to this chat, such as a video made there; users open it from the message and the Artifacts tab. path is relative to your project folder there, or anywhere inside their home folder. name and description work as in attach_file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        name: { type: "string" },
+        description: { type: "string" },
+      },
+      required: ["path"],
+    },
+  },
+  {
     name: "user_computer_agent",
     description:
       "Hand a task to the coding agent on the user's computer. It works in your project folder there with the project's own instructions and skills, and returns its answer, the steps it took and a session id. Pass session to continue that work, for example with the user's reply to its question. Use it for multi-step work in the project; it can run for up to an hour.",

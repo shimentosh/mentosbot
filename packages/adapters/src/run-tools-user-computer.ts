@@ -1,6 +1,8 @@
 import path from "node:path";
 import type { AgentToolExecutionResult, ProcessEvent } from "@rakazo/adapter-kit";
+import { ATTACHMENT_MAX_BYTES, attachmentSizeLabel } from "@rakazo/contracts";
 import {
+  inferAttachmentMimeType,
   MAX_SANDBOX_COMMAND_TIMEOUT_MS,
   redactSecrets,
   sandboxCommandTimeoutMs,
@@ -24,15 +26,18 @@ import type {
 import { HOST_SCREEN_MAX_ACTIONS, hostScreenAction } from "./host-screen.js";
 import { nativeShellCommandArgv } from "./native-shell.js";
 import type { RunContext } from "./run-context.js";
+import { publishMessage } from "./run-messages.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
   isRunningShellCommand,
   observeShellCommand,
   SHELL_STILL_RUNNING_NOTICE,
 } from "./shell-command-stream.js";
+import { attachWorkspaceFileToThread } from "./thread-artifacts.js";
 import {
   USER_COMPUTER_ACT_TOOL,
   USER_COMPUTER_AGENT_TOOL,
+  USER_COMPUTER_ATTACH_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
@@ -44,6 +49,7 @@ import {
 export {
   USER_COMPUTER_ACT_TOOL,
   USER_COMPUTER_AGENT_TOOL,
+  USER_COMPUTER_ATTACH_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
@@ -414,6 +420,129 @@ export async function userComputerAgent(ctx: RunContext, call: ToolCall) {
     ...(outcome.denied.length ? { denied: outcome.denied } : {}),
     steps,
   });
+}
+
+const ATTACH_FILE_VARIABLE = "RAKAZO_ATTACH_FILE";
+const ATTACH_MAX_VARIABLE = "RAKAZO_ATTACH_MAX";
+const ATTACH_MISSING_EXIT = 66;
+const ATTACH_TOO_LARGE_EXIT = 65;
+
+/**
+ * Prints the file as base64, or exits early when it is missing or over the limit. The path and
+ * the limit reach the shell as variables, never as command text.
+ */
+export function userComputerAttachScript(environment: Pick<HostComputerEnvironment, "platform">) {
+  if (environment.platform === "win32")
+    return [
+      `$f = $env:${ATTACH_FILE_VARIABLE}`,
+      `if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { exit ${ATTACH_MISSING_EXIT} }`,
+      `if ((Get-Item -LiteralPath $f).Length -gt [int64]$env:${ATTACH_MAX_VARIABLE}) { exit ${ATTACH_TOO_LARGE_EXIT} }`,
+      "[Convert]::ToBase64String([IO.File]::ReadAllBytes($f))",
+    ].join("\n");
+  return [
+    `f="$${ATTACH_FILE_VARIABLE}"`,
+    `[ -f "$f" ] || exit ${ATTACH_MISSING_EXIT}`,
+    `[ "$(wc -c < "$f" | tr -d '[:space:]')" -le "$${ATTACH_MAX_VARIABLE}" ] || exit ${ATTACH_TOO_LARGE_EXIT}`,
+    `base64 < "$f"`,
+  ].join("\n");
+}
+
+/** Sends a file from the user's computer to this chat, through the server's artifact storage. */
+export async function userComputerAttach(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { deps, bot, run, runId, thread } = ctx;
+  if (!deps.artifacts) return call.finish({ error: "artifact storage unavailable" });
+  const { owner, devices, deviceId } = connected;
+  const requested = typeof call.args.path === "string" ? call.args.path.trim() : "";
+  if (!requested) return call.finish({ error: "path must name a file on the user's computer." });
+  if (!inferAttachmentMimeType(requested))
+    return call.finish({ error: "unsupported attachment type", path: requested });
+  const limit = deps.maxUploadSizeBytes ?? ATTACHMENT_MAX_BYTES;
+  const { signal } = ctx.context;
+  let encoded = "";
+  let exitCode: number | undefined;
+  let file = requested;
+  try {
+    await lastValue(
+      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
+    );
+    const environment = await lastValue(
+      devices.request<HostComputerEnvironment>(
+        owner,
+        { method: "environment", botId: bot.id, runId },
+        signal,
+        deviceId,
+      ),
+    );
+    try {
+      file = userComputerCwd(environment, requested, await projectFolder(ctx, owner, deviceId));
+    } catch {
+      return call.finish({ error: "The file must be inside the user's home folder." });
+    }
+    // Base64 adds a third, plus line breaks on some systems.
+    const encodedLimit = Math.ceil(limit / 3) * 4 + Math.ceil(limit / 48) + 16;
+    for await (const event of devices.request<ProcessEvent>(
+      owner,
+      {
+        method: "execute",
+        botId: bot.id,
+        runId,
+        command: {
+          argv: nativeShellCommandArgv(userComputerAttachScript(environment), environment),
+          cwd: environment.home,
+          env: { [ATTACH_FILE_VARIABLE]: file, [ATTACH_MAX_VARIABLE]: String(limit) },
+          timeoutMs: MAX_SANDBOX_COMMAND_TIMEOUT_MS,
+        },
+      },
+      signal,
+      deviceId,
+    )) {
+      if (event.type === "stdout") {
+        encoded += event.data;
+        if (encoded.length > encodedLimit) throw new Error("the file grew past the limit");
+      } else if (event.type === "exit") exitCode = event.code;
+    }
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "the transfer stopped",
+      ctx.secrets,
+    );
+    return call.finish({ error: `The user's computer did not send the file: ${reason}` });
+  }
+  if (exitCode === ATTACH_MISSING_EXIT)
+    return call.finish({ error: `There is no file at ${file} on the user's computer.` });
+  if (exitCode === ATTACH_TOO_LARGE_EXIT)
+    return call.finish({
+      error: `${file} is larger than the ${attachmentSizeLabel(limit)} attachment limit.`,
+    });
+  if (exitCode !== 0) return call.finish({ error: `The user's computer could not read ${file}.` });
+  const bytes = Buffer.from(encoded, "base64");
+  try {
+    const attached = await attachWorkspaceFileToThread(
+      { prisma: deps.prisma, artifacts: deps.artifacts, maxUploadSizeBytes: limit },
+      {
+        spaceId: run.spaceId,
+        userId: run.userId,
+        botId: bot.id,
+        groupId: thread.groupId ?? undefined,
+        runId: run.id,
+        filePath: file,
+        bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+        operationId: call.executionId,
+        name: typeof call.args.name === "string" ? call.args.name : undefined,
+        description: typeof call.args.description === "string" ? call.args.description : undefined,
+      },
+    );
+    await publishMessage(deps, run, "bot", [attached.block]);
+    return call.finish({ ok: true, artifactId: attached.artifactId, path: file });
+  } catch (error) {
+    return call.finish({
+      error: error instanceof Error ? error.message : "could not attach file",
+      path: file,
+    });
+  }
 }
 
 const screenActions = z.array(hostScreenAction).min(1).max(HOST_SCREEN_MAX_ACTIONS);

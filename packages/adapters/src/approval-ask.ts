@@ -136,6 +136,20 @@ export function buildApprovalAskBlock(
       ],
     };
   }
+  if (toolName === "user_computer_attach") {
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: "Send this file from your computer to the chat?",
+      detail: truncate(redactSecrets(String(args.path ?? ""), secrets), MAX_APPROVAL_DETAIL_LENGTH),
+      detailFormat: "code",
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow in this space" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
   if (toolName === "user_computer_agent") {
     return {
       kind: "ask",
