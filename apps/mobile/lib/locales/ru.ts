@@ -592,7 +592,6 @@ export const RU_MESSAGES: Record<string, string> = {
   "Group settings": "Настройки группы",
   "Hear a sample": "Прослушать образец",
   Hide: "Скрыть",
-  "Hide {label}": "Скрыть {label}",
   "Hi, this is how I'll sound when I read replies out loud.":
     "Привет, вот как я буду звучать, когда буду читать ответы вслух.",
   "I’m done": "Готово",
@@ -750,7 +749,6 @@ export const RU_MESSAGES: Record<string, string> = {
   "Share {name}": "Поделиться {name}",
   Show: "Показать",
   "Show more": "Показать ещё",
-  "Show {label}": "Показать {label}",
   "Sign in": "Войти",
   "Sign in to Rakazo": "Войти в Rakazo",
   "Sign out": "Выйти",
@@ -848,7 +846,7 @@ export const RU_MESSAGES: Record<string, string> = {
   archived: "в архиве",
   Attachment: "Вложение",
   bot: "бот",
-  "{from} messaged {to}": "{from} отправил сообщение {to}",
+  "{from} handed off to {to}": "{from} передал работу {to}",
   "Bring your own key. ElevenLabs, OpenAI, and Cartesia all plug into the same speak buttons.":
     "Используйте собственный ключ. ElevenLabs, OpenAI и Cartesia подключаются к одним и тем же кнопкам озвучивания.",
   "Configure a plugin catalog on the server to connect apps.":

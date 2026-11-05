@@ -11,8 +11,8 @@ type PresentableMessage = {
 
 export type UserVisibleMessagesOptions = {
   /**
-   * Keep `bot_message_sent` / `bot_message_received` rows as compact chips
-   * (web CollaborationMarker; mobile AgentEventLabel). Peer replies fold under the received chip.
+   * Keep `bot_message_sent` / `bot_message_received` rows as compact cards
+   * (`PeerMessageCard` on web and mobile). Peer replies fold under the received card.
    */
   includePeerReceipts?: boolean;
   /** Peer-run ids from `run.trigger === "bot_message"` when receipts may be out of window. */

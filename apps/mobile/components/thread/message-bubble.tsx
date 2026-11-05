@@ -1,4 +1,4 @@
-import { ChatMarkdown, MarkdownLongPressContext, withBlockMentions } from "@rakazo/chat-ui/native";
+import { MarkdownLongPressContext, withBlockMentions } from "@rakazo/chat-ui/native";
 import type { LoginFieldInput, MessageBlock } from "@rakazo/contracts";
 import { artifactPreviewKind, isAttachmentAudioMimeType } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
@@ -10,7 +10,7 @@ import {
 } from "@rakazo/core";
 import { fontWeight, typeScale } from "@rakazo/ui-tokens";
 import type { ComponentProps } from "react";
-import { memo, useContext, useMemo, useState } from "react";
+import { memo, useContext, useMemo } from "react";
 import type { TextProps } from "react-native";
 import { Alert, Pressable, Text, View } from "react-native";
 import type { MobileBot, MobileMessage, MobileSnapshot } from "../../lib/api";
@@ -20,7 +20,7 @@ import type { MobileArtifactTarget } from "../../lib/artifact-open";
 import { openMobileArtifact } from "../../lib/artifact-open";
 import { allowsSpace } from "../../lib/ask-action-label";
 import { plainAskTitle } from "../../lib/ask-title";
-import { t, useI18n } from "../../lib/i18n";
+import { peerExchangeLabel, t, useI18n } from "../../lib/i18n";
 import { isInlineImageBlock } from "../../lib/inline-image";
 import {
   mentionedBots,
@@ -45,9 +45,8 @@ import type { ImageArtifactPreviewTarget } from "../image-artifact-viewer";
 import { InlineImageAttachment } from "../inline-image-attachment";
 import { McpApprovalCard } from "../McpApprovalCard";
 import { MessageCaption } from "../message-caption";
-import { NativeSymbol } from "../native-symbol";
 import { PageCard } from "../pages/page-card";
-import { PeerReceiptLine } from "../peer-receipt-line";
+import { PeerMessageCard } from "../peer-message-card";
 import { AskBlock } from "./ask-block";
 import type { MessageRowActions } from "./message-row";
 import { isSpecialMessageBlock, SpecialMessageCard } from "./special-message-card";
@@ -235,7 +234,6 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   const colorScheme = useResolvedAppearance();
   const tokens = withUserBubble(mobileTokens(), userBubble);
   const { t } = useI18n();
-  const [peerExpanded, setPeerExpanded] = useState(false);
   const artifactTarget: MobileArtifactTarget = groupId ? { groupId } : { botId };
   const cardBotId = message.botId ?? botId;
   const computerBotId = message.botId ?? (groupId ? undefined : botId);
@@ -294,13 +292,17 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   if (handoff) {
     const from = memberName(members, handoff.fromBotId) ?? t("bot");
     const to = memberName(members, handoff.toBotId) ?? t("bot");
+    const target = members?.find((member) => member.botId === handoff.toBotId);
     return (
-      <AgentEventLabel
+      <PeerMessageCard
+        peerBotId={handoff.toBotId}
+        peerBotName={to}
+        color={target?.color}
+        avatarSet={target?.avatarSet}
+        label={t("{from} handed off to {to}", { from, to })}
+        direction="handoff"
+        text={handoff.text}
         actionProps={actionProps}
-        label={t("{from} messaged {to}", { from, to })}
-        detail={handoff.text}
-        expanded={peerExpanded}
-        onToggle={() => setPeerExpanded((expanded) => !expanded)}
       />
     );
   }
@@ -316,17 +318,20 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
     const peerBotId = sent ? peerMessage.toBotId : peerMessage.fromBotId;
     const peerBot = bots.find((bot) => bot.id === peerBotId);
     const peerMember = members?.find((member) => member.botId === peerBotId);
-    const peerColor = peerBot?.color ?? peerMember?.color ?? tokens.mutedForeground;
+    const peerName = peerExchange?.peerBotName ?? peer ?? t("Bot");
+    const count = peerExchange?.count ?? 1;
+    const direction = sent ? "sent" : "received";
     return (
-      <PeerReceiptLine
+      <PeerMessageCard
         peerBotId={peerBotId}
-        peerBotName={peerExchange?.peerBotName ?? peer ?? t("Bot")}
-        color={peerColor}
+        peerBotName={peerName}
+        color={peerBot?.color ?? peerMember?.color}
         avatarSet={peerBot?.avatarSet ?? peerMember?.avatarSet}
-        count={peerExchange?.count ?? 1}
-        direction={sent ? "sent" : "received"}
+        label={peerExchangeLabel(count, direction, peerName)}
+        direction={count > 1 ? "exchange" : direction}
+        text={peerMessage.text}
         actionProps={actionProps}
-        onPress={
+        onOpen={
           !groupId && botId && peerBotId !== botId
             ? () => onOpenPeerChat({ peerBotId, peerBotName: peer ?? t("Bot") })
             : undefined
@@ -808,60 +813,5 @@ function MessageTextCard({
         streaming={message.id.startsWith("progress:")}
       />
     </Surface>
-  );
-}
-
-function AgentEventLabel({
-  label,
-  detail,
-  expanded,
-  onToggle,
-  actionProps,
-}: {
-  label: string;
-  detail?: string;
-  expanded: boolean;
-  onToggle: () => void;
-  actionProps: MessageActionProps;
-}) {
-  const colorScheme = useResolvedAppearance();
-  const tokens = mobileTokens();
-  const { t } = useI18n();
-  return (
-    <Pressable
-      {...actionProps}
-      onPress={onToggle}
-      accessibilityRole="button"
-      accessibilityLabel={expanded ? t("Hide {label}", { label }) : t("Show {label}", { label })}
-      style={{ width: "100%", paddingVertical: 4, alignItems: "center" }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <NativeSymbol
-          ios="arrow.left.arrow.right"
-          android="swap-horizontal"
-          size={12}
-          color={tokens.mutedForeground}
-        />
-        <Text style={{ color: tokens.mutedForeground, fontSize: 13.5, textAlign: "center" }}>
-          {label}
-        </Text>
-      </View>
-      {expanded && detail ? (
-        <View
-          style={{
-            width: "100%",
-            marginTop: 6,
-            borderRadius: 14,
-            backgroundColor: tokens.card,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-          }}
-        >
-          <ChatMarkdown palette={tokens} colorScheme={colorScheme}>
-            {detail}
-          </ChatMarkdown>
-        </View>
-      ) : null}
-    </Pressable>
   );
 }

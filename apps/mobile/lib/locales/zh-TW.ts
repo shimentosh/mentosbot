@@ -548,7 +548,6 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Group settings": "群組設定",
   "Hear a sample": "試聽示例",
   Hide: "隱藏",
-  "Hide {label}": "隱藏 {label}",
   "Hi, this is how I'll sound when I read replies out loud.": "你好，這是我朗讀回覆時的聲音。",
   "I’m done": "我完成了",
   "If you heard that, voice is ready.": "如果你聽到了，說明語音已就緒。",
@@ -700,7 +699,6 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Share {name}": "分享 {name}",
   Show: "顯示",
   "Show more": "顯示更多",
-  "Show {label}": "顯示 {label}",
   "Sign in": "登入",
   "Sign in to Rakazo": "登入 Rakazo",
   "Sign out": "登出",
@@ -796,7 +794,7 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   archived: "已封存",
   Attachment: "附件",
   bot: "機器人",
-  "{from} messaged {to}": "{from} 已向 {to} 發訊息",
+  "{from} handed off to {to}": "{from} 已移交給 {to}",
   "Bring your own key. ElevenLabs, OpenAI, Cartesia, and Fish Audio all plug into the same speak buttons.":
     "自帶金鑰。ElevenLabs、OpenAI、Cartesia 和 Fish Audio 都接入同一套朗讀按鈕。",
   "Configure a plugin catalog on the server to connect apps.":

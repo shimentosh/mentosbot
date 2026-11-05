@@ -214,6 +214,10 @@ msgstr "{count} lat"
 msgid "{days}d ago"
 msgstr "{days} dn. temu"
 
+#: src/pages/shell/message-view.tsx
+msgid "{from} handed off to {to}"
+msgstr "{from} przekazuje pracę do {to}"
+
 #: src/components/markdown-copy.tsx
 msgid "{from}–{to} of {total} rows"
 msgstr "{from}-{to} z {total} wierszy"
@@ -2923,10 +2927,6 @@ msgstr "Docker jest skonfigurowany, ale komputery nie odpowiadają. Sprawdź, cz
 msgid "Docker limits access to your computer for added security. Using {hostLabel} lets bots work with your local files and tools."
 msgstr "Docker ogranicza dostęp do Twojego komputera dla większego bezpieczeństwa. Użycie {hostLabel} pozwala botom pracować na lokalnych plikach i narzędziach."
 
-#: src/components/SidebarFooter.tsx
-msgid "Docs"
-msgstr "Dokumentacja"
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Document changed. Reopen to edit the latest version."
 msgstr "Dokument się zmienił. Otwórz go ponownie, aby edytować najnowszą wersję."
@@ -3046,10 +3046,6 @@ msgstr "Punkt końcowy"
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "Koniec {day}"
-
-#: src/components/GitHubStarPrompt.tsx
-msgid "Enjoying Rakazo?"
-msgstr "Podoba Ci się Rakazo?"
 
 #: src/lib/user-error.ts
 msgid "Enter a password"
@@ -3404,10 +3400,6 @@ msgstr "Adres URL bramy"
 #: src/pages/SettingsOverlay.tsx
 msgid "General"
 msgstr "Ogólne"
-
-#: src/components/SidebarFooter.tsx
-msgid "Get the mobile app"
-msgstr "Pobierz aplikację mobilną"
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Getting ready"
@@ -4707,7 +4699,6 @@ msgstr "Poza katalogiem Rakazo"
 msgid "Not in the plugin catalog"
 msgstr "Poza katalogiem wtyczek"
 
-#: src/components/GitHubStarPrompt.tsx
 #: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
@@ -4814,6 +4805,7 @@ msgstr "Wpisz tylko kod wysłany przez {codeHost}."
 msgid "Only you"
 msgstr "Tylko Ty"
 
+#: src/components/ai/CollaborationMarker.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
@@ -4829,6 +4821,7 @@ msgid "Open {0}"
 msgstr "Otwórz {0}"
 
 #: src/pages/shell/import-setup-card.tsx
+#: src/pages/shell/message-view.tsx
 msgid "Open {name}"
 msgstr "Otwórz {name}"
 
@@ -6412,10 +6405,6 @@ msgstr "SSO"
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO jest tymczasowo niedostępne. Spróbuj ponownie."
-
-#: src/components/GitHubStarPrompt.tsx
-msgid "Star on GitHub"
-msgstr "Daj gwiazdkę na GitHub"
 
 #: src/pages/shell/computer-overlay.tsx
 msgid "Start"
