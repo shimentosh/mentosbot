@@ -25,9 +25,10 @@ jobs:
       matrix:
         include:
           # Ad-hoc signed (package.json `mac.identity`), so Apple Silicon runs it without a
-          # Developer ID; Gatekeeper asks once on first open.
+          # Developer ID; Gatekeeper asks once on first open. macos-26 runners are often
+          # unavailable, so this uses macos-15 with its newest Xcode (the .icon needs Xcode 26).
           - name: macOS
-            os: macos-26
+            os: macos-15
             artifact: desktop-macos
             args: --mac --universal
           - name: Windows
@@ -43,6 +44,12 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: Select the newest Xcode
+        if: runner.os == 'macOS'
+        run: |
+          xcode="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          echo "Using $xcode"
+          sudo xcode-select -s "$xcode"
       - run: pnpm install --frozen-lockfile
       - name: Generate the database client for desktop compilation
         run: pnpm db:generate
@@ -57,8 +64,15 @@ jobs:
         env:
           ARGS: ${{ matrix.args }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        # ARGS is unquoted on purpose: it holds several flags.
-        run: pnpm --filter @rakazo/desktop exec electron-builder $ARGS --publish never
+        # ARGS is unquoted on purpose: it holds several flags. electron-builder downloads its
+        # tools from GitHub, which sometimes answers 504, so try again before failing.
+        run: |
+          for attempt in 1 2 3; do
+            pnpm --filter @rakazo/desktop exec electron-builder $ARGS --publish never && exit 0
+            echo "Packaging failed (attempt $attempt); retrying."
+            sleep 20
+          done
+          exit 1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}
@@ -92,8 +106,10 @@ jobs:
       - name: Generate Android project
         run: |
           pnpm --filter @rakazo/mobile exec expo prebuild --platform android --no-install
-          sed -i 's/MaxMetaspaceSize=512m/MaxMetaspaceSize=1g/' \
+          # R8 runs out of the template's 2 GB heap on the release build.
+          sed -i -e 's/MaxMetaspaceSize=512m/MaxMetaspaceSize=1g/' -e 's/-Xmx[0-9]*[mg]/-Xmx6g/' \
             apps/mobile/android/gradle.properties
+          grep jvmargs apps/mobile/android/gradle.properties
       # Expo's template signs release builds with its bundled debug keystore, the same on every
       # run, so a new APK installs over the previous one.
       - name: Build APK
