@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { BUILTIN_MEMORY_PROVIDER_ID } from "./builtin-memory-provider.js";
 import { assertLocalServiceBaseUrl } from "./local-service-endpoint.js";
 import { createMemoryProvider, SpaceMemoryProviderResolver } from "./memory-provider-factory.js";
 
@@ -48,8 +49,17 @@ describe("SpaceMemoryProviderResolver", () => {
     const { resolver, secrets } = resolverFor(JSON.stringify({ apiKey: "fake-key" }), {
       provider: "supermemory",
     });
-    await expect(resolver.resolve("workspace-1", "teammate")).resolves.toBeNull();
+    const teammate = await resolver.resolve("workspace-1", "teammate");
+    expect(teammate?.provider.describe().id).toBe(BUILTIN_MEMORY_PROVIDER_ID);
+    expect(teammate?.defaultScope).toBe("isolated");
     expect(secrets.load).not.toHaveBeenCalled();
+  });
+
+  it("uses the built-in memory when no memory provider is connected", async () => {
+    const prisma = { spaceMemoryConfig: { findUnique: vi.fn(async () => null) } };
+    const resolver = new SpaceMemoryProviderResolver(prisma as never, {} as never);
+    const resolved = await resolver.resolve("workspace-1", "user-1");
+    expect(resolved?.provider.describe().id).toBe(BUILTIN_MEMORY_PROVIDER_ID);
   });
 
   it.each(["honcho", "supermemory"])(

@@ -446,6 +446,7 @@ model Space {
   connections                 Connection[]
   capabilities                CapabilityInstall[]
   memoryDocuments             MemoryDocument[]
+  semanticMemories            SemanticMemory[]
   agentHomes                  AgentHome[]
   browserProfiles             BrowserProfile[]
   artifacts                   Artifact[]
@@ -782,6 +783,7 @@ model Bot {
   scratchpadItems   ScratchpadItem[]
   taughtSkills      TaughtSkill[]
   memoryDocuments   MemoryDocument[]
+  semanticMemories  SemanticMemory[]
   agentHome         AgentHome?
   browserProfile    BrowserProfile?
   artifacts         Artifact[]
@@ -1392,6 +1394,27 @@ model MemoryDocument {
   @@unique([spaceId, scope, botId, path])
   @@index([spaceId, userId])
   @@map("memory_documents")
+}
+
+/// Built-in long-term memory: facts a bot saves and its compacted chat summaries, recalled by
+/// relevance so only matching ones reach a prompt. A connected memory provider replaces it.
+model SemanticMemory {
+  id         String   @id @default(cuid())
+  spaceId    String
+  space      Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId     String
+  botId      String
+  bot        Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  /// Saved under the shared scope, so every bot of this user in the Space recalls it.
+  shared     Boolean  @default(false)
+  /// Set for a compacted chat summary: the bot's history generation it came from.
+  generation Int?
+  content    String
+  createdAt  DateTime @default(now())
+
+  @@index([spaceId, userId, botId])
+  @@index([spaceId, userId, shared])
+  @@map("semantic_memories")
 }
 
 model MemoryRevision {

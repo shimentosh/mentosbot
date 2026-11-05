@@ -1,6 +1,7 @@
 import type { DurableMemoryScope, SecretStore, SemanticMemoryProvider } from "@rakazo/adapter-kit";
 import type { PrismaClient } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
+import { BuiltinMemoryProvider } from "./builtin-memory-provider.js";
 import {
   createHonchoProvider,
   HONCHO_PROVIDER_ID,
@@ -46,7 +47,10 @@ export interface ConfiguredMemoryProvider {
 }
 
 export interface MemoryProviderResolver {
-  /** The Space's external memory, only for the person who connected it. */
+  /**
+   * The Space's external memory for the person who connected it, otherwise the built-in memory;
+   * null only when a connected provider is unusable.
+   */
   resolve(spaceId: string, userId: string): Promise<ConfiguredMemoryProvider | null>;
 }
 
@@ -170,10 +174,14 @@ function decodeCredentials(provider: string, plaintext: string): Record<string, 
 }
 
 export class SpaceMemoryProviderResolver implements MemoryProviderResolver {
+  private readonly builtin: ConfiguredMemoryProvider;
+
   constructor(
-    private readonly prisma: Pick<PrismaClient, "spaceMemoryConfig">,
+    private readonly prisma: Pick<PrismaClient, "spaceMemoryConfig" | "semanticMemory">,
     private readonly secrets: SecretStore,
-  ) {}
+  ) {
+    this.builtin = { provider: new BuiltinMemoryProvider(prisma), defaultScope: "isolated" };
+  }
 
   async resolve(spaceId: string, userId: string): Promise<ConfiguredMemoryProvider | null> {
     const config = await this.prisma.spaceMemoryConfig.findUnique({
@@ -181,8 +189,8 @@ export class SpaceMemoryProviderResolver implements MemoryProviderResolver {
       include: { secret: true },
     });
     // It holds that person's account and pools the Space's memories, so teammates sharing the
-    // Space never write into it or recall from it.
-    if (!config || config.userId !== userId) return null;
+    // Space never write into it or recall from it; they keep their own built-in memory.
+    if (!config || config.userId !== userId) return this.builtin;
     const settings = toStringRecord(config.settings);
     if (memoryProviderRequiresPrivateEndpoint(config.provider, settings)) {
       // Saved configurations cannot bypass an operator's current network policy.

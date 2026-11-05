@@ -1056,7 +1056,7 @@ export const builtinAgentTools: ConnectorTool[] = [
   {
     name: "save_memory",
     description:
-      "Store a durable fact in this bot's semantic memory (preferences, decisions, recurring context). Use for anything worth recalling in future conversations.",
+      "Store a fact in long-term memory, recalled only when relevant. Prefer it to remember for anything not needed every turn.",
     inputSchema: {
       type: "object",
       properties: {
