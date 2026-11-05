@@ -242,7 +242,7 @@ const FOLLOW_UP_INSTRUCTION =
 function spawnBotClause(disabled?: ReadonlySet<string>): string | undefined {
   if (!builtinOffered(disabled, "spawn_bot")) return undefined;
   const demo = builtinOffered(disabled, "run_subagent") ? " Do not run_subagent to demo it." : "";
-  return `spawn_bot creates a lasting regular bot (own chat, computer, memory) that appears in the user's bot list. If the user asked to create a bot, call spawn_bot once and stop.${demo}`;
+  return `spawn_bot creates a lasting regular bot (own chat, computer, memory) that appears in the user's bot list. Call spawn_bot once for each bot the user asked for, all in this turn, then stop.${demo}`;
 }
 
 /** The fleet rules, naming only the tools the run was offered; none without a write tool. */

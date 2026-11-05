@@ -1074,6 +1074,66 @@ describe("Pi connector tool dispatch", () => {
     );
   });
 
+  it("creates a bot with spawn_bot when computer_mode is omitted", async () => {
+    const spawnBotTool = builtinAgentTools.find((tool) => tool.name === "spawn_bot");
+    if (!spawnBotTool) throw new Error("missing spawn_bot");
+    fakeAgentState.invoke = {
+      name: "use_tool",
+      args: {
+        name: "spawn_bot",
+        arguments: {
+          name: "Scout",
+          description: "Finds venues.",
+          instructions: "Ask before booking anything.",
+        },
+      },
+    };
+    const executeTool = vi.fn(async () => ({ ok: true }));
+    const runtime = new PiAgentRuntime();
+
+    for await (const _event of runtime.run(
+      {
+        botId: "b",
+        threadId: "t",
+        runId: "r",
+        prompt: "create a bot named Scout",
+        instructions: "",
+        history: [],
+        tools: [spawnBotTool],
+        model: { provider: "test", id: "dispatch-test-model" },
+        executeTool,
+      },
+      {
+        operationId: "1",
+        traceId: "1",
+        spaceId: "w",
+        userId: "u",
+        signal: new AbortController().signal,
+      },
+    )) {
+      // Exhaust the runtime event stream so tool execution completes.
+    }
+
+    expect(executeTool).toHaveBeenCalledWith(
+      "spawn_bot",
+      expect.objectContaining({
+        name: "Scout",
+        description: "Finds venues.",
+        instructions: "Ask before booking anything.",
+      }),
+      JSON.stringify(["pi-tool", "main", "call-1"]),
+      undefined,
+      { onShellStillRunning: expect.any(Function) },
+    );
+    expect(executeTool).not.toHaveBeenCalledWith(
+      "spawn_bot",
+      expect.objectContaining({ computer_mode: expect.anything() }),
+      expect.anything(),
+      undefined,
+      expect.anything(),
+    );
+  });
+
   it("passes update_bot's read offset through the use_tool wrapper", async () => {
     const updateBotTool = builtinAgentTools.find((tool) => tool.name === "update_bot");
     if (!updateBotTool) throw new Error("missing update_bot");

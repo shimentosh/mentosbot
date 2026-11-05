@@ -37,6 +37,7 @@ import { VERBATIM_TOOL_RESULTS } from "./runtime-context.js";
 import { SCHEDULE_TOOL_NAMES } from "./schedule-tools.js";
 import type { FinishedShellCommand } from "./shell-command-stream.js";
 import { textContentArg } from "./tool-text.js";
+import { argumentGiven } from "./update-bot-patch.js";
 import { isVerbatimMcpResult } from "./verbatim-mcp-result.js";
 
 export interface ToolCallBudget {
@@ -399,7 +400,8 @@ function toAgentTool(
           description: raw.description ? String(raw.description) : "",
           instructions: raw.instructions ? String(raw.instructions) : "",
           prompt: raw.prompt ? String(raw.prompt) : "",
-          computer_mode: raw.computer_mode ? String(raw.computer_mode) : "",
+          // Omitted stays absent: a blank would fail the computer_mode enum.
+          ...(argumentGiven(raw.computer_mode) ? { computer_mode: String(raw.computer_mode) } : {}),
         };
       }
       if (tool.name === "update_bot" || FLEET_TOOL_NAMES.some((name) => name === tool.name)) {
