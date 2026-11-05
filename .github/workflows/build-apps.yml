@@ -1,11 +1,15 @@
 name: build-apps
 
-# Internal builds for the team: the Windows and macOS desktop apps, neither store-signed. Run it
-# from the Actions tab to get the files as run artifacts, or push an `app-v*` tag to also attach
-# them to a GitHub release.
+# Internal builds for the team: the Windows and macOS desktop apps, neither store-signed. A push to
+# main that changes the desktop app builds it and releases it under the next `app-v*` tag; pushing
+# an `app-v*` tag by hand does the same under that tag. Run it from the Actions tab to get the
+# files as run artifacts only. Shared packages are left out of the paths on purpose: the app loads
+# its screens from the server, and macOS minutes are costly on a private repository.
 on:
   workflow_dispatch:
   push:
+    branches: [main]
+    paths: ["apps/desktop/**"]
     tags: ["app-v*"]
 
 permissions:
@@ -84,7 +88,7 @@ jobs:
 
   release:
     name: Attach to GitHub release
-    if: startsWith(github.ref, 'refs/tags/app-v')
+    if: startsWith(github.ref, 'refs/tags/app-v') || github.ref == 'refs/heads/main'
     needs: [desktop]
     runs-on: ubuntu-latest
     permissions:
@@ -98,5 +102,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" files/* --title "Mentosbot $TAG" --generate-notes
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        # From main, the release creates the next patch tag on this commit. A tag made with
+        # GITHUB_TOKEN does not start this workflow again, so the build is not repeated.
+        run: |
+          if [[ "$REF" == refs/tags/* ]]; then
+            tag="$REF_NAME"
+          else
+            last="$(gh api "repos/$GH_REPO/tags" --paginate --jq '.[].name' | grep -E '^app-v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+            last="${last:-app-v0.0.0}"
+            IFS=. read -r major minor patch <<<"${last#app-v}"
+            tag="app-v$major.$minor.$((patch + 1))"
+          fi
+          gh release create "$tag" files/* --target "$SHA" --title "Mentosbot $tag" --generate-notes
