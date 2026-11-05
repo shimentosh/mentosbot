@@ -13,7 +13,7 @@ export type ContentMigrationMode = "encrypt" | "reencrypt" | "decrypt";
 
 interface TableSpec {
   model: keyof typeof ENCRYPTED_MODELS;
-  delegate: "message" | "event" | "memoryDocument" | "memoryRevision" | "thread";
+  delegate: "message" | "event" | "memoryDocument" | "memoryRevision" | "semanticMemory" | "thread";
   column: string;
   json: boolean;
   /** Preserve @updatedAt so a migration does not reorder recently edited documents. */
@@ -78,6 +78,17 @@ const TABLES: TableSpec[] = [
       WHERE r.id > ${cursor} ORDER BY r.id LIMIT ${limit}`,
     writePlaintext: (id, value) =>
       Prisma.sql`UPDATE memory_revisions SET content = ${value as string} WHERE id = ${id}`,
+  },
+  {
+    model: "SemanticMemory",
+    delegate: "semanticMemory",
+    column: "content",
+    json: false,
+    scan: (cursor, limit) => Prisma.sql`
+      SELECT id, content AS value, "spaceId", "userId" AS owner FROM semantic_memories
+      WHERE id > ${cursor} ORDER BY id LIMIT ${limit}`,
+    writePlaintext: (id, value) =>
+      Prisma.sql`UPDATE semantic_memories SET content = ${value as string} WHERE id = ${id}`,
   },
   {
     model: "Thread",
@@ -305,6 +316,8 @@ export async function contentEncryptionStatus(
     SELECT 'memory_documents', count(*), count(*) FILTER (WHERE content NOT LIKE 'rkz1:%') FROM memory_documents
     UNION ALL
     SELECT 'memory_revisions', count(*), count(*) FILTER (WHERE content NOT LIKE 'rkz1:%') FROM memory_revisions
+    UNION ALL
+    SELECT 'semantic_memories', count(*), count(*) FILTER (WHERE content NOT LIKE 'rkz1:%') FROM semantic_memories
     UNION ALL
     SELECT 'threads', count(*) FILTER (WHERE "historyCompactionSummary" IS NOT NULL),
       count(*) FILTER (WHERE "historyCompactionSummary" NOT LIKE 'rkz1:%') FROM threads

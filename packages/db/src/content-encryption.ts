@@ -74,6 +74,12 @@ export const ENCRYPTED_MODELS: Record<string, ModelSpec> = {
     space: { parent: "memory_documents" },
     ownerRelation: "document",
   },
+  SemanticMemory: {
+    table: "semantic_memories",
+    fields: { content: {} },
+    space: { column: "spaceId" },
+    ownerRelation: "user",
+  },
   /** The compacted summary of older history is derived message content. */
   Thread: {
     table: "threads",
