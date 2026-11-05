@@ -474,6 +474,7 @@ msgid "Access for {0}"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -687,6 +688,7 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1198,6 +1200,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "MCP-servers doorzoeken"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "Bucket"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "Bucketnaam in pad"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2194,6 +2204,10 @@ msgstr "Aanmeldopties laden mislukt"
 msgid "Could not load skill"
 msgstr "Skill laden mislukt"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "Kan opslaginstellingen niet laden"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "Dit artefact laden mislukt."
@@ -2358,6 +2372,10 @@ msgstr "Regel opslaan mislukt"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "Skill opslaan mislukt"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "Kan opslaginstellingen niet opslaan"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -3021,6 +3039,10 @@ msgstr "{0} inschakelen"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "Endpoint"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "Eindigt op {day}"
@@ -3313,6 +3335,10 @@ msgstr "MCP-verbinding afronden…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Naar bericht"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "Map"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5385,6 +5411,7 @@ msgid "Refreshing…"
 msgstr "Bezig met vernieuwen…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5788,6 +5815,7 @@ msgstr "zaterdag"
 #: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5816,6 +5844,7 @@ msgstr "Opslaan in kluis"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5946,6 +5975,10 @@ msgstr "Zoeken: {0}"
 msgid "Searching…"
 msgstr "Bezig met zoeken…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "Geheime toegangssleutel"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Beveiliging"
@@ -6045,6 +6078,10 @@ msgstr "Server-URL"
 #: src/pages/ComputerServersSettings.tsx
 msgid "Servers"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "Ingesteld door de serveromgeving."
 
 #: src/pages/ComputerServersSettings.tsx
 msgid "Set up"
@@ -6470,6 +6507,11 @@ msgstr "Gestopt."
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "Opslag"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "Versleuteld opgeslagen"
@@ -6546,6 +6588,10 @@ msgstr "Overstappen op jaarlijks"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "Overstappen op jaarlijks?"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "Opslag wordt gewisseld…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

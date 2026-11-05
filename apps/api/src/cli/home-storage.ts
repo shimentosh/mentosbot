@@ -2,9 +2,12 @@ import { parseArgs } from "node:util";
 import {
   contentKeyProviderFromEnv,
   createAgentHomeStore,
+  createSecretStore,
   ObjectAgentHomeStore,
+  resolveObjectStorage,
   unwrapEnvFromKeyManager,
 } from "@rakazo/adapters";
+import { resolveEncryptionKey } from "@rakazo/core";
 import { loadRootEnv } from "@rakazo/core/node/load-root-env";
 import { createDb } from "@rakazo/db";
 
@@ -47,9 +50,16 @@ process.once("SIGINT", () => (stopping = true));
 process.once("SIGTERM", () => (stopping = true));
 
 try {
-  const home = createAgentHomeStore(process.env.DATA_DIR ?? "./data", prisma);
+  const secrets = createSecretStore(resolveEncryptionKey(process.env));
+  const storage = await resolveObjectStorage(prisma, secrets);
+  const home = createAgentHomeStore(
+    process.env.DATA_DIR ?? "./data",
+    prisma,
+    process.env,
+    storage?.config,
+  );
   if (!(home instanceof ObjectAgentHomeStore))
-    throw new Error("Set OBJECT_STORAGE_BUCKET and its credentials first");
+    throw new Error("Connect storage in Settings, or set OBJECT_STORAGE_BUCKET, first");
   const counts = { uploaded: 0, "would-upload": 0, stored: 0, "no-computer": 0, failed: 0 };
   for (const homeKey of await home.localHomes()) {
     if (stopping) break;

@@ -557,6 +557,8 @@ model DeploymentSettings {
   computerProvider                String?
   /// That provider's encrypted connection settings, owned by the deployment rather than a user.
   computerProviderCipher          String?
+  /// Object storage connection saved in Settings, encrypted; OBJECT_STORAGE_* takes precedence.
+  objectStorageCipher             String?
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 

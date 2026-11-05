@@ -72,14 +72,17 @@ import {
   reconcileComputerUpdates,
   reconcilePurchases,
   resolveDeploymentModel,
+  resolveObjectStorage,
   resolvePiSessionRoot,
   resolveSandboxProvider,
+  restartOntoSavedObjectStorage,
   ScriptedAgentRuntime,
   SpaceMemoryProviderResolver,
   sandboxProviderOptionsFromEnv,
   shutdownPiTelemetry,
   UserDevices,
   userDeviceForwardSecret,
+  watchObjectStorageSettings,
   withRunWorker,
   withSecretPersistence,
 } from "@rakazo/adapters";
@@ -232,9 +235,17 @@ async function main() {
   ]);
   integrationSettings.warmDirectories();
   const memoryProviders = new SpaceMemoryProviderResolver(prisma, secrets);
-  const home = createAgentHomeStore(dataDir, prisma);
+  const objectStorage = await resolveObjectStorage(prisma, secrets);
+  const home = createAgentHomeStore(dataDir, prisma, process.env, objectStorage?.config);
   void home.removeStaleStaging().catch((error) => logger.error("home staging cleanup", error));
-  const artifacts = createArtifactStore(dataDir, prisma);
+  const artifacts = createArtifactStore(dataDir, prisma, process.env, objectStorage?.config);
+  // A bucket saved in Settings takes effect on restart, as it would from OBJECT_STORAGE_*.
+  const stopObjectStorageWatch = watchObjectStorageSettings(
+    prisma,
+    secrets,
+    objectStorage,
+    restartOntoSavedObjectStorage,
+  );
   const shutdown = new AbortController();
   const inMemoryJobs = process.env.WAKEUP_DRIVER === "memory" ? new InMemoryJobQueue() : undefined;
   const runs = new RunStarter(realtime, { signal: shutdown.signal });
@@ -391,6 +402,7 @@ async function main() {
       stopping = true;
       shutdown.abort();
       stopStallWatch();
+      stopObjectStorageWatch();
       try {
         await stopHealth?.();
         await reconciler.stop();

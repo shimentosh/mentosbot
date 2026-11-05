@@ -475,6 +475,7 @@ msgid "Access for {0}"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -688,6 +689,7 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1199,6 +1201,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "瀏覽 MCP 伺服器"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "儲存貯體"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "在路徑中使用儲存貯體名稱"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2195,6 +2205,10 @@ msgstr "無法載入登入選項"
 msgid "Could not load skill"
 msgstr "無法載入技能"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "無法載入儲存空間設定"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "無法載入此成品。"
@@ -2359,6 +2373,10 @@ msgstr "無法儲存規則"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "無法儲存技能"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "無法儲存儲存空間設定"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -3022,6 +3040,10 @@ msgstr "啟用 {0}"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "端點"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "於 {day} 結束"
@@ -3314,6 +3336,10 @@ msgstr "正在完成 MCP 連線…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "移至訊息欄"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "資料夾"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5386,6 +5412,7 @@ msgid "Refreshing…"
 msgstr "重新整理中…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5789,6 +5816,7 @@ msgstr "週六"
 #: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5817,6 +5845,7 @@ msgstr "儲存到保管庫"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5947,6 +5976,10 @@ msgstr "搜尋：{0}"
 msgid "Searching…"
 msgstr "正在搜尋…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "秘密存取金鑰"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "安全"
@@ -6046,6 +6079,10 @@ msgstr "伺服器 URL"
 #: src/pages/ComputerServersSettings.tsx
 msgid "Servers"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "由伺服器環境設定。"
 
 #: src/pages/ComputerServersSettings.tsx
 msgid "Set up"
@@ -6471,6 +6508,11 @@ msgstr "已停止。"
 msgid "Stopping…"
 msgstr "正在停止…"
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "儲存空間"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "已加密儲存"
@@ -6547,6 +6589,10 @@ msgstr "切換為按年"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "切換為按年付費？"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "正在切換儲存空間…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

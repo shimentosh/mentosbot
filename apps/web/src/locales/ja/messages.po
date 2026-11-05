@@ -474,6 +474,7 @@ msgid "Access for {0}"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Access key ID"
 msgstr ""
 
@@ -687,6 +688,7 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1198,6 +1200,14 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Browse MCP servers"
 msgstr "MCPサーバーを探す"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket"
+msgstr "バケット"
+
+#: src/components/StorageSettings.tsx
+msgid "Bucket name in path"
+msgstr "パスにバケット名を含める"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2194,6 +2204,10 @@ msgstr "ログイン方法を読み込めませんでした"
 msgid "Could not load skill"
 msgstr "スキルを読み込めませんでした"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not load storage settings"
+msgstr "ストレージ設定を読み込めませんでした"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "このアーティファクトを読み込めませんでした。"
@@ -2358,6 +2372,10 @@ msgstr "ルールを保存できませんでした"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not save skill"
 msgstr "スキルを保存できませんでした"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not save storage settings"
+msgstr "ストレージ設定を保存できませんでした"
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "Could not save that choice"
@@ -3021,6 +3039,10 @@ msgstr "{0}を有効にする"
 msgid "End user ID"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+msgid "Endpoint"
+msgstr "エンドポイント"
+
 #: src/lib/billing.ts
 msgid "Ends {day}"
 msgstr "{day}に終了"
@@ -3313,6 +3335,10 @@ msgstr "MCP接続を完了しています…"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "メッセージ欄に移動"
+
+#: src/components/StorageSettings.tsx
+msgid "Folder"
+msgstr "フォルダー"
 
 #: src/pages/Auth.tsx
 msgid "Forgot password?"
@@ -5385,6 +5411,7 @@ msgid "Refreshing…"
 msgstr "更新中…"
 
 #: src/components/ComputerProviderSettings.tsx
+#: src/components/StorageSettings.tsx
 msgid "Region"
 msgstr ""
 
@@ -5788,6 +5815,7 @@ msgstr "土曜日"
 #: src/components/NetworkExitDialog.tsx
 #: src/components/PasskeySettings.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -5816,6 +5844,7 @@ msgstr "保管庫に保存"
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/NetworkExitDialog.tsx
 #: src/components/SecretAskCard.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/SkillDraftCard.tsx
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Saved"
@@ -5946,6 +5975,10 @@ msgstr "検索: {0}"
 msgid "Searching…"
 msgstr "検索中…"
 
+#: src/components/StorageSettings.tsx
+msgid "Secret access key"
+msgstr "シークレットアクセスキー"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "セキュリティ"
@@ -6045,6 +6078,10 @@ msgstr "サーバーURL"
 #: src/pages/ComputerServersSettings.tsx
 msgid "Servers"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Set by the server environment."
+msgstr "サーバー環境で設定されています。"
 
 #: src/pages/ComputerServersSettings.tsx
 msgid "Set up"
@@ -6470,6 +6507,11 @@ msgstr "停止しました。"
 msgid "Stopping…"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
+#: src/pages/settings-nav.ts
+msgid "Storage"
+msgstr "ストレージ"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Stored encrypted"
 msgstr "暗号化して保存済み"
@@ -6546,6 +6588,10 @@ msgstr "年払いに切り替え"
 #: src/components/ModelCredits.tsx
 msgid "Switch to yearly?"
 msgstr "年払いに切り替えますか？"
+
+#: src/components/StorageSettings.tsx
+msgid "Switching storage…"
+msgstr "ストレージを切り替えています…"
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Switching…"

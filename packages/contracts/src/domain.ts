@@ -1930,6 +1930,33 @@ export const ComputerProviderUpdateSchema = z.object({
 });
 export type ComputerProviderUpdate = z.infer<typeof ComputerProviderUpdateSchema>;
 
+/** Where bot homes and artifacts are stored; secrets are never returned. */
+export const ObjectStorageSettingsSchema = z.object({
+  /** environment: OBJECT_STORAGE_* is set and wins; settings: saved here; none: local disk. */
+  source: z.enum(["none", "environment", "settings"]),
+  /** The running server uses this connection; false while it restarts onto a new one. */
+  active: z.boolean(),
+  endpoint: z.string(),
+  bucket: z.string(),
+  region: z.string(),
+  prefix: z.string(),
+  pathStyle: z.boolean(),
+  accessKeyId: z.string(),
+  hasSecret: z.boolean(),
+});
+export type ObjectStorageSettings = z.infer<typeof ObjectStorageSettingsSchema>;
+export const ObjectStorageUpdateSchema = z.object({
+  endpoint: z.string().trim().url().max(2048),
+  bucket: z.string().trim().min(1).max(255),
+  region: z.string().trim().max(64).default(""),
+  prefix: z.string().trim().max(512).default(""),
+  pathStyle: z.boolean().default(false),
+  accessKeyId: z.string().trim().min(1).max(256),
+  /** Blank keeps the saved secret, so an admin never has to see it again. */
+  secretAccessKey: z.string().trim().max(512).default(""),
+});
+export type ObjectStorageUpdate = z.infer<typeof ObjectStorageUpdateSchema>;
+
 export const ServerUpdateSourceSchema = z.object({
   repoUrl: z.string().max(400),
   branch: z.string().max(200),

@@ -6,6 +6,7 @@ import {
   Cpu,
   CreditCard,
   Gauge,
+  HardDrive,
   KeyRound,
   MessageCircle,
   Monitor,
@@ -28,6 +29,7 @@ export function useSettingsNavItems(available: {
   messaging: boolean;
   wallet: boolean;
   computer: boolean;
+  storage: boolean;
   billing: boolean;
   updates: boolean;
 }): SettingsNavItem[] {
@@ -46,6 +48,7 @@ export function useSettingsNavItems(available: {
     { id: "memory", label: t`Memory`, icon: Brain },
     { id: "usage", label: t`Usage`, icon: Gauge },
     ...(available.computer ? [{ id: "computer" as const, label: t`Computer`, icon: Monitor }] : []),
+    ...(available.storage ? [{ id: "storage" as const, label: t`Storage`, icon: HardDrive }] : []),
     ...(available.billing ? [{ id: "billing" as const, label: t`Billing`, icon: CreditCard }] : []),
     ...(available.updates
       ? [{ id: "updates" as const, label: t`Updates`, icon: CloudDownload }]

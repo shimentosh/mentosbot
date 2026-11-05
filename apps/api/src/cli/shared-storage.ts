@@ -2,10 +2,12 @@ import { parseArgs } from "node:util";
 import {
   contentKeyProviderFromEnv,
   createArtifactStore,
+  createSecretStore,
   LocalArtifactStore,
   migrateLocalArtifacts,
   migrateLocalPushTokens,
   PrismaPushTokenStore,
+  resolveObjectStorage,
   unwrapEnvFromKeyManager,
 } from "@rakazo/adapters";
 import { resolveEncryptionKey } from "@rakazo/core";
@@ -29,12 +31,16 @@ const { prisma, pool, contentKeys } = createDb(process.env.DATABASE_URL, {
 });
 const dataDir = process.env.DATA_DIR ?? "./data";
 try {
+  const storage = await resolveObjectStorage(
+    prisma,
+    createSecretStore(resolveEncryptionKey(process.env)),
+  );
   const counts =
     positionals[0] === "artifacts"
       ? await migrateLocalArtifacts(
           prisma,
           new LocalArtifactStore(dataDir, contentKeys),
-          createArtifactStore(dataDir, prisma),
+          createArtifactStore(dataDir, prisma, process.env, storage?.config),
           { dryRun: values["dry-run"] },
         )
       : await migrateLocalPushTokens(
