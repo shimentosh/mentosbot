@@ -12,6 +12,7 @@ import type {
 import {
   USER_DEVICE_PAIR_PATH,
   USER_DEVICE_PATH,
+  USER_DEVICE_ROUTE_TRAFFIC_PATH,
   USER_DEVICE_SESSION_PATH,
 } from "@rakazo/contracts";
 import { secureHttpOrigin } from "@rakazo/contracts/network-host";
@@ -159,6 +160,8 @@ export function createUserDeviceAccess(deps: {
   let generation = 0;
   let client: { origin: string; close(): void; cancelAll(): void } | undefined;
   const paired = new Map<string, Omit<PairedDevice, "token">>();
+  /** The token of the connection started for each origin, which only this process holds. */
+  const tokens = new Map<string, string>();
   const consent = new Map<string, SavedConsent | null>();
   /** Bumped on every consent change, so a prompt answered after one is ignored. */
   const changes = new Map<string, number>();
@@ -179,6 +182,7 @@ export function createUserDeviceAccess(deps: {
 
   function start(origin: string, token: string) {
     disconnect();
+    tokens.set(origin, token);
     const active = {
       origin,
       close: () => connection.close(),
@@ -188,6 +192,7 @@ export function createUserDeviceAccess(deps: {
       onRevoked: (reason) => {
         if (client === active) client = undefined;
         paired.delete(origin);
+        tokens.delete(origin);
         untied.delete(origin);
         removals.set(
           origin,
@@ -437,6 +442,32 @@ export function createUserDeviceAccess(deps: {
       if (!paired.has(origin)) throw new Error("Could not pair this computer");
       if (changes.get(origin) !== seen) return;
       await decide(origin, "allowed");
+    },
+    /**
+     * Sends the owner's computers' browser traffic out through this computer's network. Only
+     * this device's token can turn it on, so pairing comes first; it needs no host access.
+     */
+    async setRouteTraffic(origin: string, routeTraffic: boolean) {
+      if (origin !== current) return;
+      if (routeTraffic) {
+        unavailable.delete(origin);
+        await pairOnce(origin);
+      }
+      const token = tokens.get(origin);
+      if (!token) {
+        if (routeTraffic) throw new Error("Could not pair this computer");
+        return;
+      }
+      const response = await deps.fetch(new URL(USER_DEVICE_ROUTE_TRAFFIC_PATH, origin).href, {
+        method: "PUT",
+        credentials: "omit",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ routeTraffic }),
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+      });
+      await response.body?.cancel();
+      if (response.status !== 204) throw new Error("Could not change routing");
     },
     close() {
       ++generation;

@@ -4,6 +4,7 @@ import {
   computerNetworkExitSettings,
   NETWORK_EXIT_BOT_LABEL,
   NETWORK_EXIT_LABEL,
+  NETWORK_EXIT_RELAY_LABEL,
   NetworkExitSchema,
   networkExitContainerOptions,
   networkExitFingerprint,
@@ -116,5 +117,46 @@ describe("proxy network exit", () => {
       { address: "proxy.example.com:8080", username: "me\nnever_direct deny all" },
     ])
       expect(NetworkExitSchema.safeParse({ ...exit, settings }).success).toBe(false);
+  });
+});
+
+describe("device network exit", () => {
+  const token = `${Buffer.from("home-1").toString("base64url")}.${"a".repeat(43)}`;
+  const exit = {
+    provider: "device" as const,
+    settings: { url: "https://app.example.com" },
+    credentials: { token },
+  };
+
+  it("keeps the computer's token in its relay, never the computer", () => {
+    const settings = computerNetworkExitSettings(exit);
+    expect(settings.env).toEqual(["RAKAZO_BROWSER_PROXY=http://rakazo-network-exit:3128"]);
+    expect(JSON.stringify(settings)).not.toContain(token);
+    const options = networkExitContainerOptions({
+      botId: "b1",
+      image: "node",
+      networkMode: "rakazo-computer-b1",
+      exit,
+    });
+    expect(options).toMatchObject({
+      User: "node",
+      Entrypoint: ["node", "--input-type=module", "-e"],
+      HostConfig: { CapDrop: ["ALL"], ReadonlyRootfs: true, NetworkMode: "rakazo-computer-b1" },
+    });
+    expect(options.Env).toEqual([
+      "RAKAZO_EXIT_URL=https://app.example.com",
+      `RAKAZO_EXIT_TOKEN=${token}`,
+    ]);
+    expect(options.Cmd?.[0]).toContain("startRelay");
+    expect(options.Labels?.[NETWORK_EXIT_RELAY_LABEL]).toMatch(/^[a-f0-9]{32}$/);
+  });
+
+  it("reaches the server only over HTTPS, with a token the API made", () => {
+    expect(NetworkExitSchema.safeParse(exit).success).toBe(true);
+    for (const changed of [
+      { ...exit, settings: { url: "http://app.example.com" } },
+      { ...exit, credentials: { token: "not a token" } },
+    ])
+      expect(NetworkExitSchema.safeParse(changed).success).toBe(false);
   });
 });

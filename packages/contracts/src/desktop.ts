@@ -94,6 +94,11 @@ export interface RakazoDesktop {
     state: () => Promise<RakazoDesktopDevice | null>;
     /** Turning it on asks with a native prompt the page cannot answer. */
     setAllowed: (allowed: boolean) => Promise<RakazoDesktopDevice | null>;
+    /**
+     * Sends the owner's computers' browser traffic out through this computer's network while it
+     * is connected. Absent on older desktop releases.
+     */
+    setRouteTraffic?: (routeTraffic: boolean) => Promise<RakazoDesktopDevice | null>;
   };
   /** Absent on older desktop releases, whose menus carry no app commands. */
   menu?: {

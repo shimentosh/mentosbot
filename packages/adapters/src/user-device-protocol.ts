@@ -7,6 +7,18 @@ export const userDeviceRevokeReason = z.enum(["session-ended"]);
 export const USER_DEVICE_REVOKED_HEADER = "x-rakazo-device-revoked";
 export type UserDeviceRevokeReason = z.infer<typeof userDeviceRevokeReason>;
 
+/**
+ * Carry one of the owner's computer connections: dial the server back with the ticket, then
+ * reach host:port. Sent only to a device that chose to route traffic, and needs no reply.
+ */
+export const userDeviceNotice = z.object({
+  type: z.literal("tunnel"),
+  ticket: z.string().min(1).max(1024),
+  host: z.string().min(1).max(253),
+  port: z.number().int().min(1).max(65535),
+});
+export type UserDeviceNotice = z.infer<typeof userDeviceNotice>;
+
 export const userDeviceServerMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("request"),
@@ -14,6 +26,7 @@ export const userDeviceServerMessage = z.discriminatedUnion("type", [
     request: hostComputerRequest,
   }),
   z.object({ type: z.literal("cancel"), id: z.string().min(1).max(64) }),
+  userDeviceNotice,
   // "session-ended": the sign-in that paired it ended, so the next sign-in pairs again.
   z.object({ type: z.literal("revoked"), reason: userDeviceRevokeReason.optional() }),
 ]);

@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
   device: {
     state: () => ipcRenderer.invoke("desktop.device.state"),
     setAllowed: (allowed) => ipcRenderer.invoke("desktop.device.setAllowed", allowed),
+    setRouteTraffic: (routeTraffic) =>
+      ipcRenderer.invoke("desktop.device.setRouteTraffic", routeTraffic),
   },
   locale: {
     set: (locale) => ipcRenderer.invoke("desktop.locale.set", locale),

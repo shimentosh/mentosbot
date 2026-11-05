@@ -5,6 +5,7 @@ import { BoxdSandboxProvider } from "./boxd-sandbox.js";
 import { CreateOSSandboxProvider } from "./createos-sandbox.js";
 import { DaytonaSandboxProvider } from "./daytona-sandbox.js";
 import { assertHostCommandsAllowed, DesktopSandboxProvider } from "./desktop-sandbox.js";
+import type { DeviceExitOrigin } from "./device-network-exit.js";
 import { DockerSandboxProvider } from "./docker-sandbox.js";
 import { E2BSandboxProvider } from "./e2b-sandbox.js";
 import { FakeSandboxProvider } from "./fake-sandbox.js";
@@ -18,6 +19,8 @@ import { RailwaySandboxProvider } from "./railway-sandbox.js";
 export interface SandboxProviderOptions {
   /** The network a computer's owner routes its browser through, for providers that can. */
   networkExitFor?: (homeKey: string) => Promise<NetworkExit | undefined>;
+  /** Lets an owner's devices carry their computers' browser traffic; see `deviceExitOrigin`. */
+  deviceExit?: DeviceExitOrigin;
   hostComputerUrl?: string;
   hostComputerToken?: string;
   supervisorUrl?: string;

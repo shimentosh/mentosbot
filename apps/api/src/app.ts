@@ -60,7 +60,9 @@ import {
   createStrategicInitiativeReconciler,
   createTicketChangeNotifier,
   createWebProvider,
+  DeviceExitRelay,
   deploymentModelUsageLookup,
+  deviceExitOrigin,
   EmailEmulator,
   ExpoPushProvider,
   GraphileJobPublisher,
@@ -235,7 +237,7 @@ export interface AppHandles {
   runtime: AgentRuntime;
   awaitIdle?: () => Promise<void>;
   backgroundFailures?: () => Array<{ name: string; count: number }>;
-  /** Node `upgrade` listener for desktop device sockets; absent when the feature is off. */
+  /** Node `upgrade` listener for desktop device and tunnel sockets; absent when the feature is off. */
   handleUpgrade?: UserDeviceHub["handleUpgrade"];
   stop: () => Promise<void>;
 }
@@ -412,6 +414,9 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       boatApiKey: env.boatApiKey,
       boatApiUrl: env.boatApiUrl,
       dataDir: env.dataDir,
+      deviceExit: env.userDevicesEnabled
+        ? deviceExitOrigin(env.webOrigin, env.encryptionKey)
+        : undefined,
       prisma,
       secrets,
     }));
@@ -549,6 +554,16 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   const userDevices = userDeviceHub
     ? new UserDevices({ prisma, forwardSecret: userDeviceSecret, hub: userDeviceHub })
     : undefined;
+  const deviceExitRelay =
+    userDeviceHub && userDevices
+      ? new DeviceExitRelay({
+          prisma,
+          encryptionKey: env.encryptionKey,
+          forwardSecret: userDeviceSecret,
+          hub: userDeviceHub,
+          devices: userDevices,
+        })
+      : undefined;
   const deviceSessions = {
     prisma,
     devices: userDevices ?? new UserDevices({ prisma, forwardSecret: userDeviceSecret }),
@@ -1003,6 +1018,11 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         return found ? { userId: found.user.id, sessionId: found.session.id } : null;
       },
       trustedOrigin: (origin) => isTrustedOrigin(origin, env),
+      canRouteTraffic: () =>
+        Boolean(
+          deviceExitOrigin(env.webOrigin, env.encryptionKey) &&
+            sandbox.describe().capabilities.networkExit,
+        ),
     });
   }
   if (messagingInstallations) {
@@ -1489,7 +1509,12 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     runtime,
     awaitIdle: inMemoryJobs ? () => inMemoryJobs.awaitIdle() : undefined,
     backgroundFailures: inMemoryJobs ? () => inMemoryJobs.failureCounts() : undefined,
-    handleUpgrade: userDeviceHub?.handleUpgrade,
+    handleUpgrade:
+      userDeviceHub &&
+      ((request, socket, head) => {
+        if (!deviceExitRelay?.handleUpgrade(request, socket, head))
+          userDeviceHub.handleUpgrade(request, socket, head);
+      }),
     stop: async () => {
       stopObjectStorageWatch();
       // Handlers still running would otherwise query the pool after it ends.
@@ -1500,6 +1525,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       shutdown.abort();
       // Aborted runs hand themselves back while realtime is still open to announce them.
       const runsStopped = runs?.stop();
+      deviceExitRelay?.close();
       await userDeviceHub?.close();
       oauthLogins.abortAll();
       messagingStopped = true;

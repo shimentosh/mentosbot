@@ -5736,6 +5736,10 @@ msgstr "Root filesystem"
 msgid "Rotate key"
 msgstr "Rotate key"
 
+#: src/components/ComputerDeviceSettings.tsx
+msgid "Route bot browsing through this computer"
+msgstr "Route bot browsing through this computer"
+
 #: src/lib/identity-display.ts
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/use-routine-editor.ts

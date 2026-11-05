@@ -4,10 +4,12 @@ import {
   hashUserDeviceToken,
   USER_DEVICE_DISCONNECT_PATH,
   USER_DEVICE_FORWARD_PATH,
+  USER_DEVICE_NOTIFY_PATH,
   UserDeviceHub,
   UserDevices,
   userDeviceForwardSecret,
 } from "@rakazo/adapters";
+import { USER_DEVICE_ROUTE_TRAFFIC_PATH } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { installSecurityEventStore } from "@rakazo/db";
 import { Hono } from "hono";
@@ -24,6 +26,7 @@ interface Row {
   createdAt: Date;
   lastSeenAt: Date | null;
   revokedAt: Date | null;
+  routeTraffic: boolean;
 }
 
 function fakePrisma() {
@@ -47,7 +50,10 @@ function fakePrisma() {
       create: async ({
         data,
       }: {
-        data: Omit<Row, "id" | "createdAt" | "lastSeenAt" | "revokedAt" | "sessionId"> &
+        data: Omit<
+          Row,
+          "id" | "createdAt" | "lastSeenAt" | "revokedAt" | "sessionId" | "routeTraffic"
+        > &
           Partial<Pick<Row, "lastSeenAt" | "revokedAt" | "sessionId">>;
       }) => {
         const row = {
@@ -56,6 +62,7 @@ function fakePrisma() {
           lastSeenAt: null,
           revokedAt: null,
           sessionId: null,
+          routeTraffic: false,
           ...data,
         };
         rows.push(row);
@@ -169,6 +176,7 @@ function setup() {
         : null;
     },
     trustedOrigin: (origin) => origin === "http://app.test",
+    canRouteTraffic: () => true,
   });
   const pair = (
     user: string | null,
@@ -313,6 +321,61 @@ describe("device revoke", () => {
     expect((await self()).status).toBe(204);
     await expect(hub.authenticate(`Bearer ${token}`)).resolves.toBeNull();
     expect((await self()).status).toBe(401);
+  });
+});
+
+describe("routing traffic through a device", () => {
+  it("is turned on only with the device's own token, and is listed and recorded", async () => {
+    const { pair, app, rows, events } = setup();
+    const { token, deviceId } = await (await pair("user-1")).json();
+    const put = (headers: Record<string, string>, body: unknown = { routeTraffic: true }) =>
+      app.request(USER_DEVICE_ROUTE_TRAFFIC_PATH, {
+        method: "PUT",
+        headers: { "content-type": "application/json", ...headers },
+        body: JSON.stringify(body),
+      });
+    // A web session alone cannot send a computer's traffic through a device.
+    expect((await put({ "x-test-user": "user-1" })).status).toBe(401);
+    expect((await put({ authorization: `Bearer ${token}` }, { routeTraffic: "yes" })).status).toBe(
+      400,
+    );
+    expect(rows[0]!.routeTraffic).toBe(false);
+
+    expect((await put({ authorization: `Bearer ${token}` })).status).toBe(204);
+    expect(rows[0]!.routeTraffic).toBe(true);
+    expect(events.at(-1)).toMatchObject({
+      type: "device.route_traffic.changed",
+      metadata: { deviceId, routeTraffic: true },
+    });
+    const listed = await (
+      await app.request("/api/devices", { headers: { "x-test-user": "user-1" } })
+    ).json();
+    expect(listed).toMatchObject({
+      devices: [{ deviceId, routeTraffic: true }],
+      canRouteTraffic: true,
+    });
+  });
+
+  it("delivers a tunnel request forwarded from another process to the held socket", async () => {
+    const { app, pair, hub } = setup();
+    const { deviceId } = await (await pair("user-1")).json();
+    const socket = new FakeSocket();
+    const connectionId = await hub.attach(
+      { id: deviceId, userId: "user-1", name: "Laptop", platform: "darwin" },
+      socket,
+    );
+    const message = { type: "tunnel", ticket: "t", host: "example.com", port: 443 };
+    const notify = (authorization: string, connectionId: string) =>
+      app.request(USER_DEVICE_NOTIFY_PATH, {
+        method: "POST",
+        headers: { authorization, "content-type": "application/json" },
+        body: JSON.stringify({ deviceId, userId: "user-1", connectionId, message }),
+      });
+    expect((await notify("Bearer wrong", "c")).status).toBe(401);
+    expect((await notify(`Bearer ${secret}`, "not-this-one")).status).toBe(409);
+    expect(socket.sent).toEqual([]);
+    expect((await notify(`Bearer ${secret}`, connectionId)).status).toBe(204);
+    expect(socket.sent).toEqual([message]);
   });
 });
 
