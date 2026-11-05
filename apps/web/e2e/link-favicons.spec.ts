@@ -61,3 +61,54 @@ test("links in a bot reply show the site icon the API resolved", async ({ page }
   await bubble.scrollIntoViewIfNeeded();
   await captureScreenshot(page, testInfo, "link-favicons-bot-reply");
 });
+
+// A plain landscape picture standing in for the image the API would have proxied.
+const cover =
+  "data:image/jpeg;base64,/9j/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCADIAX4DASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAID/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8ArwGiQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/2Q==";
+const article = "https://www.docs.example.test/guide/start/";
+
+test("a link a reply shares gets the preview card the API read", async ({ page }, testInfo) => {
+  const asked: string[] = [];
+  await page.route("**/rpc/links/preview", async (route) => {
+    const { json } = route.request().postDataJSON() as { json: { url: string } };
+    asked.push(json.url);
+    const preview =
+      json.url === article
+        ? {
+            title: "Getting started",
+            description: "Install the app, connect a model and send your first message.",
+            siteName: "Example Docs",
+            image: cover,
+          }
+        : null;
+    await route.fulfill({ json: { json: { preview } } });
+  });
+  await page.route("**/rpc/links/favicon", async (route) => {
+    const { json } = route.request().postDataJSON() as { json: { origin: string } };
+    await route.fulfill({ json: { json: { icon: icons[json.origin] ?? null } } });
+  });
+  // The browser must never contact a linked site for its preview or image.
+  const direct: string[] = [];
+  await page.route(/^https?:\/\/[^/]*example\.test\//, async (route) => {
+    direct.push(route.request().url());
+    await route.abort();
+  });
+
+  await signup(page, `link-previews-${Date.now()}@rakazo.test`, "password12", "Link Previews");
+  await completeOnboarding(page);
+  const composer = page.getByRole("combobox", { name: /^Message/ });
+  await composer.fill(`Here is the guide: ${article}`);
+  await composer.press("Enter");
+
+  const card = page.getByTestId("link-preview").last();
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await expect(card).toHaveAttribute("href", article);
+  await expect(card).toContainText("Getting started");
+  await expect(card).toContainText("Example Docs");
+  await expect(card.locator("img").first()).toHaveAttribute("src", cover);
+  expect(asked).toContain(article);
+  expect(direct).toEqual([]);
+
+  await card.scrollIntoViewIfNeeded();
+  await captureScreenshot(page, testInfo, "link-preview-card");
+});

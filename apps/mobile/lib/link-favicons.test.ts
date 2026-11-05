@@ -8,7 +8,7 @@ import {
   subscribeApiBase,
   subscribeSessionRejected,
 } from "./api";
-import { loadLinkFavicon } from "./link-favicons";
+import { loadLinkFavicon, loadLinkPreview } from "./link-favicons";
 import { restoreSessionToken } from "./session";
 
 vi.mock("expo-secure-store", () => ({
@@ -55,6 +55,25 @@ describe("link favicons on mobile", () => {
       unsubscribe();
       await resetApiBase();
     }
+  });
+
+  it("asks the API for a link's preview", async () => {
+    const preview = { title: "Post", description: null, siteName: null, image: null };
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ json: { preview } }), {
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadLinkPreview("https://site.example.test/post")).resolves.toEqual({ preview });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/rpc\/links\/preview$/),
+      expect.objectContaining({
+        body: JSON.stringify({ json: { url: "https://site.example.test/post" } }),
+      }),
+    );
   });
 
   it("asks the API for an origin's icon", async () => {

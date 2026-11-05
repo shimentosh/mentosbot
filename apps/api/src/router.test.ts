@@ -9700,6 +9700,74 @@ describe("link favicons", () => {
   });
 });
 
+describe("link previews", () => {
+  const preview = {
+    title: "A post",
+    description: null,
+    siteName: "Example",
+    image: "data:image/jpeg;base64,AAAA",
+  };
+
+  function previewClient(actor: Actor | null) {
+    const resolve = vi.fn().mockResolvedValue({ preview });
+    const deps = {
+      prisma: {} as PrismaClient,
+      linkPreviews: { preview: resolve },
+      env: { webOrigin: "https://app.rakazo.test", screenProxySecret: "fake-test-secret" },
+      dataDir: "/tmp/rakazo-router-test",
+    } as unknown as RouterDeps;
+    const client = createRouterClient(createRouter(deps), { context: { actor } });
+    return { client, resolve };
+  }
+
+  const reader = {
+    spaceId: "workspace-1",
+    userId: "user-1",
+    email: "user@rakazo.test",
+    isDeploymentOwner: false,
+  } satisfies Actor;
+
+  it("answers a signed-in reader, limited per reader", async () => {
+    const { client, resolve } = previewClient(reader);
+    await expect(client.links.preview({ url: "https://example.test/post" })).resolves.toEqual({
+      preview,
+    });
+    expect(resolve).toHaveBeenCalledWith("https://example.test/post", "user-1");
+  });
+
+  it("passes a busy answer through so the client can ask again", async () => {
+    const { client, resolve } = previewClient(reader);
+    resolve.mockResolvedValue({ preview: null, retry: true });
+    await expect(client.links.preview({ url: "https://example.test/" })).resolves.toEqual({
+      preview: null,
+      retry: true,
+    });
+  });
+
+  it("never previews the app's own pages", async () => {
+    const { client, resolve } = previewClient(reader);
+    await expect(
+      client.links.preview({ url: "https://app.rakazo.test/chat/123" }),
+    ).resolves.toEqual({ preview: null });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("refuses a link longer than the limit", async () => {
+    const { client, resolve } = previewClient(reader);
+    const url = `https://example.test/${"a".repeat(2048)}`;
+    await expect(client.links.preview({ url })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("refuses a request without a session before reading anything", async () => {
+    const { client, resolve } = previewClient(null);
+    await expect(client.links.preview({ url: "https://example.test/" })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+});
+
 describe("memory documents", () => {
   const actor = { userId: "user-1", spaceId: "space-1", email: "user@rakazo.test" };
 

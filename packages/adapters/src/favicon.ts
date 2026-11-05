@@ -1,6 +1,14 @@
 import { registrableDomain } from "@rakazo/core/egress";
 import { JSDOM } from "jsdom";
 import type { ResolveHostname } from "./network-address.js";
+import {
+  BUSY,
+  boundedCache,
+  concurrencyLimit,
+  documentBase,
+  sniffImage,
+  untilAborted,
+} from "./site-lookup.js";
 import { fetchSafeWebBytes } from "./web-ssrf.js";
 
 const PAGE_MAX_BYTES = 256 * 1024;
@@ -61,7 +69,6 @@ export type FaviconResolverOptions = {
  */
 export function createFaviconResolver(options: FaviconResolverOptions = {}): FaviconResolver {
   const now = options.now ?? Date.now;
-  const cache = new Map<string, { icon: string | null; expiresAt: number }>();
   const inFlight = new Map<string, Promise<FaviconAnswer>>();
   const limit = concurrencyLimit(
     MAX_CONCURRENT,
@@ -69,33 +76,19 @@ export function createFaviconResolver(options: FaviconResolverOptions = {}): Fav
     options.limits?.maxWaitMs ?? MAX_WAIT_MS,
   );
   const deadlineMs = options.limits?.deadlineMs ?? LOOKUP_DEADLINE_MS;
-  const maxCachedIconBytes = options.limits?.maxCachedIconBytes ?? MAX_CACHED_ICON_BYTES;
-  let cachedIconBytes = 0;
-
-  const forget = (origin: string) => {
-    cachedIconBytes -= cache.get(origin)?.icon?.length ?? 0;
-    cache.delete(origin);
-  };
-  // Least recently used first: Map order, refreshed on every hit.
-  const remember = (origin: string, icon: string | null) => {
-    forget(origin);
-    cache.set(origin, { icon, expiresAt: now() + (icon ? FOUND_TTL_MS : MISSING_TTL_MS) });
-    cachedIconBytes += icon?.length ?? 0;
-    while (cache.size > MAX_CACHED_ORIGINS || cachedIconBytes > maxCachedIconBytes) {
-      forget(cache.keys().next().value!);
-    }
-  };
+  const cache = boundedCache<string | null>({
+    maxEntries: MAX_CACHED_ORIGINS,
+    maxBytes: options.limits?.maxCachedIconBytes ?? MAX_CACHED_ICON_BYTES,
+    sizeOf: (icon) => icon?.length ?? 0,
+    now,
+  });
 
   return {
     async favicon(input) {
       const origin = faviconOrigin(input);
       if (!origin) return { icon: null };
       const cached = cache.get(origin);
-      if (cached && cached.expiresAt > now()) {
-        cache.delete(origin);
-        cache.set(origin, cached);
-        return { icon: cached.icon };
-      }
+      if (cached) return { icon: cached.value };
       const pending = inFlight.get(origin);
       if (pending) return pending;
       // A request turned away by a full queue is not a miss: it is not remembered, and the
@@ -105,7 +98,7 @@ export function createFaviconResolver(options: FaviconResolverOptions = {}): Fav
       )
         .then((result): FaviconAnswer => {
           if (result === BUSY) return { icon: null, retry: true };
-          remember(origin, result);
+          cache.set(origin, result, result ? FOUND_TTL_MS : MISSING_TTL_MS);
           return { icon: result };
         })
         .finally(() => inFlight.delete(origin));
@@ -204,34 +197,6 @@ export function iconCandidates(html: string, pageUrl: string): string[] {
     if (!icons.includes(url.href) && !touchIcons.includes(url.href)) list.push(url.href);
   }
   return [...icons, ...touchIcons];
-}
-
-/**
- * What relative icon links resolve against: the first `<base href>`, as a browser would, when it is
- * an http(s) URL, else the page itself. This widens nothing: a page can already name an icon on any
- * public host, and every icon URL still passes the same SSRF and port checks.
- */
-function documentBase(document: DocumentFragment, pageUrl: string): string {
-  const href = document.querySelector("base[href]")?.getAttribute("href") ?? undefined;
-  if (href === undefined) return pageUrl;
-  try {
-    const base = new URL(href.trim(), pageUrl);
-    return base.protocol === "http:" || base.protocol === "https:" ? base.href : pageUrl;
-  } catch {
-    return pageUrl;
-  }
-}
-
-type ImageFormat = "png" | "jpeg" | "gif" | "webp" | "ico";
-
-function sniffImage(bytes: Uint8Array): ImageFormat | undefined {
-  const ascii = (start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
-  if (bytes.length >= 8 && ascii(1, 4) === "PNG" && bytes[0] === 0x89) return "png";
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpeg";
-  if (ascii(0, 6) === "GIF87a" || ascii(0, 6) === "GIF89a") return "gif";
-  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "webp";
-  if (bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && bytes[3] === 0) return "ico";
-  return undefined;
 }
 
 /**
@@ -397,57 +362,4 @@ export function decodeIcoBitmap(
     }
   }
   return { width, height, rgba };
-}
-
-/** The promise's value, or null once the signal aborts, whichever comes first. */
-function untilAborted<T>(promise: Promise<T | null>, signal: AbortSignal): Promise<T | null> {
-  if (signal.aborted) return Promise.resolve(null);
-  return new Promise((resolve) => {
-    const onAbort = () => resolve(null);
-    signal.addEventListener("abort", onAbort, { once: true });
-    promise
-      .then(
-        (value) => resolve(value),
-        () => resolve(null),
-      )
-      .finally(() => signal.removeEventListener("abort", onAbort));
-  });
-}
-
-const BUSY = Symbol("busy");
-
-/** At most `max` tasks at once; a bounded number wait a bounded time, the rest are BUSY. */
-function concurrencyLimit(max: number, maxWaiting: number, maxWaitMs: number) {
-  let active = 0;
-  const waiting: Array<() => void> = [];
-  const release = () => {
-    // Hand the slot straight to the next waiter so a newcomer cannot slip in between.
-    const next = waiting.shift();
-    if (next) next();
-    else active -= 1;
-  };
-  return async <T>(task: () => Promise<T>): Promise<T | typeof BUSY> => {
-    if (active < max) {
-      active += 1;
-    } else {
-      if (waiting.length >= maxWaiting) return BUSY;
-      const admitted = await new Promise<boolean>((resolve) => {
-        const admit = () => {
-          clearTimeout(timer);
-          resolve(true);
-        };
-        const timer = setTimeout(() => {
-          waiting.splice(waiting.indexOf(admit), 1);
-          resolve(false);
-        }, maxWaitMs);
-        waiting.push(admit);
-      });
-      if (!admitted) return BUSY;
-    }
-    try {
-      return await task();
-    } finally {
-      release();
-    }
-  };
 }

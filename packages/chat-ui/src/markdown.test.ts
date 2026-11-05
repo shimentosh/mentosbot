@@ -6,6 +6,8 @@ import {
   linkFaviconOrigin,
   linkifyExplicitUrls,
   linkLabel,
+  linkPreviewSite,
+  linkPreviewUrls,
   markdownLinkDisplayParts,
   markdownLinkNeedsPrompt,
   markdownLinkRequiresConfirmation,
@@ -465,5 +467,88 @@ describe("withMentions", () => {
       { kind: "progress", text: "Planner tool", activity: true },
       { kind: "text", text: `${link} is ready.` },
     ]);
+  });
+});
+
+describe("linkPreviewUrls", () => {
+  it("previews a bare URL, in a sentence or on its own", () => {
+    expect(linkPreviewUrls(["Posted: https://x.example.test/a/status/123"])).toEqual([
+      "https://x.example.test/a/status/123",
+    ]);
+    expect(linkPreviewUrls(["https://news.example.test/story"])).toEqual([
+      "https://news.example.test/story",
+    ]);
+  });
+
+  it("previews a link labelled with its own address, which reads as a bare URL", () => {
+    expect(
+      linkPreviewUrls(["Read [https://docs.example.test/](https://docs.example.test/) today."]),
+    ).toEqual(["https://docs.example.test/"]);
+    expect(linkPreviewUrls(["[docs.example.test/a](https://docs.example.test/a)"])).toEqual([
+      "https://docs.example.test/a",
+    ]);
+  });
+
+  it("never previews a link hidden behind other words, even on a line of its own", () => {
+    expect(
+      linkPreviewUrls([
+        "See [the docs](https://docs.example.test/) for more.",
+        "[A long read](https://news.example.test/a)\n\n- [Docs](https://docs.example.test/b)\n> [Quote](https://q.example.test/c)",
+        "[https://shown.example.test/](https://hidden.example.test/?secret=1)",
+      ]),
+    ).toEqual([]);
+  });
+
+  it("skips images, linked images and anything in code", () => {
+    expect(
+      linkPreviewUrls([
+        "![chart](https://img.example.test/a.png)",
+        "[![chart](https://img.example.test/b.png)](https://site.example.test/b)",
+        "Run `curl https://api.example.test/x` then\n```\nhttps://code.example.test/y\n```",
+        "    https://indented.example.test/z",
+      ]),
+    ).toEqual([]);
+  });
+
+  it("shows at most two cards a message, in order, once each", () => {
+    expect(
+      linkPreviewUrls([
+        "https://a.example.test/1 and https://a.example.test/1#again",
+        "https://b.example.test/2\nhttps://c.example.test/3",
+      ]),
+    ).toEqual(["https://a.example.test/1", "https://b.example.test/2"]);
+  });
+
+  it("skips links to the app itself, unsafe schemes, credentials and overlong links", () => {
+    expect(
+      linkPreviewUrls(
+        [
+          [
+            "https://app.example.test/chat/1",
+            "[x](javascript:alert(1))",
+            "mailto:someone@example.test",
+            "https://user:secret@site.example.test/",
+            `https://long.example.test/${"a".repeat(2048)}`,
+            "rakazo-mention:bot-1",
+          ].join("\n"),
+        ],
+        { appOrigin: "https://app.example.test" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("names the site by the page's own name, else by the link's host", () => {
+    expect(linkPreviewSite("https://www.news.example.test/a", { siteName: "News" })).toBe("News");
+    expect(linkPreviewSite("https://www.news.example.test/a", { siteName: null })).toBe(
+      "news.example.test",
+    );
+  });
+
+  it("reads a user's literal text, where markdown is just characters", () => {
+    expect(
+      linkPreviewUrls(["Look [here](https://site.example.test/a) **https://b.example.test**"], {
+        plain: true,
+      }),
+    ).toEqual(["https://site.example.test/a", "https://b.example.test/"]);
   });
 });
