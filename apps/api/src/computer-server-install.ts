@@ -1,9 +1,8 @@
 /**
- * The setup script a deployment admin runs on a new server so it can run bots' computers. It
- * holds no secret: the token arrives as an argument and stays in a root-only file. The supervisor
+ * The setup script Rakazo runs as root on a new server so it can run bots' computers. It holds
+ * no secret: the token arrives as an argument and stays in a root-only file. The supervisor
  * listens only on the private address given, beside the screens it publishes there.
  */
-export const COMPUTER_SERVER_INSTALL_PATH = "/api/computer-servers/install.sh";
 
 export const COMPUTER_SERVER_INSTALL_SCRIPT = `#!/usr/bin/env bash
 # Sets up a server that runs Rakazo bots' computers for another Rakazo server.

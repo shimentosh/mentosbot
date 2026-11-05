@@ -1902,10 +1902,6 @@ msgstr ""
 msgid "Copy code"
 msgstr "Копировать код"
 
-#: src/pages/ComputerServersSettings.tsx
-msgid "Copy command"
-msgstr ""
-
 #: src/components/markdown-copy.tsx
 msgid "Copy diagram source"
 msgstr "Копировать источник диаграммы"
@@ -2925,7 +2921,6 @@ msgstr "У вас нет учетной записи?"
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
-#: src/pages/ComputerServersSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/import-setup-card.tsx
 #: src/pages/shell/message-view.tsx
@@ -3729,6 +3724,10 @@ msgstr ""
 
 #: src/pages/TeamMembersSettings.tsx
 msgid "Inviting…"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "IP address"
 msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
@@ -4662,6 +4661,10 @@ msgstr "Недопустимый навык"
 msgid "Not added: {0}"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Not answering"
+msgstr ""
+
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "Ещё не проверено"
@@ -4993,6 +4996,7 @@ msgstr "Ключи доступа"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Password"
 msgstr "Пароль"
 
@@ -5185,10 +5189,6 @@ msgstr ""
 #: src/pages/shell/bot-panel.tsx
 msgid "Private"
 msgstr "Личный"
-
-#: src/pages/ComputerServersSettings.tsx
-msgid "Private address"
-msgstr ""
 
 #: src/pages/shell/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -5741,10 +5741,6 @@ msgstr "Запустить в"
 msgid "Run history"
 msgstr "История запуска"
 
-#: src/pages/ComputerServersSettings.tsx
-msgid "Run this on the server"
-msgstr ""
-
 #: src/pages/shell/use-routine-editor.ts
 msgid "Run time must be in the future."
 msgstr "Время выполнения должно быть в будущем."
@@ -6050,6 +6046,23 @@ msgstr "URL-адрес сервера"
 msgid "Servers"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up"
+msgstr ""
+
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up {0} again"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up again"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setting up…"
+msgstr ""
+
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6078,6 +6091,10 @@ msgstr "Настройки: Использование"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "Настройка завершена"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setup failed"
+msgstr ""
 
 #: src/components/NetworkExitDialog.tsx
 msgid "Setup guide"
@@ -7182,6 +7199,7 @@ msgstr ""
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Username"
 msgstr ""
 
@@ -7264,10 +7282,6 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Wait a moment and test again."
 msgstr "Подождите немного и повторите тест."
-
-#: src/pages/ComputerServersSettings.tsx
-msgid "Waiting for setup"
-msgstr ""
 
 #: src/lib/roster-status.ts
 msgid "Waiting in line…"

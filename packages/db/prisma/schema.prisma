@@ -1749,7 +1749,15 @@ model NotificationPreference {
 model ComputerServer {
   id              String   @id @default(cuid())
   name            String
-  url             String
+  /// The supervisor's address on the private network; empty until setup finds it.
+  url             String   @default("")
+  /// Where Rakazo signs in to set the server up. No password or key is kept.
+  sshHost         String?
+  sshUser         String?
+  /// "installing" while setup runs, "failed" when it last failed, null otherwise.
+  setupState      String?
+  setupError      String?
+  setupStartedAt  DateTime?
   maxComputers    Int
   /// Paused servers keep the computers they have and take no new ones.
   paused          Boolean  @default(false)

@@ -15,6 +15,11 @@ export interface ComputerServerRecord {
   maxComputers: number;
   paused: boolean;
   ready: boolean;
+  sshHost: string | null;
+  sshUser: string | null;
+  setupState: string | null;
+  setupError: string | null;
+  setupStartedAt: Date | null;
   secretId: string;
   ciphertext: string;
   /** Computers placed on it, running or not. */
@@ -52,6 +57,11 @@ const SELECT = {
   maxComputers: true,
   paused: true,
   ready: true,
+  sshHost: true,
+  sshUser: true,
+  setupState: true,
+  setupError: true,
+  setupStartedAt: true,
   secretId: true,
   secret: { select: { ciphertext: true } },
 } as const;
@@ -145,7 +155,8 @@ export function addComputerServer(
   input: {
     userId: string;
     name: string;
-    url: string;
+    sshHost: string;
+    sshUser: string;
     maxComputers: number;
     secret: { id: string; ciphertext: string };
   },
@@ -166,7 +177,8 @@ export function addComputerServer(
       const server = await tx.computerServer.create({
         data: {
           name: input.name,
-          url: input.url,
+          sshHost: input.sshHost,
+          sshUser: input.sshUser,
           maxComputers: input.maxComputers,
           secretId: input.secret.id,
           createdByUserId: input.userId,
@@ -180,11 +192,48 @@ export function addComputerServer(
 
 export function updateComputerServer(
   prisma: PrismaClient,
-  input: { id: string; name?: string; maxComputers?: number; paused?: boolean; ready?: boolean },
+  input: {
+    id: string;
+    name?: string;
+    maxComputers?: number;
+    paused?: boolean;
+    ready?: boolean;
+    url?: string;
+    sshUser?: string;
+    setupState?: string | null;
+    setupError?: string | null;
+  },
 ): Promise<boolean> {
   return runAsSystem("change a computer server", async () => {
     const { id, ...data } = input;
     return (await prisma.computerServer.updateMany({ where: { id }, data })).count > 0;
+  });
+}
+
+/** How long a setup may run before another one can take over from it. */
+export const COMPUTER_SERVER_SETUP_LEASE_MS = 45 * 60_000;
+
+/** Starts a setup unless one is already running; false when one is. */
+export function claimComputerServerSetup(
+  prisma: PrismaClient,
+  id: string,
+  now = new Date(),
+): Promise<boolean> {
+  return runAsSystem("start setting up a computer server", async () => {
+    const stale = new Date(now.getTime() - COMPUTER_SERVER_SETUP_LEASE_MS);
+    const claimed = await prisma.computerServer.updateMany({
+      where: {
+        id,
+        OR: [
+          { setupState: null },
+          { setupState: { not: "installing" } },
+          { setupStartedAt: null },
+          { setupStartedAt: { lt: stale } },
+        ],
+      },
+      data: { setupState: "installing", setupError: null, setupStartedAt: now },
+    });
+    return claimed.count > 0;
   });
 }
 

@@ -290,7 +290,11 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["networkExit/connect", { provider: "tailscale", values: {} }],
       ["networkExit/disconnect"],
       ["computerServers/list"],
-      ["computerServers/add", { name: "Nope", url: "10.0.0.2", maxComputers: 1 }],
+      [
+        "computerServers/add",
+        { name: "Nope", host: "203.0.113.7", username: "root", password: "x", maxComputers: 1 },
+      ],
+      ["computerServers/setup", { id: "missing-server", username: "root", password: "x" }],
       ["computerServers/update", { id: "missing-server", paused: true }],
       ["computerServers/remove", { id: "missing-server" }],
       ["inbox/list"],

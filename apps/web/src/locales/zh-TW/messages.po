@@ -1903,10 +1903,6 @@ msgstr "複製 .env 範例"
 msgid "Copy code"
 msgstr "複製程式碼"
 
-#: src/pages/ComputerServersSettings.tsx
-msgid "Copy command"
-msgstr ""
-
 #: src/components/markdown-copy.tsx
 msgid "Copy diagram source"
 msgstr "複製圖表原始碼"
@@ -2926,7 +2922,6 @@ msgstr "還沒有帳號？"
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
-#: src/pages/ComputerServersSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/import-setup-card.tsx
 #: src/pages/shell/message-view.tsx
@@ -3730,6 +3725,10 @@ msgstr ""
 
 #: src/pages/TeamMembersSettings.tsx
 msgid "Inviting…"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "IP address"
 msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
@@ -4663,6 +4662,10 @@ msgstr "不是有效的技能"
 msgid "Not added: {0}"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Not answering"
+msgstr ""
+
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "尚未檢查"
@@ -4994,6 +4997,7 @@ msgstr "通行金鑰"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Password"
 msgstr "密碼"
 
@@ -5186,10 +5190,6 @@ msgstr "優先順序"
 #: src/pages/shell/bot-panel.tsx
 msgid "Private"
 msgstr "私人"
-
-#: src/pages/ComputerServersSettings.tsx
-msgid "Private address"
-msgstr ""
 
 #: src/pages/shell/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -5742,10 +5742,6 @@ msgstr "執行時間"
 msgid "Run history"
 msgstr "執行紀錄"
 
-#: src/pages/ComputerServersSettings.tsx
-msgid "Run this on the server"
-msgstr ""
-
 #: src/pages/shell/use-routine-editor.ts
 msgid "Run time must be in the future."
 msgstr "執行時間必須是將來的時間。"
@@ -6051,6 +6047,23 @@ msgstr "伺服器 URL"
 msgid "Servers"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up"
+msgstr ""
+
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up {0} again"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up again"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setting up…"
+msgstr ""
+
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6079,6 +6092,10 @@ msgstr "設定：用量"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "設定完成"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setup failed"
+msgstr ""
 
 #: src/components/NetworkExitDialog.tsx
 msgid "Setup guide"
@@ -7183,6 +7200,7 @@ msgstr "使用者對端"
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Username"
 msgstr "使用者名稱"
 
@@ -7265,10 +7283,6 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Wait a moment and test again."
 msgstr "請稍候並重新測試。"
-
-#: src/pages/ComputerServersSettings.tsx
-msgid "Waiting for setup"
-msgstr ""
 
 #: src/lib/roster-status.ts
 msgid "Waiting in line…"

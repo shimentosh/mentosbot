@@ -17,13 +17,22 @@ on public interfaces.
 
 ## Adding a server
 
-1. Start a Debian server with Docker able to pull images (or let the script install `docker.io`).
-2. In **Settings → Computer**, choose **Add server** and enter a name, the server's private
-   address, and how many computers it should hold.
-3. Run the command Rakazo shows on the new server as root. It installs Docker if needed, writes the
-   token to a root-only file, and starts the supervisor from the app image with host networking.
-   Pass `--image` or `--computer-image` to use your own images.
-4. The server shows as ready once it answers. Only then does it take computers.
+1. Start a Debian server that shares a private network with the main server and accepts SSH with
+   a password.
+2. In **Settings → Computer**, choose **Add server** and enter a name, the server's IP address,
+   a username and password, and how many computers it should hold.
+3. Rakazo signs in over SSH, picks the server's private address that the main server can reach,
+   and runs the setup as root (through `sudo` for another user). Setup installs Docker if needed,
+   writes the server's token to a root-only file, and starts the supervisor from the app image with
+   host networking, listening only on that private address. The row shows **Setting up…** for the
+   few minutes the images take to download.
+4. The server takes computers once it answers. If setup fails, the row says why; fix it and
+   choose **Set up again**.
+
+The password is used for that sign-in only and never stored. The server's SSH host key is
+recorded in the API log as `computer_server.set_up`; compare it with your provider's console if
+you want to be sure you reached the right machine. To use your own images, run the setup script
+(`apps/api/src/computer-server-install.ts`) by hand with `--image` and `--computer-image`.
 
 ## Homes
 

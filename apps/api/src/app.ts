@@ -161,10 +161,6 @@ import {
   requestClientIp,
   withClientIp,
 } from "./client-ip.js";
-import {
-  COMPUTER_SERVER_INSTALL_PATH,
-  COMPUTER_SERVER_INSTALL_SCRIPT,
-} from "./computer-server-install.js";
 import { cspReportRoutes } from "./csp-report.js";
 import { configuredEmailProvider } from "./email.js";
 import type { AppEnv } from "./env.js";
@@ -893,13 +889,6 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       c.header("cache-control", "no-store");
     });
   }
-  // Holds no secret: the token reaches the server as an argument to it.
-  app.get(COMPUTER_SERVER_INSTALL_PATH, (c) =>
-    c.body(COMPUTER_SERVER_INSTALL_SCRIPT, 200, {
-      "content-type": "text/x-shellscript; charset=utf-8",
-      "cache-control": "no-store",
-    }),
-  );
   app.get("/api/auth/capabilities", (c) => {
     return c.json({
       sso: env.oidc

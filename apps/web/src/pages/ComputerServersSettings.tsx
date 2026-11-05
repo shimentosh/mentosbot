@@ -23,10 +23,10 @@ import {
   Input,
 } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { Check, Copy, Ellipsis, Plus } from "lucide-react";
+import { Ellipsis, Plus } from "lucide-react";
 import { useId, useState } from "react";
+import { Shimmer } from "../components/ai/primitives";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
-import { useCopyText } from "../lib/copy-text";
 import { queryClient, useQueryUserId } from "../lib/query";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
@@ -46,20 +46,26 @@ export function ComputerServersSettings() {
     {
       ...query,
       enabled: Boolean(userId),
-      // A server waiting for its setup command turns ready on its own.
+      // Setup runs on the server for minutes; follow it until every server settles.
       refetchInterval: (current) =>
-        current.state.data?.servers.some((server) => !server.ready) ? 5_000 : false,
+        current.state.data?.servers.some(
+          (server) => server.setup === "installing" || (!server.ready && !server.setup),
+        )
+          ? 5_000
+          : false,
     },
     queryClient,
   );
   const [adding, setAdding] = useState(false);
+  const [retrying, setRetrying] = useState<ComputerServer | null>(null);
   const [removing, setRemoving] = useState<ComputerServer | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!data?.canManage) return null;
+  const saved = (status: ComputerServerStatus) => queryClient.setQueryData(query.queryKey, status);
   const run = async (work: () => Promise<ComputerServerStatus>) => {
     setError(null);
     try {
-      queryClient.setQueryData(query.queryKey, await work());
+      saved(await work());
     } catch (reason) {
       setError(errorText(reason));
     }
@@ -74,24 +80,7 @@ export function ComputerServersSettings() {
               label={
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate">{server.name}</span>
-                  <span className="truncate text-[12.5px] text-muted-foreground">
-                    <Plural
-                      value={server.maxComputers}
-                      one={`${server.computers} of # computer`}
-                      other={`${server.computers} of # computers`}
-                    />
-                    {!server.ready ? (
-                      <>
-                        {" · "}
-                        <Trans>Waiting for setup</Trans>
-                      </>
-                    ) : server.paused ? (
-                      <>
-                        {" · "}
-                        <Trans>Paused</Trans>
-                      </>
-                    ) : null}
-                  </span>
+                  <ServerState server={server} />
                 </span>
               }
               control={
@@ -100,6 +89,7 @@ export function ComputerServersSettings() {
                   onPause={(paused) =>
                     void run(() => rpc.computerServers.update({ id: server.id, paused }))
                   }
+                  onRetry={() => setRetrying(server)}
                   onRemove={() => setRemoving(server)}
                 />
               }
@@ -116,11 +106,9 @@ export function ComputerServersSettings() {
         <Plus aria-hidden="true" />
         <Trans>Add server</Trans>
       </Button>
-      {adding ? (
-        <AddServerDialog
-          onAdded={(status) => queryClient.setQueryData(query.queryKey, status)}
-          onClose={() => setAdding(false)}
-        />
+      {adding ? <ServerDialog onSaved={saved} onClose={() => setAdding(false)} /> : null}
+      {retrying ? (
+        <ServerDialog server={retrying} onSaved={saved} onClose={() => setRetrying(null)} />
       ) : null}
       <AlertDialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
         <AlertDialogContent>
@@ -153,13 +141,54 @@ export function ComputerServersSettings() {
   );
 }
 
+function ServerState({ server }: { server: ComputerServer }) {
+  const detail = "truncate text-[12.5px] text-muted-foreground";
+  if (server.setup === "installing")
+    return (
+      <span className={detail}>
+        <Shimmer>
+          <Trans>Setting up…</Trans>
+        </Shimmer>
+      </span>
+    );
+  if (server.setup === "failed")
+    return (
+      <span className="text-[12.5px] text-destructive">
+        {server.setupError ?? <Trans>Setup failed</Trans>}
+      </span>
+    );
+  if (!server.ready)
+    return (
+      <span className={detail}>
+        <Trans>Not answering</Trans>
+      </span>
+    );
+  return (
+    <span className={detail}>
+      <Plural
+        value={server.maxComputers}
+        one={`${server.computers} of # computer`}
+        other={`${server.computers} of # computers`}
+      />
+      {server.paused ? (
+        <>
+          {" · "}
+          <Trans>Paused</Trans>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
 function ServerMenu({
   server,
   onPause,
+  onRetry,
   onRemove,
 }: {
   server: ComputerServer;
   onPause: (paused: boolean) => void;
+  onRetry: () => void;
   onRemove: () => void;
 }) {
   const { t } = useLingui();
@@ -173,9 +202,16 @@ function ServerMenu({
         <Ellipsis aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onPause(!server.paused)}>
-          {server.paused ? <Trans>Resume</Trans> : <Trans>Pause</Trans>}
-        </DropdownMenuItem>
+        {server.ready ? (
+          <DropdownMenuItem onClick={() => onPause(!server.paused)}>
+            {server.paused ? <Trans>Resume</Trans> : <Trans>Pause</Trans>}
+          </DropdownMenuItem>
+        ) : null}
+        {server.setup !== "installing" && server.host ? (
+          <DropdownMenuItem onClick={onRetry}>
+            <Trans>Set up again</Trans>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem variant="destructive" onClick={onRemove}>
           <Trans>Remove</Trans>
         </DropdownMenuItem>
@@ -184,35 +220,44 @@ function ServerMenu({
   );
 }
 
-function AddServerDialog({
-  onAdded,
+/** Adds a server, or with one given, signs in to it again and reruns its setup. */
+function ServerDialog({
+  server,
+  onSaved,
   onClose,
 }: {
-  onAdded: (status: ComputerServerStatus) => void;
+  server?: ComputerServer;
+  onSaved: (status: ComputerServerStatus) => void;
   onClose: () => void;
 }) {
   const id = useId();
-  const { t } = useLingui();
-  const [copied, copy] = useCopyText();
   const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
+  const [host, setHost] = useState("");
+  const [username, setUsername] = useState("root");
+  const [password, setPassword] = useState("");
   const [maxComputers, setMaxComputers] = useState("10");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [command, setCommand] = useState<string | null>(null);
   const max = Number(maxComputers);
   const valid =
-    name.trim() !== "" && url.trim() !== "" && Number.isInteger(max) && max >= 1 && max <= 500;
+    username.trim() !== "" &&
+    password !== "" &&
+    (server ||
+      (name.trim() !== "" &&
+        host.trim() !== "" &&
+        Number.isInteger(max) &&
+        max >= 1 &&
+        max <= 500));
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      const added = await rpc.computerServers.add({ name, url, maxComputers: max });
-      onAdded(added.status);
-      const address = new URL(url.includes("://") ? url : `http://${url}`).hostname;
-      setCommand(
-        `curl -fsSL ${window.location.origin}/api/computer-servers/install.sh | sudo bash -s -- --token ${added.token} --address ${address.replace(/^\[|\]$/g, "")}`,
+      onSaved(
+        server
+          ? await rpc.computerServers.setup({ id: server.id, username, password })
+          : await rpc.computerServers.add({ name, host, username, password, maxComputers: max }),
       );
+      onClose();
     } catch (reason) {
       setError(errorText(reason));
     } finally {
@@ -224,70 +269,69 @@ function AddServerDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            <Trans>Add server</Trans>
+            {server ? <Trans>Set up {server.name} again</Trans> : <Trans>Add server</Trans>}
           </DialogTitle>
         </DialogHeader>
-        {command ? (
-          <div className="space-y-4">
-            <Field>
-              <FieldLabel>
-                <Trans>Run this on the server</Trans>
-              </FieldLabel>
-              <div className="flex gap-2">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (valid && !busy) void submit();
+          }}
+        >
+          {server ? null : (
+            <>
+              <Field>
+                <FieldLabel htmlFor={`${id}-name`}>
+                  <Trans>Name</Trans>
+                </FieldLabel>
                 <Input
-                  readOnly
-                  value={command}
-                  className="font-mono text-xs"
-                  onFocus={(event) => event.currentTarget.select()}
+                  id={`${id}-name`}
+                  value={name}
+                  maxLength={80}
+                  onChange={(event) => setName(event.target.value)}
                 />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label={t`Copy command`}
-                  onClick={() => copy(command)}
-                >
-                  {copied ? <Check /> : <Copy />}
-                </Button>
-              </div>
-            </Field>
-            <div className="flex justify-end">
-              <Button onClick={onClose}>
-                <Trans>Done</Trans>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (valid && !busy) void submit();
-            }}
-          >
-            <Field>
-              <FieldLabel htmlFor={`${id}-name`}>
-                <Trans>Name</Trans>
-              </FieldLabel>
-              <Input
-                id={`${id}-name`}
-                value={name}
-                maxLength={80}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${id}-url`}>
-                <Trans>Private address</Trans>
-              </FieldLabel>
-              <Input
-                id={`${id}-url`}
-                value={url}
-                placeholder="10.0.0.2"
-                autoComplete="off"
-                spellCheck={false}
-                onChange={(event) => setUrl(event.target.value)}
-              />
-            </Field>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={`${id}-host`}>
+                  <Trans>IP address</Trans>
+                </FieldLabel>
+                <Input
+                  id={`${id}-host`}
+                  value={host}
+                  placeholder="203.0.113.7"
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => setHost(event.target.value)}
+                />
+              </Field>
+            </>
+          )}
+          <Field>
+            <FieldLabel htmlFor={`${id}-user`}>
+              <Trans>Username</Trans>
+            </FieldLabel>
+            <Input
+              id={`${id}-user`}
+              value={username}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(event) => setUsername(event.target.value)}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor={`${id}-password`}>
+              <Trans>Password</Trans>
+            </FieldLabel>
+            <Input
+              id={`${id}-password`}
+              type="password"
+              value={password}
+              autoComplete="off"
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </Field>
+          {server ? null : (
             <Field>
               <FieldLabel htmlFor={`${id}-max`}>
                 <Trans>Computers</Trans>
@@ -301,21 +345,21 @@ function AddServerDialog({
                 onChange={(event) => setMaxComputers(event.target.value)}
               />
             </Field>
-            {error ? (
-              <p role="alert" className="text-[12.5px] text-destructive">
-                {error}
-              </p>
-            ) : null}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>
-                <Trans>Cancel</Trans>
-              </Button>
-              <Button type="submit" disabled={!valid || busy}>
-                <Trans>Add</Trans>
-              </Button>
-            </div>
-          </form>
-        )}
+          )}
+          {error ? (
+            <p role="alert" className="text-[12.5px] text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>
+              <Trans>Cancel</Trans>
+            </Button>
+            <Button type="submit" disabled={!valid || busy}>
+              {server ? <Trans>Set up</Trans> : <Trans>Add</Trans>}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

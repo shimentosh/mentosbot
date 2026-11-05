@@ -1871,13 +1871,17 @@ export const NetworkExitConnectSchema = z.object({
 export const ComputerServerSchema = z.object({
   id: z.string(),
   name: z.string(),
-  url: z.string(),
+  /** Where Rakazo signs in to set it up. */
+  host: z.string().nullable(),
   maxComputers: z.number().int(),
   /** Computers placed on it, running or not. */
   computers: z.number().int(),
   paused: z.boolean(),
   /** False until the server first answers; it takes no computers before then. */
   ready: z.boolean(),
+  setup: z.enum(["installing", "failed"]).nullable(),
+  /** Why the last setup failed. */
+  setupError: z.string().nullable(),
 });
 export type ComputerServer = z.infer<typeof ComputerServerSchema>;
 export const ComputerServerStatusSchema = z.object({
@@ -1886,16 +1890,25 @@ export const ComputerServerStatusSchema = z.object({
   servers: z.array(ComputerServerSchema),
 });
 export type ComputerServerStatus = z.infer<typeof ComputerServerStatusSchema>;
-export const ComputerServerAddSchema = z.object({
+const ServerHostSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(253)
+  .regex(/^[A-Za-z0-9.:[\]-]+$/);
+const ServerSignInSchema = z.object({
+  username: z.string().trim().min(1).max(64),
+  /** Used for this sign-in only; never stored. */
+  password: z.string().min(1).max(1024),
+});
+export const ComputerServerAddSchema = ServerSignInSchema.extend({
   name: z.string().trim().min(1).max(80),
-  /** The server's address on the private network this deployment shares with it. */
-  url: z.string().trim().min(1).max(512),
+  /** The address Rakazo signs in to over SSH, with an optional port. */
+  host: ServerHostSchema,
   maxComputers: z.number().int().min(1).max(500),
 });
-export const ComputerServerAddedSchema = z.object({
-  status: ComputerServerStatusSchema,
-  /** Shown once, for the server's setup command; never returned again. */
-  token: z.string(),
+export const ComputerServerSetupSchema = ServerSignInSchema.extend({
+  id: z.string().min(1).max(64),
 });
 export const ComputerServerUpdateSchema = z.object({
   id: z.string().min(1).max(64),

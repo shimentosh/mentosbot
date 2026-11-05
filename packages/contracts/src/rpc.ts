@@ -77,8 +77,8 @@ import {
   ComputerProviderSettingsSchema,
   ComputerProviderUpdateSchema,
   ComputerReleaseReasonSchema,
-  ComputerServerAddedSchema,
   ComputerServerAddSchema,
+  ComputerServerSetupSchema,
   ComputerServerStatusSchema,
   ComputerServerUpdateSchema,
   ComputerStatusSchema,
@@ -548,7 +548,9 @@ export const appContract = {
   /** The deployment's own servers for bots' computers. Deployment admins only. */
   computerServers: {
     list: oc.output(ComputerServerStatusSchema),
-    add: oc.input(ComputerServerAddSchema).output(ComputerServerAddedSchema),
+    add: oc.input(ComputerServerAddSchema).output(ComputerServerStatusSchema),
+    /** Signs in again and reruns setup, for a server whose setup failed. */
+    setup: oc.input(ComputerServerSetupSchema).output(ComputerServerStatusSchema),
     update: oc.input(ComputerServerUpdateSchema).output(ComputerServerStatusSchema),
     remove: oc
       .input(z.object({ id: z.string().min(1).max(64) }))

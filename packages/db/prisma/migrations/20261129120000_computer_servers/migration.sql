@@ -2,7 +2,12 @@
 CREATE TABLE "computer_servers" (
   "id" TEXT NOT NULL,
   "name" TEXT NOT NULL,
-  "url" TEXT NOT NULL,
+  "url" TEXT NOT NULL DEFAULT '',
+  "sshHost" TEXT,
+  "sshUser" TEXT,
+  "setupState" TEXT,
+  "setupError" TEXT,
+  "setupStartedAt" TIMESTAMP(3),
   "maxComputers" INTEGER NOT NULL,
   "paused" BOOLEAN NOT NULL DEFAULT false,
   "ready" BOOLEAN NOT NULL DEFAULT false,
