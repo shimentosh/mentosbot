@@ -17,6 +17,13 @@ msgstr ""
 msgid " (unread)"
 msgstr " (nieprzeczytane)"
 
+#. placeholder {0}: server.maxComputers
+#. placeholder {1}: server.computers
+#. placeholder {2}: server.computers
+#: src/pages/ComputerServersSettings.tsx
+msgid "{0, plural, one {{1} of # computer} other {{2} of # computers}}"
+msgstr "{0, plural, one {{1} z # komputera} few {{2} z # komputerów} many {{2} z # komputerów} other {{2} z # komputera}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -525,6 +532,7 @@ msgstr "Aktywność"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -630,6 +638,7 @@ msgstr "Dodaj dostawcę"
 msgid "Add rule"
 msgstr "Dodaj regułę"
 
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
 msgstr "Dodaj serwer"
@@ -1251,6 +1260,7 @@ msgstr "Nie odczytuje obrazów"
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -1671,6 +1681,7 @@ msgstr "Model do obsługi komputera"
 
 #: src/components/ComputerDeviceSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Computers"
 msgstr "Komputery"
 
@@ -3715,6 +3726,10 @@ msgstr "Zaproszono"
 msgid "Inviting…"
 msgstr "Zapraszanie…"
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "IP address"
+msgstr "Adres IP"
+
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Isolated"
@@ -3735,6 +3750,10 @@ msgstr "Mogło wygasnąć albo zostało wysłane na inny adres e-mail. Poproś o
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Its bots and groups are kept and leave the section."
 msgstr "Boty i grupy pozostaną, ale opuszczą tę sekcję."
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Its computers start on another server next time."
+msgstr "Jego komputery uruchomią się następnym razem na innym serwerze."
 
 #: src/pages/shell/dialogs.tsx
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
@@ -4329,6 +4348,7 @@ msgstr "Moje komputery"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/providers-section.tsx
@@ -4641,6 +4661,10 @@ msgstr "Nieprawidłowa umiejętność"
 msgid "Not added: {0}"
 msgstr "Nie dodano: {0}"
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Not answering"
+msgstr "Nie odpowiada"
+
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "Jeszcze nie sprawdzono"
@@ -4858,6 +4882,11 @@ msgstr "Opcjonalne"
 msgid "Optional header value"
 msgstr "Opcjonalna wartość nagłówka"
 
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Options for {0}"
+msgstr "Opcje dla {0}"
+
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Or paste an API key"
@@ -4967,6 +4996,7 @@ msgstr "Klucze dostępu"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Password"
 msgstr "Hasło"
 
@@ -5017,6 +5047,11 @@ msgstr "Wklej swój klucz API"
 msgid "Paste your API key, then test again."
 msgstr "Wklej swój klucz API, a potem ponów test."
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Pause"
+msgstr "Wstrzymaj"
+
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/import-status.ts
 msgid "Paused"
@@ -5388,6 +5423,7 @@ msgstr "Wczytaj ponownie"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5407,6 +5443,11 @@ msgstr "Usuń {0}"
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
 msgstr "Usuń bota {0} z grupy"
+
+#. placeholder {0}: removing?.name ?? ""
+#: src/pages/ComputerServersSettings.tsx
+msgid "Remove {0}?"
+msgstr "Usunąć {0}?"
 
 #: src/pages/TeamMembersSettings.tsx
 msgid "Remove {name}?"
@@ -5605,6 +5646,10 @@ msgstr "Przywrócono"
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
 msgstr "Przywracanie obszaru roboczego"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Resume"
+msgstr "Wznów"
 
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
@@ -5997,6 +6042,27 @@ msgstr "Nazwa serwera"
 msgid "Server URL"
 msgstr "Adres URL serwera"
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Servers"
+msgstr "Serwery"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up"
+msgstr "Skonfiguruj"
+
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up {0} again"
+msgstr "Skonfiguruj {0} ponownie"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up again"
+msgstr "Skonfiguruj ponownie"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setting up…"
+msgstr "Konfigurowanie…"
+
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6025,6 +6091,10 @@ msgstr "Ustawienia: Użycie"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "Konfiguracja zakończona"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setup failed"
+msgstr "Konfiguracja nie powiodła się"
 
 #: src/components/NetworkExitDialog.tsx
 msgid "Setup guide"
@@ -7129,6 +7199,7 @@ msgstr "Profil użytkownika"
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Username"
 msgstr "Nazwa użytkownika"
 

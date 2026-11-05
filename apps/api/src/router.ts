@@ -40,6 +40,7 @@ import { boardsRoutes } from "./routes/boards.js";
 import { botsRoutes } from "./routes/bots.js";
 import { computerRoutes } from "./routes/computer.js";
 import { computerProviderRoutes } from "./routes/computer-provider.js";
+import { computerServerRoutes } from "./routes/computer-servers.js";
 import { connectionsRoutes } from "./routes/connections.js";
 import { contentRoutes } from "./routes/content.js";
 import { createRouterContext } from "./routes/context.js";
@@ -165,6 +166,7 @@ export function createRouter(deps: RouterDeps) {
     ...computerRoutes(ctx),
     ...computerProviderRoutes(ctx),
     ...networkExitRoutes(ctx),
+    ...computerServerRoutes(ctx),
     ...memoryRoutes(ctx),
     ...routinesRoutes(ctx),
     ...boardsRoutes(ctx),

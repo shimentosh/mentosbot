@@ -18,6 +18,13 @@ msgstr ""
 msgid " (unread)"
 msgstr "（未讀）"
 
+#. placeholder {0}: server.maxComputers
+#. placeholder {1}: server.computers
+#. placeholder {2}: server.computers
+#: src/pages/ComputerServersSettings.tsx
+msgid "{0, plural, one {{1} of # computer} other {{2} of # computers}}"
+msgstr ""
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -526,6 +533,7 @@ msgstr "動態"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -631,6 +639,7 @@ msgstr "新增供應商"
 msgid "Add rule"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
 msgstr "新增伺服器"
@@ -1252,6 +1261,7 @@ msgstr "無法讀取影像"
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -1672,6 +1682,7 @@ msgstr "電腦操作模型"
 
 #: src/components/ComputerDeviceSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Computers"
 msgstr "電腦"
 
@@ -3716,6 +3727,10 @@ msgstr ""
 msgid "Inviting…"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "IP address"
+msgstr ""
+
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Isolated"
@@ -3736,6 +3751,10 @@ msgstr ""
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Its bots and groups are kept and leave the section."
 msgstr "其中的機器人和群組會保留，並移出該分組。"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Its computers start on another server next time."
+msgstr ""
 
 #: src/pages/shell/dialogs.tsx
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
@@ -4330,6 +4349,7 @@ msgstr ""
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/providers-section.tsx
@@ -4642,6 +4662,10 @@ msgstr "不是有效的技能"
 msgid "Not added: {0}"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Not answering"
+msgstr ""
+
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "尚未檢查"
@@ -4859,6 +4883,11 @@ msgstr "選填"
 msgid "Optional header value"
 msgstr "選填標頭值"
 
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Options for {0}"
+msgstr ""
+
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Or paste an API key"
@@ -4968,6 +4997,7 @@ msgstr "通行金鑰"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Password"
 msgstr "密碼"
 
@@ -5018,6 +5048,11 @@ msgstr "貼上你的 API 金鑰"
 msgid "Paste your API key, then test again."
 msgstr "請貼上你的 API 金鑰，然後重新測試。"
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Pause"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/import-status.ts
 msgid "Paused"
@@ -5389,6 +5424,7 @@ msgstr "重新載入"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5408,6 +5444,11 @@ msgstr "移除 {0}"
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
 msgstr "將 {0} 移出群組"
+
+#. placeholder {0}: removing?.name ?? ""
+#: src/pages/ComputerServersSettings.tsx
+msgid "Remove {0}?"
+msgstr ""
 
 #: src/pages/TeamMembersSettings.tsx
 msgid "Remove {name}?"
@@ -5606,6 +5647,10 @@ msgstr "已還原"
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
 msgstr "正在還原工作空間"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Resume"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
@@ -5998,6 +6043,27 @@ msgstr "伺服器名稱"
 msgid "Server URL"
 msgstr "伺服器 URL"
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Servers"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up"
+msgstr ""
+
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up {0} again"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Set up again"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setting up…"
+msgstr ""
+
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6026,6 +6092,10 @@ msgstr "設定：用量"
 #: src/pages/shell/import-setup-card.tsx
 msgid "Setup complete"
 msgstr "設定完成"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Setup failed"
+msgstr ""
 
 #: src/components/NetworkExitDialog.tsx
 msgid "Setup guide"
@@ -7130,6 +7200,7 @@ msgstr "使用者對端"
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Username"
 msgstr "使用者名稱"
 

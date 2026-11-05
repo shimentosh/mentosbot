@@ -77,6 +77,10 @@ import {
   ComputerProviderSettingsSchema,
   ComputerProviderUpdateSchema,
   ComputerReleaseReasonSchema,
+  ComputerServerAddSchema,
+  ComputerServerSetupSchema,
+  ComputerServerStatusSchema,
+  ComputerServerUpdateSchema,
   ComputerStatusSchema,
   ComputerUpdateSchema,
   ConnectionCatalogItemSchema,
@@ -540,6 +544,17 @@ export const appContract = {
     get: oc.output(NetworkExitStatusSchema),
     connect: oc.input(NetworkExitConnectSchema).output(NetworkExitStatusSchema),
     disconnect: oc.output(NetworkExitStatusSchema),
+  },
+  /** The deployment's own servers for bots' computers. Deployment admins only. */
+  computerServers: {
+    list: oc.output(ComputerServerStatusSchema),
+    add: oc.input(ComputerServerAddSchema).output(ComputerServerStatusSchema),
+    /** Signs in again and reruns setup, for a server whose setup failed. */
+    setup: oc.input(ComputerServerSetupSchema).output(ComputerServerStatusSchema),
+    update: oc.input(ComputerServerUpdateSchema).output(ComputerServerStatusSchema),
+    remove: oc
+      .input(z.object({ id: z.string().min(1).max(64) }))
+      .output(ComputerServerStatusSchema),
   },
   /** Deployment-owner view of the append-only security event log, newest first. */
   security: {

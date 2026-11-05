@@ -74,6 +74,7 @@ import { getUiAppearancePreference, setUiAppearance } from "../lib/ui-appearance
 import type { UiLocale } from "../lib/ui-locale";
 import { UI_LOCALE_LABELS, UI_LOCALES } from "../lib/ui-locale";
 import { authErrorText } from "../lib/user-error";
+import { ComputerServersSettings } from "./ComputerServersSettings";
 
 export type SettingsGeneralProps = {
   email?: string | null;
@@ -646,6 +647,7 @@ export function ComputerSettingsPanel({
           onProviderChange={onSandboxProviderChange}
         />
       ) : null}
+      {canConfigureComputers ? <ComputerServersSettings /> : null}
     </div>
   );
 }

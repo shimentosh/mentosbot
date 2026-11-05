@@ -1867,6 +1867,55 @@ export const NetworkExitConnectSchema = z.object({
   provider: z.string().trim().min(1).max(64),
   values: z.record(z.string().max(64), z.string().trim().max(4096)),
 });
+/** A server of the deployment's own that runs bots' computers. */
+export const ComputerServerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** Where Rakazo signs in to set it up. */
+  host: z.string().nullable(),
+  maxComputers: z.number().int(),
+  /** Computers placed on it, running or not. */
+  computers: z.number().int(),
+  paused: z.boolean(),
+  /** False until the server first answers; it takes no computers before then. */
+  ready: z.boolean(),
+  setup: z.enum(["installing", "failed"]).nullable(),
+  /** Why the last setup failed. */
+  setupError: z.string().nullable(),
+});
+export type ComputerServer = z.infer<typeof ComputerServerSchema>;
+export const ComputerServerStatusSchema = z.object({
+  /** False when the signed-in person can't manage servers here. */
+  canManage: z.boolean(),
+  servers: z.array(ComputerServerSchema),
+});
+export type ComputerServerStatus = z.infer<typeof ComputerServerStatusSchema>;
+const ServerHostSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(253)
+  .regex(/^[A-Za-z0-9.:[\]-]+$/);
+const ServerSignInSchema = z.object({
+  username: z.string().trim().min(1).max(64),
+  /** Used for this sign-in only; never stored. */
+  password: z.string().min(1).max(1024),
+});
+export const ComputerServerAddSchema = ServerSignInSchema.extend({
+  name: z.string().trim().min(1).max(80),
+  /** The address Rakazo signs in to over SSH, with an optional port. */
+  host: ServerHostSchema,
+  maxComputers: z.number().int().min(1).max(500),
+});
+export const ComputerServerSetupSchema = ServerSignInSchema.extend({
+  id: z.string().min(1).max(64),
+});
+export const ComputerServerUpdateSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().trim().min(1).max(80).optional(),
+  maxComputers: z.number().int().min(1).max(500).optional(),
+  paused: z.boolean().optional(),
+});
 export const ComputerProviderSettingsSchema = z.object({
   provider: z.string(),
   defaultProvider: z.string(),

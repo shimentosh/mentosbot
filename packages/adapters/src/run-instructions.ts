@@ -121,7 +121,7 @@ export function dockerComputerToolInstruction(
   computerKind: string,
   disabled?: ReadonlySet<string>,
 ): string | undefined {
-  if (computerKind !== "docker") return undefined;
+  if (computerKind !== "docker" && computerKind !== "server") return undefined;
   const navigate = builtinOffered(disabled, "browser_navigate");
   const act = builtinOffered(disabled, "browser_act");
   const takeover = builtinOffered(disabled, "request_takeover");

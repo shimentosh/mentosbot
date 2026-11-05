@@ -242,7 +242,7 @@ app.post("/computers", async (c) => {
   const body = z
     .object({
       botId: z.string().min(1),
-      homePath: z.string().min(1),
+      homePath: z.string(),
       spaceId: z.string().min(1),
       networkExit: NetworkExitSchema.optional(),
     })
@@ -273,7 +273,11 @@ app.post("/computers", async (c) => {
         );
       }
       if (networkExit) await networkExitImageEnsurers[networkExit.provider]();
-      const serviceHomePath = path.resolve(body.homePath);
+      // A server of an organization's own keeps homes in its own data directory and is sent
+      // no path: the API's path names a directory on another machine.
+      const serviceHomePath = body.homePath
+        ? path.resolve(body.homePath)
+        : path.join(dataDir, "homes", body.botId);
       assertBotHomePath(serviceHomePath, body.botId);
       const hostUid = process.getuid?.();
       const hostGid = process.getgid?.();
@@ -1636,7 +1640,7 @@ function isRakazoContainer(info: Docker.ContainerInspectInfo, botId: string, spa
 
 function assertBotHomePath(homePath: string, botId: string) {
   const expected = path.join(dataDir, "homes", botId);
-  if (homePath !== expected) {
+  if (homePath !== expected || path.dirname(expected) !== path.join(dataDir, "homes")) {
     throw new Error("computer home must be the bot's home directory");
   }
 }
