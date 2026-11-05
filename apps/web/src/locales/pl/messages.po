@@ -17,6 +17,13 @@ msgstr ""
 msgid " (unread)"
 msgstr " (nieprzeczytane)"
 
+#. placeholder {0}: server.maxComputers
+#. placeholder {1}: server.computers
+#. placeholder {2}: server.computers
+#: src/pages/ComputerServersSettings.tsx
+msgid "{0, plural, one {{1} of # computer} other {{2} of # computers}}"
+msgstr "{0, plural, one {{1} z # komputera} few {{2} z # komputerów} many {{2} z # komputerów} other {{2} z # komputera}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -525,6 +532,7 @@ msgstr "Aktywność"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -630,6 +638,7 @@ msgstr "Dodaj dostawcę"
 msgid "Add rule"
 msgstr "Dodaj regułę"
 
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
 msgstr "Dodaj serwer"
@@ -1251,6 +1260,7 @@ msgstr "Nie odczytuje obrazów"
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -1671,6 +1681,7 @@ msgstr "Model do obsługi komputera"
 
 #: src/components/ComputerDeviceSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Computers"
 msgstr "Komputery"
 
@@ -1890,6 +1901,10 @@ msgstr "Kopiuj przykład .env"
 #: src/components/markdown-copy.tsx
 msgid "Copy code"
 msgstr "Kopiuj kod"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Copy command"
+msgstr "Kopiuj polecenie"
 
 #: src/components/markdown-copy.tsx
 msgid "Copy diagram source"
@@ -2910,6 +2925,7 @@ msgstr "Nie masz konta?"
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/import-setup-card.tsx
 #: src/pages/shell/message-view.tsx
@@ -3736,6 +3752,10 @@ msgstr "Mogło wygasnąć albo zostało wysłane na inny adres e-mail. Poproś o
 msgid "Its bots and groups are kept and leave the section."
 msgstr "Boty i grupy pozostaną, ale opuszczą tę sekcję."
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Its computers start on another server next time."
+msgstr "Jego komputery uruchomią się następnym razem na innym serwerze."
+
 #: src/pages/shell/dialogs.tsx
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "Rozmowa, pliki i rutyny tego bota zostaną trwale usunięte. Utworzone przez niego boty pozostaną na liście."
@@ -4329,6 +4349,7 @@ msgstr "Moje komputery"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/providers-section.tsx
@@ -4858,6 +4879,11 @@ msgstr "Opcjonalne"
 msgid "Optional header value"
 msgstr "Opcjonalna wartość nagłówka"
 
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Options for {0}"
+msgstr "Opcje dla {0}"
+
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Or paste an API key"
@@ -5017,6 +5043,11 @@ msgstr "Wklej swój klucz API"
 msgid "Paste your API key, then test again."
 msgstr "Wklej swój klucz API, a potem ponów test."
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Pause"
+msgstr "Wstrzymaj"
+
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/import-status.ts
 msgid "Paused"
@@ -5154,6 +5185,10 @@ msgstr "Priorytet"
 #: src/pages/shell/bot-panel.tsx
 msgid "Private"
 msgstr "Prywatne"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Private address"
+msgstr "Adres prywatny"
 
 #: src/pages/shell/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -5388,6 +5423,7 @@ msgstr "Wczytaj ponownie"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5407,6 +5443,11 @@ msgstr "Usuń {0}"
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
 msgstr "Usuń bota {0} z grupy"
+
+#. placeholder {0}: removing?.name ?? ""
+#: src/pages/ComputerServersSettings.tsx
+msgid "Remove {0}?"
+msgstr "Usunąć {0}?"
 
 #: src/pages/TeamMembersSettings.tsx
 msgid "Remove {name}?"
@@ -5606,6 +5647,10 @@ msgstr "Przywrócono"
 msgid "Restoring your workspace"
 msgstr "Przywracanie obszaru roboczego"
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Resume"
+msgstr "Wznów"
+
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/integrations/skills-dialog.tsx
@@ -5695,6 +5740,10 @@ msgstr "Uruchom o"
 #: src/pages/RoutineRunHistory.tsx
 msgid "Run history"
 msgstr "Historia uruchomień"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Run this on the server"
+msgstr "Uruchom to na serwerze"
 
 #: src/pages/shell/use-routine-editor.ts
 msgid "Run time must be in the future."
@@ -5996,6 +6045,10 @@ msgstr "Nazwa serwera"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "Adres URL serwera"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Servers"
+msgstr "Serwery"
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -7211,6 +7264,10 @@ msgstr "Upłynął czas żądania głosowego."
 #: src/lib/model-connection-preflight.ts
 msgid "Wait a moment and test again."
 msgstr "Poczekaj chwilę i ponów test."
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Waiting for setup"
+msgstr "Czeka na konfigurację"
 
 #: src/lib/roster-status.ts
 msgid "Waiting in line…"

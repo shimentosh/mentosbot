@@ -106,6 +106,10 @@ export async function createSandboxProvider(
   switch (sandboxKind) {
     case "none":
       return new NoneSandboxProvider();
+    case "server":
+      return new NoneSandboxProvider(
+        "Computers unavailable: an organization adds its own servers in Settings; set SANDBOX_PROVIDER=docker.",
+      );
     case "e2b":
       if (!opts.e2bApiKey?.trim()) return missingRemoteKey("e2b", "E2B_API_KEY");
       return new E2BSandboxProvider(opts.e2bApiKey);

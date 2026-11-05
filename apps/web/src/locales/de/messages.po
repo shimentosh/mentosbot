@@ -17,6 +17,13 @@ msgstr ""
 msgid " (unread)"
 msgstr " (ungelesen)"
 
+#. placeholder {0}: server.maxComputers
+#. placeholder {1}: server.computers
+#. placeholder {2}: server.computers
+#: src/pages/ComputerServersSettings.tsx
+msgid "{0, plural, one {{1} of # computer} other {{2} of # computers}}"
+msgstr ""
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -525,6 +532,7 @@ msgstr "Aktivität"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -630,6 +638,7 @@ msgstr "Anbieter hinzufügen"
 msgid "Add rule"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Add server"
 msgstr "Server hinzufügen"
@@ -1251,6 +1260,7 @@ msgstr "Kann keine Bilder lesen"
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -1671,6 +1681,7 @@ msgstr "Modell für Computernutzung"
 
 #: src/components/ComputerDeviceSettings.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/ComputerServersSettings.tsx
 msgid "Computers"
 msgstr "Computer"
 
@@ -1890,6 +1901,10 @@ msgstr ""
 #: src/components/markdown-copy.tsx
 msgid "Copy code"
 msgstr "Code kopieren"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Copy command"
+msgstr ""
 
 #: src/components/markdown-copy.tsx
 msgid "Copy diagram source"
@@ -2910,6 +2925,7 @@ msgstr "Du hast noch kein Konto?"
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/import-setup-card.tsx
 #: src/pages/shell/message-view.tsx
@@ -3736,6 +3752,10 @@ msgstr ""
 msgid "Its bots and groups are kept and leave the section."
 msgstr "Seine Bots und Gruppen bleiben erhalten und verlassen den Abschnitt."
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Its computers start on another server next time."
+msgstr ""
+
 #: src/pages/shell/dialogs.tsx
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "Seine Unterhaltung, Dateien und Routinen werden dauerhaft gelöscht. Von ihm erstellte Bots bleiben in deiner Liste."
@@ -4329,6 +4349,7 @@ msgstr ""
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Auth.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/GroupPanel.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/providers-section.tsx
@@ -4858,6 +4879,11 @@ msgstr "Optional"
 msgid "Optional header value"
 msgstr "Optionaler Header-Wert"
 
+#. placeholder {0}: server.name
+#: src/pages/ComputerServersSettings.tsx
+msgid "Options for {0}"
+msgstr ""
+
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Or paste an API key"
@@ -5017,6 +5043,11 @@ msgstr "Füge deinen API-Schlüssel ein"
 msgid "Paste your API key, then test again."
 msgstr "Füge deinen API-Schlüssel ein und teste erneut."
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Pause"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/import-status.ts
 msgid "Paused"
@@ -5154,6 +5185,10 @@ msgstr ""
 #: src/pages/shell/bot-panel.tsx
 msgid "Private"
 msgstr "Privat"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Private address"
+msgstr ""
 
 #: src/pages/shell/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
@@ -5388,6 +5423,7 @@ msgstr "Neu laden"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5406,6 +5442,11 @@ msgstr "{0} entfernen"
 #. placeholder {0}: bot.name
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
+msgstr ""
+
+#. placeholder {0}: removing?.name ?? ""
+#: src/pages/ComputerServersSettings.tsx
+msgid "Remove {0}?"
 msgstr ""
 
 #: src/pages/TeamMembersSettings.tsx
@@ -5606,6 +5647,10 @@ msgstr "Wiederhergestellt"
 msgid "Restoring your workspace"
 msgstr ""
 
+#: src/pages/ComputerServersSettings.tsx
+msgid "Resume"
+msgstr ""
+
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/integrations/skills-dialog.tsx
@@ -5694,6 +5739,10 @@ msgstr ""
 
 #: src/pages/RoutineRunHistory.tsx
 msgid "Run history"
+msgstr ""
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Run this on the server"
 msgstr ""
 
 #: src/pages/shell/use-routine-editor.ts
@@ -5996,6 +6045,10 @@ msgstr "Servername"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Server URL"
 msgstr "Server-URL"
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Servers"
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
@@ -7211,6 +7264,10 @@ msgstr ""
 #: src/lib/model-connection-preflight.ts
 msgid "Wait a moment and test again."
 msgstr "Warte kurz und teste erneut."
+
+#: src/pages/ComputerServersSettings.tsx
+msgid "Waiting for setup"
+msgstr ""
 
 #: src/lib/roster-status.ts
 msgid "Waiting in line…"

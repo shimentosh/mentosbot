@@ -1744,6 +1744,26 @@ model NotificationPreference {
 }
 
 /// A person's own network that their computers' browsers in one Space reach the internet through.
+/// A server of the deployment's own that runs bots' computers beside its main Docker host. Its
+/// computers' provider refs start with this id; the token to reach it lives only in the secret.
+model ComputerServer {
+  id              String   @id @default(cuid())
+  name            String
+  url             String
+  maxComputers    Int
+  /// Paused servers keep the computers they have and take no new ones.
+  paused          Boolean  @default(false)
+  /// Set once the server first answers with its token; until then it takes no computers.
+  ready           Boolean  @default(false)
+  secretId        String   @unique
+  secret          Secret   @relation(fields: [secretId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("computer_servers")
+}
+
 model ComputerNetworkExit {
   id        String   @id @default(cuid())
   spaceId   String
@@ -1792,6 +1812,7 @@ model Secret {
   mcpServers        McpServer[]
   spaceMemoryConfig SpaceMemoryConfig?
   networkExit       ComputerNetworkExit?
+  computerServer    ComputerServer?
   agentSecret       AgentSecret?
   pageShare         Page?
 

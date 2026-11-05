@@ -977,6 +977,7 @@ export function computerSupportsUpdate(kind: string): boolean {
 export function computerSupportsTerminal(kind: string): boolean {
   return (
     kind === "docker" ||
+    kind === "server" ||
     kind === "e2b" ||
     kind === "novita" ||
     kind === "daytona" ||

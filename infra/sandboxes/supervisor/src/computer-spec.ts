@@ -70,6 +70,11 @@ export const COMPUTER_USER = `${COMPUTER_UID}:${COMPUTER_GID}`;
 export { screenPorts };
 export const COMPUTER_CONTROL_PORT = 7070;
 export const SCREEN_HOST = process.env.SANDBOX_SCREEN_HOST ?? "127.0.0.1";
+/**
+ * The host address published screens listen on. Loopback by default; a server that runs computers
+ * for another machine sets its private network address so that machine can reach them.
+ */
+export const SCREEN_BIND = process.env.SANDBOX_SCREEN_BIND?.trim() || "127.0.0.1";
 export type ScreenNetworkMode = "published" | "internal" | "isolated";
 
 export function resolveTeamScreenLimit(value = process.env.SANDBOX_TEAM_SCREEN_LIMIT): number {
@@ -484,7 +489,7 @@ export function computerPortBindings(publishControlPort = false) {
   const PortBindings: Record<string, Array<{ HostIp: string; HostPort: string }>> = {};
   const port = `${screenPorts(0).viewPort}/tcp`;
   ExposedPorts[port] = {};
-  PortBindings[port] = [{ HostIp: "127.0.0.1", HostPort: "0" }];
+  PortBindings[port] = [{ HostIp: SCREEN_BIND, HostPort: "0" }];
   // Host-run Docker Desktop supervisors need an opt-in loopback mapping.
   // Otherwise control stays unpublished on the container network.
   if (publishControlPort) {

@@ -1867,6 +1867,42 @@ export const NetworkExitConnectSchema = z.object({
   provider: z.string().trim().min(1).max(64),
   values: z.record(z.string().max(64), z.string().trim().max(4096)),
 });
+/** A server of the deployment's own that runs bots' computers. */
+export const ComputerServerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  maxComputers: z.number().int(),
+  /** Computers placed on it, running or not. */
+  computers: z.number().int(),
+  paused: z.boolean(),
+  /** False until the server first answers; it takes no computers before then. */
+  ready: z.boolean(),
+});
+export type ComputerServer = z.infer<typeof ComputerServerSchema>;
+export const ComputerServerStatusSchema = z.object({
+  /** False when the signed-in person can't manage servers here. */
+  canManage: z.boolean(),
+  servers: z.array(ComputerServerSchema),
+});
+export type ComputerServerStatus = z.infer<typeof ComputerServerStatusSchema>;
+export const ComputerServerAddSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  /** The server's address on the private network this deployment shares with it. */
+  url: z.string().trim().min(1).max(512),
+  maxComputers: z.number().int().min(1).max(500),
+});
+export const ComputerServerAddedSchema = z.object({
+  status: ComputerServerStatusSchema,
+  /** Shown once, for the server's setup command; never returned again. */
+  token: z.string(),
+});
+export const ComputerServerUpdateSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().trim().min(1).max(80).optional(),
+  maxComputers: z.number().int().min(1).max(500).optional(),
+  paused: z.boolean().optional(),
+});
 export const ComputerProviderSettingsSchema = z.object({
   provider: z.string(),
   defaultProvider: z.string(),

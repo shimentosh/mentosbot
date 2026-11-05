@@ -113,7 +113,8 @@ Compose bot homes mount only their own subdirectory of the application volume us
   messaging apps, cloud coding agents and payments.
 - [Computer providers](./self-host-sandbox-providers.md) and
   [Docker computers](./self-host-docker-computers.md): where bot computers run and how they are
-  limited.
+  limited. [More servers for computers](./self-host-computer-servers.md) spreads them across
+  machines.
 - [Storage and encryption](./self-host-storage.md): content encryption, object storage and upload
   limits.
 - [Production deployment](./self-host-production.md): a public single-VM install with automatic

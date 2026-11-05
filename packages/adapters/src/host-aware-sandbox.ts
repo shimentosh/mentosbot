@@ -16,7 +16,7 @@ import type {
   WorkspaceExportLimits,
 } from "@rakazo/adapter-kit";
 import type { PrismaClient } from "@rakazo/db";
-import { runAsSystem } from "@rakazo/db";
+import { computerServersForHome, findComputerServer, runAsSystem } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { cancelComputerRunWork } from "./computer-idle.js";
 import { computerProviderDescriptor } from "./computer-provider-registry.js";
@@ -31,6 +31,7 @@ import { HostComputerSandbox } from "./host-computer-sandbox.js";
 import { loadNetworkExit } from "./network-exit.js";
 import type { SandboxProviderOptions } from "./sandbox-factory.js";
 import { createSandboxProvider } from "./sandbox-factory.js";
+import { ServerPoolSandbox } from "./server-pool-sandbox.js";
 
 export function sandboxKindForBot(envKind: string, computerHost: string | null | undefined) {
   if (envKind === "docker" && computerHost === "this-mac") return "desktop";
@@ -126,16 +127,27 @@ async function createBaseRunSandbox(
         }
       : opts.onUnsafeStop,
   });
-  if (kind !== "docker" || !opts.prisma) return primary;
-  return new HostAwareSandbox(
+  if (kind !== "docker" || !prisma) return primary;
+  const hostAware = new HostAwareSandbox(
     primary,
     new HostComputerSandbox(opts.hostComputerUrl ?? "", opts.hostComputerToken ?? ""),
     async () => {
-      const settings = await opts.prisma!.deploymentSettings.findUnique({
+      const settings = await prisma.deploymentSettings.findUnique({
         where: { id: "default" },
       });
       return settings?.computerHost === "this-mac";
     },
+  );
+  if (!secrets) return hostAware;
+  // An organization's own servers run its computers beside the deployment's Docker host.
+  return new ServerPoolSandbox(
+    hostAware,
+    {
+      forHome: (homeKey) => computerServersForHome(prisma, homeKey),
+      byId: (id) => findComputerServer(prisma, id),
+    },
+    secrets,
+    { networkExitFor: (homeKey) => loadNetworkExit(prisma, secrets, homeKey) },
   );
 }
 
