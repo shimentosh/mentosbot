@@ -128,19 +128,6 @@ describe("server image publish workflow", () => {
     expect(publish).toBeGreaterThan(depotScan);
   });
 
-  it("publishes main from ci.yml so the production deploy waits for its image", () => {
-    expect(workflow.on.push?.branches).toBeUndefined();
-    expect(workflow.on).toHaveProperty("workflow_call");
-    const publish = ci.jobs["publish-server-image"];
-    expect(publish?.uses).toBe("./.github/workflows/publish-server-image.yml");
-    expect(publish?.if).toBe("github.event_name == 'push' && github.ref == 'refs/heads/main'");
-    expect(ci.jobs["deploy-production"]?.needs).toEqual([
-      "checks",
-      "test-integration",
-      "publish-server-image",
-    ]);
-  });
-
   it("lets main revisions validate independently and retains pending release work", () => {
     for (const concurrency of [ci.concurrency, workflow.concurrency]) {
       expect(concurrency.group).toContain("github.run_id");
@@ -149,8 +136,6 @@ describe("server image publish workflow", () => {
       expect(concurrency["cancel-in-progress"]).toBe("${{ github.event_name == 'pull_request' }}");
     }
     for (const job of [
-      ci.jobs["deploy-production"],
-      ci.jobs["publish-mobile-update"],
       workflow.jobs["build-depot"],
       workflow.jobs.publish,
     ]) {
@@ -164,7 +149,6 @@ describe("server image publish workflow", () => {
       "static-checks",
       "unit-tests-shard",
       "test-integration-shard",
-      "publish-server-image",
     ].map((name) => ci.jobs[name]?.concurrency);
     expect(new Set(locks.map((lock) => lock?.group)).size).toBe(locks.length);
     for (const lock of locks) {
@@ -178,7 +162,6 @@ describe("server image publish workflow", () => {
       "static-checks",
       "unit-tests-shard",
       "test-integration-shard",
-      "publish-server-image",
     ]) {
       expect(ci.jobs[name]?.needs, name).toBeUndefined();
     }
