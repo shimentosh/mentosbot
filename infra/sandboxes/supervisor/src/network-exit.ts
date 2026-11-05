@@ -10,6 +10,22 @@ import { containerNameFor } from "./computer-spec.js";
  * that network in a separate container on the computer's private network, so its credentials stay
  * out of the computer: the computer only sees a proxy address.
  */
+/**
+ * The owner's time zone and language, for the computer's browser. Each becomes an environment
+ * value, so only a plain zone or language tag is kept; anything else is dropped, never refused.
+ */
+const BrowserSchema = z.object({
+  timeZone: z
+    .string()
+    .regex(/^[A-Za-z0-9_+/-]{1,64}$/)
+    .optional()
+    .catch(undefined),
+  locale: z
+    .string()
+    .regex(/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/)
+    .optional()
+    .catch(undefined),
+});
 const TailscaleExitSchema = z.object({
   provider: z.literal("tailscale"),
   // It goes into tailscale's arguments, so it may hold no spaces and never start a flag.
@@ -17,6 +33,7 @@ const TailscaleExitSchema = z.object({
     exitNode: z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9.:-]{0,251}[A-Za-z0-9])?$/),
   }),
   credentials: z.object({ authKey: z.string().min(1).max(4096) }),
+  browser: BrowserSchema.optional(),
 });
 // These go into the forwarder's configuration: no whitespace, quotes or separators.
 const PROXY_WORD = /^[^\s:"\\]{1,256}$/;
@@ -29,12 +46,14 @@ const ProxyExitSchema = z.object({
     username: z.string().regex(PROXY_WORD).optional(),
   }),
   credentials: z.object({ password: z.string().regex(PROXY_WORD).optional() }),
+  browser: BrowserSchema.optional(),
 });
 // The owner's own device, reached through the Rakazo server at `url` with the computer's token.
 const DeviceExitSchema = z.object({
   provider: z.literal("device"),
   settings: z.object({ url: z.url({ protocol: /^https$/ }).max(2048) }),
   credentials: z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{1,1024}\.[A-Za-z0-9_-]{43}$/) }),
+  browser: BrowserSchema.optional(),
 });
 export const NetworkExitSchema = z.discriminatedUnion("provider", [
   TailscaleExitSchema,
@@ -201,16 +220,23 @@ export function squidConfig(exit: Extract<NetworkExit, { provider: "proxy" }>): 
   ].join("\n");
 }
 
-/** The computer's side: only where to send browser traffic, and which exit it was made for. */
+/**
+ * The computer's side: where to send browser traffic, the owner's time zone and language, and
+ * which exit it was made for. From the owner's own address the browser also keeps a person's pace.
+ */
 export function computerNetworkExitSettings(exit: NetworkExit | undefined): {
   env: string[];
   labels: Record<string, string>;
 } {
   const fingerprint = networkExitFingerprint(exit);
-  return fingerprint
-    ? {
-        env: [`RAKAZO_BROWSER_PROXY=${networkExitProxy(exit!)}`],
-        labels: { [NETWORK_EXIT_LABEL]: fingerprint },
-      }
-    : { env: [], labels: {} };
+  if (!exit || !fingerprint) return { env: [], labels: {} };
+  return {
+    env: [
+      `RAKAZO_BROWSER_PROXY=${networkExitProxy(exit)}`,
+      "RAKAZO_BROWSER_PACE=natural",
+      ...(exit.browser?.timeZone ? [`RAKAZO_BROWSER_TZ=${exit.browser.timeZone}`] : []),
+      ...(exit.browser?.locale ? [`RAKAZO_BROWSER_LANG=${exit.browser.locale}`] : []),
+    ],
+    labels: { [NETWORK_EXIT_LABEL]: fingerprint },
+  };
 }

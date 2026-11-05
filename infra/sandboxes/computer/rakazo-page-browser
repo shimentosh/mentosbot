@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import random
 import time
 import unicodedata
 import urllib.request
@@ -199,6 +200,20 @@ TAB_WORK_SECONDS = 8.0
 TABS_DONE_BY = 20.0
 REREAD_FAILED = ("The page opened tabs that were closed, and this tab could not be read again in time. "
                  "Take a snapshot to read it.")
+
+
+# A person's pace, while the browser reaches sites from its owner's own address: the supervisor
+# says so in the computer's environment. Longer text goes in at once, as a person pastes it.
+NATURAL_PACE = os.environ.get("RAKAZO_BROWSER_PACE") == "natural"
+PACE_TYPED_MOST = 200
+
+
+def key_gap_ms(char: str) -> int:
+    """About six keys a second, a little longer after a space or punctuation."""
+    gap = random.uniform(70, 160)
+    if char in " .,;:!?\n":
+        gap += random.uniform(60, 220)
+    return int(gap)
 
 
 def left(deadline: float | None, most: float) -> float:
@@ -743,6 +758,7 @@ SAVE_PDF = r"""(() => {
 class PageBrowser:
     def __init__(self, port: int, target_id: str, browser: AgentBrowser) -> None:
         self.port, self.target, self.ab = port, target_id, browser
+        self.pace = NATURAL_PACE
         self.downloads: Downloads | None = None
         # Set by a step whose input opened a JavaScript dialog. Reading a page that a dialog blocks
         # times out, and agent-browser then stops answering for the tab, dialog commands included.
@@ -1142,6 +1158,11 @@ class PageBrowser:
         return results
 
     def fill(self, ref: str, text: str) -> None:
+        if self.pace and text and len(text) <= PACE_TYPED_MOST and "\n" not in text:
+            # Emptied, then typed key by key at a person's pace.
+            self.step([["fill", f"@{ref}", ""]])
+            self.type(ref, text)
+            return
         _, kept = self.step([["fill", f"@{ref}", text], ["get", "value", f"@{ref}"]])
         value = kept.get("value")
         if isinstance(value, str) and value and value != text:
@@ -1164,16 +1185,21 @@ class PageBrowser:
             for index, line in enumerate("".join(chars).split("\n")):
                 if index:
                     commands.append(["press", "Shift+Enter"])
-                if line:
+                if line and self.pace:
+                    for word in re.findall(r"\S+\s*|\s+", line):
+                        commands += [["keyboard", "type", word], ["wait", str(key_gap_ms(" ") * 3)]]
+                elif line:
                     commands.append(["keyboard", "type", line])
             keys_per_command = 0
         else:
             for char in chars:
                 commands += [check, key_command(char)]
-            keys_per_command = 2
+                if self.pace:
+                    commands.append(["wait", str(key_gap_ms(char))])
+            keys_per_command = 3 if self.pace else 2
         try:
             if commands:
-                self.ab.batch(commands, timeout=60.0)
+                self.ab.batch(commands, timeout=120.0 if self.pace else 60.0)
         except AbError as error:
             if keys_per_command and error.index % keys_per_command == 0 and "Typing stopped" in str(error):
                 done, total = error.index // keys_per_command, len(chars)
@@ -1195,7 +1221,13 @@ class PageBrowser:
         uncertain = False
         typed = False
         try:
-            for step in actions:
+            for index, step in enumerate(actions):
+                if self.pace and index:
+                    # A moment between steps, as a person looks before the next one; never past the deadline.
+                    pause = random.uniform(0.5, 1.8)
+                    deadline = getattr(self.ab, "deadline", None)
+                    if deadline is None or deadline - time.monotonic() > pause + 10:
+                        time.sleep(pause)
                 kind, ref = step["kind"], step.get("ref")
                 node = self.control(ref, check_disabled=kind in ("fill", "type")) if ref is not None else None
                 typed = kind == "type" or (kind == "fill" and not (node and native_options(node)))
@@ -1219,7 +1251,9 @@ class PageBrowser:
                             if link.get("result"):
                                 self.downloads.client.download_links.append(time.monotonic())
                     self.step([*([["scrollintoview", f"@{frame.ref}"]] if frame else []),
-                               ["focus" if native_options(node) else "click", f"@{ref}"]])  # type: ignore[arg-type]
+                               ["focus", f"@{ref}"] if native_options(node)  # type: ignore[arg-type]
+                               # At a person's pace the pointer travels there on a curve first.
+                               else ["click", f"@{ref}", *(["--human"] if self.pace else [])]])
                 elif kind == "upload":
                     self.step([["upload", f"@{ref}", *step["files"]]])
                 elif kind == "fill" and native_options(node):  # type: ignore[arg-type]

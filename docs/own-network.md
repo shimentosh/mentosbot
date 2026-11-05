@@ -7,6 +7,9 @@ Only the browser on each bot's computer uses it. Web search and page reads that 
 computer still come from the server. Each person's network serves only their own computers, never a
 teammate's.
 
+While it's on, the browser also uses your time zone and app language, so it agrees with the address
+websites see, and bots click and type at a person's pace. Long text is still pasted in one go.
+
 ## Your desktop app
 
 In the Rakazo desktop app, open **Settings → General** and turn on **Route bot browsing through

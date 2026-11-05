@@ -1072,6 +1072,38 @@ class TypeTest(unittest.TestCase):
         self.assertEqual(result["error"], helper.NOT_KEPT)
 
 
+class NaturalPaceTest(unittest.TestCase):
+    """While the browser reaches sites from its owner's own address, the page tools keep a person's pace."""
+
+    def act(self, actions, browser=None, pace=True):
+        browser = browser or FakeAgentBrowser()
+        current = page(browser)
+        current.pace = pace
+        with patch.object(helper.time, "sleep") as sleep, patch.object(helper, "QUIET_SECONDS", 0.0):
+            return current.act(actions), browser, sleep
+
+    def test_types_a_field_key_by_key_with_a_gap_and_clicks_along_a_curve(self):
+        result, browser, sleep = self.act([{"kind": "click", "ref": "e8"}, {"kind": "fill", "ref": "e2", "text": "Gr a"}])
+        self.assertTrue(result["ok"])
+        actions = browser.actions()
+        self.assertEqual(actions[:2], [["click", "@e8", "--human"], ["fill", "@e2", ""]])
+        keys = [command for command in actions if command[0] in ("press", "keyboard")]
+        self.assertEqual(keys, [["press", "G"], ["press", "r"], ["keyboard", "inserttext", " "], ["press", "a"]])
+        waits = [int(command[1]) for command in actions if command[0] == "wait"]
+        self.assertEqual(len(waits), 4)
+        self.assertTrue(all(60 <= wait <= 400 for wait in waits))
+        # A pause between the two steps, as a person looks before the next one.
+        self.assertTrue(any(0.5 <= call.args[0] <= 1.8 for call in sleep.call_args_list))
+
+    def test_long_text_goes_in_at_once_and_nothing_changes_with_the_pace_off(self):
+        long_text = "x" * (helper.PACE_TYPED_MOST + 1)
+        _, browser, _ = self.act([{"kind": "fill", "ref": "e2", "text": long_text}])
+        self.assertEqual(browser.actions()[0], ["fill", "@e2", long_text])
+        _, browser, _ = self.act([{"kind": "click", "ref": "e8"}, {"kind": "fill", "ref": "e2", "text": "Grace"}],
+                                 pace=False)
+        self.assertEqual(browser.actions(), [["click", "@e8"], ["fill", "@e2", "Grace"]])
+
+
 class AgentBrowserTest(unittest.TestCase):
     def test_runs_on_the_screen_s_browser_with_its_own_settings_and_commands_over_stdin(self):
         browser = helper.AgentBrowser(9222)

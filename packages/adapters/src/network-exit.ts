@@ -46,15 +46,15 @@ export async function loadNetworkExit(
   homeKey: string,
   deviceExit?: DeviceExitOrigin,
 ): Promise<NetworkExit | undefined> {
-  const { connection, routesTraffic } = await runAsSystem(
+  const { connection, routesTraffic, owner } = await runAsSystem(
     "read a computer owner's network exit",
     async () => {
       const computer = await prisma.computer.findUnique({
         where: { homeKey },
         select: { userId: true, spaceId: true },
       });
-      if (!computer) return { connection: null, routesTraffic: false };
-      const [connection, devices] = await Promise.all([
+      if (!computer) return { connection: null, routesTraffic: false, owner: null };
+      const [connection, devices, owner] = await Promise.all([
         prisma.computerNetworkExit.findUnique({
           where: { spaceId_userId: { spaceId: computer.spaceId, userId: computer.userId } },
           include: { secret: true },
@@ -64,16 +64,30 @@ export async function loadNetworkExit(
               where: { userId: computer.userId, revokedAt: null, routeTraffic: true },
             })
           : 0,
+        prisma.user.findUnique({
+          where: { id: computer.userId },
+          select: { timezone: true, locale: true },
+        }),
       ]);
-      return { connection, routesTraffic: devices > 0 };
+      return { connection, routesTraffic: devices > 0, owner };
     },
   );
+  const browser =
+    owner?.timezone || owner?.locale
+      ? {
+          browser: {
+            ...(owner.timezone ? { timeZone: owner.timezone } : {}),
+            ...(owner.locale ? { locale: owner.locale } : {}),
+          },
+        }
+      : {};
   if (!connection) {
     return deviceExit && routesTraffic
       ? {
           provider: "device",
           settings: { url: deviceExit.url },
           credentials: { token: deviceExitToken(deviceExit.encryptionKey, homeKey) },
+          ...browser,
         }
       : undefined;
   }
@@ -90,5 +104,6 @@ export async function loadNetworkExit(
       ]),
     ),
     credentials,
+    ...browser,
   };
 }

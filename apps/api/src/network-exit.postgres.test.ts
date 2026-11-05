@@ -171,10 +171,16 @@ describePostgres("network exit (PostgreSQL)", () => {
       values: { address: "proxy.example.com:8080", username: "me" },
     });
     expect(JSON.stringify(connected)).not.toContain("s3cret");
+    // The browser takes its owner's time zone and language, to agree with the address it shows.
+    await system.user.update({
+      where: { id: ada.userId },
+      data: { timezone: "Asia/Dhaka", locale: "bn" },
+    });
     await expect(loadNetworkExit(system, secrets, home)).resolves.toEqual({
       provider: "proxy",
       settings: { address: "proxy.example.com:8080", username: "me" },
       credentials: { password: "s3cret" },
+      browser: { timeZone: "Asia/Dhaka", locale: "bn" },
     });
     await expect(
       client(ada).networkExit.connect({ provider: "proxy", values: { address: "10.0.0.2:3128" } }),

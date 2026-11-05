@@ -271,6 +271,8 @@ export interface NetworkExit {
   provider: string;
   settings: Record<string, string>;
   credentials: Record<string, string>;
+  /** The owner's time zone and language, so the browser agrees with the address sites see. */
+  browser?: { timeZone?: string; locale?: string };
 }
 
 export interface ConnectorTool {

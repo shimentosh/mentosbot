@@ -71,6 +71,27 @@ describe("computer network exit", () => {
     expect(NetworkExitSchema.safeParse(exit).success).toBe(true);
   });
 
+  it("gives the browser its owner's time zone and language, and drops any other value", () => {
+    const parsed = NetworkExitSchema.parse({
+      ...exit,
+      browser: { timeZone: "Asia/Dhaka", locale: "bn-BD" },
+    });
+    expect(computerNetworkExitSettings(parsed).env).toEqual([
+      "RAKAZO_BROWSER_PROXY=socks5://rakazo-network-exit:1055",
+      "RAKAZO_BROWSER_PACE=natural",
+      "RAKAZO_BROWSER_TZ=Asia/Dhaka",
+      "RAKAZO_BROWSER_LANG=bn-BD",
+    ]);
+    const unsafe = NetworkExitSchema.parse({
+      ...exit,
+      browser: { timeZone: "UTC; rm -rf /", locale: "en\nX=1" },
+    });
+    expect(computerNetworkExitSettings(unsafe).env).toEqual([
+      "RAKAZO_BROWSER_PROXY=socks5://rakazo-network-exit:1055",
+      "RAKAZO_BROWSER_PACE=natural",
+    ]);
+  });
+
   it("changes the fingerprint with any change, so the computer is replaced", () => {
     const moved = { ...exit, settings: { exitNode: "apple-tv" } };
     const rekeyed = { ...exit, credentials: { authKey: "tskey-auth-other-9" } };
@@ -96,7 +117,10 @@ describe("proxy network exit", () => {
 
   it("keeps the password in the forwarder, never the computer", () => {
     const settings = computerNetworkExitSettings(exit);
-    expect(settings.env).toEqual(["RAKAZO_BROWSER_PROXY=http://rakazo-network-exit:3128"]);
+    expect(settings.env).toEqual([
+      "RAKAZO_BROWSER_PROXY=http://rakazo-network-exit:3128",
+      "RAKAZO_BROWSER_PACE=natural",
+    ]);
     expect(JSON.stringify(settings)).not.toContain("s3cret");
     const options = networkExitContainerOptions({
       botId: "b1",
@@ -130,7 +154,10 @@ describe("device network exit", () => {
 
   it("keeps the computer's token in its relay, never the computer", () => {
     const settings = computerNetworkExitSettings(exit);
-    expect(settings.env).toEqual(["RAKAZO_BROWSER_PROXY=http://rakazo-network-exit:3128"]);
+    expect(settings.env).toEqual([
+      "RAKAZO_BROWSER_PROXY=http://rakazo-network-exit:3128",
+      "RAKAZO_BROWSER_PACE=natural",
+    ]);
     expect(JSON.stringify(settings)).not.toContain(token);
     const options = networkExitContainerOptions({
       botId: "b1",

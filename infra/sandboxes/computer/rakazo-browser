@@ -441,6 +441,16 @@ FLAGS="--test-type --no-sandbox --disable-dev-shm-usage --disable-gpu --enable-u
 if [ -n "${RAKAZO_BROWSER_PROXY:-}" ]; then
   FLAGS="$FLAGS --proxy-server=$RAKAZO_BROWSER_PROXY --force-webrtc-ip-handling-policy=disable_non_proxied_udp"
 fi
+# With it, the owner's time zone and language, so the browser agrees with the address sites see.
+# The supervisor passes only a plain zone name and language tag.
+if [ -n "${RAKAZO_BROWSER_TZ:-}" ]; then
+  export TZ="$RAKAZO_BROWSER_TZ"
+fi
+if [ -n "${RAKAZO_BROWSER_LANG:-}" ]; then
+  LANGUAGE=$(printf %s "$RAKAZO_BROWSER_LANG" | tr - _)
+  export LANGUAGE
+  FLAGS="$FLAGS --lang=$RAKAZO_BROWSER_LANG"
+fi
 if [ "$USER_DATA_DIR_SET" -eq 0 ]; then
   exec "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@"
 fi
