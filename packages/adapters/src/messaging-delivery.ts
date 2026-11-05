@@ -10,8 +10,11 @@ import { messagingDeliverJob, runContinueJob } from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
 import { CardBlock } from "@rakazo/contracts";
 import {
+  askChoicePlainText,
   botMessageHopExhausted,
   cardPlainText,
+  isApprovalAskBlock,
+  isSecretAskBlock,
   nextBotMessageHop,
   pageLinksAsTitles,
 } from "@rakazo/core";
@@ -139,7 +142,7 @@ async function mirrorRun(deps: MessagingDeliveryDeps, runId: string): Promise<vo
   const linkedPages = linkedPageIds(messages);
   const rows = messages
     .flatMap((message) => {
-      const body = extractText(message.blocks, linkedPages);
+      const body = extractText(message.blocks, linkedPages, { questions: true });
       const parts = body ? splitOutboundBody(identity.provider, body) : [];
       return [
         ...parts.map((part, index) => ({
@@ -762,9 +765,15 @@ function linkedPageIds(messages: readonly { blocks: unknown }[]): Set<string> {
 
 /**
  * The text other channels get. A page card cannot travel, so a page the reply does not name goes
- * as its title; a status card goes as its lines and links.
+ * as its title; a status card goes as its lines and links. With `questions`, an open choice
+ * question goes as text with numbered options for the person to reply to; approvals and secret
+ * requests stay in the app.
  */
-function extractText(blocks: unknown, linkedPages: ReadonlySet<string>): string {
+function extractText(
+  blocks: unknown,
+  linkedPages: ReadonlySet<string>,
+  options: { questions?: boolean } = {},
+): string {
   if (!Array.isArray(blocks)) return "";
   return blocks
     .flatMap(
@@ -773,6 +782,15 @@ function extractText(blocks: unknown, linkedPages: ReadonlySet<string>): string 
           return [pageLinksAsTitles(block.text)];
         const card = CardBlock.safeParse(block);
         if (card.success) return [cardPlainText(card.data)];
+        if (options.questions && block?.kind === "ask") {
+          const ask = block as Extract<MessageBlock, { kind: "ask" }>;
+          return ask.status !== "answered" &&
+            ask.actions?.length &&
+            !isApprovalAskBlock(ask) &&
+            !isSecretAskBlock(ask)
+            ? [askChoicePlainText(ask)]
+            : [];
+        }
         if (
           block?.kind === "page" &&
           typeof block.title === "string" &&

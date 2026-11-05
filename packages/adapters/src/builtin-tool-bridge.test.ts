@@ -57,8 +57,9 @@ describe("built-in tool bridge", () => {
       "write_file",
     ]);
     // request_secret carries the card and contact kinds; update_bot carries instructions paging;
-    // show_card stays listed so receipts follow outward actions without a find_tool step.
-    expect(definitionBytes(listed)).toBeLessThanOrEqual(33_226);
+    // show_card stays listed so receipts follow outward actions without a find_tool step, and
+    // ask_user carries draft approval.
+    expect(definitionBytes(listed)).toBeLessThanOrEqual(33_748);
     expect(deferred.map((tool) => tool.name)).toEqual(
       expect.arrayContaining(["render_plot", "create_space", "generate_secret", "scratchpad_add"]),
     );

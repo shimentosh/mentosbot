@@ -831,6 +831,7 @@ msgid "Another assistant"
 msgstr "Andere assistent"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answer"
 msgstr "Antwoorden"
 
@@ -840,6 +841,7 @@ msgid "Answer"
 msgstr "Opnemen"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answered"
 msgstr "Beantwoord"
 
@@ -2936,6 +2938,7 @@ msgid "Don’t have an account?"
 msgstr "Heb je geen account?"
 
 #: src/components/AccountDataSettings.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -2975,6 +2978,10 @@ msgstr "PDF downloaden"
 msgid "Downloading…"
 msgstr "Bezig met downloaden…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Draft"
+msgstr "Concept"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Draft skill"
 msgstr "Concept-skill"
@@ -2992,6 +2999,7 @@ msgid "Each name can be used once."
 msgstr "Elke naam kan maar één keer worden gebruikt."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -4934,6 +4942,10 @@ msgstr "Oorspronkelijk bericht niet beschikbaar"
 msgid "Other model…"
 msgstr "Ander model…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Other…"
+msgstr "Anders…"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
 msgstr "Uitvoer"
@@ -5997,6 +6009,7 @@ msgstr "Selecteer een bot"
 msgid "Self-hosted"
 msgstr "Zelf gehost"
 
+#: src/components/ChoiceAsk.tsx
 #: src/pages/shell/composer.tsx
 msgid "Send"
 msgstr "Verzenden"
@@ -6046,6 +6059,7 @@ msgid "Send your computers' browsers through a network of your own."
 msgstr ""
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Sending…"
@@ -7065,6 +7079,7 @@ msgid "Type without recording"
 msgstr "Typen zonder opname"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "Typ je antwoord"
 

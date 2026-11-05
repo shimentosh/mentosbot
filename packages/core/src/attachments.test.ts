@@ -241,7 +241,7 @@ describe("ask history", () => {
       { id: "choice-2", label: "Paris" },
     ];
     expect(blocksToAgentHistoryText([{ kind: "ask", text: "Which city?", actions }])).toBe(
-      "Which city?",
+      "Which city?\n\n1. Berlin\n2. Paris",
     );
     expect(
       blocksToAgentHistoryText([
@@ -258,6 +258,52 @@ describe("ask history", () => {
         { kind: "ask", text: "API key", input: "secret", status: "answered", answer: "" },
       ]),
     ).toBe("API key");
+  });
+
+  it("keeps a draft, every chosen option and the edited text in history", () => {
+    const actions = [
+      { id: "choice-1", label: "Post" },
+      { id: "choice-2", label: "Not now" },
+    ];
+    const draft = { kind: "ask" as const, text: "Post this?", preview: "Hello", actions };
+    expect(blocksToAgentHistoryText([draft])).toBe(
+      "Post this?\n\nHello\n\n1. Post\n2. Not now",
+    );
+    expect(
+      blocksToAgentHistoryText([
+        { ...draft, status: "answered", answer: "choice-1", answers: ["choice-1"] },
+      ]),
+    ).toBe("Post this?\nHello\nAnswer: Post");
+    expect(
+      blocksToAgentHistoryText([
+        {
+          ...draft,
+          status: "answered",
+          answer: "Post",
+          answers: ["choice-1"],
+          editedPreview: "Hello there",
+        },
+      ]),
+    ).toBe("Post this?\nAnswer: Post\nEdited draft:\nHello there");
+    expect(
+      blocksToAgentHistoryText([
+        {
+          kind: "ask",
+          text: "Which platforms?",
+          multiple: true,
+          other: true,
+          actions: [
+            { id: "choice-1", label: "Blog" },
+            { id: "choice-2", label: "Newsletter" },
+            { id: "choice-3", label: "Forum" },
+          ],
+          status: "answered",
+          answer: "Blog, Forum, Podcast",
+          answers: ["choice-1", "choice-3"],
+          otherAnswer: "Podcast",
+        },
+      ]),
+    ).toBe("Which platforms?\nAnswer: Blog, Forum, Podcast");
   });
 });
 

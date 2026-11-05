@@ -17,6 +17,7 @@ import {
   isTerminatingReplyResult,
   isToolPauseResult,
 } from "./approval-effect.js";
+import { askUserRequest } from "./ask-user.js";
 import {
   connectionIdArgument,
   credentialArgument,
@@ -351,6 +352,12 @@ function toAgentTool(
           // Keep a missing/invalid options value as-is so schema minItems can reject it;
           // coercing to [] would look like a valid empty list upstream.
           options,
+          // Models often send null for an optional field they leave out.
+          ...Object.fromEntries(
+            (["preview", "limit", "multiple", "other"] as const).flatMap((key) =>
+              raw[key] === undefined || raw[key] === null ? [] : [[key, raw[key]]],
+            ),
+          ),
         };
       }
       if (tool.name === "request_secret") {
@@ -482,26 +489,17 @@ function toAgentTool(
                 };
               }
               if (tool.name === "ask_user") {
-                const options = Array.isArray(args.options)
-                  ? args.options.map((option) => String(option).trim())
-                  : [];
-                if (
-                  options.length < 2 ||
-                  options.length > 4 ||
-                  options.some((option) => option.length === 0 || option.length > 80) ||
-                  new Set(options).size !== options.length
-                ) {
-                  throw new Error("ask_user requires two to four unique, non-empty options");
-                }
+                const { question, options, ...card } = askUserRequest(args);
                 host.pausePending = true;
                 host.queue.push({
                   type: "ask",
                   ...(host.request.onCheckpoint ? { executionId } : {}),
-                  text: String(args.question ?? "What should I use?"),
+                  text: question,
                   actions: options.map((label, index) => ({
                     id: `choice-${index + 1}`,
                     label,
                   })),
+                  ...card,
                 });
                 return {
                   content: [{ type: "text", text: "Waiting for the user's choice." }],

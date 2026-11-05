@@ -831,6 +831,7 @@ msgid "Another assistant"
 msgstr "其他助手"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answer"
 msgstr "回答"
 
@@ -840,6 +841,7 @@ msgid "Answer"
 msgstr "接听"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answered"
 msgstr "已回答"
 
@@ -2936,6 +2938,7 @@ msgid "Don’t have an account?"
 msgstr "还没有账户？"
 
 #: src/components/AccountDataSettings.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -2975,6 +2978,10 @@ msgstr "下载 PDF"
 msgid "Downloading…"
 msgstr "正在下载…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Draft"
+msgstr "草稿"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Draft skill"
 msgstr "技能草稿"
@@ -2992,6 +2999,7 @@ msgid "Each name can be used once."
 msgstr "每个名称只能使用一次。"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -4934,6 +4942,10 @@ msgstr "原消息不可用"
 msgid "Other model…"
 msgstr "其他模型…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Other…"
+msgstr "其他…"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
 msgstr "输出"
@@ -5997,6 +6009,7 @@ msgstr "选择 Bot"
 msgid "Self-hosted"
 msgstr "自托管"
 
+#: src/components/ChoiceAsk.tsx
 #: src/pages/shell/composer.tsx
 msgid "Send"
 msgstr "发送"
@@ -6046,6 +6059,7 @@ msgid "Send your computers' browsers through a network of your own."
 msgstr ""
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Sending…"
@@ -7065,6 +7079,7 @@ msgid "Type without recording"
 msgstr "直接输入，不录制"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "输入你的回答"
 

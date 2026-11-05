@@ -831,6 +831,7 @@ msgid "Another assistant"
 msgstr "Inny asystent"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answer"
 msgstr "Odpowiedź"
 
@@ -840,6 +841,7 @@ msgid "Answer"
 msgstr "Odbierz"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answered"
 msgstr "Odpowiedziano"
 
@@ -2936,6 +2938,7 @@ msgid "Don’t have an account?"
 msgstr "Nie masz konta?"
 
 #: src/components/AccountDataSettings.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -2975,6 +2978,10 @@ msgstr "Pobierz PDF"
 msgid "Downloading…"
 msgstr "Pobieranie…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Draft"
+msgstr "Szkic"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Draft skill"
 msgstr "Szkic umiejętności"
@@ -2992,6 +2999,7 @@ msgid "Each name can be used once."
 msgstr "Każdej nazwy można użyć raz."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -4934,6 +4942,10 @@ msgstr "Oryginalna wiadomość jest niedostępna"
 msgid "Other model…"
 msgstr "Inny model…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Other…"
+msgstr "Inne…"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
 msgstr "Dane wyjściowe"
@@ -5997,6 +6009,7 @@ msgstr "Wybierz bota"
 msgid "Self-hosted"
 msgstr "Własny serwer"
 
+#: src/components/ChoiceAsk.tsx
 #: src/pages/shell/composer.tsx
 msgid "Send"
 msgstr "Wyślij"
@@ -6046,6 +6059,7 @@ msgid "Send your computers' browsers through a network of your own."
 msgstr "Kieruj przeglądarki swoich komputerów przez własną sieć."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Sending…"
@@ -7065,6 +7079,7 @@ msgid "Type without recording"
 msgstr "Pisz bez nagrywania"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "Wpisz odpowiedź"
 

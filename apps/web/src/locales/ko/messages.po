@@ -831,6 +831,7 @@ msgid "Another assistant"
 msgstr "다른 어시스턴트"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answer"
 msgstr "답변"
 
@@ -840,6 +841,7 @@ msgid "Answer"
 msgstr "답변"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answered"
 msgstr "응답함"
 
@@ -2936,6 +2938,7 @@ msgid "Don’t have an account?"
 msgstr "계정이 없나요?"
 
 #: src/components/AccountDataSettings.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -2975,6 +2978,10 @@ msgstr "PDF 다운로드"
 msgid "Downloading…"
 msgstr ""
 
+#: src/components/ChoiceAsk.tsx
+msgid "Draft"
+msgstr "초안"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Draft skill"
 msgstr "작업 기술 초안"
@@ -2992,6 +2999,7 @@ msgid "Each name can be used once."
 msgstr "각 이름은 한 번만 사용할 수 있습니다."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -4934,6 +4942,10 @@ msgstr "원본 메시지를 사용할 수 없습니다"
 msgid "Other model…"
 msgstr "다른 모델 직접 입력…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Other…"
+msgstr "기타…"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
 msgstr "출력"
@@ -5997,6 +6009,7 @@ msgstr "대화할 Bot을 선택하세요"
 msgid "Self-hosted"
 msgstr "자체 호스팅"
 
+#: src/components/ChoiceAsk.tsx
 #: src/pages/shell/composer.tsx
 msgid "Send"
 msgstr "보내기"
@@ -6046,6 +6059,7 @@ msgid "Send your computers' browsers through a network of your own."
 msgstr ""
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Sending…"
@@ -7065,6 +7079,7 @@ msgid "Type without recording"
 msgstr ""
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "답변을 입력하세요"
 

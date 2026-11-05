@@ -1,6 +1,14 @@
 import { Type } from "@earendil-works/pi-ai";
 import type { ConnectorTool } from "@rakazo/adapter-kit";
-import { BOT_INSTRUCTIONS_MAX_LENGTH, ThinkingLevelSchema } from "@rakazo/contracts";
+import {
+  ASK_USER_MAX_MULTIPLE_OPTIONS,
+  ASK_USER_MIN_OPTIONS,
+  ASK_USER_OPTION_MAX_LENGTH,
+  ASK_USER_PREVIEW_MAX_LENGTH,
+  ASK_USER_QUESTION_MAX_LENGTH,
+  BOT_INSTRUCTIONS_MAX_LENGTH,
+  ThinkingLevelSchema,
+} from "@rakazo/contracts";
 import { getLogger } from "@rakazo/logging";
 import {
   normalizeOpenAiToolParameters,
@@ -66,12 +74,16 @@ function builtinParameters(tool: ConnectorTool) {
   }
   if (tool.name === "ask_user") {
     return Type.Object({
-      question: Type.String({ maxLength: 240 }),
-      options: Type.Array(Type.String({ minLength: 1, maxLength: 80 }), {
-        minItems: 2,
-        maxItems: 4,
+      question: Type.String({ maxLength: ASK_USER_QUESTION_MAX_LENGTH }),
+      options: Type.Array(Type.String({ minLength: 1, maxLength: ASK_USER_OPTION_MAX_LENGTH }), {
+        minItems: ASK_USER_MIN_OPTIONS,
+        maxItems: ASK_USER_MAX_MULTIPLE_OPTIONS,
         uniqueItems: true,
       }),
+      preview: Type.Optional(Type.String({ minLength: 1, maxLength: ASK_USER_PREVIEW_MAX_LENGTH })),
+      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: ASK_USER_PREVIEW_MAX_LENGTH })),
+      multiple: Type.Optional(Type.Boolean()),
+      other: Type.Optional(Type.Boolean()),
     });
   }
   if (tool.name === "remember") {

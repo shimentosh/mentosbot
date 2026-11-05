@@ -831,6 +831,7 @@ msgid "Another assistant"
 msgstr "Another assistant"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answer"
 msgstr "Answer"
 
@@ -840,6 +841,7 @@ msgid "Answer"
 msgstr "Answer"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answered"
 msgstr "Answered"
 
@@ -2936,6 +2938,7 @@ msgid "Don’t have an account?"
 msgstr "Don’t have an account?"
 
 #: src/components/AccountDataSettings.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -2975,6 +2978,10 @@ msgstr "Download PDF"
 msgid "Downloading…"
 msgstr "Downloading…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Draft"
+msgstr "Draft"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Draft skill"
 msgstr "Draft skill"
@@ -2992,6 +2999,7 @@ msgid "Each name can be used once."
 msgstr "Each name can be used once."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -4934,6 +4942,10 @@ msgstr "Original message unavailable"
 msgid "Other model…"
 msgstr "Other model…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Other…"
+msgstr "Other…"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
 msgstr "Output"
@@ -5997,6 +6009,7 @@ msgstr "Select a bot"
 msgid "Self-hosted"
 msgstr "Self-hosted"
 
+#: src/components/ChoiceAsk.tsx
 #: src/pages/shell/composer.tsx
 msgid "Send"
 msgstr "Send"
@@ -6046,6 +6059,7 @@ msgid "Send your computers' browsers through a network of your own."
 msgstr "Send your computers' browsers through a network of your own."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Sending…"
@@ -7065,6 +7079,7 @@ msgid "Type without recording"
 msgstr "Type without recording"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "Type your answer"
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fakeAgentState = vi.hoisted(() => ({
   options: ["Berlin", "Seoul", "Toronto"],
+  extra: {} as Record<string, unknown>,
   tools: [] as Array<{
     name: string;
     execute: (toolCallId: string, params: Record<string, unknown>) => Promise<unknown>;
@@ -27,6 +28,7 @@ vi.mock("@earendil-works/pi-agent-core", () => ({
       await askUser.execute("call-choice-1", {
         question: "Which city should I use?",
         options: fakeAgentState.options,
+        ...fakeAgentState.extra,
       });
     }
 
@@ -94,6 +96,28 @@ describe("Pi choice asks", () => {
   beforeEach(() => {
     fakeAgentState.tools = [];
     fakeAgentState.options = ["Berlin", "Seoul", "Toronto"];
+    fakeAgentState.extra = {};
+  });
+
+  it("puts a draft for approval on the ask, leaving out the nulls a model sends", async () => {
+    fakeAgentState.options = ["Post", "Not now"];
+    fakeAgentState.extra = { preview: "Hello\nworld", limit: 280, multiple: null, other: true };
+    const runtime = new PiAgentRuntime();
+    const events: AgentRuntimeEvent[] = [];
+
+    for await (const event of runtime.run(runRequest, runContext)) events.push(event);
+
+    expect(events).toContainEqual({
+      type: "ask",
+      text: "Which city should I use?",
+      actions: [
+        { id: "choice-1", label: "Post" },
+        { id: "choice-2", label: "Not now" },
+      ],
+      preview: "Hello\nworld",
+      previewLimit: 280,
+      other: true,
+    });
   });
 
   it("emits a tappable ask and stops without a finished-work fallback", async () => {

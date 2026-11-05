@@ -149,6 +149,20 @@ export const MessageBlock = z.discriminatedUnion("kind", [
     dismissed: z.literal(true).optional(),
     /** A login the user used for this run only instead of saving it. */
     remembered: z.literal(false).optional(),
+    /** On a choice question, the draft the options approve, shown quoted and editable. */
+    preview: z.string().optional(),
+    /** The draft's character limit, counted as askTextLength counts. */
+    previewLimit: z.number().int().positive().optional(),
+    /** On a choice question, the person may pick several options and confirm once. */
+    multiple: z.literal(true).optional(),
+    /** On a choice question, the person may type their own answer instead. */
+    other: z.literal(true).optional(),
+    /** The option ids an answer from a choice card chose; `answer` reads them for older apps. */
+    answers: z.array(z.string()).optional(),
+    /** The person's own answer typed into a choice card. */
+    otherAnswer: z.string().optional(),
+    /** The draft as the person edited it before choosing. */
+    editedPreview: z.string().optional(),
     actions: z
       .array(
         z.object({

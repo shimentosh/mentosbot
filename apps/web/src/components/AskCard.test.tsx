@@ -837,3 +837,139 @@ it("sends Undo to the chat's space, not the one selected in another tab", async 
   expect(rpc.bots.restoreInstructions).not.toHaveBeenCalled();
   expect(rpc.bots.update).not.toHaveBeenCalled();
 });
+
+const draftCard: AskBlock = {
+  kind: "ask",
+  text: "Post this?",
+  status: "pending",
+  preview: "Building a business\nteaches you",
+  previewLimit: 40,
+  actions: [
+    { id: "choice-1", label: "Post" },
+    { id: "choice-2", label: "Not now" },
+  ],
+};
+
+async function typeDraft(value: string) {
+  await act(async () => {
+    const area = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Draft"]')!;
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(area, value);
+    area.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+function previewCount() {
+  return container.querySelector('[data-testid="ask-preview-count"]');
+}
+
+it("quotes a draft with its line breaks and count above Post, Edit and Not now", async () => {
+  const onAnswer = vi.fn(async () => undefined);
+  await render(draftCard, undefined, onAnswer);
+
+  expect(container.querySelector('[data-testid="ask-preview"]')!.textContent).toBe(
+    "Building a business\nteaches you",
+  );
+  expect(previewCount()!.textContent).toBe("31/40");
+  expect([...container.querySelectorAll("button")].map((item) => item.textContent)).toEqual([
+    "Post",
+    "Edit",
+    "Not now",
+  ]);
+  await act(async () => button("Post")!.click());
+  expect(onAnswer).toHaveBeenCalledWith("choice-1");
+});
+
+it("sends the edited draft with the choice, and holds the options while it is over the limit", async () => {
+  const onAnswer = vi.fn(async () => undefined);
+  await render(draftCard, undefined, onAnswer);
+
+  await act(async () => button("Edit")!.click());
+  await typeDraft("x".repeat(41));
+  expect(previewCount()!.textContent).toBe("41/40");
+  expect(previewCount()!.classList.contains("text-destructive")).toBe(true);
+  expect(button("Post")!.disabled).toBe(true);
+  expect(button("Not now")!.disabled).toBe(true);
+
+  await typeDraft("Shorter\ndraft");
+  expect(button("Post")!.disabled).toBe(false);
+  await act(async () => button("Post")!.click());
+  expect(onAnswer).toHaveBeenCalledWith(
+    JSON.stringify({ choices: ["choice-1"], edited: "Shorter\ndraft" }),
+  );
+});
+
+it("shows an answered draft as the final text and the choice, without buttons", async () => {
+  await render({
+    ...draftCard,
+    status: "answered",
+    answer: "choice-1",
+    answers: ["choice-1"],
+    editedPreview: "Edited text",
+  });
+  expect(container.querySelector('[data-testid="ask-preview"]')!.textContent).toBe("Edited text");
+  expect(container.textContent).toContain("Post");
+  expect(container.querySelectorAll("button")).toHaveLength(0);
+});
+
+it("confirms a multi-select question once, with every chosen option", async () => {
+  const onAnswer = vi.fn(async () => undefined);
+  await render(
+    {
+      kind: "ask",
+      text: "Which platforms?",
+      status: "pending",
+      multiple: true,
+      actions: [
+        { id: "choice-1", label: "Blog" },
+        { id: "choice-2", label: "Newsletter" },
+        { id: "choice-3", label: "Forum" },
+      ],
+    },
+    undefined,
+    onAnswer,
+  );
+
+  expect(button("Done")!.disabled).toBe(true);
+  await act(async () => button("CForum")!.click());
+  await act(async () => button("ABlog")!.click());
+  await act(async () => button("BNewsletter")!.click());
+  await act(async () => button("BNewsletter")!.click());
+  expect(onAnswer).not.toHaveBeenCalled();
+  expect(button("ABlog")!.getAttribute("aria-pressed")).toBe("true");
+  expect(button("BNewsletter")!.hasAttribute("aria-pressed")).toBe(false);
+
+  await act(async () => button("Done")!.click());
+  expect(onAnswer).toHaveBeenCalledWith(JSON.stringify({ choices: ["choice-1", "choice-3"] }));
+});
+
+it("sends an own answer typed under Other, and shows it once answered", async () => {
+  const block: AskBlock = {
+    kind: "ask",
+    text: "Which city?",
+    status: "pending",
+    other: true,
+    actions: [
+      { id: "choice-1", label: "Berlin" },
+      { id: "choice-2", label: "Seoul" },
+    ],
+  };
+  const onAnswer = vi.fn(async () => undefined);
+  await render(block, undefined, onAnswer);
+
+  expect(container.querySelector('input[aria-label="Answer"]')).toBeNull();
+  await act(async () => button("COther…")!.click());
+  expect(button("Send")!.disabled).toBe(true);
+  await type("Answer", " Lisbon ");
+  await act(async () => button("Send")!.click());
+  expect(onAnswer).toHaveBeenCalledWith(JSON.stringify({ choices: [], other: "Lisbon" }));
+
+  await render({
+    ...block,
+    status: "answered",
+    answer: "Lisbon",
+    answers: [],
+    otherAnswer: "Lisbon",
+  });
+  expect(button("CLisbon")!.getAttribute("aria-pressed")).toBe("true");
+  expect(button("ABerlin")!.disabled).toBe(true);
+});

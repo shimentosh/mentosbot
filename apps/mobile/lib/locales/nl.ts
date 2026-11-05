@@ -440,6 +440,8 @@ export const NL_MESSAGES: Record<string, string> = {
   "This removes every message and stops current work. The bot, computer, memory, and routines are kept.":
     "Hiermee worden alle berichten verwijderd en lopend werk gestopt. De bot, computer, het geheugen en de routines blijven behouden.",
   "Type your answer": "Typ je antwoord",
+  Draft: "Concept",
+  "Other…": "Anders…",
   Username: "Gebruikersnaam",
   "Waiting for this bot’s response.": "Wachten op het antwoord van deze bot.",
   "Work stopped, but the thread could not refresh: {detail}":

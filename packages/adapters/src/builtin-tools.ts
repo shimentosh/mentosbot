@@ -1,5 +1,10 @@
 import type { ConnectorTool } from "@rakazo/adapter-kit";
 import {
+  ASK_USER_MAX_MULTIPLE_OPTIONS,
+  ASK_USER_MIN_OPTIONS,
+  ASK_USER_OPTION_MAX_LENGTH,
+  ASK_USER_PREVIEW_MAX_LENGTH,
+  ASK_USER_QUESTION_MAX_LENGTH,
   BOT_DESCRIPTION_MAX_LENGTH,
   BOT_INSTRUCTIONS_MAX_LENGTH,
   BOT_MEMORY_MAX_BYTES,
@@ -586,18 +591,22 @@ export const builtinAgentTools: ConnectorTool[] = [
   {
     name: "ask_user",
     description:
-      "Ask the user one short multiple-choice question with tappable options, then wait for their selection. Use this instead of asking them to type when two to four concise choices are enough.",
+      'Ask the user one short question with tappable options, then wait for their answer. Use it instead of asking them to type when a few choices are enough. To approve anything you will post, send or publish, put the exact text in preview (limit sets its character cap) with options such as "Post" and "Not now"; never ask them to reply "Approved". They can edit the preview: when the answer has edited text, use exactly that. multiple lets them pick several (up to six options); other lets them type their own answer.',
     inputSchema: {
       type: "object",
       properties: {
-        question: { type: "string", maxLength: 240 },
+        question: { type: "string", maxLength: ASK_USER_QUESTION_MAX_LENGTH },
         options: {
           type: "array",
-          items: { type: "string", minLength: 1, maxLength: 80 },
-          minItems: 2,
-          maxItems: 4,
+          items: { type: "string", minLength: 1, maxLength: ASK_USER_OPTION_MAX_LENGTH },
+          minItems: ASK_USER_MIN_OPTIONS,
+          maxItems: ASK_USER_MAX_MULTIPLE_OPTIONS,
           uniqueItems: true,
         },
+        preview: { type: "string", minLength: 1, maxLength: ASK_USER_PREVIEW_MAX_LENGTH },
+        limit: { type: "integer", minimum: 1, maximum: ASK_USER_PREVIEW_MAX_LENGTH },
+        multiple: { type: "boolean" },
+        other: { type: "boolean" },
       },
       required: ["question", "options"],
     },
