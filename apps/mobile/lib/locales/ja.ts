@@ -428,6 +428,8 @@ export const JA_MESSAGES: Record<string, string> = {
   "This removes every message and stops current work. The bot, computer, memory, and routines are kept.":
     "すべてのメッセージを削除し、現在の作業を停止します。ボット、コンピューター、メモリ、ルーティンは保持されます。",
   "Type your answer": "回答を入力",
+  Draft: "下書き",
+  "Other…": "その他…",
   Username: "ユーザー名",
   "Waiting for this bot’s response.": "このボットの応答を待っています。",
   "Work stopped, but the thread could not refresh: {detail}":

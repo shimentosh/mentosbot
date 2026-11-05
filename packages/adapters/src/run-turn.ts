@@ -415,6 +415,12 @@ async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
         detail: safeDetail,
         status: "pending",
         actions: safeActions,
+        ...(event.preview !== undefined
+          ? { preview: redactSecrets(event.preview, ctx.secrets) }
+          : {}),
+        ...(event.previewLimit !== undefined ? { previewLimit: event.previewLimit } : {}),
+        ...(event.multiple ? { multiple: true as const } : {}),
+        ...(event.other ? { other: true as const } : {}),
       },
     ],
     // Keep unredacted labels on the run for resume; message blocks stay redacted.

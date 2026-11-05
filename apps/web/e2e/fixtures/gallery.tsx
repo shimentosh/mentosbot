@@ -123,6 +123,50 @@ const questions: Scenario = {
     bot([
       {
         kind: "ask",
+        text: "Post this?",
+        status: "pending",
+        preview:
+          "Building a business teaches you patience.\n\nShip small, listen closely, and keep going.",
+        previewLimit: 280,
+        actions: [
+          { id: "choice-1", label: "Post" },
+          { id: "choice-2", label: "Not now" },
+        ],
+      },
+    ]),
+    bot([
+      {
+        kind: "ask",
+        text: "Which platforms?",
+        status: "pending",
+        multiple: true,
+        other: true,
+        actions: [
+          { id: "choice-1", label: "Forum" },
+          { id: "choice-2", label: "Newsletter" },
+          { id: "choice-3", label: "Blog" },
+        ],
+      },
+    ]),
+    bot([
+      {
+        kind: "ask",
+        text: "Send this reply?",
+        status: "answered",
+        preview: "Tuesday works.",
+        previewLimit: 280,
+        answer: "choice-1",
+        answers: ["choice-1"],
+        editedPreview: "Tuesday at 2 pm works for me.",
+        actions: [
+          { id: "choice-1", label: "Send" },
+          { id: "choice-2", label: "Not now" },
+        ],
+      },
+    ]),
+    bot([
+      {
+        kind: "ask",
         text: "Which city should I use?",
         status: "answered",
         answer: "seoul",

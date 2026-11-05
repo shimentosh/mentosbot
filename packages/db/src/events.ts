@@ -1,5 +1,6 @@
 import type { ProductAnalytics, RealtimeFanout } from "@rakazo/adapter-kit";
 import type {
+  AskChoiceAnswer,
   BotSecretDestination,
   ChatAlert,
   LoginFieldInput,
@@ -9,6 +10,9 @@ import type {
 } from "@rakazo/contracts";
 import {
   AnalyticsTrigger,
+  ASK_USER_OTHER_MAX_LENGTH,
+  ASK_USER_PREVIEW_MAX_LENGTH,
+  askTextLength,
   BOT_INSTRUCTIONS_MAX_LENGTH,
   BOT_SECRET_VALUE_MAX_LENGTH,
   encodeLoginSecret,
@@ -16,6 +20,7 @@ import {
   loginAnswerValue,
   MessageBlock as MessageBlockSchema,
   normalizeOneTimeCode,
+  parseAskChoiceAnswer,
   ThreadActivityPayloadSchema,
 } from "@rakazo/contracts";
 import {
@@ -249,6 +254,67 @@ function resumeChoiceLabel(
   } catch {
     return selected.label;
   }
+}
+
+type ChoiceAction = { id: string; label: string };
+type CardSelection = { chosen: ChoiceAction[]; other?: string; edited?: string };
+
+/**
+ * A choice card's structured answer checked against the question it answers: offered options only,
+ * several only on a multi-select question, a typed answer only where one was offered, and an edited
+ * draft only on a question with one, within its limit.
+ */
+function choiceCardSelection(
+  ask: Extract<MessageBlock, { kind: "ask" }>,
+  answer: AskChoiceAnswer,
+): CardSelection | undefined {
+  if (new Set(answer.choices).size !== answer.choices.length) return undefined;
+  const chosen: ChoiceAction[] = [];
+  for (const id of answer.choices) {
+    const action = ask.actions?.find((candidate) => candidate.id === id);
+    if (!action) return undefined;
+    chosen.push({ id: action.id, label: action.label });
+  }
+  const other = answer.other?.trim();
+  if (
+    answer.other !== undefined &&
+    (!ask.other || !other || other.length > ASK_USER_OTHER_MAX_LENGTH)
+  )
+    return undefined;
+  const picked = chosen.length + (other ? 1 : 0);
+  if (picked === 0 || (!ask.multiple && picked > 1)) return undefined;
+  const { edited } = answer;
+  if (
+    edited !== undefined &&
+    (ask.preview === undefined ||
+      !edited.trim() ||
+      edited.length > ASK_USER_PREVIEW_MAX_LENGTH ||
+      (ask.previewLimit !== undefined && askTextLength(edited) > ask.previewLimit))
+  )
+    return undefined;
+  return {
+    chosen,
+    ...(other ? { other } : {}),
+    ...(edited !== undefined && edited !== ask.preview ? { edited } : {}),
+  };
+}
+
+function cardSelectionPrompt(selection: CardSelection, checkpoint: string | null | undefined) {
+  const { chosen, other, edited } = selection;
+  const choices = chosen
+    .map((action) => `${action.id}: ${resumeChoiceLabel(action, checkpoint)}`)
+    .join("; ");
+  return [
+    ...(chosen.length ? [`Selected choice${chosen.length > 1 ? "s" : ""} ${choices}`] : []),
+    ...(other ? [chosen.length ? `Their own answer: ${other}` : other] : []),
+    ...(edited !== undefined ? [`They edited the draft. Use exactly this text:\n${edited}`] : []),
+  ].join("\n");
+}
+
+/** The answer older apps read: a lone option's id, or every choice by name. */
+function cardSelectionAnswer({ chosen, other }: CardSelection): string {
+  if (chosen.length === 1 && !other) return chosen[0]!.id;
+  return [...chosen.map((action) => action.label), ...(other ? [other] : [])].join(", ");
 }
 
 /**
@@ -888,6 +954,12 @@ async function commitAnswerRunInput(
   const secretAsk = isSecretAskBlock(pendingAsk);
   const choiceAsk = !approvalAsk && !secretAsk && Boolean(pendingAsk.actions?.length);
   const selectedChoice = choiceAsk ? resolveAskChoice(input.answer, pendingAsk.actions) : undefined;
+  // A choice card's richer answer: several options, its own typed answer, or an edited draft.
+  const cardAnswer = choiceAsk ? parseAskChoiceAnswer(input.answer) : undefined;
+  const cardSelection = cardAnswer ? choiceCardSelection(pendingAsk, cardAnswer) : undefined;
+  if (cardAnswer && !cardSelection) return null;
+  // The bot publishes an edited draft exactly as written, so only the run's user can send one.
+  if (cardSelection?.edited !== undefined && run.userId !== input.answeredByUserId) return null;
   const dismissed = Boolean(input.dismiss);
   // Only the run's user can turn down a secret request; every other card needs an answer.
   if (dismissed && (!secretAsk || run.userId !== input.answeredByUserId || input.answer))
@@ -996,7 +1068,11 @@ async function commitAnswerRunInput(
   });
   if (queued.count !== 1) return null;
 
-  const recordedAnswer = secretAsk ? "" : (selectedChoice?.id ?? approvalAnswer);
+  const recordedAnswer = secretAsk
+    ? ""
+    : cardSelection
+      ? cardSelectionAnswer(cardSelection)
+      : (selectedChoice?.id ?? approvalAnswer);
   const callId = callIdFromClientNonce(input.clientNonce);
   const recordsCallUtterance = Boolean(callId && !secretAsk);
 
@@ -1106,7 +1182,11 @@ async function commitAnswerRunInput(
         prompt: resumePrompt(
           { ...run, trigger: resumedTrigger },
           pendingAsk.text,
-          selectedChoice ? `Selected choice ${selectedChoice.id}: ${resumeLabel}` : input.answer,
+          cardSelection
+            ? cardSelectionPrompt(cardSelection, run.checkpoint)
+            : selectedChoice
+              ? `Selected choice ${selectedChoice.id}: ${resumeLabel}`
+              : input.answer,
         ),
       },
     });
@@ -1121,6 +1201,15 @@ async function commitAnswerRunInput(
           answer: recordedAnswer,
           ...(dismissed ? { dismissed: true as const } : {}),
           ...(input.remember === false ? { remembered: false as const } : {}),
+          ...(cardSelection
+            ? {
+                answers: cardSelection.chosen.map((action) => action.id),
+                ...(cardSelection.other ? { otherAnswer: cardSelection.other } : {}),
+                ...(cardSelection.edited !== undefined
+                  ? { editedPreview: cardSelection.edited }
+                  : {}),
+              }
+            : {}),
           ...(editedInstructions !== undefined && pendingAsk.instructionUpdate
             ? {
                 instructionUpdate: { ...pendingAsk.instructionUpdate, after: editedInstructions },

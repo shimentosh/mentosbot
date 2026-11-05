@@ -729,6 +729,21 @@ async function ensureRequestCards(
   ]);
   await bot([
     {
+      kind: "ask",
+      text: "Post this update?",
+      preview: "Status page is back.\nThanks for your patience this morning.",
+      previewLimit: 280,
+      status: "answered",
+      answer: "choice-1",
+      answers: ["choice-1"],
+      actions: [
+        { id: "choice-1", label: "Post" },
+        { id: "choice-2", label: "Not now" },
+      ],
+    },
+  ]);
+  await bot([
+    {
       kind: "choice",
       question: "Which tone should replies use?",
       options: [

@@ -7,6 +7,7 @@ import {
   isAllowedAttachmentMimeType,
   isAttachmentImageMimeType,
 } from "@rakazo/contracts";
+import { askChoiceAnswerText, askChoicePlainText, askChoiceSelection } from "./answerable-ask.js";
 
 export class AttachmentValidationError extends Error {
   constructor(message: string) {
@@ -186,9 +187,21 @@ export function blocksToAgentHistoryText(blocks: MessageBlock[]): string {
       }
       // Without the answer a later turn sees the question as still open and asks it again.
       if (block.kind === "ask") {
-        if (block.status !== "answered" || !block.answer) return block.text;
-        const choice = block.actions?.find((action) => action.id === block.answer);
-        return `${block.text}\nAnswer: ${choice?.label ?? block.answer}`;
+        const choiceAsk = Boolean(block.actions?.length) && !block.approvalEffectId;
+        // A pending question keeps its options, so a later reply naming one by number reads.
+        if (block.status !== "answered" || (!block.answer && !block.answers))
+          return choiceAsk ? askChoicePlainText(block) : block.text;
+        if (!choiceAsk) {
+          const choice = block.actions?.find((action) => action.id === block.answer);
+          return `${block.text}\nAnswer: ${choice?.label ?? block.answer}`;
+        }
+        const { edited } = askChoiceSelection(block);
+        return [
+          block.text,
+          ...(block.preview && edited === undefined ? [block.preview] : []),
+          `Answer: ${askChoiceAnswerText(block)}`,
+          ...(edited !== undefined ? [`Edited draft:\n${edited}`] : []),
+        ].join("\n");
       }
       // The bot needs the outcome of its own call: a missed call is its cue to follow up.
       if (block.kind === "call_request") {

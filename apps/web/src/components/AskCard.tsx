@@ -3,12 +3,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import type { LoginFieldInput, ThreadMessage } from "@rakazo/contracts";
 import { BOT_INSTRUCTIONS_MAX_LENGTH } from "@rakazo/contracts";
-import {
-  isApprovalAskBlock,
-  isSecretAskBlock,
-  resolveAskChoice,
-  selectedAskActionLabel,
-} from "@rakazo/core";
+import { isApprovalAskBlock, isSecretAskBlock, selectedAskActionLabel } from "@rakazo/core";
 import { Button, Input, Textarea } from "@rakazo/ui-web";
 import { Check } from "lucide-react";
 import { useState } from "react";
@@ -16,7 +11,7 @@ import type { RpcClient } from "../lib/rpc";
 import { rpc as selectedSpaceRpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
 import { BuiCard } from "./ai/primitives";
-import { OptionRow, optionLetter } from "./OptionRow";
+import { ChoiceAsk } from "./ChoiceAsk";
 import { SecretAskCard } from "./SecretAskCard";
 
 export type AskBlock = Extract<ThreadMessage["blocks"][number], { kind: "ask" }>;
@@ -102,8 +97,6 @@ function PromptAskCard({ block, canAnswer, onAnswer, rpc = selectedSpaceRpc }: A
     : askActions;
   const optionQuestion =
     !approvalActions && !block.instructionUpdate && Boolean(askActions?.length);
-  const chosenOption =
-    answered && displayedAnswer ? resolveAskChoice(displayedAnswer, askActions) : undefined;
   // An edited draft is shown in the user's words, so the card reads as answered. A typed reply to
   // options already shows as the user's message, so it only dims them.
   const typedAnswer =
@@ -226,20 +219,13 @@ function PromptAskCard({ block, canAnswer, onAnswer, rpc = selectedSpaceRpc }: A
           </Button>
         </form>
       ) : optionQuestion ? (
-        // Options stay in place once answered: the chosen one is marked, the rest dim.
-        <div className="mt-2.5 space-y-0.5">
-          {askActions?.map((action, index) => (
-            <OptionRow
-              key={action.id}
-              letter={optionLetter(index)}
-              selected={chosenOption?.id === action.id}
-              disabled={answered || !canAnswer || submitting}
-              onClick={() => void submitAnswer(action.id)}
-            >
-              {pendingAction === action.id ? <Trans>Sending…</Trans> : action.label}
-            </OptionRow>
-          ))}
-        </div>
+        <ChoiceAsk
+          block={block}
+          canAnswer={canAnswer}
+          acceptedAnswer={acceptedAnswer}
+          pendingAnswer={pendingAction}
+          onAnswer={(value) => void submitAnswer(value)}
+        />
       ) : typedAnswer ? (
         <blockquote
           data-testid="ask-answer"

@@ -698,6 +698,11 @@ export type AgentRuntimeEvent =
       text: string;
       detail?: string;
       actions?: Array<{ id: string; label: string }>;
+      /** The draft a choice question approves, shown quoted and editable. */
+      preview?: string;
+      previewLimit?: number;
+      multiple?: true;
+      other?: true;
     }
   | { type: "takeover"; reason: string; executionId?: string }
   | ({

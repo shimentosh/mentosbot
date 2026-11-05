@@ -5535,3 +5535,160 @@ it("checks cross-space peer permission inside the message transaction before cre
   expect(tx.task.create).not.toHaveBeenCalled();
   expect(tx.run.create).not.toHaveBeenCalled();
 });
+
+describe("choice card answers", () => {
+  const actions = [
+    { id: "choice-1", label: "Blog" },
+    { id: "choice-2", label: "Newsletter" },
+    { id: "choice-3", label: "Forum" },
+  ];
+
+  function answerChoiceCard(
+    card: Record<string, unknown>,
+    answer: string,
+    answeredByUserId = "user-1",
+  ) {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "thread-1" }]),
+      message: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: "message-1",
+          blocks: [{ kind: "ask", text: "Which?", status: "pending", actions, ...card }],
+        }),
+        update: vi.fn().mockResolvedValue({ id: "message-1" }),
+      },
+      run: {
+        findFirst: vi.fn().mockResolvedValue({ botId: "bot-2", userId: "user-1" }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn().mockResolvedValue({
+          status: "queued",
+          createdAt: new Date("2026-08-16T12:00:00.000Z"),
+          threadId: "thread-1",
+        }),
+      },
+      task: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      thread: { update: vi.fn().mockResolvedValue({ nextEventSeq: 14 }) },
+      event: {
+        create: vi.fn(async ({ data }: { data: { seq: number; type: string } }) => ({
+          ...event(data.seq),
+          type: data.type,
+        })),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)),
+    } as unknown as PrismaClient;
+    const answered = answerRunInput(
+      prisma,
+      {
+        spaceId: "workspace-1",
+        threadId: "thread-1",
+        runId: "run-1",
+        messageId: "message-1",
+        answeredByUserId,
+        answer,
+      },
+      new TestFanout(),
+    );
+    const prompt = () =>
+      (tx.task.updateMany.mock.calls[0]?.[0] as { data: { prompt: string } } | undefined)?.data
+        .prompt;
+    const saved = () =>
+      (
+        tx.message.update.mock.calls[0]?.[0] as
+          | { data: { blocks: Array<Record<string, unknown>> } }
+          | undefined
+      )?.data.blocks[0];
+    return { answered, prompt, saved, tx };
+  }
+
+  it("resumes with every option a multi-select answer chose", async () => {
+    const card = answerChoiceCard(
+      { multiple: true },
+      JSON.stringify({ choices: ["choice-1", "choice-3"] }),
+    );
+    await expect(card.answered).resolves.toBe(true);
+    expect(card.prompt()).toBe("Selected choices choice-1: Blog; choice-3: Forum");
+    expect(card.saved()).toMatchObject({
+      status: "answered",
+      answer: "Blog, Forum",
+      answers: ["choice-1", "choice-3"],
+    });
+  });
+
+  it("resumes with the person's own answer typed into the card", async () => {
+    const card = answerChoiceCard(
+      { other: true },
+      JSON.stringify({ choices: [], other: " Podcast " }),
+    );
+    await expect(card.answered).resolves.toBe(true);
+    expect(card.prompt()).toBe("Podcast");
+    expect(card.saved()).toMatchObject({ answer: "Podcast", answers: [], otherAnswer: "Podcast" });
+  });
+
+  it("tells the bot to use an edited draft exactly as written", async () => {
+    const card = answerChoiceCard(
+      { preview: "Hello", previewLimit: 20 },
+      JSON.stringify({ choices: ["choice-1"], edited: "Hello\nthere" }),
+    );
+    await expect(card.answered).resolves.toBe(true);
+    expect(card.prompt()).toBe(
+      "Selected choice choice-1: Blog\nThey edited the draft. Use exactly this text:\nHello\nthere",
+    );
+    expect(card.saved()).toMatchObject({
+      answer: "choice-1",
+      answers: ["choice-1"],
+      editedPreview: "Hello\nthere",
+    });
+  });
+
+  it("drops an edit that left the draft as it was", async () => {
+    const card = answerChoiceCard(
+      { preview: "Hello" },
+      JSON.stringify({ choices: ["choice-2"], edited: "Hello" }),
+      "user-2",
+    );
+    await expect(card.answered).resolves.toBe(true);
+    expect(card.prompt()).toBe("Selected choice choice-2: Newsletter");
+    expect(card.saved()).not.toHaveProperty("editedPreview");
+  });
+
+  it.each([
+    ["several options on a single-choice question", {}, { choices: ["choice-1", "choice-2"] }],
+    ["an option it did not offer", { multiple: true }, { choices: ["choice-9"] }],
+    ["the same option twice", { multiple: true }, { choices: ["choice-1", "choice-1"] }],
+    ["no choice at all", { multiple: true }, { choices: [] }],
+    ["an own answer it did not offer", {}, { choices: [], other: "Podcast" }],
+    ["an empty own answer", { other: true }, { choices: [], other: "  " }],
+    ["an over-long own answer", { other: true }, { choices: [], other: "x".repeat(501) }],
+    ["an option and an own answer at once", { other: true }, { choices: ["choice-1"], other: "B" }],
+    ["an edit with no draft", {}, { choices: ["choice-1"], edited: "Hi" }],
+    ["an empty edit", { preview: "Hi" }, { choices: ["choice-1"], edited: " " }],
+    [
+      "an edit over the draft's limit",
+      { preview: "Hi", previewLimit: 3 },
+      { choices: ["choice-1"], edited: "Hiya" },
+    ],
+    [
+      "an edit over the draft cap",
+      { preview: "Hi" },
+      { choices: ["choice-1"], edited: "x".repeat(4001) },
+    ],
+  ])("rejects %s without queueing the run", async (_name, ask, answer) => {
+    const card = answerChoiceCard(ask, JSON.stringify(answer));
+    await expect(card.answered).resolves.toBe(false);
+    expect(card.tx.run.updateMany).not.toHaveBeenCalled();
+    expect(card.tx.message.update).not.toHaveBeenCalled();
+  });
+
+  it("lets only the run's user send an edited draft", async () => {
+    const card = answerChoiceCard(
+      { preview: "Hello" },
+      JSON.stringify({ choices: ["choice-1"], edited: "Hello there" }),
+      "user-2",
+    );
+    await expect(card.answered).resolves.toBe(false);
+    expect(card.tx.run.updateMany).not.toHaveBeenCalled();
+  });
+});

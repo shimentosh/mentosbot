@@ -438,6 +438,8 @@ export const PL_MESSAGES: Record<string, string> = {
   "This removes every message and stops current work. The bot, computer, memory, and routines are kept.":
     "Wszystkie wiadomości zostaną usunięte, a bieżąca praca zatrzymana. Bot, komputer, pamięć i rutyny zostaną zachowane.",
   "Type your answer": "Wpisz odpowiedź",
+  Draft: "Szkic",
+  "Other…": "Inne…",
   Username: "Nazwa użytkownika",
   "Waiting for this bot’s response.": "Oczekiwanie na odpowiedź tego bota.",
   "Work stopped, but the thread could not refresh: {detail}":

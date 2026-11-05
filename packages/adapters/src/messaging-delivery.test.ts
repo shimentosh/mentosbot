@@ -275,6 +275,55 @@ describe("deliverMessagingOutbound", () => {
     });
   });
 
+  it("sends an open choice question as text with numbered options, but not an approval", async () => {
+    const deps = createDeps({
+      messages: [
+        {
+          id: "m-1",
+          blocks: [
+            { kind: "text", text: "Here's the draft." },
+            {
+              kind: "ask",
+              text: "Post this?",
+              preview: "Line one\nLine two",
+              previewLimit: 280,
+              status: "pending",
+              actions: [
+                { id: "choice-1", label: "Post" },
+                { id: "choice-2", label: "Not now" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "m-2",
+          blocks: [
+            {
+              kind: "ask",
+              text: "Run this command?",
+              approvalEffectId: "effect-1",
+              status: "pending",
+              actions: [
+                { id: "allow", label: "Allow once" },
+                { id: "deny", label: "Deny" },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    await deliverMessagingOutbound(deps, { runId: "run-1" }, context);
+
+    expect(deps.sendToThread).toHaveBeenCalledTimes(1);
+    expect(deps.sendToThread).toHaveBeenCalledWith(
+      {
+        threadId: "sendblue:dm-1",
+        body: "Here's the draft.\nPost this?\n\nLine one\nLine two\n\n1. Post\n2. Not now",
+      },
+      context,
+    );
+  });
+
   it("sends a page the bot named as its title, never as an app-only page link", async () => {
     const deps = createDeps({
       messages: [

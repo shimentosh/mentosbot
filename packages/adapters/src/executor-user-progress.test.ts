@@ -872,6 +872,36 @@ describe("text written before a question", () => {
     expect(finalizeRun).not.toHaveBeenCalled();
   });
 
+  it("puts a draft on the question card with secrets redacted, and its choice flags", async () => {
+    const { pauseRunForInput } = await runTurn("", false, "", ["fake-secret-value"], "fyi", {
+      runtimeEvents: [
+        { type: "tool", name: "ask_user", args: {}, executionId: "ask-1" },
+        {
+          type: "ask",
+          text: "Post this?",
+          actions: [{ id: "choice-1", label: "Post" }],
+          preview: "Key fake-secret-value\nis live",
+          previewLimit: 280,
+          multiple: true,
+          other: true,
+        },
+      ],
+    });
+    expect(pauseRunForInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blocks: [
+          expect.objectContaining({
+            kind: "ask",
+            preview: "Key [redacted]\nis live",
+            previewLimit: 280,
+            multiple: true,
+            other: true,
+          }),
+        ],
+      }),
+    );
+  });
+
   it("brings back the notes held on earlier steps, in order", async () => {
     const { messages } = await runTurn("", false, undefined, [], "fyi", {
       runtimeEvents: [

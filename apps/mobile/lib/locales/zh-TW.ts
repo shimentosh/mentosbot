@@ -751,6 +751,8 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Try again.": "請重試。",
   "Treg token": "Treg 權杖",
   "Type your answer": "輸入你的回答",
+  Draft: "草稿",
+  "Other…": "其他…",
   Pinned: "置頂",
   Unassigned: "未分組",
   Unpin: "取消置頂",

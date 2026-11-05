@@ -71,3 +71,56 @@ export function resolveAskChoice(
   const lower = trimmed.toLowerCase();
   return actions.find((action) => action.label.trim().toLowerCase() === lower);
 }
+
+type ChoiceAction = { id: string; label: string };
+
+type ChoiceAskBlock = {
+  text: string;
+  answer?: string;
+  answers?: readonly string[];
+  otherAnswer?: string;
+  editedPreview?: string;
+  preview?: string;
+  actions?: readonly ChoiceAction[];
+};
+
+/** What an answered choice question chose: its options, the person's own answer, the edited draft. */
+export function askChoiceSelection(block: ChoiceAskBlock): {
+  chosen: ChoiceAction[];
+  other?: string;
+  edited?: string;
+} {
+  if (block.answers) {
+    return {
+      chosen: block.answers.flatMap(
+        (id) => block.actions?.find((action) => action.id === id) ?? [],
+      ),
+      ...(block.otherAnswer !== undefined ? { other: block.otherAnswer } : {}),
+      ...(block.editedPreview !== undefined ? { edited: block.editedPreview } : {}),
+    };
+  }
+  const chosen = block.answer ? resolveAskChoice(block.answer, block.actions) : undefined;
+  return { chosen: chosen ? [chosen] : [] };
+}
+
+/** An answered choice question in one line: the chosen labels, then the person's own answer. */
+export function askChoiceAnswerText(block: ChoiceAskBlock): string | undefined {
+  if (!block.answer && !block.answers) return undefined;
+  const { chosen, other } = askChoiceSelection(block);
+  const parts = [...chosen.map((action) => action.label), ...(other ? [other] : [])];
+  return parts.length ? parts.join(", ") : block.answer;
+}
+
+/**
+ * A choice question where only text travels: the question, its draft, and numbered options a reply
+ * can name.
+ */
+export function askChoicePlainText(block: ChoiceAskBlock): string {
+  return [
+    block.text.trim(),
+    block.preview?.trim(),
+    block.actions?.map((action, index) => `${index + 1}. ${action.label}`).join("\n"),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}

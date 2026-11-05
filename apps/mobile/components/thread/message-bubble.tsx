@@ -38,6 +38,7 @@ import { AppConnectCard } from "../AppConnectCard";
 import { AskActions } from "../AskActions";
 import { AudioAttachment } from "../audio-attachment";
 import { MessageMentions } from "../bot-mention";
+import { ChoiceAskActions, isRichChoiceAsk } from "../ChoiceAskActions";
 import { ChoiceCard } from "../ChoiceCard";
 import { ComputerCard } from "../ComputerCard";
 import { ChangeUndo, isUndoableChange } from "../change-undo";
@@ -423,7 +424,15 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                   {askBlock.detail}
                 </Text>
               ) : null}
-              {askBlock.status === "answered" ? (
+              {isRichChoiceAsk(askBlock) && !isApprovalAskBlock(askBlock) ? (
+                <ChoiceAskActions
+                  block={askBlock}
+                  canAnswer={canAnswer}
+                  accessibilityActions={actionProps.accessibilityActions}
+                  onAccessibilityAction={actionProps.onAccessibilityAction}
+                  onAnswer={(answer) => onAnswer(message, answer)}
+                />
+              ) : askBlock.status === "answered" ? (
                 <Text
                   {...actionProps}
                   style={{

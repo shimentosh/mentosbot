@@ -827,6 +827,7 @@ msgid "Another assistant"
 msgstr "Otro asistente"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answer"
 msgstr "Responder"
 
@@ -836,6 +837,7 @@ msgid "Answer"
 msgstr "Contestar"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Answered"
 msgstr "Respondido"
 
@@ -2936,6 +2938,7 @@ msgid "Don’t have an account?"
 msgstr "¿No tienes una cuenta?"
 
 #: src/components/AccountDataSettings.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/ticket-status.ts
 #: src/pages/ActivityList.tsx
@@ -2975,6 +2978,10 @@ msgstr "Descargar PDF"
 msgid "Downloading…"
 msgstr "Descargando…"
 
+#: src/components/ChoiceAsk.tsx
+msgid "Draft"
+msgstr "Borrador"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Draft skill"
 msgstr "Habilidad en borrador"
@@ -2992,6 +2999,7 @@ msgid "Each name can be used once."
 msgstr "Cada nombre solo se puede usar una vez."
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -4707,7 +4715,6 @@ msgstr "No está en el catálogo de Rakazo"
 msgid "Not in the plugin catalog"
 msgstr "No está en el catálogo de plugins"
 
-#: src/components/GitHubStarPrompt.tsx
 #: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
@@ -4940,6 +4947,10 @@ msgstr "Mensaje original no disponible"
 #: src/pages/model-settings/compatible-model-fields.tsx
 msgid "Other model…"
 msgstr "Otro modelo…"
+
+#: src/components/ChoiceAsk.tsx
+msgid "Other…"
+msgstr "Otro…"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Output"
@@ -6004,6 +6015,7 @@ msgstr "Selecciona un bot"
 msgid "Self-hosted"
 msgstr "Autoalojado"
 
+#: src/components/ChoiceAsk.tsx
 #: src/pages/shell/composer.tsx
 msgid "Send"
 msgstr "Enviar"
@@ -6053,6 +6065,7 @@ msgid "Send your computers' browsers through a network of your own."
 msgstr ""
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Sending…"
@@ -7076,6 +7089,7 @@ msgid "Type without recording"
 msgstr "Escribir sin grabar"
 
 #: src/components/AskCard.tsx
+#: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "Escribe tu respuesta"
 
