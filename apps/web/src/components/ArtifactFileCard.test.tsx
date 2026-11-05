@@ -244,3 +244,60 @@ it("previews plain text in the app instead of only offering a download", async (
     ),
   );
 });
+
+it("plays a video inside the message, loading it only when asked", async () => {
+  await act(async () =>
+    root?.render(
+      <ArtifactFileCard
+        target={{ botId: "bot-1" }}
+        artifactId="reel-1"
+        name="reel.mp4"
+        mimeType="video/mp4"
+        size={3}
+      />,
+    ),
+  );
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(container.querySelector("video")).toBeNull();
+  expect(container.textContent).toContain("reel.mp4");
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('button[aria-label="Download reel.mp4"]')?.click(),
+  );
+  expect(mocks.download).toHaveBeenCalledWith(
+    { botId: "bot-1" },
+    "reel-1",
+    "reel.mp4",
+    "video/mp4",
+  );
+  expect(mocks.fetch).not.toHaveBeenCalled();
+
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('button[aria-label="Play reel.mp4"]')?.click(),
+  );
+  const video = container.querySelector("video");
+  expect(mocks.fetch).toHaveBeenCalledExactlyOnceWith({ botId: "bot-1" }, "reel-1");
+  expect(video?.getAttribute("src")).toBe("blob:audio-preview");
+  expect(video?.hasAttribute("controls")).toBe(true);
+  expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+  expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+});
+
+it("says when a video cannot be loaded", async () => {
+  mocks.fetch.mockRejectedValueOnce(new Error("gone"));
+  await act(async () =>
+    root?.render(
+      <ArtifactFileCard
+        target={{ botId: "bot-1" }}
+        artifactId="reel-1"
+        name="reel.mp4"
+        mimeType="video/mp4"
+        size={3}
+      />,
+    ),
+  );
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('button[aria-label="Play reel.mp4"]')?.click(),
+  );
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain("Could not load");
+  expect(container.querySelector("video")).toBeNull();
+});
