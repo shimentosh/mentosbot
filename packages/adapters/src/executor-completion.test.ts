@@ -137,6 +137,13 @@ describe("completionNotificationPreview", () => {
     expect(preview.startsWith("word word")).toBe(true);
     expect(completionNotificationPreview("**  **")).toBe("");
   });
+
+  it("leads with the status card the run showed", () => {
+    expect(completionNotificationPreview("Done.", "✓ Post published")).toBe(
+      "✓ Post published · Done.",
+    );
+    expect(completionNotificationPreview("", "✓ Post published")).toBe("✓ Post published");
+  });
 });
 
 describe("secretAskNotification", () => {

@@ -47,6 +47,7 @@ describe("built-in tool bridge", () => {
       "schedule_list",
       "search_history",
       "shell",
+      "show_card",
       "skill_read",
       "update_bot",
       "update_preferences",
@@ -55,8 +56,9 @@ describe("built-in tool bridge", () => {
       "web_search",
       "write_file",
     ]);
-    // request_secret carries the card and contact kinds; update_bot carries instructions paging.
-    expect(definitionBytes(listed)).toBeLessThanOrEqual(31_878);
+    // request_secret carries the card and contact kinds; update_bot carries instructions paging;
+    // show_card stays listed so receipts follow outward actions without a find_tool step.
+    expect(definitionBytes(listed)).toBeLessThanOrEqual(33_226);
     expect(deferred.map((tool) => tool.name)).toEqual(
       expect.arrayContaining(["render_plot", "create_space", "generate_secret", "scratchpad_add"]),
     );

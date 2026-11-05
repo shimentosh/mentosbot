@@ -51,6 +51,7 @@ import { PeerReceiptLine } from "../peer-receipt-line";
 import { AskBlock } from "./ask-block";
 import type { MessageRowActions } from "./message-row";
 import { isSpecialMessageBlock, SpecialMessageCard } from "./special-message-card";
+import { StatusCard } from "./status-card";
 
 type AskAction = NonNullable<Extract<MessageBlock, { kind: "ask" }>["actions"]>[number];
 
@@ -132,7 +133,7 @@ function MessageBubbleWithMentions({
 
 /** Blocks drawn as their own card between the message's text pieces. */
 function isOwnCardBlock(block: MessageBlock): boolean {
-  return isSpecialMessageBlock(block) || block.kind === "page";
+  return isSpecialMessageBlock(block) || block.kind === "page" || block.kind === "card";
 }
 
 function MessageBubbleBody(props: ComponentProps<typeof MessageBubbleContent>) {
@@ -152,6 +153,8 @@ function MessageBubbleBody(props: ComponentProps<typeof MessageBubbleContent>) {
     const first = blocks[0]!;
     if (first.kind === "page")
       return <PageCard key={`page-${index}`} block={first} messageId={message.id} />;
+    if (first.kind === "card")
+      return <StatusCard key={`card-${index}`} block={first} actionProps={props.actionProps} />;
     return isSpecialMessageBlock(first) ? (
       <SpecialMessageCard
         key={first.kind === "subagent" ? first.agentId : `${first.kind}-${index}`}

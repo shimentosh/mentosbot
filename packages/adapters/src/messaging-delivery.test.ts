@@ -344,6 +344,31 @@ describe("deliverMessagingOutbound", () => {
     expect(sentBodies(both)).toEqual(["Open Plan, or write `[Plan](page:cm123)`."]);
   });
 
+  it("sends a status card as plain text with its link", async () => {
+    const deps = createDeps({
+      messages: [
+        {
+          id: "m-1",
+          blocks: [
+            {
+              kind: "card",
+              title: "Post published",
+              status: "done",
+              lines: [{ k: "Account", v: "@handle" }],
+              links: [{ label: "View post", url: "https://social.example.test/p/1" }],
+            },
+          ],
+        },
+        { id: "m-2", blocks: [{ kind: "text", text: "Done." }] },
+      ],
+    });
+    await deliverMessagingOutbound(deps, { runId: "run-1" }, context);
+    expect(sentBodies(deps)).toEqual([
+      "✓ Post published\nAccount: @handle\nhttps://social.example.test/p/1",
+      "Done.",
+    ]);
+  });
+
   it("resolves the DM thread once and caches it when the identity has none", async () => {
     const deps = createDeps({
       identity: { dmThreadId: null },

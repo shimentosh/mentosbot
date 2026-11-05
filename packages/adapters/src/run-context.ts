@@ -126,6 +126,8 @@ export interface ReplyState {
   assistantTurnBreakPending: boolean;
   /** Replaced whenever a secret is added, so streamed progress hides it too. */
   redactor: ReturnType<typeof createStreamingRedactor>;
+  /** The last status card this run showed, as its preview line; it leads the finish notification. */
+  cardPreview: string;
 }
 
 export interface ApprovalState {

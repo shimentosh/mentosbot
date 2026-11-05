@@ -2,6 +2,7 @@ import type { MessageBlock } from "@rakazo/contracts";
 import {
   appendTextSegment,
   appendToolCallSegment,
+  cardPreviewText,
   createStreamingRedactor,
   endsSentence,
   isBackgroundRunTrigger,
@@ -63,6 +64,7 @@ export async function createReplyState(
     hasStreamedText: false,
     assistantTurnBreakPending: false,
     redactor: createStreamingRedactor(secrets),
+    cardPreview: "",
   };
   const priorProgress = await deps.prisma.message.findMany({
     where: { runId: run.id, role: "bot" },
@@ -70,8 +72,10 @@ export async function createReplyState(
     select: { blocks: true, clientNonce: true },
   });
   for (const message of priorProgress) {
-    if (!isUserProgressClientNonce(message.clientNonce)) continue;
     const blocks = Array.isArray(message.blocks) ? (message.blocks as MessageBlock[]) : [];
+    const card = blocks.findLast((block) => block.kind === "card");
+    if (card) reply.cardPreview = cardPreviewText(card);
+    if (!isUserProgressClientNonce(message.clientNonce)) continue;
     const text = blocks
       .filter((block): block is Extract<MessageBlock, { kind: "text" }> => block.kind === "text")
       .map((block) => block.text)

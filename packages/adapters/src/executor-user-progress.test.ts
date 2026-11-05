@@ -1897,3 +1897,53 @@ describe("a group member the message named nobody for", () => {
     expect(result.finalizeRun).toHaveBeenCalledWith(expect.objectContaining({ markUnread: true }));
   });
 });
+
+describe("a status card", () => {
+  const receipt = {
+    title: "Post published",
+    fields: [{ label: "Account", value: "@handle" }],
+    links: [{ label: "View post", url: "https://social.example.test/p/1" }],
+  };
+
+  it("posts the card as its own message and keeps the reply after it", async () => {
+    const { messages, finalizeRun } = await runTurn("", false, undefined, [], "fyi", {
+      executeTools: true,
+      runtimeEvents: [
+        { type: "tool", name: "show_card", args: receipt, executionId: "call-1" },
+        { type: "text", text: "Done." },
+        { type: "done", text: "" },
+      ],
+    });
+    expect(messages.map((message) => message.blocks)).toEqual([
+      [
+        {
+          kind: "card",
+          title: "Post published",
+          status: "done",
+          lines: [{ k: "Account", v: "@handle" }],
+          links: [{ label: "View post", url: "https://social.example.test/p/1" }],
+        },
+      ],
+    ]);
+    expect(finalizeRun.mock.calls[0]![0].blocks.filter((block) => block.kind === "text")).toEqual([
+      { kind: "text", text: "Done." },
+    ]);
+  });
+
+  it("posts nothing for a card with a link it cannot open", async () => {
+    const { messages } = await runTurn("", false, undefined, [], "fyi", {
+      executeTools: true,
+      runtimeEvents: [
+        {
+          type: "tool",
+          name: "show_card",
+          args: { ...receipt, links: [{ label: "Open", url: "javascript:alert(1)" }] },
+          executionId: "call-1",
+        },
+        { type: "text", text: "Done." },
+        { type: "done", text: "" },
+      ],
+    });
+    expect(messages).toEqual([]);
+  });
+});

@@ -1,4 +1,4 @@
-import { isBackgroundRunTrigger, redactSecrets } from "@rakazo/core";
+import { cardPreviewText, isBackgroundRunTrigger, redactSecrets } from "@rakazo/core";
 import {
   connectAgent,
   messageConnectedAgent,
@@ -18,6 +18,7 @@ import {
   showNarrationStatus,
 } from "./run-progress.js";
 import type { ToolHandlers } from "./run-tool-gate.js";
+import { showCardBlock } from "./show-card.js";
 import {
   clampUserProgressMessage,
   isProgressMessageTruncated,
@@ -108,6 +109,13 @@ export const messagingTools: ToolHandlers = {
           }
         : { ok: true },
     );
+  },
+  async show_card(ctx, call) {
+    const card = showCardBlock(call.args, ctx.secrets);
+    if ("error" in card) return call.finish({ error: card.error });
+    await publishMessage(ctx.deps, ctx.run, "bot", [card.block]);
+    ctx.state.reply.cardPreview = cardPreviewText(card.block);
+    return call.finish({ ok: true, note: "The card is in the chat. Do not repeat its contents." });
   },
   async message_bot(ctx, call) {
     const { deps, run, bot } = ctx;

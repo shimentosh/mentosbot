@@ -195,6 +195,7 @@ export function describeToolActivity(toolName: string, args: unknown): string {
   if (toolName === "attach_file") return `Attaching ${detail(record.path)}`;
   if (toolName === "open_path") return `Opening ${detail(record.path)}`;
   if (toolName === "render_plot") return "Rendering a chart";
+  if (toolName === "show_card") return "Showing a card";
   if (toolName === "save_page") {
     return record.help === true ? "Reading the page kit reference" : "Writing the page code";
   }

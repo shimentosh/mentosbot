@@ -8,7 +8,13 @@ import type {
 } from "@rakazo/adapter-kit";
 import { messagingDeliverJob, runContinueJob } from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
-import { botMessageHopExhausted, nextBotMessageHop, pageLinksAsTitles } from "@rakazo/core";
+import { CardBlock } from "@rakazo/contracts";
+import {
+  botMessageHopExhausted,
+  cardPlainText,
+  nextBotMessageHop,
+  pageLinksAsTitles,
+} from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
 import {
   appendEventInTransaction,
@@ -756,7 +762,7 @@ function linkedPageIds(messages: readonly { blocks: unknown }[]): Set<string> {
 
 /**
  * The text other channels get. A page card cannot travel, so a page the reply does not name goes
- * as its title.
+ * as its title; a status card goes as its lines and links.
  */
 function extractText(blocks: unknown, linkedPages: ReadonlySet<string>): string {
   if (!Array.isArray(blocks)) return "";
@@ -765,6 +771,8 @@ function extractText(blocks: unknown, linkedPages: ReadonlySet<string>): string 
       (block: { kind?: unknown; text?: unknown; pageId?: unknown; title?: unknown } | null) => {
         if (block?.kind === "text" && typeof block.text === "string")
           return [pageLinksAsTitles(block.text)];
+        const card = CardBlock.safeParse(block);
+        if (card.success) return [cardPlainText(card.data)];
         if (
           block?.kind === "page" &&
           typeof block.title === "string" &&

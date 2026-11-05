@@ -15,6 +15,7 @@ import {
   PURCHASE_CARD_FIELDS,
   SecretAskPurpose,
   SecretHttpRequest,
+  ShowCardInput,
   ThinkingLevelSchema,
   TICKET_COMMENT_MAX_LENGTH,
   TICKET_DESCRIPTION_MAX_LENGTH,
@@ -621,6 +622,12 @@ export const builtinAgentTools: ConnectorTool[] = [
         required: ["message"],
       };
     },
+  },
+  {
+    name: "show_card",
+    description:
+      "Show a compact card in this chat. After an outward action succeeds (post published, email sent, sheet created, meeting booked), show a receipt with the link to the result; also for a short status. When the card says it all, keep your reply to a few words.",
+    inputSchema: z.toJSONSchema(ShowCardInput, { io: "input" }),
   },
   {
     name: "request_secret",

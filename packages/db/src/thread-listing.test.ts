@@ -21,6 +21,20 @@ describe("previewFromBlocks", () => {
     ).toBe("Created Projects-CoS as a Project");
   });
 
+  it("shows a card as its status and title", () => {
+    expect(
+      previewFromBlocks([
+        { kind: "card", title: "Post published", lines: [{ k: "Account", v: "@handle" }] },
+      ]),
+    ).toBe("✓ Post published");
+    expect(
+      previewFromBlocks([{ kind: "card", title: "Email not sent", status: "failed", lines: [] }]),
+    ).toBe("✕ Email not sent");
+    expect(previewFromBlocks([{ kind: "card", lines: [{ k: "Due", v: "Monday" }] }])).toBe(
+      "Due: Monday",
+    );
+  });
+
   it("returns empty when there is no text block", () => {
     expect(previewFromBlocks([{ kind: "steps", steps: [] }])).toBe("");
     expect(previewFromBlocks(undefined)).toBe("");

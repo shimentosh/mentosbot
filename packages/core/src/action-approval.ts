@@ -250,6 +250,7 @@ const OWN_STATE_RESULT_TOOLS = new Set([
   "scratchpad_remove",
   "scratchpad_update",
   "search_history",
+  "show_card",
   "skill_read",
   "task_catalog",
   "update_preferences",

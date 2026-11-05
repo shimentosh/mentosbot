@@ -17,6 +17,7 @@ import { AskCard } from "../../components/AskCard";
 import { CollaborationMarker } from "../../components/ai/CollaborationMarker";
 import { CloudAgentCard } from "../../components/CloudAgentCard";
 import { PageBlockCard } from "../../components/pages/PageBlockCard";
+import { StatusCard } from "../../components/StatusCard";
 import { SubagentCard } from "../../components/SubagentCard";
 import {
   LIVE_TOOL_STEP_WINDOW,
@@ -586,6 +587,13 @@ export const MessageView = memo(function MessageView({
             );
           }
           if (block.kind === "card") {
+            if (block.title) {
+              return (
+                <div key={i} className="flex justify-start">
+                  <StatusCard block={{ ...block, title: block.title }} />
+                </div>
+              );
+            }
             return (
               <div key={i} className="flex justify-start">
                 <div className="flex flex-col gap-2 rounded-[20px] bg-muted px-5 py-4">

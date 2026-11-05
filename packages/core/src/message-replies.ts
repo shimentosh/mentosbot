@@ -2,6 +2,7 @@ import type { MessageBlock, ReplyPreview } from "@rakazo/contracts";
 import { ReplyPreviewSchema } from "@rakazo/contracts";
 import { displayName } from "./display-name.js";
 import { plainTextFromMarkdown } from "./markdown-plain.js";
+import { cardPreviewText } from "./status-card.js";
 
 type ReplyMetadata = {
   replyToMessageId?: string;
@@ -82,6 +83,7 @@ export function previewMessageText(
   const text = message.blocks
     .map((block) => {
       if (block.kind === "channel_message") return block.text;
+      if (block.kind === "card") return cardPreviewText(block);
       if (block.kind === "text") {
         // Bot text is Markdown; user text is already plain.
         return message.role === "bot" ? plainTextFromMarkdown(block.text) : block.text;

@@ -96,6 +96,7 @@ export * from "./self-update.js";
 export * from "./signup-policy.js";
 export * from "./speech-locale.js";
 export * from "./speech-text.js";
+export * from "./status-card.js";
 export * from "./stuck-work.js";
 export * from "./teach-playbook.js";
 export * from "./teach-recording.js";

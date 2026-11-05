@@ -181,9 +181,15 @@ export function completionNotificationBody(assembled: string, blocks: MessageBlo
     .join("");
 }
 
-/** Push body: Markdown stripped, then truncated so a cut cannot land inside a marker. */
-export function completionNotificationPreview(text: string): string {
-  return truncatedPlainText(text, COMPLETION_NOTIFICATION_MAX_CHARS);
+/**
+ * Push body: Markdown stripped, then truncated so a cut cannot land inside a marker. A status card
+ * the run showed leads, since it names what was done.
+ */
+export function completionNotificationPreview(text: string, cardPreview = ""): string {
+  return truncatedPlainText(
+    [cardPreview, text].filter(Boolean).join(" · "),
+    COMPLETION_NOTIFICATION_MAX_CHARS,
+  );
 }
 
 /** A secret card can ask for a code or a login, so the title stays generic and the label short. */

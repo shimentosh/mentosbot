@@ -4,6 +4,7 @@ import { botSecretDestinationSchema, LoginFieldLabels, OneTimeCodeTarget } from 
 import { Id, ThinkingLevelSchema } from "./ids.js";
 import { McpTransportSchema } from "./mcp.js";
 import { PAGE_TITLE_MAX_LENGTH } from "./pages.js";
+import { CardBlock } from "./status-card.js";
 
 export const ProductEventType = z.enum([
   "thread.message.created",
@@ -107,10 +108,7 @@ export type BotSettingsValues = z.infer<typeof BotSettingsValuesSchema>;
 
 export const MessageBlock = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("text"), text: z.string() }),
-  z.object({
-    kind: z.literal("card"),
-    lines: z.array(z.object({ k: z.string(), v: z.string() })),
-  }),
+  CardBlock,
   z.object({
     kind: z.literal("ask"),
     text: z.string(),

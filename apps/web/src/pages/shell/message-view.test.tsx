@@ -315,3 +315,52 @@ it("sends a settings Undo through the chat's space client", async () => {
   await act(async () => undo?.click());
   expect(spaceRpc.bots.update).toHaveBeenCalledTimes(1);
 });
+
+it("draws a card without a title the way it always has", () => {
+  renderView("bot", [{ kind: "card", lines: [{ k: "Report", v: "Q3 summary" }] }]);
+  expect(container.querySelector('[data-testid="status-card"]')).toBeNull();
+  expect(container.textContent).toContain("✓Report→Q3 summary");
+});
+
+it("draws a status card with its facts and only safe links", () => {
+  renderView("bot", [
+    {
+      kind: "card",
+      title: "Post published",
+      lines: [
+        { k: "Account", v: "@handle" },
+        { k: "Time", v: "3:27 AM" },
+      ],
+      links: [{ label: "View post", url: "https://social.example.test/p/1" }],
+    },
+  ]);
+  const card = container.querySelector('[data-testid="status-card"]')!;
+  expect(card.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe("Done");
+  expect(card.textContent).toContain("Post published");
+  expect([...card.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+    "Account",
+    "Time",
+  ]);
+  expect([...card.querySelectorAll("dd")].map((value) => value.textContent)).toEqual([
+    "@handle",
+    "3:27 AM",
+  ]);
+  const link = card.querySelector("a")!;
+  expect(link.textContent).toBe("View post");
+  expect(link.getAttribute("href")).toBe("https://social.example.test/p/1");
+  expect(link.getAttribute("target")).toBe("_blank");
+
+  renderView("bot", [
+    {
+      kind: "card",
+      title: "Email not sent",
+      status: "failed",
+      lines: [],
+      links: [{ label: "Open", url: "javascript:alert(1)" }],
+    },
+  ]);
+  const failed = container.querySelector('[data-testid="status-card"]')!;
+  expect(failed.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe("Failed");
+  expect(failed.querySelector("a")).toBeNull();
+  expect(failed.querySelector("dl")).toBeNull();
+});
