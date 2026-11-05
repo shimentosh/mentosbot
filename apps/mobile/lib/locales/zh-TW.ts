@@ -1361,6 +1361,10 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Needs you on the screen": "需要你操作螢幕",
   "Needs your approval": "需要你的核准",
   "You're all caught up": "都看完了",
+  Everyone: "所有人",
+  "No bots yet": "還沒有機器人",
+  "Show bots of": "顯示誰的機器人",
+  "Show earlier": "顯示更早的訊息",
 };
 
 export const PEER_MESSAGE_FORMS = { other: "與{peer}的 {count} 則訊息" };

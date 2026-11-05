@@ -111,6 +111,11 @@ msgstr "{0} ГБ"
 msgid "{0} handling"
 msgstr "Обработка {0}"
 
+#. placeholder {0}: invitation.data.inviterName
+#: src/pages/InvitePage.tsx
+msgid "{0} invited you."
+msgstr ""
+
 #. placeholder {0}: bot.name
 #: src/components/call/IncomingCall.tsx
 msgid "{0} is calling you"
@@ -456,6 +461,11 @@ msgstr ""
 msgid "About {label}"
 msgstr "О настройке «{label}»"
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Access for {0}"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Access key ID"
 msgstr ""
@@ -662,6 +672,10 @@ msgstr ""
 
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Address line 2"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Admin"
 msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
@@ -1132,6 +1146,7 @@ msgid "Bot models"
 msgstr ""
 
 #: src/pages/shell/computer-overlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Bot screen"
 msgstr "Экран бота"
 
@@ -1205,6 +1220,14 @@ msgstr "Вызов…"
 msgid "Calls"
 msgstr "Вызовы"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can chat"
+msgstr ""
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "Can manage"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
 msgstr "Можно смотреть без входа"
@@ -1240,6 +1263,7 @@ msgstr "Не может читать изображения"
 #: src/pages/shell/create-bot-dialog.tsx
 #: src/pages/shell/dialogs.tsx
 #: src/pages/SpaceSettingOverrides.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Cancel"
 msgstr "Отмена"
 
@@ -1471,6 +1495,7 @@ msgstr "Очистка…"
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 #: src/pages/shell/chat-find-bar.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "Закрыть"
@@ -1872,6 +1897,7 @@ msgstr "Копировать источник диаграммы"
 #: src/components/InviteDialog.tsx
 #: src/components/pages/PublicPageShell.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Copy link"
 msgstr "Копировать ссылку"
 
@@ -2161,6 +2187,7 @@ msgid "Could not load this artifact."
 msgstr ""
 
 #: src/pages/PeerMessagesOverlay.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Could not load this chat."
 msgstr "Не удалось загрузить этот чат."
 
@@ -2956,6 +2983,7 @@ msgstr "Редактировать профиль"
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Email"
 msgstr "Электронная почта"
 
@@ -3094,6 +3122,10 @@ msgstr "Каждый месяц"
 #: src/pages/RoutineSchedule.tsx
 msgid "Every week"
 msgstr "Каждую неделю"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Everyone"
+msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Executor token"
@@ -3350,6 +3382,7 @@ msgstr "Git-событие"
 msgid "Give a friend {weeks} weeks free"
 msgstr "Подарите другу {weeks} недели бесплатно"
 
+#: src/pages/InvitePage.tsx
 #: src/pages/NotFound.tsx
 msgid "Go home"
 msgstr "На главную"
@@ -3652,6 +3685,10 @@ msgstr "Единица интервала"
 msgid "Invalid code"
 msgstr "Неверный код"
 
+#: src/pages/TeamMembersSettings.tsx
+msgid "Invite"
+msgstr ""
+
 #: src/pages/shell/chat-header.tsx
 msgid "Invite a friend"
 msgstr "Пригласить друга"
@@ -3663,6 +3700,18 @@ msgstr "Пригласить друзей"
 #: src/components/InviteDialog.tsx
 msgid "Invite link"
 msgstr "Ссылка-приглашение"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Invite to team"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Invited"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Inviting…"
+msgstr ""
 
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -3677,6 +3726,10 @@ msgstr ""
 msgid "It may have been deleted, or it belongs to someone else."
 msgstr "Возможно, она удалена или принадлежит другому человеку."
 
+#: src/pages/InvitePage.tsx
+msgid "It may have expired, or it was sent to another email address. Ask for a new one."
+msgstr ""
+
 #: src/pages/shell/shell-dialogs.tsx
 msgid "Its bots and groups are kept and leave the section."
 msgstr "Боты и группы из него сохранятся и выйдут из раздела."
@@ -3688,6 +3741,19 @@ msgstr "Его диалог, файлы и задачи будут безвоз�
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "Общая ссылка перестанет работать, а карточки в чате будут показаны как удалённые. Это нельзя отменить."
+
+#. placeholder {0}: invitation.data.organizationName
+#: src/pages/InvitePage.tsx
+msgid "Join {0}"
+msgstr ""
+
+#: src/pages/InvitePage.tsx
+msgid "Join team"
+msgstr ""
+
+#: src/pages/InvitePage.tsx
+msgid "Joining…"
+msgstr ""
 
 #: src/pages/shell/transcript.tsx
 msgid "Jump to latest"
@@ -3746,8 +3812,17 @@ msgid "Later"
 msgstr "Позже"
 
 #: src/pages/MessagingSettingsPanel.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Leave"
 msgstr "Выйти"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Leave team"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Leave this team?"
+msgstr ""
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Let bots use this computer"
@@ -3845,6 +3920,7 @@ msgstr "Загрузка поставщиков голосовой связи…
 #: src/pages/PeerMessagesOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/RoutineRunHistory.tsx
+#: src/pages/shell/team-bots.tsx
 #: src/pages/shell/transcript.tsx
 msgid "Loading…"
 msgstr "Загрузка…"
@@ -3889,6 +3965,14 @@ msgstr "Низкий"
 msgid "Main model"
 msgstr "Основная модель"
 
+#: src/pages/TeamMembersSettings.tsx
+msgid "Make admin"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Make member"
+msgstr ""
+
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "Manage"
@@ -3900,6 +3984,10 @@ msgstr "Управлять"
 #: src/pages/SettingsOverlay.tsx
 msgid "Manage {0}"
 msgstr "Управление {0}"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Manage {shown}"
+msgstr ""
 
 #: src/components/ModelCredits.tsx
 #: src/pages/Paywall.tsx
@@ -3991,8 +4079,13 @@ msgid "Medium"
 msgstr "Средний"
 
 #: src/lib/identity-display.ts
+#: src/pages/TeamMembersSettings.tsx
 msgid "Member"
 msgstr "Участник"
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Members"
+msgstr ""
 
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
@@ -4466,6 +4559,10 @@ msgstr ""
 msgid "No messages with {peerBotName} yet."
 msgstr "Сообщений с {peerBotName} пока нет."
 
+#: src/pages/shell/team-bots.tsx
+msgid "No messages yet."
+msgstr ""
+
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "No model catalog is available."
 msgstr "Каталога моделей нет."
@@ -4559,6 +4656,7 @@ msgid "Not in the plugin catalog"
 msgstr "Нет в каталоге плагинов"
 
 #: src/components/GitHubStarPrompt.tsx
+#: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Не сейчас"
@@ -4793,6 +4891,7 @@ msgstr "Вывод"
 #: src/components/pages/SharePopover.tsx
 #: src/lib/identity-display.ts
 #: src/pages/Board.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Owner"
 msgstr "Владелец"
 
@@ -5291,6 +5390,7 @@ msgstr "Перезагрузить"
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Remove"
 msgstr "Удалить"
 
@@ -5304,6 +5404,10 @@ msgstr "Удалить {0}"
 #. placeholder {0}: bot.name
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Remove {name}?"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -5323,6 +5427,10 @@ msgstr "Удалить триггер изменений"
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
+msgstr ""
+
+#: src/pages/BotContextMenu.tsx
+msgid "Remove from my list"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5534,11 +5642,16 @@ msgstr "Проверьте настройки поставщика и повто
 
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/MessagingSettingsPanel.tsx
+#: src/pages/TeamMembersSettings.tsx
 msgid "Revoke"
 msgstr "Отозвать"
 
 #: src/pages/AdminAccessPage.tsx
 msgid "Revoked"
+msgstr ""
+
+#: src/pages/TeamMembersSettings.tsx
+msgid "Role"
 msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
@@ -5708,6 +5821,10 @@ msgstr ""
 msgid "Scopes (optional)"
 msgstr "Области доступа (необязательно)"
 
+#: src/pages/shell/team-bots.tsx
+msgid "Screen"
+msgstr ""
+
 #: src/pages/shell/use-computer.tsx
 msgid "Screen not connected"
 msgstr "Экран не подключён"
@@ -5837,6 +5954,10 @@ msgstr "Отправить запись"
 msgid "Send reset link"
 msgstr "Отправить ссылку для сброса"
 
+#: src/pages/TeamMembersSettings.tsx
+msgid "Send this link to {email}"
+msgstr ""
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Send with Enter"
 msgstr "Отправлять по Enter"
@@ -5913,6 +6034,7 @@ msgstr ""
 
 #: src/components/pages/PagesList.tsx
 #: src/components/pages/SharePopover.tsx
+#: src/pages/shell/bot-share-section.tsx
 msgid "Share"
 msgstr "Поделиться"
 
@@ -5934,6 +6056,10 @@ msgstr "Общий"
 msgid "Shared memory"
 msgstr "Общая память"
 
+#: src/pages/shell/bot-share-section.tsx
+msgid "Shared with"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -5946,6 +6072,14 @@ msgstr ""
 #: src/pages/shell/sidebar-header.tsx
 msgid "Show bots"
 msgstr "Показать ботов"
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show bots of"
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "Show earlier"
+msgstr ""
 
 #: src/pages/Artifacts.tsx
 msgid "Show list"
@@ -6232,6 +6366,11 @@ msgstr "Остановить"
 msgid "Stop computer"
 msgstr ""
 
+#. placeholder {0}: display(entry)
+#: src/pages/shell/bot-share-section.tsx
+msgid "Stop sharing with {0}"
+msgstr ""
+
 #: src/pages/shell/message-view.tsx
 msgid "Stop speaking"
 msgstr "Остановить озвучивание"
@@ -6356,6 +6495,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Обучение в процессе. Прекратите обучение, прежде чем отправлять новое сообщение."
 
 #: src/pages/shell/bot-panel.tsx
+#: src/pages/shell/team-bots.tsx
 msgid "Team"
 msgstr "Команда"
 
@@ -6402,6 +6542,10 @@ msgstr "Бот сможет использовать файл, но не уви�
 
 #: src/lib/dictation.ts
 msgid "The browser keeps dropping the microphone. Start dictation again to retry."
+msgstr ""
+
+#: src/pages/shell/team-bots.tsx
+msgid "The computer isn't running."
 msgstr ""
 
 #: src/lib/model-connection-preflight.ts
@@ -6451,6 +6595,10 @@ msgstr "Выбранный поставщик памяти недоступен 
 msgid "The shared link stops working"
 msgstr "Общая ссылка перестанет работать"
 
+#: src/pages/InvitePage.tsx
+msgid "The team's owner can see its chats and activity."
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "The unused difference is credited to your next invoice."
 msgstr "Неиспользованная разница будет зачтена в следующий счёт."
@@ -6475,6 +6623,10 @@ msgstr ""
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
 msgstr "Друг получает {weeks} недели бесплатно."
+
+#: src/pages/shell/bot-share-section.tsx
+msgid "They use it with your apps, memory and saved sign-ins."
+msgstr ""
 
 #: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -6554,6 +6706,10 @@ msgstr ""
 #: src/lib/agent-import-errors.ts
 msgid "This import was already used. Choose the files again."
 msgstr "Этот импорт уже использован. Выберите файлы снова."
+
+#: src/pages/InvitePage.tsx
+msgid "This invitation is no longer available"
+msgstr ""
 
 #: src/pages/HostComputerPrompt.tsx
 msgid "this Mac"

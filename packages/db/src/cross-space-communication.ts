@@ -10,17 +10,19 @@ export async function crossSpaceCommunicationAllowed(
     Array<{
       id: string;
       spaceId: string;
+      userId: string;
       crossSpaceCommunication: boolean;
       archivedAt: Date | null;
     }>
   >`
-    SELECT id, "spaceId", "crossSpaceCommunication", "archivedAt" FROM bots
+    SELECT id, "spaceId", "userId", "crossSpaceCommunication", "archivedAt" FROM bots
     WHERE id = ${senderBotId} OR id = ${targetBotId}
     ORDER BY id FOR NO KEY UPDATE
   `;
   if (bots.length !== 2 || bots.some((bot) => bot.archivedAt)) return false;
+  // Bots of two teammates share a Space but not an owner, so they need the same opt-in.
   return (
-    bots[0]!.spaceId === bots[1]!.spaceId ||
+    (bots[0]!.spaceId === bots[1]!.spaceId && bots[0]!.userId === bots[1]!.userId) ||
     bots.every((bot) => bot.crossSpaceCommunication === true)
   );
 }

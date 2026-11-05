@@ -68,6 +68,8 @@ it("enables Delete only once the organization's exact name is typed", async () =
           defaultSpaceId: "s2",
           spaceIds: ["s2"],
           canManage: true,
+          role: "owner",
+          memberCount: 1,
         }}
         onCancel={() => undefined}
         onConfirm={onConfirm}

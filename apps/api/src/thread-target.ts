@@ -794,6 +794,8 @@ export async function sendThreadMessage(
     clientNonce?: string;
     /** No model to start a turn: the send may only stop active work. */
     noModel?: boolean;
+    /** A teammate writing to a bot shared with them; the actor is the bot's owner. */
+    authorUserId?: string;
   },
   releaseTakeover?: (runId: string) => Promise<void>,
   /** Runs saved with the message, after the thread lock and before the message is routed. */
@@ -920,6 +922,7 @@ export async function sendThreadMessage(
           replyToMessageId,
           replyQuote,
           clientNonce: input.clientNonce,
+          authorUserId: input.authorUserId,
         });
         // A bare "stop" from the owner while work is active is the Stop button, not a reply.
         const stopping = activeRuns.length > 0 && !routineRuns.length && isStopMessage(input);
@@ -975,6 +978,7 @@ export async function sendThreadMessage(
               messageId: message.id,
               seq: message.seq,
               role: "user",
+              ...(input.authorUserId ? { authorUserId: input.authorUserId } : {}),
               blocks,
               callId,
               runIds: answered.map((run) => run.id),
@@ -1013,6 +1017,7 @@ export async function sendThreadMessage(
               messageId: message.id,
               seq: message.seq,
               role: "user",
+              ...(input.authorUserId ? { authorUserId: input.authorUserId } : {}),
               blocks,
               callId,
               replyToMessageId,
@@ -1065,6 +1070,7 @@ export async function sendThreadMessage(
             messageId: message.id,
             seq: message.seq,
             role: "user",
+            ...(input.authorUserId ? { authorUserId: input.authorUserId } : {}),
             blocks,
             callId,
             runIds: [run.id],

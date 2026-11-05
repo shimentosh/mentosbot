@@ -237,7 +237,9 @@ export function threadsRoutes(ctx: RouterContext) {
           void follow.return(undefined).catch(() => {});
         }
       }),
-      send: authed.threads.send.handler(({ context, input }) => send(context.actor, input)),
+      send: authed.threads.send.handler(({ context, input }) =>
+        send(context.actor, { ...input, authorUserId: context.sharedBy?.userId }),
+      ),
       sendWithRoutines: authed.threads.sendWithRoutines.handler(async ({ context, input }) => {
         const { actor } = context;
         // The same checks as routines/testRun, all before anything is written.
@@ -346,10 +348,12 @@ export function threadsRoutes(ctx: RouterContext) {
         });
         const [configuredMemory] = await Promise.all([
           target.kind === "bot"
-            ? deps.memoryProviders.resolve(context.actor.spaceId).catch((error) => {
-                getLogger().error("semantic memory resolution after thread clear failed", error);
-                return null;
-              })
+            ? deps.memoryProviders
+                .resolve(context.actor.spaceId, context.actor.userId)
+                .catch((error) => {
+                  getLogger().error("semantic memory resolution after thread clear failed", error);
+                  return null;
+                })
             : Promise.resolve(null),
           Promise.all(
             cancelledRunIds.map((runId) =>

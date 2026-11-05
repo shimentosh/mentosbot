@@ -72,4 +72,12 @@ export const KO_MESSAGES: Record<string, string> = {
     "다시 구독하지 않으면 저장된 컴퓨터 파일이 {date}에 삭제됩니다.",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "플랜을 선택하지 않으면 저장된 컴퓨터 파일이 {date}에 삭제됩니다.",
+  "{inviter} invited you to {team} on Rakazo": "{inviter}님이 Rakazo의 {team}에 초대했습니다",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter}님이 Rakazo의 {team}에 참여하도록 초대했습니다.",
+  "Join {team}": "{team} 참여하기",
+  "The team's owner can see its chats and activity.":
+    "팀 소유자는 팀의 채팅과 활동을 볼 수 있습니다.",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "이 초대는 7일 후에 만료됩니다. 수락하려면 이 이메일 주소로 로그인하세요.",
 };

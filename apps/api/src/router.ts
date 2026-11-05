@@ -53,6 +53,7 @@ import { pagesRoutes } from "./routes/pages.js";
 import { paymentWalletRoutes } from "./routes/payment-wallet.js";
 import { routinesRoutes } from "./routes/routines.js";
 import { spacesRoutes } from "./routes/spaces.js";
+import { teamRoutes } from "./routes/team.js";
 import { threadsRoutes } from "./routes/threads.js";
 import type { VoiceDeps } from "./voice.js";
 
@@ -156,6 +157,7 @@ export function createRouter(deps: RouterDeps) {
     ...spacesRoutes(ctx),
     ...organizationsRoutes(ctx),
     ...inboxRoutes(ctx),
+    ...teamRoutes(ctx),
     ...modelsRoutes(ctx),
     ...botsRoutes(ctx),
     ...threadsRoutes(ctx),

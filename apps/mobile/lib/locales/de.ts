@@ -1363,6 +1363,10 @@ export const DE_MESSAGES: Record<string, string> = {
   "Needs you on the screen": "Braucht dich am Bildschirm",
   "Needs your approval": "Braucht deine Freigabe",
   "You're all caught up": "Alles erledigt",
+  Everyone: "Alle",
+  "No bots yet": "Noch keine Bots",
+  "Show bots of": "Bots anzeigen von",
+  "Show earlier": "Frühere anzeigen",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

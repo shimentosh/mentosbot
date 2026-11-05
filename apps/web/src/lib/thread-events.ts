@@ -556,6 +556,11 @@ export function reduceThreadSnapshot(
       botId: event.botId,
       runId: event.runId,
       callId: typeof event.payload.callId === "string" ? event.payload.callId : known?.callId,
+      ...(typeof event.payload.authorUserId === "string"
+        ? { authorUserId: event.payload.authorUserId }
+        : known?.authorUserId
+          ? { authorUserId: known.authorUserId }
+          : {}),
       ...replyMetadata(event.payload, known),
       createdAt: known?.createdAt ?? event.createdAt,
     };

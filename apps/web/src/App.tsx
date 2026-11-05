@@ -24,6 +24,7 @@ import { syncCallIdentity } from "./lib/call-session";
 import { desktopBridge } from "./lib/desktop";
 import { syncWebLogoAvatarIdentity } from "./lib/logo-avatar-activity";
 import { identifyMonitoringUser } from "./lib/monitoring";
+import { pendingInvitePath, SignedOutInvite } from "./lib/pending-invite";
 import { markAfterPaint, markOnce } from "./lib/performance";
 import { lazyComponent } from "./lib/preload-recovery";
 import { QueryUserProvider, setQueryUser } from "./lib/query";
@@ -62,6 +63,9 @@ const ArtifactsPage = lazyComponent(() =>
 const BoardPage = lazyComponent(() => import("./pages/Board").then((module) => module.BoardPage));
 const AdminPluginsPage = lazyComponent(() =>
   import("./pages/AdminPluginsPage").then((module) => module.AdminPluginsPage),
+);
+const InvitePage = lazyComponent(() =>
+  import("./pages/InvitePage").then((module) => module.InvitePage),
 );
 const AdminAccessPage = lazyComponent(() =>
   import("./pages/AdminAccessPage").then((module) => module.AdminAccessPage),
@@ -119,7 +123,7 @@ function SessionApp() {
     next.startsWith(`${MCP_OAUTH_CALLBACK_PATH}?`) ||
     next.startsWith(`${SLACK_INSTALL_CALLBACK_PATH}?`)
       ? next
-      : "/app";
+      : (pendingInvitePath() ?? "/app");
   const ticketBoardEnabled = useSyncExternalStore(
     subscribeTicketBoardEnabled,
     getTicketBoardEnabled,
@@ -208,7 +212,11 @@ function SessionApp() {
               <Route
                 path="/sign-up"
                 element={
-                  user ? <Navigate to="/onboarding" replace /> : <AuthPage key="up" mode="up" />
+                  user ? (
+                    <Navigate to={pendingInvitePath() ?? "/onboarding"} replace />
+                  ) : (
+                    <AuthPage key="up" mode="up" />
+                  )
                 }
               />
               <Route
@@ -218,6 +226,10 @@ function SessionApp() {
                 }
               />
               <Route path="/reset-password" element={<PasswordResetPage />} />
+              <Route
+                path="/invite/:invitationId"
+                element={user ? <InvitePage /> : <SignedOutInvite />}
+              />
               <Route path="/p/:slugToken" element={<SharedPagePage />} />
               <Route
                 path={MCP_OAUTH_CALLBACK_PATH}

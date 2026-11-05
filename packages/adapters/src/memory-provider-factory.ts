@@ -46,7 +46,8 @@ export interface ConfiguredMemoryProvider {
 }
 
 export interface MemoryProviderResolver {
-  resolve(spaceId: string): Promise<ConfiguredMemoryProvider | null>;
+  /** The Space's external memory, only for the person who connected it. */
+  resolve(spaceId: string, userId: string): Promise<ConfiguredMemoryProvider | null>;
 }
 
 interface MemoryProviderAdapter {
@@ -174,12 +175,14 @@ export class SpaceMemoryProviderResolver implements MemoryProviderResolver {
     private readonly secrets: SecretStore,
   ) {}
 
-  async resolve(spaceId: string): Promise<ConfiguredMemoryProvider | null> {
+  async resolve(spaceId: string, userId: string): Promise<ConfiguredMemoryProvider | null> {
     const config = await this.prisma.spaceMemoryConfig.findUnique({
       where: { spaceId },
       include: { secret: true },
     });
-    if (!config) return null;
+    // It holds that person's account and pools the Space's memories, so teammates sharing the
+    // Space never write into it or recall from it.
+    if (!config || config.userId !== userId) return null;
     const settings = toStringRecord(config.settings);
     if (memoryProviderRequiresPrivateEndpoint(config.provider, settings)) {
       // Saved configurations cannot bypass an operator's current network policy.

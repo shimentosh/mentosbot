@@ -1388,6 +1388,10 @@ export const JA_MESSAGES: Record<string, string> = {
   "Needs you on the screen": "画面で対応が必要です",
   "Needs your approval": "承認が必要です",
   "You're all caught up": "すべて確認済みです",
+  Everyone: "全員",
+  "No bots yet": "まだボットがありません",
+  "Show bots of": "表示するボットの持ち主",
+  "Show earlier": "以前のメッセージを表示",
 };
 
 export const PEER_MESSAGE_FORMS = { other: "{peer}とのメッセージ{count}件" };

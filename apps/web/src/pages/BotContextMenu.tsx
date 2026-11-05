@@ -20,9 +20,13 @@ import {
   Pencil,
   Pin,
   Trash2,
+  X,
 } from "lucide-react";
+import { useQueryUserId } from "../lib/query";
+import { rpc } from "../lib/rpc";
 
-type ChatMenuTarget = Pick<Bot, "name" | "pinned" | "sectionId" | "unread">;
+type ChatMenuTarget = Pick<Bot, "name" | "pinned" | "sectionId" | "unread"> &
+  Partial<Pick<Bot, "id" | "share">>;
 
 /** A roster row's context menu content; `onClose` serves the lazy-load error fallback. */
 export function BotContextMenu({
@@ -54,6 +58,37 @@ export function BotContextMenu({
   onDelete: () => void;
 }) {
   const { t } = useLingui();
+  const userId = useQueryUserId();
+
+  // A teammate's bot: its sidebar place, profile and lifecycle stay its owner's.
+  if (bot.share && bot.id) {
+    const botId = bot.id;
+    return (
+      <ContextMenuContent aria-label={t`Actions for ${bot.name}`} className="w-[264px]">
+        <ContextMenuItem onClick={onToggleUnread}>
+          {bot.unread ? <BellDot /> : <Bell />}
+          {bot.unread ? t`Mark as Read` : t`Mark as Unread`}
+        </ContextMenuItem>
+        {bot.share.level === "manage" ? (
+          <ContextMenuItem onClick={onEdit}>
+            <Pencil />
+            {t`Edit Profile`}
+          </ContextMenuItem>
+        ) : null}
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() =>
+            void rpc.team
+              .unshareBot({ botId, userId: userId ?? "" })
+              .then(() => window.location.assign("/app"))
+          }
+        >
+          <X />
+          {t`Remove from my list`}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    );
+  }
 
   return (
     <ContextMenuContent

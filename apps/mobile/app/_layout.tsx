@@ -484,6 +484,7 @@ function LayoutContent() {
                       name="notifications"
                       options={glassHeaderOptions(t("Notifications"))}
                     />
+                    <Stack.Screen name="team" options={glassHeaderOptions(t("Team"))} />
                     <Stack.Screen name="artifact" options={{ title: t("Artifact") }} />
                     <Stack.Screen name="pages" options={glassHeaderOptions(t("Pages"))} />
                     <Stack.Screen

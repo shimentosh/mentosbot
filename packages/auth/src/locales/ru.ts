@@ -73,4 +73,12 @@ export const RU_MESSAGES: Record<string, string> = {
     "Сохранённые файлы вашего компьютера будут удалены {date}, если вы не продлите подписку.",
   "Your saved computer files will be deleted on {date} unless you choose a plan.":
     "Сохранённые файлы вашего компьютера будут удалены {date}, если вы не выберете тариф.",
+  "{inviter} invited you to {team} on Rakazo": "{inviter} приглашает вас в {team} в Rakazo",
+  "{inviter} invited you to join {team} on Rakazo.":
+    "{inviter} приглашает вас присоединиться к {team} в Rakazo.",
+  "Join {team}": "Присоединиться к {team}",
+  "The team's owner can see its chats and activity.":
+    "Владелец команды видит её чаты и активность.",
+  "This invitation expires in 7 days. Sign in with this email address to accept it.":
+    "Срок действия приглашения истекает через 7 дней. Чтобы принять его, войдите с этим адресом электронной почты.",
 };

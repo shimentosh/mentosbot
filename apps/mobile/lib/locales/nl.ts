@@ -1355,6 +1355,10 @@ export const NL_MESSAGES: Record<string, string> = {
   "Needs you on the screen": "Heeft je nodig op het scherm",
   "Needs your approval": "Heeft je goedkeuring nodig",
   "You're all caught up": "Je bent helemaal bij",
+  Everyone: "Iedereen",
+  "No bots yet": "Nog geen bots",
+  "Show bots of": "Bots tonen van",
+  "Show earlier": "Eerdere tonen",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

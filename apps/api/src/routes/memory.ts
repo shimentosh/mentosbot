@@ -138,7 +138,9 @@ export function memoryRoutes(ctx: RouterContext) {
       }),
       providerConfig: authed.memory.providerConfig.handler(async ({ context }) => {
         const config = await findSpaceMemoryConfig(deps.prisma, context.actor.spaceId);
-        return config ? serializeSpaceMemoryConfig(config) : null;
+        return config && config.userId === context.actor.userId
+          ? serializeSpaceMemoryConfig(config)
+          : null;
       }),
       connectProvider: authed.memory.connectProvider.handler(async ({ context, input }) =>
         persistMemoryProviderConfig(deps, context.actor, input),

@@ -1396,6 +1396,10 @@ export const RU_MESSAGES: Record<string, string> = {
   "Needs you on the screen": "Нужна ваша помощь на экране",
   "Needs your approval": "Нужно ваше одобрение",
   "You're all caught up": "Всё просмотрено",
+  Everyone: "Все",
+  "No bots yet": "Ботов пока нет",
+  "Show bots of": "Показать ботов",
+  "Show earlier": "Показать раньше",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

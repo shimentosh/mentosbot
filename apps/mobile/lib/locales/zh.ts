@@ -1363,6 +1363,10 @@ export const ZH_MESSAGES: Record<string, string> = {
   "Needs you on the screen": "需要你操作屏幕",
   "Needs your approval": "需要你的批准",
   "You're all caught up": "都看完了",
+  Everyone: "所有人",
+  "No bots yet": "还没有机器人",
+  "Show bots of": "显示谁的机器人",
+  "Show earlier": "显示更早的消息",
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {
