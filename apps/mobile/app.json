@@ -1,8 +1,7 @@
 {
   "expo": {
-    "name": "Rakazo",
-    "slug": "rakazo",
-    "owner": "inbox-zero",
+    "name": "Mentosbot",
+    "slug": "mentosbot",
     "scheme": "rakazo",
     "version": "1.0.12",
     "orientation": "default",
@@ -59,7 +58,7 @@
         {
           "ios": {
             "enabled": true,
-            "appGroupId": "group.com.rakazo.app",
+            "appGroupId": "group.com.mentosbot.app",
             "activationRule": {
               "supportsText": true,
               "supportsWebUrlWithMaxCount": 1,
@@ -101,7 +100,7 @@
       "pl": "./locales/pl.json"
     },
     "ios": {
-      "bundleIdentifier": "com.rakazo.app",
+      "bundleIdentifier": "com.mentosbot.app",
       "buildNumber": "1",
       "supportsTablet": true,
       "icon": "../../packages/ui-tokens/assets/Rakazo.icon",
@@ -124,7 +123,7 @@
       }
     },
     "android": {
-      "package": "com.rakazo.app",
+      "package": "com.mentosbot.app",
       "versionCode": 10,
       "softwareKeyboardLayoutMode": "resize",
       "icon": "./assets/icon.png",
@@ -141,25 +140,24 @@
       "router": {},
       "supportsRTL": true,
       "eas": {
-        "projectId": "07f7eb04-45e3-47fe-9374-99a2f991131e",
         "build": {
           "experimental": {
             "ios": {
               "appExtensions": [
                 {
                   "targetName": "RakazoWidgets",
-                  "bundleIdentifier": "com.rakazo.app.widgets"
+                  "bundleIdentifier": "com.mentosbot.app.widgets"
                 },
                 {
                   "targetName": "expo-sharing-extension",
-                  "bundleIdentifier": "com.rakazo.app.expo-sharing-extension",
+                  "bundleIdentifier": "com.mentosbot.app.expo-sharing-extension",
                   "entitlements": {
-                    "com.apple.security.application-groups": ["group.com.rakazo.app"]
+                    "com.apple.security.application-groups": ["group.com.mentosbot.app"]
                   }
                 },
                 {
                   "targetName": "AgentNotifications",
-                  "bundleIdentifier": "com.rakazo.app.notifications",
+                  "bundleIdentifier": "com.mentosbot.app.notifications",
                   "entitlements": {
                     "com.apple.developer.usernotifications.communication": true
                   }
@@ -174,7 +172,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/07f7eb04-45e3-47fe-9374-99a2f991131e"
+      "enabled": false
     }
   }
 }

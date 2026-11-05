@@ -1,4 +1,4 @@
-appId: com.rakazo.app
+appId: com.mentosbot.app
 name: Split view
 ---
 # On a phone this is a single column; on an unfolded iPhone Duo the chat list sits beside it.

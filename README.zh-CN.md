@@ -228,7 +228,7 @@ chmod +x Rakazo-*.AppImage
 开发自动化中，可以设置 `RAKAZO_WEB_URL`，让桌面应用连接其他地址而不改变已保存的实例；
 也可以设置 `RAKAZO_FORCE_SETUP=1`，再次运行设置流程。
 
-移动端构建和发布说明见 [docs/mobile-release.md](./docs/mobile-release.md)。
+移动端构建和发布说明见 [docs/internal-builds.md](./docs/internal-builds.md)。
 
 ## 界面语言
 
@@ -267,8 +267,7 @@ pnpm test:e2e
 - [自托管](./docs/self-host.md)
 - [自托管密钥管理](./docs/self-host-secrets.md)
 - [计算机运行时与隔离](./docs/computer-runtime.md)
-- [桌面端发布](./docs/desktop-release.md)
-- [移动端发布](./docs/mobile-release.md)
+- [移动端发布](./docs/internal-builds.md)
 - [性能测试](./docs/performance.md)
 - [管理机器人的机器人](./docs/fleet-management.md)
 

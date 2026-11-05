@@ -234,9 +234,9 @@ iOS, `sudo swcutil developer-mode -e true` on macOS, where the app must also liv
 `/Applications`). To let a build use this server's passkeys, set:
 
 ```bash
-# iOS and the macOS desktop app (dev.rakazo.desktop): <Apple Team ID>.<bundle id>, comma-separated.
+# iOS and the macOS desktop app (com.mentosbot.desktop): <Apple Team ID>.<bundle id>, comma-separated.
 # Served as /.well-known/apple-app-site-association.
-PASSKEY_APPLE_APP_IDS=ABCDE12345.com.rakazo.app,ABCDE12345.dev.rakazo.desktop
+PASSKEY_APPLE_APP_IDS=ABCDE12345.com.mentosbot.app,ABCDE12345.com.mentosbot.desktop
 # Android: SHA-256 fingerprints of the app signing certificates, comma-separated.
 # Served as /.well-known/assetlinks.json and accepted as passkey origins.
 PASSKEY_ANDROID_CERT_SHA256=AA:BB:...:FF

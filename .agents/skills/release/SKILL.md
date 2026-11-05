@@ -39,4 +39,4 @@ sha="$(gh pr view <release PR> --json mergeCommit -q .mergeCommit.oid)"
 git fetch origin main && git tag vX.Y.Z "$sha" && git push origin vX.Y.Z
 ```
 
-The tag runs `release-desktop` (desktop builds, GitHub release text from the changelog section followed by the merged PR list) and publishes the server images. The workflow refuses a tag without a matching changelog section.
+The tag publishes the server images. App builds use separate `app-v*` tags (see `docs/internal-builds.md`).

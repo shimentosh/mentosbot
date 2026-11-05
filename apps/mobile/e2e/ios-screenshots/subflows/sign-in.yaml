@@ -1,4 +1,4 @@
-appId: com.rakazo.app
+appId: com.mentosbot.app
 ---
 - runFlow: launch-app.yaml
 - runFlow:

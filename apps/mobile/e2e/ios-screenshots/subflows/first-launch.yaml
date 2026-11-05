@@ -1,4 +1,4 @@
-appId: com.rakazo.app
+appId: com.mentosbot.app
 ---
 # A link left from building the app can leave iOS asking to open it.
 - tapOn:

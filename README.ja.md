@@ -225,7 +225,7 @@ Docker 互換 CLI を試すには、アプリを起動する前に `RAKAZO_DOCKE
 保存済みのインスタンスを変えずにシェルの接続先を変更でき、`RAKAZO_FORCE_SETUP=1` を設定するとセットアップを
 再実行できます。
 
-モバイルのビルドとリリースの手順は [docs/mobile-release.md](./docs/mobile-release.md) にあります。
+モバイルのビルドとリリースの手順は [docs/internal-builds.md](./docs/internal-builds.md) にあります。
 
 ## UI の言語
 
@@ -264,8 +264,7 @@ pnpm test:e2e
 - [セルフホスト](./docs/self-host.md)
 - [セルフホストのシークレット](./docs/self-host-secrets.md)
 - [コンピューターのランタイムと分離](./docs/computer-runtime.md)
-- [デスクトップのリリース](./docs/desktop-release.md)
-- [モバイルのリリース](./docs/mobile-release.md)
+- [モバイルのリリース](./docs/internal-builds.md)
 - [パフォーマンステスト](./docs/performance.md)
 - [ボットを管理するボット](./docs/fleet-management.md)
 

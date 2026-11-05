@@ -422,7 +422,7 @@ describe("setup", () => {
       "Esta computadora",
     );
     expect(document.querySelector('label[for="mode-cloud"]')?.textContent?.trim()).toBe(
-      "Rakazo Cloud",
+      "Mentosbot",
     );
     expect(element("quit").textContent).toBe("Salir");
     expect(element("quit").title).toBe("Salir de Rakazo");
