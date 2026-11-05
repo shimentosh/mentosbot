@@ -26,6 +26,7 @@ import { modelsForRequest, resolveRuntimeModel } from "./pi-runtime-models.js";
 import {
   dockerComputerToolInstruction,
   persistentComputerInstruction,
+  replyShapeClause,
   threadContextForRun,
   userTurnInstructions,
   VOICE_CALL_INSTRUCTION,
@@ -1454,6 +1455,7 @@ describe("userTurnInstructions", () => {
     'For charts and data visualization, use the render_plot tool: it renders bar, line, scatter, histogram, heatmap, faceted and many more chart types from a JSON spec and attaches the PNG to the chat. Call render_plot with {"help": true} before your first chart to read the full guide.',
     'For a dashboard, report, tracker or comparison, build a page with save_page (call it with {"help": true} first for the kit guide). To change a page, pass its pageId with edits or new source instead of making a new page. In your reply, mention the page by its title; never paste its source.',
     "When the user asks you to add or connect an MCP server (and gives you its details), use add_mcp_server. When add_mcp_server posts an approval card, end with one short sentence asking the user to approve it. You will be told when they connect it.",
+    replyShapeClause(),
     "Never print API keys, access tokens, or secret values. Prefer tools over claiming you already did the work.",
     "Treat pagination cursors as opaque: copy the returned continuation value exactly, never calculate or guess it. When the tool reports no next page, stop; if a cursor is rejected, recheck the last successful result before retrying.",
     replyGuidance,
@@ -1466,6 +1468,16 @@ describe("userTurnInstructions", () => {
     workspaceInstruction: "This entire computer workspace is your private home.",
     replyGuidance,
   };
+
+  it("shapes replies with buttons and receipts only when those tools are offered", () => {
+    const offered = replyShapeClause();
+    expect(offered).toContain("ask_user");
+    expect(offered).toContain("show_card");
+    const without = replyShapeClause(new Set(["ask_user", "show_card"]));
+    expect(without).not.toContain("ask_user");
+    expect(without).not.toContain("show_card");
+    expect(without).toContain("give the link to the result");
+  });
 
   it("places stable guidance before volatile context when every optional context is present", () => {
     const instructions = userTurnInstructions({
