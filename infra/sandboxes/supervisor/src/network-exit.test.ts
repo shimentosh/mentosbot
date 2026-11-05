@@ -178,6 +178,24 @@ describe("device network exit", () => {
     expect(options.Labels?.[NETWORK_EXIT_RELAY_LABEL]).toMatch(/^[a-f0-9]{32}$/);
   });
 
+  it("reaches the server from the computer's network where its public address is refused", () => {
+    const options = (relayUrl?: string) =>
+      networkExitContainerOptions({
+        botId: "b1",
+        image: "node",
+        networkMode: "rakazo-computer-b1",
+        exit,
+        ...(relayUrl ? { relayUrl } : {}),
+      });
+    const inside = options("http://rakazo-web-1:5173");
+    expect(inside.Env).toContain("RAKAZO_EXIT_URL=http://rakazo-web-1:5173");
+    // A new address replaces the relay, while the computer, made for the same exit, stays.
+    expect(inside.Labels?.[NETWORK_EXIT_RELAY_LABEL]).not.toBe(
+      options().Labels?.[NETWORK_EXIT_RELAY_LABEL],
+    );
+    expect(inside.Labels?.[NETWORK_EXIT_LABEL]).toBe(options().Labels?.[NETWORK_EXIT_LABEL]);
+  });
+
   it("reaches the server only over HTTPS, with a token the API made", () => {
     expect(NetworkExitSchema.safeParse(exit).success).toBe(true);
     for (const changed of [

@@ -1995,6 +1995,8 @@ async function syncNetworkExit(
     if (!exit) return;
     throw new Error(`${name} exists but was not made for this computer`);
   }
+  const relayUrl =
+    exit?.provider === "device" && networkMode ? await composeWebExitUrl(networkMode) : undefined;
   const options =
     exit && networkMode
       ? networkExitContainerOptions({
@@ -2002,6 +2004,7 @@ async function syncNetworkExit(
           image: NETWORK_EXIT_IMAGES[exit.provider],
           networkMode,
           exit,
+          ...(relayUrl ? { relayUrl } : {}),
         })
       : undefined;
   const wanted = networkExitFingerprint(exit);
@@ -2020,6 +2023,27 @@ async function syncNetworkExit(
   if (!options) return;
   const created = await docker.createContainer(options);
   await created.start();
+}
+
+/** The port the Compose web server listens on, which carries the API's device sockets. */
+const COMPOSE_WEB_PORT = 5173;
+
+/**
+ * How a device relay on an isolated computer network reaches the server: restricted egress
+ * refuses the host's own public address, so it goes to the Compose web server, which joins that
+ * network as a screen peer. Undefined without one; the relay then uses the public address.
+ */
+async function composeWebExitUrl(networkMode: string) {
+  if (screenNetworkMode !== "isolated") return undefined;
+  const runtime = supervisorInfo ?? (await inspectSupervisorContainer());
+  if (!runtime) return undefined;
+  await connectComposeScreenPeers(networkMode, runtime);
+  for (const id of await composeScreenPeerIds(runtime)) {
+    if (id === runtime.Id) continue;
+    const { Name } = await docker.getContainer(id).inspect();
+    return `http://${Name.replace(/^\//, "")}:${COMPOSE_WEB_PORT}`;
+  }
+  return undefined;
 }
 
 async function removeNetworkExit(botId: string) {

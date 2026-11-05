@@ -4,7 +4,8 @@
 //
 // It runs in a stock Node image with no packages, so it uses only Node's built-ins. Keep the
 // close codes and the ready message in step with packages/contracts/src/user-devices.ts.
-import { connect, createServer } from "node:net";
+import { lookup } from "node:dns/promises";
+import { connect, createServer, isIP } from "node:net";
 
 export const RELAY_PORT = 3128;
 const EXIT_PATH = "/api/devices/exit";
@@ -129,12 +130,26 @@ function carry(client, socket, first) {
 const failed = (client) =>
   client.end("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
 
+/**
+ * The server's address for one connection. An internal http:// address names the web server's
+ * container, whose address can change and which answers to an address rather than that name, so
+ * the name is looked up each time.
+ */
+export async function exitUrl(url, resolve = lookup) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== "http:" || isIP(parsed.hostname)) return url;
+  const { address, family } = await resolve(parsed.hostname);
+  parsed.hostname = family === 6 ? `[${address}]` : address;
+  return parsed.href;
+}
+
 export function startRelay({ url, token, port = RELAY_PORT, WebSocketImpl = WebSocket }) {
   let directUntil = 0;
 
   async function open(request) {
     if (Date.now() >= directUntil) {
-      const result = await openThroughDevice({ url, token, ...request, WebSocketImpl });
+      const server = await exitUrl(url).catch(() => url);
+      const result = await openThroughDevice({ url: server, token, ...request, WebSocketImpl });
       if (result === "unreachable") return null;
       if (result !== "unavailable") return { device: result };
       directUntil = Date.now() + DIRECT_FOR_MS;

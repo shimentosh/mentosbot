@@ -117,6 +117,8 @@ export function networkExitContainerOptions(input: {
   image: string;
   networkMode: string;
   exit: NetworkExit;
+  /** Where a device relay reaches the server from the computer's network, if not its public URL. */
+  relayUrl?: string;
 }): Docker.ContainerCreateOptions {
   const fingerprint = networkExitFingerprint(input.exit)!;
   const isolated = {
@@ -136,12 +138,14 @@ export function networkExitContainerOptions(input: {
     },
   };
   if (input.exit.provider === "device") {
+    const relayUrl = input.relayUrl ?? input.exit.settings.url;
     return {
       ...shared,
       Labels: {
         ...shared.Labels,
         [NETWORK_EXIT_RELAY_LABEL]: createHash("sha256")
           .update(DEVICE_RELAY_SCRIPT)
+          .update(relayUrl)
           .digest("hex")
           .slice(0, 32),
       },
@@ -149,10 +153,7 @@ export function networkExitContainerOptions(input: {
       User: "node",
       Entrypoint: ["node", "--input-type=module", "-e"],
       Cmd: [DEVICE_RELAY_SCRIPT],
-      Env: [
-        `RAKAZO_EXIT_URL=${input.exit.settings.url}`,
-        `RAKAZO_EXIT_TOKEN=${input.exit.credentials.token}`,
-      ],
+      Env: [`RAKAZO_EXIT_URL=${relayUrl}`, `RAKAZO_EXIT_TOKEN=${input.exit.credentials.token}`],
       HostConfig: { ...isolated, Tmpfs: { "/tmp": "rw,noexec,nosuid,size=16m" } },
     };
   }

@@ -3,11 +3,29 @@ import type { AddressInfo, Server, Socket } from "node:net";
 import { connect, createServer } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 // @ts-expect-error The relay is plain JavaScript so a stock Node image runs it as given.
-import { parseRequestHead, startRelay } from "./device-exit-relay.mjs";
+import { exitUrl, parseRequestHead, startRelay } from "./device-exit-relay.mjs";
 
 const closers: Array<() => unknown> = [];
 afterEach(async () => {
   for (const close of closers.splice(0).reverse()) await close();
+});
+
+describe("server address", () => {
+  it("looks up an internal server's name for each connection and keeps a public one", async () => {
+    const resolve = async (name: string) => {
+      expect(name).toBe("rakazo-web-1");
+      return { address: "172.20.0.4", family: 4 };
+    };
+    await expect(exitUrl("http://rakazo-web-1:5173", resolve)).resolves.toBe(
+      "http://172.20.0.4:5173/",
+    );
+    await expect(exitUrl("http://172.20.0.4:5173", resolve)).resolves.toBe(
+      "http://172.20.0.4:5173",
+    );
+    await expect(exitUrl("https://app.example.com", resolve)).resolves.toBe(
+      "https://app.example.com",
+    );
+  });
 });
 
 describe("proxy requests", () => {
