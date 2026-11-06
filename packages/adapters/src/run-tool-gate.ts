@@ -48,6 +48,7 @@ import {
   resolveAutoReviewChecker,
 } from "./auto-review.js";
 import { reviewWithBackups } from "./auto-review-backups.js";
+import { tellRequesterAwaitingApproval } from "./bot-messages.js";
 import { RAKAZO_DOCS_URLS } from "./builtin-skills.js";
 import type { ExecutorDeps } from "./executor-deps.js";
 import { CATALOG_LOAD, CATALOG_SEARCH } from "./lazy-tool-catalog.js";
@@ -711,6 +712,20 @@ async function showApprovalCard(ctx: RunContext, call: ToolCall, card: ApprovalC
   await ctx.computer.checkpoint.flush();
   await persistTurnCheckpoint(ctx, executionId);
   await ctx.settleRunningHelpers();
+  const ask = buildApprovalAskBlock(
+    applied!.effect.id,
+    name,
+    name === "update_bot" && "previousInstructions" in args ? { ...args, botId: bot.id } : args,
+    ctx.secrets,
+    card,
+  );
+  // Sent while this run still holds its lease; a failed notice never blocks the card.
+  await tellRequesterAwaitingApproval(
+    deps,
+    { ...run, id: runId },
+    { id: bot.id, name: bot.name },
+    { effectId: applied!.effect.id, summary: ask.kind === "ask" ? ask.text : name },
+  ).catch((error) => getLogger().warn("approval wait notice", error));
   const paused = await deps.events.pauseRunForInput({
     spaceId: run.spaceId,
     threadId: run.threadId,
@@ -719,15 +734,7 @@ async function showApprovalCard(ctx: RunContext, call: ToolCall, card: ApprovalC
     attemptId: ctx.attempt.id,
     leaseOwner: ctx.workerId,
     leaseFence: ctx.fence,
-    blocks: [
-      buildApprovalAskBlock(
-        applied!.effect.id,
-        name,
-        name === "update_bot" && "previousInstructions" in args ? { ...args, botId: bot.id } : args,
-        ctx.secrets,
-        card,
-      ),
-    ],
+    blocks: [ask],
   });
   // pauseRunForInput returning false after a successful renew means the run row no
   // longer matches this worker. Exiting via pauseForApproval() would leave the run

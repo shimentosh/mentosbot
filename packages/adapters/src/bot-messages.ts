@@ -412,6 +412,43 @@ export async function returnBotMessageOutcome(
   return outcome.ok;
 }
 
+/**
+ * Tell the bot that delegated this run that it now waits on the person's approval. The card sits
+ * in this bot's own chat, which the person may not be reading, and without word the requester
+ * keeps asking for progress until the chain's message limit runs out.
+ */
+export async function tellRequesterAwaitingApproval(
+  deps: Pick<ExecutorDeps, "prisma" | "events" | "jobs" | "runLease">,
+  run: {
+    id: string;
+    spaceId: string;
+    threadId: string;
+    botId: string;
+    userId: string;
+    trigger: string;
+    sourceMessageId?: string | null;
+  },
+  sender: { id: string; name: string },
+  approval: { effectId: string; summary: string },
+): Promise<void> {
+  if (run.trigger !== "bot_message") return;
+  const source = await loadBotMessageContext(deps.prisma, run.sourceMessageId);
+  if (!source) return;
+  const sourceIntent = source.intent ?? "request";
+  if (sourceIntent !== "request" && sourceIntent !== "question") return;
+  const sent = await messageBot(deps, run, sender, {
+    bot_id: source.fromBotId,
+    message: clampBotMessage(
+      `Waiting for the user's approval in my chat: ${approval.summary}\nThey can answer it there; I continue once they do, so you don't need to message me again.`,
+    ),
+    intent: "status",
+    // One notice per approval, however often this turn is retried.
+    deliveryKey: `approval-wait:${approval.effectId}`,
+    userRequest: source.userRequest,
+  });
+  if (!sent.ok) getLogger().warn("approval wait notice not delivered", { error: sent.error });
+}
+
 async function markBotOutcomeReturned(prisma: PrismaClient, runId: string) {
   await prisma.run.updateMany({
     where: {
