@@ -2992,7 +2992,6 @@ msgid "Download {0}"
 msgstr "Скачать {0}"
 
 #: src/components/ArtifactFileCard.tsx
-#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "Скачать {name}"
 
