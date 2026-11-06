@@ -120,6 +120,7 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Search bots": "搜尋機器人",
   "About {label}": "關於 {label}",
   "Manage other bots": "管理其他機器人",
+  "Share sign-ins with my other bots": "與我的其他機器人共用登入",
   "Allow cross-space bot communication": "允許跨空間機器人通訊",
   "Organize the sidebar and edit bots. Instruction, model, routine and group edits need approval.":
     "整理側邊欄並編輯機器人。更改群組、指令、模型和例行任務需要你的核准。",

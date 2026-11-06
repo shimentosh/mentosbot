@@ -1213,6 +1213,7 @@ export type MobileBot = Pick<
   | "crossSpaceCommunication"
   | "dailyCheckIns"
 > &
+  Partial<Pick<Bot, "shareSignIns">> &
   Partial<Pick<Bot, "parentBotId" | "spaceId" | "instructions">>;
 
 export type MobileBotSection = BotSection;

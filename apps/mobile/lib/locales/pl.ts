@@ -134,6 +134,7 @@ export const PL_MESSAGES: Record<string, string> = {
   "{count} messages with {peer}": "Wiadomości z {peer}: {count}",
   "About {label}": "O {label}",
   "Manage other bots": "Zarządzaj innymi botami",
+  "Share sign-ins with my other bots": "Udostępniaj logowania moim innym botom",
   "Allow cross-space bot communication": "Zezwól botom na komunikację między przestrzeniami",
   "Organize the sidebar and edit bots. Instruction, model, routine and group edits need approval.":
     "Organizuj pasek boczny i edytuj boty. Zmiany instrukcji, modeli, rutyn i grup wymagają zatwierdzenia.",

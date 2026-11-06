@@ -1342,7 +1342,7 @@ msgstr "Karty"
 
 #: src/components/ProjectFolderSection.tsx
 msgid "Change"
-msgstr ""
+msgstr "Zmień"
 
 #: src/pages/ModelRoleSettings.tsx
 msgid "Change {name}"
@@ -1472,7 +1472,7 @@ msgstr "Wybierz nowe hasło"
 
 #: src/components/FolderPickerDialog.tsx
 msgid "Choose a project folder"
-msgstr ""
+msgstr "Wybierz folder projektu"
 
 #: src/pages/Onboarding.tsx
 msgid "Choose a provider"
@@ -2992,6 +2992,7 @@ msgid "Download {0}"
 msgstr "Pobierz {0}"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "Pobierz {name}"
 
@@ -4613,7 +4614,7 @@ msgstr "Brak pasujących botów"
 
 #: src/components/FolderPickerDialog.tsx
 msgid "No folders here"
-msgstr ""
+msgstr "Brak folderów"
 
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
@@ -4826,7 +4827,7 @@ msgstr "Ollama Cloud"
 #. placeholder {0}: folder.otherComputer
 #: src/components/ProjectFolderSection.tsx
 msgid "On {0}"
-msgstr ""
+msgstr "Na {0}"
 
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
@@ -4914,7 +4915,7 @@ msgstr "Otwórz link"
 
 #: src/components/ProjectFolderSection.tsx
 msgid "Open localhost:{port}"
-msgstr ""
+msgstr "Otwórz localhost:{port}"
 
 #: src/pages/shell/chat-header.tsx
 msgid "Open navigation"
@@ -5292,7 +5293,7 @@ msgstr "Program: {name}"
 
 #: src/components/ProjectFolderSection.tsx
 msgid "Project folder"
-msgstr ""
+msgstr "Folder projektu"
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Protected input"
@@ -5560,7 +5561,7 @@ msgstr "Usuń wyzwalacz zmiany"
 
 #: src/pages/shell/create-bot-dialog.tsx
 msgid "Remove folder"
-msgstr ""
+msgstr "Usuń folder"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -6239,7 +6240,7 @@ msgstr "Udostępnij \"{title}\""
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Share sign-ins with my other bots"
-msgstr ""
+msgstr "Udostępniaj logowania moim innym botom"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
@@ -6500,7 +6501,7 @@ msgstr "Rozpocznij bezpłatny okres próbny na {trialDays} dni"
 
 #: src/pages/shell/create-bot-dialog.tsx
 msgid "Start from a project folder"
-msgstr ""
+msgstr "Zacznij od folderu projektu"
 
 #: src/components/ModelCredits.tsx
 msgid "Start plan"
@@ -6581,11 +6582,11 @@ msgstr "Zatrzymaj naukę"
 
 #: src/components/ProjectFolderSection.tsx
 msgid "Stop using this folder"
-msgstr ""
+msgstr "Przestań używać tego folderu"
 
 #: src/components/ProjectFolderSection.tsx
 msgid "Stopped"
-msgstr ""
+msgstr "Zatrzymano"
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -7275,7 +7276,7 @@ msgstr "Użycie"
 
 #: src/components/FolderPickerDialog.tsx
 msgid "Use"
-msgstr ""
+msgstr "Użyj"
 
 #. Switches the saved timezone to this device's, e.g. 'Use Pacific/Auckland'
 #. placeholder {0}: deviceTimezone.replaceAll("_", " ")
@@ -7330,7 +7331,7 @@ msgstr "Użyj domyślnych przestrzeni"
 
 #: src/components/FolderPickerDialog.tsx
 msgid "Use this folder"
-msgstr ""
+msgstr "Użyj tego folderu"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Use up to 512 letters, digits, _ or -."
@@ -7542,6 +7543,11 @@ msgstr "Gdzie mają działać boty?"
 #: src/components/pages/SharePopover.tsx
 msgid "Who can open this page"
 msgstr "Kto może otworzyć tę stronę"
+
+#. placeholder {0}: formatList(signInPeers)
+#: src/pages/shell/bot-panel.tsx
+msgid "With {0}"
+msgstr "Z {0}"
 
 #: src/lib/ticket-status.ts
 msgid "Won't do"

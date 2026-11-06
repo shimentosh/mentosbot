@@ -135,6 +135,7 @@ export const RU_MESSAGES: Record<string, string> = {
   "{count} messages with {peer}": "{count} сообщения с {peer}",
   "About {label}": "О настройке «{label}»",
   "Manage other bots": "Управлять другими ботами",
+  "Share sign-ins with my other bots": "Делиться входами с другими моими ботами",
   "Allow cross-space bot communication": "Разрешить общение ботов из разных пространств",
   "Organize the sidebar and edit bots. Instruction, model, routine and group edits need approval.":
     "Упорядочивайте боковую панель и редактируйте ботов. Изменения групп, инструкций, моделей и процедур требуют вашего одобрения.",

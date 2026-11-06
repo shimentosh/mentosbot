@@ -2992,6 +2992,7 @@ msgid "Download {0}"
 msgstr "Baixar {0}"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "Baixar {name}"
 
@@ -6239,7 +6240,7 @@ msgstr "Compartilhar “{title}”"
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Share sign-ins with my other bots"
-msgstr ""
+msgstr "Compartilhar logins com meus outros bots"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
@@ -7542,6 +7543,11 @@ msgstr "Onde os bots devem ser executados?"
 #: src/components/pages/SharePopover.tsx
 msgid "Who can open this page"
 msgstr "Quem pode abrir esta página"
+
+#. placeholder {0}: formatList(signInPeers)
+#: src/pages/shell/bot-panel.tsx
+msgid "With {0}"
+msgstr "Com {0}"
 
 #: src/lib/ticket-status.ts
 msgid "Won't do"

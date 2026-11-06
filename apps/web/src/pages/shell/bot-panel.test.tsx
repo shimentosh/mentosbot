@@ -185,6 +185,7 @@ async function render(
   overrides: Partial<Bot> = {},
   memoryProviderConfigured = false,
   focusModel = 0,
+  signInPeers: string[] = [],
 ) {
   await act(async () => {
     root.render(
@@ -197,6 +198,7 @@ async function render(
           onSave={onSave}
           onExport={onExport}
           onClear={() => undefined}
+          signInPeers={signInPeers}
         />
       </QueryClientProvider>,
     );
@@ -821,6 +823,19 @@ describe("BotSettings sign-ins", () => {
       toggle()?.click();
     });
     expect(toggle()?.getAttribute("aria-checked")).toBe("true");
+    // The reason sits under the switch, not at the foot of the panel.
+    const detail = toggle()?.closest("div.rounded-xl")?.querySelector('[role="alert"]');
+    expect(detail?.textContent).toBe("offline");
+  });
+
+  it("names the other bots it shares sign-ins with", async () => {
+    await render("Billing", { shareSignIns: true }, false, 0, ["Noor X", "KODI"]);
+    expect(toggle()?.closest("div.rounded-xl")?.textContent).toContain("With Noor X and KODI");
+  });
+
+  it("names no one while it is off", async () => {
+    await render("Billing", { shareSignIns: false }, false, 0, ["Noor X"]);
+    expect(toggle()?.closest("div.rounded-xl")?.textContent).not.toContain("Noor X");
   });
 
   it("is not offered to a bot with its own computer", async () => {

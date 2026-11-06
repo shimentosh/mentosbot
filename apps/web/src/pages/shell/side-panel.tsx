@@ -190,6 +190,15 @@ export function ShellSidePanel({
             <BotSettings
               key={active.id}
               bot={active}
+              signInPeers={bots
+                .filter(
+                  (bot) =>
+                    bot.id !== active.id &&
+                    !bot.share &&
+                    bot.shareSignIns &&
+                    bot.computerMode === "team",
+                )
+                .map((bot) => bot.name)}
               tab={botTab}
               onTabChange={(tab: BotPanelTab) => {
                 setPanel(tab);

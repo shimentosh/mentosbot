@@ -135,6 +135,7 @@ export const NL_MESSAGES: Record<string, string> = {
   "{count} messages with {peer}": "{count} berichten met {peer}",
   "About {label}": "Over {label}",
   "Manage other bots": "Andere bots beheren",
+  "Share sign-ins with my other bots": "Aanmeldingen delen met mijn andere bots",
   "Allow cross-space bot communication":
     "Communicatie tussen bots in verschillende ruimtes toestaan",
   "Organize the sidebar and edit bots. Instruction, model, routine and group edits need approval.":

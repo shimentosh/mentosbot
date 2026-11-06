@@ -1,3 +1,4 @@
+import { i18n } from "@lingui/core";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type {
   AgentSkillCatalogEntry,
@@ -63,6 +64,11 @@ const KnowledgeSection = lazyComponent(() =>
 
 const rowLabelClass = "text-sm text-foreground";
 
+/** "A, B and C" in the reader's language. */
+function formatList(names: string[]): string {
+  return new Intl.ListFormat(i18n.locale || "en", { type: "conjunction" }).format(names);
+}
+
 /** The advanced fields one Save sends, in the order their saved snapshot keeps them. */
 function advancedValues(bot: Bot) {
   return [
@@ -116,8 +122,11 @@ export function BotSettings({
   onClear,
   focusModel = 0,
   onOpenConnections,
+  signInPeers = [],
 }: {
   bot: Bot;
+  /** Names of the owner's other bots whose browsers share sign-ins. */
+  signInPeers?: string[];
   tab?: BotPanelTab;
   onTabChange?: (tab: BotPanelTab) => void;
   computer?: ReactNode;
@@ -242,6 +251,7 @@ export function BotSettings({
     advancedSnapshot !== savedAdvanced ||
     description.trim() !== savedDescriptionRef.current;
   const [error, setError] = useState<string | null>(null);
+  const [shareSignInsError, setShareSignInsError] = useState<string | null>(null);
   const saveQueueRef = useRef(Promise.resolve());
   const executeSaveRef = useRef<
     (
@@ -475,7 +485,12 @@ export function BotSettings({
         setDailyCheckIns(!patchOverrides.dailyCheckIns);
       if (patchOverrides?.fleetManagement !== undefined)
         setFleetManagement(!patchOverrides.fleetManagement);
-      if (patchOverrides?.shareSignIns !== undefined) setShareSignIns(!patchOverrides.shareSignIns);
+      if (patchOverrides?.shareSignIns !== undefined) {
+        setShareSignIns(!patchOverrides.shareSignIns);
+        // Shown beside the switch: the panel's own error line sits far below it.
+        setShareSignInsError(errorText(err, t`Could not save`));
+        return;
+      }
       setError(errorText(err, t`Could not save`));
     } finally {
       pendingSavesRef.current -= 1;
@@ -686,19 +701,37 @@ export function BotSettings({
             <SettingsGroup label={t`Computer`} plain>
               <ComputerModePicker value={computerMode} onChange={setComputerMode} />
               {bot.computerMode === "team" ? (
-                <div className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 text-sm">
-                  <label htmlFor={`${ids}-share-sign-ins`} className={rowLabelClass}>
-                    <Trans>Share sign-ins with my other bots</Trans>
-                  </label>
-                  <Switch
-                    id={`${ids}-share-sign-ins`}
-                    checked={shareSignIns}
-                    disabled={saving}
-                    onCheckedChange={(checked) => {
-                      setShareSignIns(checked);
-                      void enqueueSave({ shareSignIns: checked });
-                    }}
-                  />
+                <div className="mt-4 rounded-xl bg-muted/50 px-4 py-2 text-sm">
+                  <div className="flex min-h-9 items-center justify-between gap-3">
+                    <label htmlFor={`${ids}-share-sign-ins`} className={rowLabelClass}>
+                      <Trans>Share sign-ins with my other bots</Trans>
+                    </label>
+                    <Switch
+                      id={`${ids}-share-sign-ins`}
+                      checked={shareSignIns}
+                      disabled={saving}
+                      aria-describedby={`${ids}-share-sign-ins-detail`}
+                      onCheckedChange={(checked) => {
+                        setShareSignIns(checked);
+                        setShareSignInsError(null);
+                        void enqueueSave({ shareSignIns: checked });
+                      }}
+                    />
+                  </div>
+                  <div id={`${ids}-share-sign-ins-detail`}>
+                    {shareSignInsError ? (
+                      <p role="alert" className="pb-1 text-[13px] text-destructive">
+                        {shareSignInsError}
+                      </p>
+                    ) : shareSignIns && signInPeers.length ? (
+                      <p
+                        className="truncate pb-1 text-[13px] text-muted-foreground"
+                        title={signInPeers.join(", ")}
+                      >
+                        {t`With ${formatList(signInPeers)}`}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
               {memoryProviderConfigured ? (

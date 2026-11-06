@@ -83,6 +83,7 @@ export default function BotSettingsScreen() {
   const [dailyCheckIns, setDailyCheckIns] = useState(true);
   const [crossSpaceCommunication, setCrossSpaceCommunication] = useState(true);
   const [fleetManagement, setFleetManagement] = useState(true);
+  const [shareSignIns, setShareSignIns] = useState(false);
   const [credentials, setCredentials] = useState<MobileModelCredential[]>([]);
   const [catalog, setCatalog] = useState<MobileModel[]>([]);
   const [me, setMe] = useState<MobileMe | null>(null);
@@ -127,6 +128,18 @@ export default function BotSettingsScreen() {
           await rpc("bots/update", { botId, fleetManagement: value });
         },
         onChange: setFleetManagement,
+        onError: (err) => setError(errorText(err, t("Could not save bot"))),
+      }),
+    [botId, t],
+  );
+
+  const shareSignInsSave = useMemo(
+    () =>
+      createQueuedSave<boolean>(false, {
+        save: async (value) => {
+          await rpc("bots/update", { botId, shareSignIns: value });
+        },
+        onChange: setShareSignIns,
         onError: (err) => setError(errorText(err, t("Could not save bot"))),
       }),
     [botId, t],
@@ -199,9 +212,11 @@ export default function BotSettingsScreen() {
         crossSpaceSave.reset(next.crossSpaceCommunication ?? true);
         setFleetManagement(next.fleetManagement);
         fleetSave.reset(next.fleetManagement);
+        setShareSignIns(next.shareSignIns ?? false);
+        shareSignInsSave.reset(next.shareSignIns ?? false);
       })
       .catch((err) => setError(errorText(err, t("Could not load bot"))));
-  }, [botId, dailyCheckInsSave, crossSpaceSave, fleetSave, notifySave, nameSave]);
+  }, [botId, dailyCheckInsSave, crossSpaceSave, fleetSave, shareSignInsSave, notifySave, nameSave]);
 
   useEffect(() => {
     void Promise.all([rpc("me"), rpc("models/list"), rpc("models/credentials")])
@@ -637,6 +652,22 @@ export default function BotSettingsScreen() {
 
             <SettingsGroup label={t("Computer")}>
               <ComputerModePicker plain value={computerMode} onChange={setComputerMode} />
+              {bot?.computerMode === "team" ? (
+                <View style={styles.row}>
+                  <Text style={[styles.rowLabel, { color: tokens.foreground }]}>
+                    {t("Share sign-ins with my other bots")}
+                  </Text>
+                  <NativeSwitch
+                    accessibilityLabel={t("Share sign-ins with my other bots")}
+                    value={shareSignIns}
+                    onValueChange={(value) => {
+                      if (!botId) return;
+                      setError(null);
+                      shareSignInsSave.update(value);
+                    }}
+                  />
+                </View>
+              ) : null}
             </SettingsGroup>
             <SettingsGroup label={t("Voice")}>
               <View style={styles.row}>

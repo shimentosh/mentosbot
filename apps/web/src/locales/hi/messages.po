@@ -2992,6 +2992,7 @@ msgid "Download {0}"
 msgstr "{0} डाउनलोड करें"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "{name} डाउनलोड करें"
 
@@ -6239,7 +6240,7 @@ msgstr "“{title}” शेयर करें"
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Share sign-ins with my other bots"
-msgstr ""
+msgstr "मेरे दूसरे बॉट के साथ साइन-इन शेयर करें"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
@@ -7542,6 +7543,11 @@ msgstr "बॉट कहां चलने चाहिए?"
 #: src/components/pages/SharePopover.tsx
 msgid "Who can open this page"
 msgstr "यह पेज कौन खोल सकता है"
+
+#. placeholder {0}: formatList(signInPeers)
+#: src/pages/shell/bot-panel.tsx
+msgid "With {0}"
+msgstr "{0} के साथ"
 
 #: src/lib/ticket-status.ts
 msgid "Won't do"

@@ -2992,6 +2992,7 @@ msgid "Download {0}"
 msgstr "Download {0}"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "Download {name}"
 
@@ -7542,6 +7543,11 @@ msgstr "Where should bots run?"
 #: src/components/pages/SharePopover.tsx
 msgid "Who can open this page"
 msgstr "Who can open this page"
+
+#. placeholder {0}: formatList(signInPeers)
+#: src/pages/shell/bot-panel.tsx
+msgid "With {0}"
+msgstr "With {0}"
 
 #: src/lib/ticket-status.ts
 msgid "Won't do"

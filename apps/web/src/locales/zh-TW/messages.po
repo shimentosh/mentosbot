@@ -2993,6 +2993,7 @@ msgid "Download {0}"
 msgstr "下載 {0}"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "下載 {name}"
 
@@ -6240,7 +6241,7 @@ msgstr "分享「{title}」"
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Share sign-ins with my other bots"
-msgstr ""
+msgstr "與我的其他機器人共用登入"
 
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
@@ -7543,6 +7544,11 @@ msgstr "機器人應在哪裡執行？"
 #: src/components/pages/SharePopover.tsx
 msgid "Who can open this page"
 msgstr "誰可以開啟此頁面"
+
+#. placeholder {0}: formatList(signInPeers)
+#: src/pages/shell/bot-panel.tsx
+msgid "With {0}"
+msgstr "與 {0} 共用"
 
 #: src/lib/ticket-status.ts
 msgid "Won't do"
