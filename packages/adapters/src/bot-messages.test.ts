@@ -6,6 +6,7 @@ import {
   loadBotMessageContext,
   messageBot,
   returnBotMessageOutcome,
+  tellRequesterAwaitingApproval,
 } from "./bot-messages.js";
 import type { ExecutorDeps } from "./executor-deps.js";
 
@@ -167,6 +168,83 @@ describe("messaging another bot", () => {
       ([call]) => (call as { data?: { unread?: boolean } }).data?.unread === true,
     );
     expect(unreadWrites).toHaveLength(2);
+  });
+
+  it("carries the person's own request to the target", async () => {
+    const harness = deps();
+    await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "Publish this post on both networks.",
+      userRequest: "write a post and publish it, send me the links",
+    });
+
+    expect(harness.tx.message.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          threadId: "thread-target",
+          blocks: [
+            expect.objectContaining({
+              kind: "bot_message_received",
+              userRequest: "write a post and publish it, send me the links",
+            }),
+          ],
+        }),
+      }),
+    );
+    expect(harness.tx.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          prompt: expect.stringContaining(
+            "<user_request>\nwrite a post and publish it, send me the links\n</user_request>",
+          ),
+        }),
+      }),
+    );
+  });
+
+  it("adds no request when the sending run has no words from the person", async () => {
+    const harness = deps();
+    await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "ping",
+      userRequest: "  ",
+    });
+
+    const inbound = harness.tx.message.create.mock.calls.at(-1)?.[0] as {
+      data: { blocks: Array<Record<string, unknown>> };
+    };
+    expect(inbound.data.blocks[0]).not.toHaveProperty("userRequest");
+  });
+
+  it("returns a delegated outcome with the request that started the chain", async () => {
+    const harness = deps({
+      hopBlocks: [
+        {
+          kind: "bot_message_received",
+          fromBotId: "bot-target",
+          fromBotName: "Coordinator",
+          text: "publish it",
+          hop: 1,
+          intent: "request",
+          returnToMessageId: "message-request",
+          userRequest: "publish the post",
+        },
+      ],
+    });
+    await returnBotMessageOutcome(
+      harness.deps,
+      { ...run, sourceMessageId: "message-source" },
+      sender,
+      "Published.",
+    );
+
+    expect(harness.tx.message.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          blocks: [expect.objectContaining({ intent: "result", userRequest: "publish the post" })],
+        }),
+      }),
+    );
   });
 
   it("tells the sender to continue independent work", async () => {
@@ -803,5 +881,71 @@ describe("automatic outcome return", () => {
       },
       data: { botOutcomeReturnedAt: expect.any(Date) },
     });
+  });
+});
+
+describe("waiting on the person's approval", () => {
+  const delegated = { ...run, trigger: "bot_message", sourceMessageId: "message-source" };
+  const request = (fields: Record<string, unknown> = {}) => [
+    {
+      kind: "bot_message_received",
+      fromBotId: "bot-target",
+      fromBotName: "Manager",
+      text: "publish it",
+      hop: 1,
+      intent: "request",
+      returnToMessageId: "message-request",
+      userRequest: "publish the post",
+      ...fields,
+    },
+  ];
+
+  it("tells the bot that asked, once per approval", async () => {
+    const harness = deps({ hopBlocks: request() });
+    await tellRequesterAwaitingApproval(harness.deps as never, delegated, sender, {
+      effectId: "effect-1",
+      summary: "Post on X",
+    });
+
+    expect(harness.tx.message.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          threadId: "thread-target",
+          clientNonce: "bot-message:approval-wait:effect-1",
+          blocks: [
+            expect.objectContaining({
+              kind: "bot_message_received",
+              intent: "status",
+              text: expect.stringContaining(
+                "Waiting for the user's approval in my chat: Post on X",
+              ),
+              userRequest: "publish the post",
+            }),
+          ],
+        }),
+      }),
+    );
+    expect(harness.enqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays quiet when no bot is waiting on this run", async () => {
+    for (const [trigger, blocks] of [
+      ["user", request()],
+      ["bot_message", request({ intent: "result" })],
+      ["bot_message", request({ intent: "fyi" })],
+      ["bot_message", []],
+    ] as const) {
+      const harness = deps({ hopBlocks: [...blocks] });
+      await tellRequesterAwaitingApproval(
+        harness.deps as never,
+        { ...delegated, trigger },
+        sender,
+        {
+          effectId: "effect-1",
+          summary: "Post on X",
+        },
+      );
+      expect(harness.tx.message.create).not.toHaveBeenCalled();
+    }
   });
 });

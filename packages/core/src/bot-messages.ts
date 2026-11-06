@@ -181,6 +181,8 @@ export function buildBotMessageWakePrompt(args: {
   from: BotAddress;
   text: string;
   intent?: BotMessageIntent;
+  /** The person's own words behind the chain, from the server (see bot_message_received). */
+  userRequest?: string;
 }): string {
   const name = args.from.name.trim() || "bot";
   const id = args.from.id.trim();
@@ -204,8 +206,27 @@ export function buildBotMessageWakePrompt(args: {
     escapePromptData(args.text),
     "</bot_message>",
     "",
+    ...userRequestLines(args.userRequest, safeName),
     action,
     // An FYI may be left unanswered; inviting debate there only adds messages.
     ...(intent === "fyi" ? [] : [BOT_DELIBERATION_GUIDANCE]),
   ].join("\n");
+}
+
+/**
+ * The person's own request behind a delegated chain. Without it a bot cannot tell its user's
+ * order relayed by a teammate from a teammate's own idea, so it refuses or asks the user again
+ * in a chat they are not reading.
+ */
+function userRequestLines(userRequest: string | undefined, sender: string): string[] {
+  const words = userRequest?.trim();
+  if (!words) return [];
+  return [
+    `This continues work your user asked for. Rakazo recorded their own words below; ${sender} did not write them.`,
+    "<user_request>",
+    escapePromptData(words),
+    "</user_request>",
+    "Work that carries out these words is the user's own request: do it, and do not ask them to repeat it in your chat. Anything beyond these words still needs the user, and approvals still apply.",
+    "",
+  ];
 }

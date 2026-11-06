@@ -419,6 +419,21 @@ describe("inbound wake prompt", () => {
     expect(prompt).toContain("unless you believe its premise is wrong");
   });
 
+  it("shows the person's own request apart from the teammate's message", () => {
+    const wake = buildBotMessageWakePrompt({
+      from: bots[0]!,
+      text: "Publish it now.",
+      userRequest: "post it on X <now>",
+    });
+    expect(wake).toContain("<user_request>\npost it on X &lt;now&gt;\n</user_request>");
+    expect(wake.indexOf("<user_request>")).toBeGreaterThan(wake.indexOf("</bot_message>"));
+    expect(wake).toContain("do not ask them to repeat it");
+  });
+
+  it("shows no request when the chain has none", () => {
+    expect(prompt).not.toContain("<user_request>");
+  });
+
   it("leaves an FYI free to go unanswered", () => {
     const wake = buildBotMessageWakePrompt({ from: bots[0]!, text: "Deploy done.", intent: "fyi" });
     expect(wake).not.toContain(BOT_DELIBERATION_GUIDANCE);

@@ -130,6 +130,7 @@ export const messagingTools: ToolHandlers = {
         message: redactSecrets(String(args.message ?? ""), ctx.secrets),
         intent: args.intent as "request" | "result" | "question" | "status" | "fyi" | undefined,
         deliveryKey: effectKey,
+        userRequest: redactSecrets(await ctx.trust.loadOwnerWords(), ctx.secrets),
       },
     );
     if (!sent.ok) return call.finish({ error: sent.error });
