@@ -519,7 +519,7 @@ describe("recent turn images follow model vision", () => {
     expect(writeFile).not.toHaveBeenCalled();
     expect(releaseScreen).not.toHaveBeenCalled();
     expect(request.prompt).toContain(
-      'Files attached earlier in this conversation are also on your computer:\n- "shot.png" (image/png, 4 bytes): "attachments/art-1.png"',
+      'Files shown earlier in this conversation, by you or the user, are also on your computer. To post, send or upload one of them, use its path here rather than searching for it or taking a screenshot:\n- "shot.png" (image/png, 4 bytes): "attachments/art-1.png"',
     );
   });
 
@@ -537,7 +537,7 @@ describe("recent turn images follow model vision", () => {
       { path: "attachments/art-1.png", content: new Uint8Array([1, 2, 3, 4]) },
     ]);
     expect(request.prompt).toContain(
-      'Files attached earlier in this conversation are also on your computer:\n- "shot.png" (image/png, 4 bytes): "attachments/art-1.png"',
+      'Files shown earlier in this conversation, by you or the user, are also on your computer. To post, send or upload one of them, use its path here rather than searching for it or taking a screenshot:\n- "shot.png" (image/png, 4 bytes): "attachments/art-1.png"',
     );
     expect(exportWorkspace).not.toHaveBeenCalled();
   });

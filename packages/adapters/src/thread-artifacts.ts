@@ -294,7 +294,10 @@ export async function listRecentThreadFiles(
     .slice(0, ATTACHMENT_MAX_COUNT);
 }
 
-/** The newest attachments across the last `maxTurns` user turns that carry any. */
+/**
+ * The newest attachments across the last `maxTurns` turns that carry any. A bot's own turns
+ * count too: an image it showed earlier is what "publish that" means, so it needs the exact file.
+ */
 function recentAttachmentBlocks(
   history: ReadonlyArray<{ id?: string; role: string }>,
   messages: ReadonlyArray<{ id: string; blocks: MessageBlock[] }>,
@@ -305,7 +308,7 @@ function recentAttachmentBlocks(
   let turns = 0;
   for (let index = history.length - 1; index >= 0 && turns < input.maxTurns; index -= 1) {
     const entry = history[index];
-    if (!entry?.id || entry.role !== "user" || entry.id === input.skipMessageId) continue;
+    if (!entry?.id || entry.role === "system" || entry.id === input.skipMessageId) continue;
     const attached = attachmentBlocks(blocksByMessageId.get(entry.id));
     if (!attached.length) continue;
     turns += 1;
@@ -331,7 +334,7 @@ export function currentTurnFilesInstruction(files: readonly MaterializedThreadFi
 export function recentThreadFilesInstruction(files: readonly MaterializedThreadFile[]): string {
   if (!files.length) return "";
   return [
-    "Files attached earlier in this conversation are also on your computer:",
+    "Files shown earlier in this conversation, by you or the user, are also on your computer. To post, send or upload one of them, use its path here rather than searching for it or taking a screenshot:",
     ...files.map(fileLine),
   ].join("\n");
 }

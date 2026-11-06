@@ -558,9 +558,68 @@ describe("recent thread files", () => {
     );
     expect(recentThreadFilesInstruction(files)).toBe(
       [
-        "Files attached earlier in this conversation are also on your computer:",
+        "Files shown earlier in this conversation, by you or the user, are also on your computer. To post, send or upload one of them, use its path here rather than searching for it or taking a screenshot:",
         '- "screenshot.png" (image/png, 3 bytes): "attachments/image-1.png"',
       ].join("\n"),
+    );
+  });
+
+  it("copies an image the bot itself showed, so a later turn can post that exact file", async () => {
+    const design = {
+      kind: "image" as const,
+      artifactId: "design",
+      name: "2026-11-07-delivery-system.png",
+      mimeType: "image/png",
+    };
+    const writeFile = vi.fn().mockResolvedValue(undefined);
+    const files = await materializeRecentThreadFiles(
+      {
+        prisma: {
+          artifact: {
+            findMany: vi
+              .fn()
+              .mockResolvedValue([{ ...design, id: "design", size: 3, storageKey: "stored" }]),
+          },
+        } as unknown as PrismaClient,
+        artifacts: {
+          get: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
+        } as unknown as ArtifactStore,
+        sandbox: {
+          writeFile,
+          readFile: vi.fn().mockRejectedValue(new Error("missing")),
+        } as unknown as SandboxProvider,
+      },
+      [
+        { id: "shown", role: "assistant" },
+        { id: "ask", role: "user" },
+      ],
+      [
+        { id: "shown", blocks: [design] },
+        { id: "ask", blocks: [{ kind: "text", text: "publish it" }] },
+      ],
+      {
+        context: {
+          operationId: "run",
+          traceId: "run",
+          spaceId: "space",
+          userId: "user",
+          botId: "bot",
+          signal: new AbortController().signal,
+        },
+        computer: async () =>
+          ({ id: "computer", kind: "fake", providerRef: "fake" }) as ComputerRef,
+        computerMode: "dedicated",
+        maxTurns: 3,
+        skipMessageId: "ask",
+      },
+    );
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.anything(),
+      { path: "attachments/design.png", content: new Uint8Array([1, 2, 3]) },
+      expect.anything(),
+    );
+    expect(recentThreadFilesInstruction(files)).toContain(
+      '"2026-11-07-delivery-system.png" (image/png, 3 bytes): "attachments/design.png"',
     );
   });
 });
