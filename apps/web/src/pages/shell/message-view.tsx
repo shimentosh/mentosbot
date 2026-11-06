@@ -652,6 +652,13 @@ export const MessageView = memo(function MessageView({
                   }
                   onDismiss={() => onAnswer(message, "", undefined, true)}
                   rpc={rpc}
+                  renderImage={(image) => (
+                    <ArtifactImage
+                      target={artifactTarget}
+                      artifactId={image.artifactId}
+                      name={image.name}
+                    />
+                  )}
                 />
                 {i === hoverAnchorIndex ? hoverActions : null}
               </div>

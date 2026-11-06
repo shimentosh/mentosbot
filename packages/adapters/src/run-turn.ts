@@ -397,6 +397,7 @@ async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
     id: action.id,
     label: redactSecrets(action.label, ctx.secrets),
   }));
+  const previewImages = await askPreviewImages(deps, run, event.previewImages);
   await ctx.computer.checkpoint.flush();
   await persistTurnCheckpoint(ctx, event.executionId);
   await ctx.settleRunningHelpers();
@@ -419,6 +420,15 @@ async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
           ? { preview: redactSecrets(event.preview, ctx.secrets) }
           : {}),
         ...(event.previewLimit !== undefined ? { previewLimit: event.previewLimit } : {}),
+        ...(event.previewLimits
+          ? {
+              previewLimits: event.previewLimits.map((entry) => ({
+                label: redactSecrets(entry.label, ctx.secrets),
+                max: entry.max,
+              })),
+            }
+          : {}),
+        ...(previewImages.length ? { previewImages } : {}),
         ...(event.multiple ? { multiple: true as const } : {}),
         ...(event.other ? { other: true as const } : {}),
       },
@@ -1102,4 +1112,30 @@ export async function failRun(
       threadId: thread.id,
     });
   }
+}
+
+/**
+ * The images a draft carries, in the order asked: only images in this Space that this bot made or
+ * its owner added. Anything else is left off the card rather than failing the question.
+ */
+export async function askPreviewImages(
+  deps: Pick<RunContext["deps"], "prisma">,
+  run: { spaceId: string; botId: string; userId: string },
+  ids: string[] | undefined,
+): Promise<Array<{ artifactId: string; name: string; mimeType: string }>> {
+  if (!ids?.length) return [];
+  const rows = await deps.prisma.artifact.findMany({
+    where: {
+      id: { in: ids },
+      spaceId: run.spaceId,
+      mimeType: { startsWith: "image/" },
+      OR: [{ botId: run.botId }, { userId: run.userId }],
+    },
+    select: { id: true, name: true, mimeType: true },
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return ids.flatMap((id) => {
+    const row = byId.get(id);
+    return row ? [{ artifactId: id, name: row.name, mimeType: row.mimeType }] : [];
+  });
 }

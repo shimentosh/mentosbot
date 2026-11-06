@@ -4,6 +4,7 @@ import { BOT_INSTRUCTIONS_MAX_LENGTH } from "@rakazo/contracts";
 import {
   batchActions,
   CARD_TITLE_ESCAPED_CHARACTERS,
+  humanizeToolName,
   instructionUpdateDiff,
   messagingProviderName,
   redactSecrets,
@@ -301,7 +302,7 @@ function describeApprovalAction(
   // A batch is named by the actions it runs; "…" stands for an entry that names none.
   const batch = batchShape && batchActions(batchShape, args);
   if (batch?.actions.length) {
-    return [...batch.actions, ...(batch.complete ? [] : ["…"])].join(", ");
+    return [...batch.actions.map(approvalToolLabel), ...(batch.complete ? [] : ["…"])].join(", ");
   }
   if (toolName === "archive_bot") {
     const name = args.confirm_name ?? args.confirmName;
@@ -312,7 +313,28 @@ function describeApprovalAction(
     return `Create space “${name}”`;
   }
   const target = webFetchSite(toolName, args) ?? pickScopeLabel(args);
-  return target ? `${toolName} → ${target}` : toolName;
+  const label = approvalToolLabel(toolName);
+  return target ? `${label} → ${target}` : label;
+}
+
+/** A tool's name as a person reads it: "schedule_update" as "schedule update", a server tool without its server. */
+export function approvalToolLabel(toolName: string): string {
+  const own = /^mcp__.+?__(.+)$/.exec(toolName)?.[1] ?? toolName;
+  return humanizeToolName(own).toLowerCase();
+}
+
+/** An argument's name as a person reads it: "scheduled_at" or "scheduledAt" as "Scheduled at". */
+export function argumentLabel(key: string): string {
+  const words = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLowerCase();
+  if (!words) return key;
+  const label = words.replace(/\b(url|uri|id|ids|api|html|json|cc|bcc)\b/g, (word) =>
+    word === "ids" ? "IDs" : word.toUpperCase(),
+  );
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function formatApprovalDetail(
@@ -344,7 +366,10 @@ function formatApprovalDetail(
     for (const item of items) {
       const entry = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
       const action = entry[batch.action];
-      const name = (typeof action === "string" && action.trim()) || "…";
+      const name =
+        typeof action === "string" && action.trim()
+          ? humanizeToolName(approvalToolLabel(action.trim()))
+          : "…";
       const { first, last } = shown(objectArguments(entry[batch.arguments]));
       lines.push(name, ...first);
       later.push(...last.map((line) => `${name} ${line}`));
@@ -377,7 +402,7 @@ function argumentLines(
     const value = values[key];
     const text = argumentText(value);
     if (!text) continue;
-    const line = `${key}: ${text}`;
+    const line = `${argumentLabel(key)}: ${text}`;
     if (text.length <= SHORT_ARGUMENT_LENGTH) short.push(line);
     else (typeof value === "string" ? last : structured).push(line);
   }

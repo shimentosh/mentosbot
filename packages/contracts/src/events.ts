@@ -151,8 +151,16 @@ export const MessageBlock = z.discriminatedUnion("kind", [
     remembered: z.literal(false).optional(),
     /** On a choice question, the draft the options approve, shown quoted and editable. */
     preview: z.string().optional(),
-    /** The draft's character limit, counted as askTextLength counts. */
+    /** The draft's character limit, counted as askTextLength counts: the strictest of `previewLimits`. */
     previewLimit: z.number().int().positive().optional(),
+    /** Each place the draft goes with its own limit, such as several accounts, counted separately. */
+    previewLimits: z
+      .array(z.object({ label: z.string(), max: z.number().int().positive() }))
+      .optional(),
+    /** Images that go with the draft, such as a post's pictures, shown on the card. */
+    previewImages: z
+      .array(z.object({ artifactId: Id, name: z.string(), mimeType: z.string() }))
+      .optional(),
     /** On a choice question, the person may pick several options and confirm once. */
     multiple: z.literal(true).optional(),
     /** On a choice question, the person may type their own answer instead. */

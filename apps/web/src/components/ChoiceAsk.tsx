@@ -10,6 +10,7 @@ import {
 import { askChoiceSelection } from "@rakazo/core";
 import { Button, cn, Input, Textarea } from "@rakazo/ui-web";
 import { Check } from "lucide-react";
+import type { ReactNode } from "react";
 import { Fragment, useState } from "react";
 import type { AskBlock } from "./AskCard";
 import { OptionRow, optionLetter } from "./OptionRow";
@@ -42,12 +43,15 @@ export function ChoiceAsk({
   acceptedAnswer,
   pendingAnswer,
   onAnswer,
+  renderImage,
 }: {
   block: AskBlock;
   canAnswer: boolean;
   acceptedAnswer?: string;
   pendingAnswer: string | null;
   onAnswer: (answer: string) => void;
+  /** Shows one of the draft's images, such as a post's picture; without it they are left out. */
+  renderImage?: (image: { artifactId: string; name: string; mimeType: string }) => ReactNode;
 }) {
   const { t } = useLingui();
   const actions = block.actions ?? [];
@@ -62,7 +66,9 @@ export function ChoiceAsk({
   const chosen = new Set(selection?.chosen.map((action) => action.id));
   const limit = block.previewLimit;
   const shownText = answered ? (selection.edited ?? block.preview) : draft;
-  const overLimit = limit !== undefined && askTextLength(shownText ?? "") > limit;
+  const shownLength = askTextLength(shownText ?? "");
+  const overLimit = limit !== undefined && shownLength > limit;
+  const images = renderImage ? (block.previewImages ?? []) : [];
   const other = otherText.trim();
 
   function answerFor(choices: string[], ownAnswer?: string) {
@@ -118,6 +124,13 @@ export function ChoiceAsk({
 
   return (
     <>
+      {images.length ? (
+        <div data-testid="ask-preview-images" className="mt-3 flex flex-wrap gap-2">
+          {images.map((image) => (
+            <Fragment key={image.artifactId}>{renderImage?.(image)}</Fragment>
+          ))}
+        </div>
+      ) : null}
       {block.preview !== undefined ? (
         <div
           className={cn(
@@ -143,7 +156,21 @@ export function ChoiceAsk({
               {shownText}
             </p>
           )}
-          {limit !== undefined ? (
+          {block.previewLimits?.length ? (
+            <p
+              data-testid="ask-preview-count"
+              className="mt-1 flex flex-wrap justify-end gap-x-3 text-xs tabular-nums text-muted-foreground"
+            >
+              {block.previewLimits.map((entry) => (
+                <span
+                  key={entry.label}
+                  className={cn(shownLength > entry.max && "text-destructive")}
+                >
+                  {entry.label} {shownLength}/{entry.max}
+                </span>
+              ))}
+            </p>
+          ) : limit !== undefined ? (
             <p
               data-testid="ask-preview-count"
               className={cn(
@@ -151,7 +178,7 @@ export function ChoiceAsk({
                 overLimit && "text-destructive",
               )}
             >
-              {askTextLength(shownText ?? "")}/{limit}
+              {shownLength}/{limit}
             </p>
           ) : null}
         </div>

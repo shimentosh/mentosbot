@@ -364,8 +364,8 @@ function toAgentTool(
           options,
           // Models often send null for an optional field they leave out.
           ...Object.fromEntries(
-            (["preview", "limit", "multiple", "other"] as const).flatMap((key) =>
-              raw[key] === undefined || raw[key] === null ? [] : [[key, raw[key]]],
+            (["preview", "limit", "limits", "images", "multiple", "other"] as const).flatMap(
+              (key) => (raw[key] === undefined || raw[key] === null ? [] : [[key, raw[key]]]),
             ),
           ),
         };

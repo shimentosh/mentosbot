@@ -659,7 +659,7 @@ export const builtinAgentTools: ConnectorTool[] = [
   {
     name: "ask_user",
     description:
-      'Ask the user one short question with tappable options, then wait for their answer. Use it instead of asking them to type when a few choices are enough. To approve anything you will post, send or publish, put the exact text in preview (limit sets its character cap) with options such as "Post" and "Not now"; never ask them to reply "Approved". They can edit the preview: when the answer has edited text, use exactly that. multiple lets them pick several (up to six options); other lets them type their own answer.',
+      'Ask the user one short question with tappable options, then wait. To approve what you will post, send or publish, put its exact text in preview, one ask each, with options like "Post now" and "Not now"; never ask them to reply "Approved". limits: each place\'s cap, e.g. [{label:"X",max:280}]. images: its pictures\' artifact ids. Use edited answer text exactly. multiple: pick several (up to six); other: type their own.',
     inputSchema: {
       type: "object",
       properties: {
@@ -673,6 +673,8 @@ export const builtinAgentTools: ConnectorTool[] = [
         },
         preview: { type: "string", minLength: 1, maxLength: ASK_USER_PREVIEW_MAX_LENGTH },
         limit: { type: "integer", minimum: 1, maximum: ASK_USER_PREVIEW_MAX_LENGTH },
+        limits: { type: "array", items: { type: "object" } },
+        images: { type: "array", items: { type: "string" } },
         multiple: { type: "boolean" },
         other: { type: "boolean" },
       },

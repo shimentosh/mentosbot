@@ -6,6 +6,7 @@ import { BOT_INSTRUCTIONS_MAX_LENGTH } from "@rakazo/contracts";
 import { isApprovalAskBlock, isSecretAskBlock, selectedAskActionLabel } from "@rakazo/core";
 import { Button, Input, Textarea } from "@rakazo/ui-web";
 import { Check } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import type { RpcClient } from "../lib/rpc";
 import { rpc as selectedSpaceRpc } from "../lib/rpc";
@@ -66,6 +67,8 @@ export type AskCardProps = {
   onDismiss: () => Promise<void>;
   /** The chat's space; Undo goes there even if another tab selects a different space. */
   rpc?: RpcClient;
+  /** Shows one of a draft's images, such as a post's picture. */
+  renderImage?: (image: { artifactId: string; name: string; mimeType: string }) => ReactNode;
 };
 
 /** A question, approval or protected-input request from the bot. */
@@ -77,7 +80,13 @@ export function AskCard(props: AskCardProps) {
   );
 }
 
-function PromptAskCard({ block, canAnswer, onAnswer, rpc = selectedSpaceRpc }: AskCardProps) {
+function PromptAskCard({
+  block,
+  canAnswer,
+  onAnswer,
+  rpc = selectedSpaceRpc,
+  renderImage,
+}: AskCardProps) {
   const { t } = useLingui();
   const [editing, setEditing] = useState(false);
   const [answer, setAnswer] = useState(block.instructionUpdate?.after ?? "");
@@ -225,6 +234,7 @@ function PromptAskCard({ block, canAnswer, onAnswer, rpc = selectedSpaceRpc }: A
           acceptedAnswer={acceptedAnswer}
           pendingAnswer={pendingAction}
           onAnswer={(value) => void submitAnswer(value)}
+          renderImage={renderImage}
         />
       ) : typedAnswer ? (
         <blockquote

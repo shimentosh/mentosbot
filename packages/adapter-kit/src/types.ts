@@ -703,6 +703,9 @@ export type AgentRuntimeEvent =
       /** The draft a choice question approves, shown quoted and editable. */
       preview?: string;
       previewLimit?: number;
+      previewLimits?: Array<{ label: string; max: number }>;
+      /** Artifact ids of images that go with the draft; the executor keeps only the bot's own. */
+      previewImages?: string[];
       multiple?: true;
       other?: true;
     }

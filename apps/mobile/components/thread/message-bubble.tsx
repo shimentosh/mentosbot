@@ -439,6 +439,16 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                   accessibilityActions={actionProps.accessibilityActions}
                   onAccessibilityAction={actionProps.onAccessibilityAction}
                   onAnswer={(answer) => onAnswer(message, answer)}
+                  renderImage={(image) => (
+                    <InlineImageAttachment
+                      threadTarget={artifactTarget}
+                      artifactId={image.artifactId}
+                      name={image.name}
+                      mimeType={image.mimeType}
+                      labelColor={tokens.foreground}
+                      onOpen={() => onPreviewImage(image)}
+                    />
+                  )}
                 />
               ) : askBlock.status === "answered" ? (
                 <Text

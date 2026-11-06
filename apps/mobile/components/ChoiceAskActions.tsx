@@ -7,6 +7,7 @@ import {
 } from "@rakazo/contracts";
 import { askChoiceAnswerText, askChoiceSelection } from "@rakazo/core";
 import { fontWeight, typeScale } from "@rakazo/ui-tokens";
+import type { ReactNode } from "react";
 import { Fragment, useState } from "react";
 import type { ViewProps } from "react-native";
 import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
@@ -32,12 +33,15 @@ export function ChoiceAskActions({
   onAnswer,
   accessibilityActions,
   onAccessibilityAction,
+  renderImage,
 }: {
   block: AskBlock;
   canAnswer: boolean;
   onAnswer: (answer: string) => Promise<void>;
   accessibilityActions?: ViewProps["accessibilityActions"];
   onAccessibilityAction?: ViewProps["onAccessibilityAction"];
+  /** Shows one of the draft's images, such as a post's picture. */
+  renderImage?: (image: { artifactId: string; name: string; mimeType: string }) => ReactNode;
 }) {
   const { t } = useI18n();
   const tokens = useMobileTokens();
@@ -104,6 +108,13 @@ export function ChoiceAskActions({
 
   return (
     <View style={styles.stack}>
+      {renderImage && block.previewImages?.length ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {block.previewImages.map((image) => (
+            <Fragment key={image.artifactId}>{renderImage(image)}</Fragment>
+          ))}
+        </View>
+      ) : null}
       {block.preview !== undefined ? (
         <View style={[styles.preview, { backgroundColor: tokens.muted }]}>
           {editing && !answered ? (
@@ -122,7 +133,24 @@ export function ChoiceAskActions({
               {shownText}
             </Text>
           )}
-          {limit !== undefined ? (
+          {block.previewLimits?.length ? (
+            <View
+              style={{ alignSelf: "flex-end", flexDirection: "row", flexWrap: "wrap", gap: 12 }}
+            >
+              {block.previewLimits.map((entry) => (
+                <Text
+                  key={entry.label}
+                  style={{
+                    color: length > entry.max ? tokens.destructive : tokens.mutedForeground,
+                    fontVariant: ["tabular-nums"],
+                    ...typeScale.caption,
+                  }}
+                >
+                  {`${entry.label} ${length}/${entry.max}`}
+                </Text>
+              ))}
+            </View>
+          ) : limit !== undefined ? (
             <Text
               style={{
                 alignSelf: "flex-end",

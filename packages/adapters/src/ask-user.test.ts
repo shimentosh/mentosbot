@@ -71,4 +71,46 @@ describe("askUserRequest", () => {
     expect(() => askUserRequest({ ...base, multiple: "yes" })).toThrow();
     expect(() => askUserRequest({ ...base, question: "x".repeat(241) })).toThrow();
   });
+
+  it("gives each place a post goes its own limit, and the strictest one guards edits", () => {
+    const post = {
+      question: "Post 1 of 2?",
+      options: ["Post now", "Save draft", "Not now"],
+      preview: "Most agencies do not have a lead problem.",
+      limits: [
+        { label: " X ", max: 280 },
+        { label: "Threads", max: 500 },
+      ],
+      images: ["art_1", "art_2", "art_1"],
+    };
+    expect(askUserRequest(post)).toMatchObject({
+      preview: post.preview,
+      previewLimit: 280,
+      previewLimits: [
+        { label: "X", max: 280 },
+        { label: "Threads", max: 500 },
+      ],
+      previewImages: ["art_1", "art_2"],
+    });
+    expect(() => askUserRequest({ ...post, preview: "a".repeat(300) })).toThrow(
+      "over X (280); shorten it",
+    );
+  });
+
+  it("rejects malformed limits or images, and either without a draft", () => {
+    const base = { question: "Post?", options: ["Post", "Not now"], preview: "Hi" };
+    for (const bad of [
+      { limits: [] },
+      { limits: [{ label: "", max: 280 }] },
+      { limits: [{ label: "X", max: 0 }] },
+      { limits: Array.from({ length: 5 }, (_, i) => ({ label: `L${i}`, max: 100 })) },
+      { images: [] },
+      { images: ["../etc"] },
+      { images: ["a", "b", "c", "d", "e"] },
+    ])
+      expect(() => askUserRequest({ ...base, ...bad }), JSON.stringify(bad)).toThrow();
+    expect(() =>
+      askUserRequest({ question: "Post?", options: ["Post", "Not now"], images: ["a"] }),
+    ).toThrow("needs a preview");
+  });
 });

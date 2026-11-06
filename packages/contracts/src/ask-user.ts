@@ -8,6 +8,11 @@ export const ASK_USER_MAX_MULTIPLE_OPTIONS = 6;
 /** The longest draft a bot can show for approval, and the longest edit a person can send back. */
 export const ASK_USER_PREVIEW_MAX_LENGTH = 4000;
 export const ASK_USER_OTHER_MAX_LENGTH = 500;
+/** Images a draft carries, such as a post's pictures, shown with it on the card. */
+export const ASK_USER_MAX_IMAGES = 4;
+/** Where a draft goes, each with its own character limit, such as several social accounts. */
+export const ASK_USER_MAX_LIMITS = 4;
+export const ASK_USER_LIMIT_LABEL_MAX_LENGTH = 24;
 
 /** Characters as people count them, so an emoji is one, not two. */
 export function askTextLength(text: string): number {

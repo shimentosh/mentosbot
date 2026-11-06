@@ -1,6 +1,9 @@
 import { Type } from "@earendil-works/pi-ai";
 import type { ConnectorTool } from "@rakazo/adapter-kit";
 import {
+  ASK_USER_LIMIT_LABEL_MAX_LENGTH,
+  ASK_USER_MAX_IMAGES,
+  ASK_USER_MAX_LIMITS,
   ASK_USER_MAX_MULTIPLE_OPTIONS,
   ASK_USER_MIN_OPTIONS,
   ASK_USER_OPTION_MAX_LENGTH,
@@ -82,6 +85,18 @@ function builtinParameters(tool: ConnectorTool) {
       }),
       preview: Type.Optional(Type.String({ minLength: 1, maxLength: ASK_USER_PREVIEW_MAX_LENGTH })),
       limit: Type.Optional(Type.Integer({ minimum: 1, maximum: ASK_USER_PREVIEW_MAX_LENGTH })),
+      limits: Type.Optional(
+        Type.Array(
+          Type.Object({
+            label: Type.String({ minLength: 1, maxLength: ASK_USER_LIMIT_LABEL_MAX_LENGTH }),
+            max: Type.Integer({ minimum: 1, maximum: ASK_USER_PREVIEW_MAX_LENGTH }),
+          }),
+          { maxItems: ASK_USER_MAX_LIMITS },
+        ),
+      ),
+      images: Type.Optional(
+        Type.Array(Type.String({ minLength: 1, maxLength: 64 }), { maxItems: ASK_USER_MAX_IMAGES }),
+      ),
       multiple: Type.Optional(Type.Boolean()),
       other: Type.Optional(Type.Boolean()),
     });

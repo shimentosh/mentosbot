@@ -973,3 +973,39 @@ it("sends an own answer typed under Other, and shows it once answered", async ()
   expect(button("CLisbon")!.getAttribute("aria-pressed")).toBe("true");
   expect(button("ABerlin")!.disabled).toBe(true);
 });
+
+it("shows a post with its pictures and a count for each place it goes", async () => {
+  const post: AskBlock = {
+    ...draftCard,
+    text: "Post 1 of 2?",
+    preview: "x".repeat(300),
+    previewLimit: 280,
+    previewLimits: [
+      { label: "X", max: 280 },
+      { label: "Threads", max: 500 },
+    ],
+    previewImages: [{ artifactId: "art_1", name: "Post 1 image", mimeType: "image/png" }],
+  };
+  await act(async () =>
+    root.render(
+      <AskCard
+        block={post}
+        canAnswer
+        canDismiss
+        onAnswer={async () => undefined}
+        onDismiss={async () => undefined}
+        renderImage={(image) => <img alt={image.name} data-artifact={image.artifactId} />}
+      />,
+    ),
+  );
+  const images = container.querySelector('[data-testid="ask-preview-images"]');
+  expect(images?.querySelector("img")?.getAttribute("data-artifact")).toBe("art_1");
+  const counts = [...previewCount()!.querySelectorAll("span")];
+  expect(counts.map((count) => count.textContent)).toEqual(["X 300/280", "Threads 300/500"]);
+  expect(counts.map((count) => count.classList.contains("text-destructive"))).toEqual([
+    true,
+    false,
+  ]);
+  // Over the strictest place's limit, nothing can be chosen until the draft is shortened.
+  expect(button("Post")!.disabled).toBe(true);
+});

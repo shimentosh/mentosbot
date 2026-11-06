@@ -48,7 +48,7 @@ describe("buildApprovalAskBlock", () => {
     expect(block.kind).toBe("ask");
     if (block.kind !== "ask") throw new Error("expected ask block");
     expect(block.detail?.startsWith("Sends email outside the draft-only task.")).toBe(true);
-    expect(block.detail).toContain("to: person@example.test");
+    expect(block.detail).toContain("To: person@example.test");
   });
 
   it("uses a one-time create or cancel choice for a new security boundary", () => {
@@ -244,28 +244,28 @@ describe("approval card arguments", () => {
     [
       "GMAIL_SEND_EMAIL",
       { recipient_email: "a@example.test", to_email: "b@example.test" },
-      "to_email: b@example.test",
+      "To email: b@example.test",
     ],
     [
       "GOOGLECALENDAR_CREATE_EVENT",
       { summary: "Sync", attendees: ["c@example.test", "d@example.test"] },
-      "attendees: c@example.test, d@example.test",
+      "Attendees: c@example.test, d@example.test",
     ],
     [
       "GMAIL_SEND_EMAIL",
       { to: "a@example.test", extra_recipients: ["e@example.test"] },
-      "extra_recipients: e@example.test",
+      "Extra recipients: e@example.test",
     ],
-    ["SLACK_SEND_MESSAGE", { channel: "C-OUTSIDE", text: "Hello" }, "channel: C-OUTSIDE"],
+    ["SLACK_SEND_MESSAGE", { channel: "C-OUTSIDE", text: "Hello" }, "Channel: C-OUTSIDE"],
     [
       "GITHUB_CREATE_AN_ISSUE",
       { owner: "someone-else", repo: "public-repo", title: "Notes" },
-      "repo: public-repo",
+      "Repo: public-repo",
     ],
     [
       "SEND_WEBHOOK",
       { destination: { url: "https://hooks.example.test/x" } },
-      'destination: {"url":"https://hooks.example.test/x"}',
+      'Destination: {"url":"https://hooks.example.test/x"}',
     ],
   ])("shows where %s sends", (toolName, args, line) => {
     expect(detailOf(toolName, args).split("\n")).toContain(line);
@@ -278,8 +278,8 @@ describe("approval card arguments", () => {
       bcc: "hidden@example.test",
     });
     expect(detail.split("\n").slice(0, 2)).toEqual([
-      "to: a@example.test",
-      "bcc: hidden@example.test",
+      "To: a@example.test",
+      "BCC: hidden@example.test",
     ]);
     expect(detail.length).toBeLessThanOrEqual(4_001);
   });
@@ -289,7 +289,7 @@ describe("approval card arguments", () => {
       email: `r${index}@example.test`,
     }));
     const detail = detailOf("SEND_CAMPAIGN", { body: "b".repeat(5_000), recipients });
-    expect(detail.startsWith("recipients: [")).toBe(true);
+    expect(detail.startsWith("Recipients: [")).toBe(true);
   });
 
   it("shows a later batched action's destination above an earlier action's long text", () => {
@@ -307,9 +307,9 @@ describe("approval card arguments", () => {
     );
     if (block.kind !== "ask") throw new Error("expected ask block");
     expect(block.detail?.split("\n").slice(0, 3)).toEqual([
-      "DRAFT_POST",
-      "GMAIL_SEND_EMAIL",
-      "to_email: g@example.test",
+      "Draft post",
+      "Gmail send email",
+      "To email: g@example.test",
     ]);
   });
 
@@ -323,7 +323,7 @@ describe("approval card arguments", () => {
     );
     if (block.kind !== "ask") throw new Error("expected ask block");
     expect(block.detail).not.toContain("ss");
-    expect(block.detail).toContain("to: h@example.test");
+    expect(block.detail).toContain("To: h@example.test");
   });
 
   it("shows each batched action's destinations", () => {
@@ -335,6 +335,6 @@ describe("approval card arguments", () => {
       { batch: { items: "tools", action: "tool_slug", arguments: "arguments" } },
     );
     if (block.kind !== "ask") throw new Error("expected ask block");
-    expect(block.detail?.split("\n")).toContain("to_email: f@example.test");
+    expect(block.detail?.split("\n")).toContain("To email: f@example.test");
   });
 });
