@@ -791,6 +791,8 @@ model Bot {
   computerId        String?
   computer          Computer?         @relation(fields: [computerId], references: [id], onDelete: SetNull)
   computerSwitching Boolean           @default(false)
+  /// Bots with the same group share their browsers' sign-ins (cookies) on their computer; null keeps its own.
+  signInGroup       String?
   voiceId           String?
   autoSpeak         Boolean           @default(false)
   modelProvider     String?

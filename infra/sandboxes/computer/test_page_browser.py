@@ -1072,6 +1072,151 @@ class TypeTest(unittest.TestCase):
         self.assertEqual(result["error"], helper.NOT_KEPT)
 
 
+class FakeCookieBrowser:
+    """Storage.getCookies and Storage.setCookies over one browser's cookie jar."""
+
+    def __init__(self, cookies=(), refuse=()):
+        self.jar = {helper.cookie_key(c): dict(c) for c in cookies}
+        self.refuse = set(refuse)
+
+    def call(self, method, params=None):
+        if method == "Storage.getCookies":
+            return {"cookies": [dict(c) for c in self.jar.values()]}
+        assert method == "Storage.setCookies"
+        cookies = params["cookies"]
+        if len(cookies) > 1 and any(c["name"] in self.refuse for c in cookies):
+            raise RuntimeError("Sets cookies failed")
+        for cookie in cookies:
+            if cookie["name"] in self.refuse:
+                raise RuntimeError("Sets cookies failed")
+            stored = dict(cookie)
+            if "url" in stored:
+                stored["domain"] = urlsplit(stored.pop("url")).hostname
+            key = helper.cookie_key(stored)
+            if stored.get("expires") == 1:
+                self.jar.pop(key, None)
+            else:
+                self.jar[key] = stored
+        return {}
+
+    def names(self):
+        return sorted(c["name"] + "=" + c["value"] for c in self.jar.values())
+
+
+def cookie(name, value, domain=".site.test", **extra):
+    return {"name": name, "value": value, "domain": domain, "path": "/", "secure": True, "httpOnly": True,
+            "sameSite": "Lax", "expires": time.time() + 86400, **extra}
+
+
+class SignInGroupTest(unittest.TestCase):
+    """Bots in one sign-in group share their browsers' cookies, each browser still running on its own."""
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp()
+        self.profiles = os.path.join(self.root, ".browser-profiles")
+        self.group = "a" * 32
+
+    def browser(self, name):
+        profile = os.path.join(self.profiles, f"chromium-bot-{name * 32}")
+        os.makedirs(profile, exist_ok=True)
+        return helper.SignIns(9222, self.group, profile)
+
+    def test_a_sign_in_in_one_browser_reaches_the_other(self):
+        first, second = self.browser("1"), self.browser("2")
+        one, two = FakeCookieBrowser(), FakeCookieBrowser()
+        first.merge(one)
+        second.merge(two)
+        one.jar[helper.cookie_key(cookie("session", "ada"))] = cookie("session", "ada")
+        first.merge(one)
+        second.merge(two)
+        self.assertEqual(two.names(), ["session=ada"])
+
+    def test_signing_out_in_one_browser_signs_the_other_out(self):
+        first, second = self.browser("1"), self.browser("2")
+        one, two = FakeCookieBrowser([cookie("session", "ada")]), FakeCookieBrowser()
+        first.merge(one)
+        second.merge(two)
+        one.jar.clear()
+        first.merge(one)
+        second.merge(two)
+        self.assertEqual(two.names(), [])
+
+    def test_both_browsers_signing_in_to_different_sites_keep_both(self):
+        first, second = self.browser("1"), self.browser("2")
+        one, two = FakeCookieBrowser(), FakeCookieBrowser()
+        first.merge(one)
+        second.merge(two)
+        one.jar["a"] = cookie("mail", "ada", ".mail.test")
+        two.jar["b"] = cookie("shop", "ada", ".shop.test")
+        one.jar = {helper.cookie_key(c): c for c in one.jar.values()}
+        two.jar = {helper.cookie_key(c): c for c in two.jar.values()}
+        first.merge(one)
+        second.merge(two)
+        first.merge(one)
+        self.assertEqual(one.names(), ["mail=ada", "shop=ada"])
+        self.assertEqual(two.names(), ["mail=ada", "shop=ada"])
+
+    def test_a_joining_browser_takes_the_groups_sign_in_over_its_own(self):
+        first, second = self.browser("1"), self.browser("2")
+        first.merge(FakeCookieBrowser([cookie("session", "group")]))
+        two = FakeCookieBrowser([cookie("session", "own"), cookie("theme", "dark")])
+        second.merge(two)
+        self.assertEqual(two.names(), ["session=group", "theme=dark"])
+
+    def test_a_lost_group_file_does_not_sign_everyone_out(self):
+        first = self.browser("1")
+        one = FakeCookieBrowser([cookie("session", "ada")])
+        first.merge(one)
+        os.unlink(first.shared)
+        first.merge(one)
+        self.assertEqual(one.names(), ["session=ada"])
+
+    def test_a_cookie_the_browser_refuses_is_not_shared_as_a_sign_out(self):
+        first, second = self.browser("1"), self.browser("2")
+        first.merge(FakeCookieBrowser([cookie("session", "ada"), cookie("odd", "x")]))
+        two = FakeCookieBrowser(refuse={"odd"})
+        second.merge(two)
+        self.assertEqual(two.names(), ["session=ada"])
+        second.merge(two)
+        third = FakeCookieBrowser()
+        self.browser("3").merge(third)
+        self.assertEqual(third.names(), ["odd=x", "session=ada"])
+
+    def test_host_only_cookies_are_set_by_url(self):
+        param = helper.set_cookie_param(cookie("__Host-id", "1", "app.site.test"))
+        self.assertNotIn("domain", param)
+        self.assertEqual(param["url"], "https://app.site.test/")
+        self.assertEqual(helper.set_cookie_param(cookie("id", "1"))["domain"], ".site.test")
+
+    def test_session_cookies_stay_session_cookies(self):
+        self.assertNotIn("expires", helper.cookie_param({**cookie("s", "1"), "expires": -1, "session": True}))
+
+    def test_group_files_stay_private_to_the_computer_user(self):
+        first = self.browser("1")
+        first.merge(FakeCookieBrowser([cookie("session", "ada")]))
+        self.assertEqual(os.stat(first.shared).st_mode & 0o077, 0)
+        self.assertEqual(os.stat(first.base).st_mode & 0o077, 0)
+
+    def test_finds_only_the_computers_own_profiles(self):
+        proc = os.path.join(self.root, "proc")
+
+        def process(pid, *args):
+            os.makedirs(os.path.join(proc, pid))
+            Path(proc, pid, "cmdline").write_bytes(b"\0".join(a.encode() for a in args))
+
+        profile = os.path.join(self.profiles, "chromium-bot-" + "b" * 32)
+        process("10", "chrome", "--type=renderer", "--remote-debugging-port=9222", f"--user-data-dir={profile}")
+        process("11", "chrome", "--remote-debugging-port=9222", f"--user-data-dir={profile}")
+        process("12", "chrome", "--remote-debugging-port=9333", "--user-data-dir=/etc")
+        self.assertEqual(helper.browser_profile(9222, proc), profile)
+        self.assertIsNone(helper.browser_profile(9333, proc))
+        self.assertIsNone(helper.browser_profile(9444, proc))
+
+    def test_only_a_group_key_reaches_the_file_names(self):
+        self.assertIsNone(helper.sign_ins_for(9222, "../../etc"))
+        self.assertIsNone(helper.sign_ins_for(9222, None))
+
+
 class NaturalPaceTest(unittest.TestCase):
     """While the browser reaches sites from its owner's own address, the page tools keep a person's pace."""
 

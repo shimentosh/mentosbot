@@ -48,6 +48,9 @@ function cannotCheck(error: unknown): boolean {
 
 type LivePayload = Partial<PageBrowserResult>;
 
+/** The sign-in group a bot's browser shares cookies with, if any. */
+export type SignInsLookup = (botId: string) => Promise<string | undefined>;
+
 export type LivePageBrowserDriver = (
   computer: ComputerRef,
   request: PageBrowserCommand,
@@ -66,17 +69,20 @@ export class ComputerBrowserProvider implements BrowserProvider {
   private readonly fake: FakeBrowserProvider;
   private readonly sandbox?: SandboxProvider;
   private readonly liveDriver?: LivePageBrowserDriver;
+  private readonly signInsFor?: SignInsLookup;
 
   constructor(
     options: FakeBrowserProviderOptions & {
       sandbox?: SandboxProvider;
       /** Test seam for the live CDP helper. */
       liveDriver?: LivePageBrowserDriver;
+      signInsFor?: SignInsLookup;
     } = {},
   ) {
-    const { sandbox, liveDriver, ...fakeOptions } = options;
+    const { sandbox, liveDriver, signInsFor, ...fakeOptions } = options;
     this.sandbox = sandbox;
     this.liveDriver = liveDriver;
+    this.signInsFor = signInsFor;
     this.fake = new FakeBrowserProvider(fakeOptions);
   }
 
@@ -299,6 +305,11 @@ export class ComputerBrowserProvider implements BrowserProvider {
   ): Promise<LivePayload> {
     context.signal.throwIfAborted();
     try {
+      if (request.command !== "purchase_check" && context.botId && this.signInsFor) {
+        // Best effort: without its group, the browser keeps its own sign-ins for this call.
+        const signIns = await this.signInsFor(context.botId).catch(() => undefined);
+        if (signIns) request = { ...request, signIns };
+      }
       const result = this.liveDriver
         ? await this.liveDriver(computer, request, context)
         : this.sandbox?.pageBrowser

@@ -201,6 +201,12 @@ export function ShellSidePanel({
               onOpenConnections={() => openSettings("models")}
               memoryProviderConfigured={memoryProviderConfigured}
               onSkillsChange={setAgentSkills}
+              bots={bots}
+              onSignInsChange={async (withBotId) => {
+                await rpc.bots.setSignIns({ botId: active.id, withBotId });
+                // The other bot joins the group too, so the whole roster is read again.
+                await refreshBots();
+              }}
               onSave={async ({ computerMode, ...patch }) => {
                 if (computerMode !== undefined && computerMode !== active.computerMode) {
                   await rpc.bots.setComputer({

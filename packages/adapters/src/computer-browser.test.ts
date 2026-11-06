@@ -117,6 +117,58 @@ describe("computer browser provider", () => {
     });
   });
 
+  it("sends the bot's sign-in group with page commands, never with a purchase check", async () => {
+    const liveDriver = vi.fn(async (_c: ComputerRef, request: PageBrowserCommand) =>
+      request.command === "purchase_check"
+        ? { ok: true, url: "", title: "", site: "", purchase: null }
+        : { ok: true, url: "https://example.test/live", title: "Live" },
+    );
+    const signInsFor = vi.fn(async (botId: string) =>
+      botId === "bot-a" ? "f".repeat(32) : undefined,
+    );
+    const provider = new ComputerBrowserProvider({ pages, liveDriver, signInsFor });
+    const computer: ComputerRef = { id: "c", botId: "b", kind: "docker", providerRef: "c" };
+    await provider.navigate(
+      computer,
+      { url: "https://example.test/live" },
+      { ...baseContext, botId: "bot-a" },
+    );
+    await provider.purchaseCheck(computer, { actions: [] }, { ...baseContext, botId: "bot-a" });
+    await provider.navigate(
+      computer,
+      { url: "https://example.test/live" },
+      { ...baseContext, botId: "bot-b" },
+    );
+    expect(liveDriver.mock.calls.map(([, request]) => request.signIns)).toEqual([
+      "f".repeat(32),
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("browses with the browser's own sign-ins when its group cannot be read", async () => {
+    const liveDriver = vi.fn(async () => ({
+      ok: true,
+      url: "https://example.test/live",
+      title: "Live",
+    }));
+    const provider = new ComputerBrowserProvider({
+      pages,
+      liveDriver,
+      signInsFor: async () => {
+        throw new Error("database unavailable");
+      },
+    });
+    const computer: ComputerRef = { id: "c", botId: "b", kind: "docker", providerRef: "c" };
+    const nav = await provider.navigate(
+      computer,
+      { url: "https://example.test/live" },
+      { ...baseContext, botId: "bot-a" },
+    );
+    expect(nav.title).toBe("Live");
+    expect(liveDriver.mock.calls[0]?.[1]).not.toHaveProperty("signIns");
+  });
+
   it("passes on the page a live navigation reached, when the helper read it", async () => {
     const tree = '- link "Sign in" [e1]';
     const elements = [{ ref: "e1", role: "link", name: "Sign in" }];

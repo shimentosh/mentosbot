@@ -263,7 +263,17 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
   const web = executorDeps.web ?? createWebProvider();
   const mediaGeneration = executorDeps.mediaGeneration ?? createMediaGenerationProvider();
   const browser =
-    executorDeps.browser ?? createBrowserProvider(undefined, { sandbox: executorDeps.sandbox });
+    executorDeps.browser ??
+    createBrowserProvider(undefined, {
+      sandbox: executorDeps.sandbox,
+      signInsFor: async (botId) =>
+        (
+          await executorDeps.prisma.bot.findUnique({
+            where: { id: botId },
+            select: { signInGroup: true },
+          })
+        )?.signInGroup ?? undefined,
+    });
   const cloudAgent = executorDeps.cloudAgent;
   const resolveConnectedModel = resolveConnectedRunModel.bind(undefined, executorDeps);
 

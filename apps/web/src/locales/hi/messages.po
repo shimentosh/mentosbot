@@ -3805,6 +3805,10 @@ msgstr ""
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "इसकी बातचीत, फ़ाइलें और रूटीन स्थायी रूप से डिलीट कर दिए जाएंगे। इसके बनाए बॉट आपकी सूची में बने रहेंगे।"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Its own"
+msgstr ""
+
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "इसका शेयर किया गया लिंक काम करना बंद कर देगा और चैट में इसके कार्ड हटाए गए दिखेंगे। इसे पूर्ववत नहीं किया जा सकता।"
@@ -6223,6 +6227,11 @@ msgstr "साझा मेमोरी"
 msgid "Shared with"
 msgstr ""
 
+#. placeholder {0}: other.name
+#: src/pages/shell/bot-panel.tsx
+msgid "Shared with {0}"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -6321,6 +6330,10 @@ msgstr "साइन अप करें"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Sign-ins"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx

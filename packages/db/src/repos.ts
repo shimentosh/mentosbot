@@ -108,6 +108,7 @@ function mapBot(
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     fleetManagement?: boolean;
+    signInGroup?: string | null;
     disabledBuiltinTools?: string[];
     webhookSecretId?: string | null;
     spawnKey?: string | null;
@@ -155,6 +156,7 @@ function mapBot(
     crossSpaceCommunication: bot.crossSpaceCommunication ?? true,
     dailyCheckIns: bot.dailyCheckIns ?? true,
     fleetManagement: bot.fleetManagement ?? true,
+    signInGroup: bot.signInGroup ?? null,
     // Stored lists may name a tool that no longer exists; settings resend what they read.
     disabledBuiltinTools: [...disabledBuiltinToolSet(bot.disabledBuiltinTools)],
     webhookConfigured: Boolean(bot.webhookSecretId),

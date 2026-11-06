@@ -10,6 +10,7 @@ Saved logins, cards and pay tokens go through page_secrets instead.
 from __future__ import annotations
 
 import contextlib
+import fcntl
 import json
 import math
 import mimetypes
@@ -2389,6 +2390,174 @@ def validate_actions(actions: Any) -> None:
             raise RuntimeError("A saved login fill needs its field")
 
 
+# Bots in one sign-in group share their browsers' cookies through a file beside their profiles. Each
+# call merges this browser's cookies with the group's three ways, against what this browser last
+# shared: whichever side changed a cookie since wins, so a sign-in or sign-out in one browser reaches
+# the others while every browser keeps running.
+SIGN_IN_GROUP = re.compile(r"[0-9a-f]{32}")
+PROFILE_NAME = re.compile(r"chromium(-bot-[0-9a-f]{32}|-screen-[0-9]+)?")
+COOKIE_FIELDS = ("name", "value", "domain", "path", "expires", "httpOnly", "secure", "sameSite", "priority",
+                 "sourceScheme", "sourcePort", "partitionKey")
+MAX_SIGN_IN_BYTES = 8 * 1024 * 1024
+SIGN_IN_LOCK_SECONDS = 3.0
+# The supervisor stops a call at 25 seconds.
+SIGN_IN_SHARE_BY = 18.0
+
+
+def browser_profile(port: int, proc: str = "/proc") -> str | None:
+    """The profile of the Chromium serving CDP on this port, when it is one of the computer's profiles."""
+    flag = f"--remote-debugging-port={port}"
+    for entry in os.listdir(proc):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(os.path.join(proc, entry, "cmdline"), "rb") as file:
+                args = [arg.decode("utf-8", "replace") for arg in file.read().split(b"\0")]
+        except OSError:
+            continue
+        if flag not in args or any(arg.startswith("--type=") for arg in args):
+            continue
+        for arg in args:
+            if arg.startswith("--user-data-dir="):
+                profile = os.path.normpath(arg.split("=", 1)[1])
+                if (PROFILE_NAME.fullmatch(os.path.basename(profile))
+                        and os.path.basename(os.path.dirname(profile)) == ".browser-profiles"):
+                    return profile
+        return None
+    return None
+
+
+def cookie_param(cookie: dict[str, Any]) -> dict[str, Any]:
+    """A cookie as Storage.setCookies takes it back."""
+    param = {key: cookie[key] for key in COOKIE_FIELDS if key in cookie}
+    expires = param.get("expires")
+    if cookie.get("session") or not isinstance(expires, (int, float)) or expires <= 0:
+        param.pop("expires", None)
+    else:
+        param["expires"] = int(expires)
+    return param
+
+
+def cookie_key(cookie: dict[str, Any]) -> str:
+    return json.dumps([cookie.get("name"), cookie.get("domain"), cookie.get("path"), cookie.get("partitionKey")],
+                      sort_keys=True)
+
+
+def cookie_map(cookies: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(cookies, list):
+        return {}
+    return {cookie_key(param): param for param in (cookie_param(c) for c in cookies if isinstance(c, dict))
+            if isinstance(param.get("name"), str) and isinstance(param.get("domain"), str)}
+
+
+def merge_cookies(local: dict[str, dict[str, Any]], base: dict[str, dict[str, Any]] | None,
+                  group: dict[str, dict[str, Any]], now: float) -> dict[str, dict[str, Any]]:
+    """The group's cookies after this browser's changes since it last shared. A browser joining the group
+    (no base yet) adds what it has, and the group's copy wins where both hold the same cookie."""
+    merged: dict[str, dict[str, Any]] = {}
+    for key in set(local) | set(base or {}) | set(group):
+        mine, theirs = local.get(key), group.get(key)
+        if base is None:
+            pick = theirs if theirs is not None else mine
+        else:
+            pick = mine if mine != base.get(key) else theirs
+        if pick is not None and pick.get("expires", now + 1) > now:
+            merged[key] = pick
+    return merged
+
+
+def set_cookie_param(cookie: dict[str, Any]) -> dict[str, Any]:
+    """A host-only cookie (no leading dot) is set by URL, or Chromium would widen it to a domain cookie."""
+    param = dict(cookie)
+    domain = str(param.get("domain") or "")
+    if domain and not domain.startswith("."):
+        param.pop("domain")
+        param["url"] = f"{'https' if param.get('secure') else 'http'}://{domain}{param.get('path') or '/'}"
+    return param
+
+
+def read_cookie_file(path: str) -> dict[str, dict[str, Any]] | None:
+    try:
+        if os.path.getsize(path) > MAX_SIGN_IN_BYTES:
+            return None
+        with open(path, encoding="utf-8") as file:
+            data = json.load(file)
+    except (OSError, ValueError):
+        return None
+    return cookie_map(data.get("cookies")) if isinstance(data, dict) else None
+
+
+def write_cookie_file(path: str, cookies: dict[str, dict[str, Any]]) -> None:
+    fd, temp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".sign-ins-")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as file:
+            json.dump({"cookies": sorted(cookies.values(), key=cookie_key)}, file)
+        os.replace(temp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temp)
+        raise
+
+
+class SignIns:
+    """This browser's share of its sign-in group, synced at the start and end of each call."""
+
+    def __init__(self, port: int, group: str, profile: str) -> None:
+        self.port = port
+        self.shared = os.path.join(os.path.dirname(profile), f"sign-ins-{group}.json")
+        self.base = os.path.join(profile, f"rakazo-sign-ins-{group}.json")
+
+    def sync(self) -> None:
+        with open(f"{self.shared}.lock", "a") as lock:
+            give_up = time.monotonic() + SIGN_IN_LOCK_SECONDS
+            while True:
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() > give_up:
+                        return
+                    time.sleep(0.05)
+            client = CdpClient(discover_ws_url(self.port))
+            client.connect()
+            try:
+                self.merge(client)
+            finally:
+                client.close()
+
+    def merge(self, client: Any) -> None:
+        local = cookie_map(client.call("Storage.getCookies").get("cookies"))
+        shared = read_cookie_file(self.shared)
+        group = shared or {}
+        # Without the group's file (none yet, or unreadable), this browser joins afresh: what it last
+        # shared would otherwise read as everyone else signing out.
+        base = read_cookie_file(self.base) if shared is not None else None
+        merged = merge_cookies(local, base, group, time.time())
+        changes = [set_cookie_param(cookie) for key, cookie in merged.items() if local.get(key) != cookie]
+        # Chromium removes a cookie set to expire in the past.
+        changes += [{**set_cookie_param(cookie), "expires": 1} for key, cookie in local.items() if key not in merged]
+        if changes:
+            try:
+                client.call("Storage.setCookies", {"cookies": changes})
+            except Exception:  # noqa: BLE001
+                # One cookie Chromium refuses fails the batch: the rest are still set, one at a time.
+                for change in changes:
+                    with contextlib.suppress(Exception):
+                        client.call("Storage.setCookies", {"cookies": [change]})
+            # What the browser now holds: a cookie it refused is not taken for one this browser removed.
+            local = cookie_map(client.call("Storage.getCookies").get("cookies"))
+        if merged != group:
+            write_cookie_file(self.shared, merged)
+        write_cookie_file(self.base, local)
+
+
+def sign_ins_for(port: int, group: Any) -> SignIns | None:
+    if not isinstance(group, str) or not SIGN_IN_GROUP.fullmatch(group):
+        return None
+    profile = browser_profile(port)
+    return SignIns(port, group, profile) if profile else None
+
+
 def exit_when_stdin_closes() -> None:
     """The supervisor owns this pipe; losing it cancels this helper, not Chromium."""
     try:
@@ -2442,6 +2611,7 @@ def run(argv: list[str]) -> int:
     connected = False
     opened = False
     page: PageBrowser | None = None
+    sign_ins: SignIns | None = None
     try:
         if command == "purchase_check":
             # No browser running, no tab open, or one of Chromium's own pages: nothing on it can be bought.
@@ -2462,6 +2632,12 @@ def run(argv: list[str]) -> int:
                 return 0
         version = wait_for_cdp(port)
         connected = True
+        if command != "purchase_check":
+            with contextlib.suppress(Exception):
+                sign_ins = sign_ins_for(port, args.get("signIns"))
+            if sign_ins:
+                with contextlib.suppress(Exception):
+                    sign_ins.sync()
         browser = AgentBrowser(port)
         tabs: Tabs | None = None
         # Best effort here and below: a tab list that fails leaves the call as it was. A purchase check
@@ -2570,6 +2746,11 @@ def run(argv: list[str]) -> int:
             page.close()
         if client:
             client.close()
+        # What this call signed in to reaches the group's other browsers, unless the call ran so long
+        # that sharing could keep its answer past the supervisor's limit.
+        if sign_ins and time.monotonic() - STARTED < SIGN_IN_SHARE_BY:
+            with contextlib.suppress(Exception):
+                sign_ins.sync()
 
 
 if __name__ == "__main__":

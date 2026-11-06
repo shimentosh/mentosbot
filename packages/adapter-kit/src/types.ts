@@ -1257,9 +1257,9 @@ export interface BrowserPurchaseCheckResult {
 
 /** A sandbox must route these commands through its owned screen, never generic host execution. */
 export type PageBrowserCommand =
-  | { command: "navigate"; url: string; downloads?: string }
-  | { command: "snapshot"; query?: string; downloads?: string }
-  | { command: "act"; actions: BrowserActStep[]; downloads?: string }
+  | { command: "navigate"; url: string; downloads?: string; signIns?: string }
+  | { command: "snapshot"; query?: string; downloads?: string; signIns?: string }
+  | { command: "act"; actions: BrowserActStep[]; downloads?: string; signIns?: string }
   | {
       command: "purchase_check";
       actions?: BrowserPurchaseCheckRequest["actions"];

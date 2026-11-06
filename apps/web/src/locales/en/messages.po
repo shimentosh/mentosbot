@@ -3805,6 +3805,10 @@ msgstr "Its computers start on another server next time."
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Its own"
+msgstr "Its own"
+
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
@@ -6223,6 +6227,11 @@ msgstr "Shared memory"
 msgid "Shared with"
 msgstr "Shared with"
 
+#. placeholder {0}: other.name
+#: src/pages/shell/bot-panel.tsx
+msgid "Shared with {0}"
+msgstr "Shared with {0}"
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -6322,6 +6331,10 @@ msgstr "Sign up"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
 msgstr "Sign-in cancelled. Try again."
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Sign-ins"
+msgstr "Sign-ins"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx

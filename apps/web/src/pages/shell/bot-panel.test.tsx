@@ -800,3 +800,61 @@ describe("BotSettings cached data", () => {
     expect(patch).not.toHaveProperty("name");
   });
 });
+
+describe("BotSettings sign-ins", () => {
+  async function renderSignIns(
+    self: Bot,
+    bots: Bot[],
+    onSignInsChange = vi.fn(async () => undefined),
+  ) {
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <BotSettings
+            bot={self}
+            bots={bots}
+            onSignInsChange={onSignInsChange}
+            memoryProviderConfigured={false}
+            onSave={onSave}
+            onExport={onExport}
+            onClear={() => undefined}
+          />
+        </QueryClientProvider>,
+      );
+    });
+    return onSignInsChange;
+  }
+  const picker = () => container.querySelector<HTMLSelectElement>('select[id$="-sign-ins"]');
+
+  it("offers the owner's other bots on the same computer and saves the choice", async () => {
+    const self = bot("Billing");
+    const scout = bot("", { id: "bot-2", name: "Scout" });
+    const own = bot("", { id: "bot-3", name: "Private", computerMode: "dedicated" });
+    const shared = bot("", {
+      id: "bot-4",
+      name: "Teammate's",
+      share: { level: "manage", ownerUserId: "u-2", ownerName: "Grace" },
+    });
+    const onSignInsChange = await renderSignIns(self, [self, scout, own, shared]);
+    const select = picker();
+    if (!select) throw new Error("Missing sign-ins picker");
+    expect([...select.options].map((option) => option.textContent)).toEqual([
+      "Its own",
+      "Shared with Scout",
+    ]);
+    await act(async () => {
+      select.value = "bot-2";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onSignInsChange).toHaveBeenCalledWith("bot-2");
+  });
+
+  it("shows the bot it shares with, and stays hidden with no bot to share with", async () => {
+    const self = bot("Billing", { signInGroup: "g".repeat(32) });
+    const scout = bot("", { id: "bot-2", name: "Scout", signInGroup: "g".repeat(32) });
+    await renderSignIns(self, [self, scout]);
+    expect(picker()?.value).toBe("bot-2");
+    await renderSignIns(self, [self]);
+    expect(picker()).toBeNull();
+  });
+});

@@ -1,11 +1,13 @@
 import type { BrowserProvider, SandboxProvider } from "@rakazo/adapter-kit";
 import { EmulatorBrowserProvider } from "./browser-emulator.js";
+import type { SignInsLookup } from "./computer-browser.js";
 import { ComputerBrowserProvider } from "./computer-browser.js";
 import type { FakeBrowserProviderOptions } from "./fake-browser.js";
 import { FakeBrowserProvider } from "./fake-browser.js";
 
 export type CreateBrowserProviderOptions = FakeBrowserProviderOptions & {
   sandbox?: SandboxProvider;
+  signInsFor?: SignInsLookup;
 };
 
 /**

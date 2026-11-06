@@ -3805,6 +3805,10 @@ msgstr ""
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "대화, 파일, 자동 실행이 영구 삭제됩니다. 이 Bot이 만든 다른 Bot은 목록에 남습니다."
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Its own"
+msgstr ""
+
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "공유 링크가 더 이상 작동하지 않고 채팅의 카드는 삭제됨으로 표시됩니다. 되돌릴 수 없습니다."
@@ -6223,6 +6227,11 @@ msgstr "공유 기억"
 msgid "Shared with"
 msgstr ""
 
+#. placeholder {0}: other.name
+#: src/pages/shell/bot-panel.tsx
+msgid "Shared with {0}"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
 msgid "Show"
@@ -6321,6 +6330,10 @@ msgstr "가입하기"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
+msgstr ""
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Sign-ins"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx

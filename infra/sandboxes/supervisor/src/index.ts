@@ -586,6 +586,11 @@ app.post("/computers/:id/exec", async (c) => {
 
 // The bot's folder in the computer's home that files its page downloads, and PDFs its tabs show, are saved to.
 const downloadFolder = z.string().min(1).max(1024).optional();
+// The bot's sign-in group: its browser shares cookies with the group's other browsers on this computer.
+const signIns = z
+  .string()
+  .regex(/^[0-9a-f]{32}$/)
+  .optional();
 
 app.post("/computers/:id/browser", async (c) => {
   // Read eagerly so the Node HTTP adapter observes disconnects during screen setup too.
@@ -605,11 +610,13 @@ app.post("/computers/:id/browser", async (c) => {
             return /^https?:$/.test(url.protocol) && !url.username && !url.password;
           }),
         downloads: downloadFolder,
+        signIns,
       }),
       z.object({
         command: z.literal("snapshot"),
         query: z.string().max(200).optional(),
         downloads: downloadFolder,
+        signIns,
       }),
       z.object({
         command: z.literal("purchase_check"),
@@ -629,6 +636,7 @@ app.post("/computers/:id/browser", async (c) => {
       z.object({
         command: z.literal("act"),
         downloads: downloadFolder,
+        signIns,
         actions: z
           .array(
             z.discriminatedUnion("kind", [
