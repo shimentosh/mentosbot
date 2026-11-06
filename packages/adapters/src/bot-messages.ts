@@ -80,6 +80,11 @@ export async function messageBot(
     message: string;
     intent?: BotMessageIntent;
     deliveryKey?: string;
+    /**
+     * The person's own words behind the sending run (its owner words). Callers pass what the
+     * server recorded, never model text, so the target can act on its user's request.
+     */
+    userRequest?: string;
   },
   options?: { allowTerminalSource?: boolean; forceUnread?: boolean },
 ) {
@@ -138,7 +143,13 @@ export async function messageBot(
       note: `Already sent to ${target.name} in this turn; it was not sent again.`,
     }) as const;
 
-  const wakePrompt = buildBotMessageWakePrompt({ from: sender, text: message, intent });
+  const userRequest = input.userRequest?.trim() ? clampBotMessage(input.userRequest) : undefined;
+  const wakePrompt = buildBotMessageWakePrompt({
+    from: sender,
+    text: message,
+    intent,
+    userRequest,
+  });
   const outboundBlock: MessageBlock = {
     kind: "bot_message_sent",
     toBotId: target.id,
@@ -228,6 +239,7 @@ export async function messageBot(
           hop,
           intent,
           returnToMessageId: outbound.id,
+          ...(userRequest ? { userRequest } : {}),
         };
         const inbound = await createThreadMessageInTransaction(tx, {
           threadId: targetThreadId,
@@ -389,6 +401,7 @@ export async function returnBotMessageOutcome(
       intent,
       // One key per run so status vs result (executor vs reconciler) cannot double-deliver.
       deliveryKey: `auto-outcome:${run.id}`,
+      userRequest: source.userRequest,
     },
     {
       allowTerminalSource: true,

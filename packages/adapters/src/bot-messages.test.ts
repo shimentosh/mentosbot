@@ -169,6 +169,83 @@ describe("messaging another bot", () => {
     expect(unreadWrites).toHaveLength(2);
   });
 
+  it("carries the person's own request to the target", async () => {
+    const harness = deps();
+    await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "Publish this post on both networks.",
+      userRequest: "write a post and publish it, send me the links",
+    });
+
+    expect(harness.tx.message.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          threadId: "thread-target",
+          blocks: [
+            expect.objectContaining({
+              kind: "bot_message_received",
+              userRequest: "write a post and publish it, send me the links",
+            }),
+          ],
+        }),
+      }),
+    );
+    expect(harness.tx.task.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          prompt: expect.stringContaining(
+            "<user_request>\nwrite a post and publish it, send me the links\n</user_request>",
+          ),
+        }),
+      }),
+    );
+  });
+
+  it("adds no request when the sending run has no words from the person", async () => {
+    const harness = deps();
+    await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "ping",
+      userRequest: "  ",
+    });
+
+    const inbound = harness.tx.message.create.mock.calls.at(-1)?.[0] as {
+      data: { blocks: Array<Record<string, unknown>> };
+    };
+    expect(inbound.data.blocks[0]).not.toHaveProperty("userRequest");
+  });
+
+  it("returns a delegated outcome with the request that started the chain", async () => {
+    const harness = deps({
+      hopBlocks: [
+        {
+          kind: "bot_message_received",
+          fromBotId: "bot-target",
+          fromBotName: "Coordinator",
+          text: "publish it",
+          hop: 1,
+          intent: "request",
+          returnToMessageId: "message-request",
+          userRequest: "publish the post",
+        },
+      ],
+    });
+    await returnBotMessageOutcome(
+      harness.deps,
+      { ...run, sourceMessageId: "message-source" },
+      sender,
+      "Published.",
+    );
+
+    expect(harness.tx.message.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          blocks: [expect.objectContaining({ intent: "result", userRequest: "publish the post" })],
+        }),
+      }),
+    );
+  });
+
   it("tells the sender to continue independent work", async () => {
     const harness = deps();
     const sent = await messageBot(harness.deps, run, sender, {

@@ -1,6 +1,7 @@
 import type { MessageBlock } from "@rakazo/contracts";
 import type { ActionApprovalRule } from "@rakazo/core";
 import {
+  botMessageContext,
   connectorKindFromToolName,
   inboundRoutinePrompts,
   SITE_SENDING_TOOLS,
@@ -106,7 +107,8 @@ export function createRunTrustLoaders(
     return autoReviewPreferencePromise;
   };
   // The owner's own words for this run: the message they sent, or the instructions of the
-  // routine that started it. Never a bot, channel or webhook message, or a tool result.
+  // routine that started it, carried along when a bot delegates that work to another (see
+  // messageBot). Never a bot, channel or webhook message, or a tool result.
   // These name the sites a run is given, and are all Auto Review sees of a new site's run.
   let ownerWordsPromise: Promise<string> | undefined;
   const loadOwnerWords = () => {
@@ -118,6 +120,13 @@ export function createRunTrustLoaders(
       }
       // Saved when the routine fired, so a later edit cannot change what this run judges.
       if (run.trigger === "routine") return routineTaskInstructions(taskPrompt);
+      // Only the server writes this block, copying the sending run's owner words.
+      if (run.trigger === "bot_message") {
+        const blocks = Array.isArray(sourceMessage?.blocks)
+          ? (sourceMessage.blocks as MessageBlock[])
+          : [];
+        return botMessageContext(blocks)?.userRequest ?? "";
+      }
       if (run.trigger === "webhook") {
         const routines = await deps.prisma.routine.findMany({
           where: { botId: botId, spaceId: run.spaceId, userId: run.userId },
