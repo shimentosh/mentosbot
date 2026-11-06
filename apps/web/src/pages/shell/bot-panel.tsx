@@ -125,7 +125,7 @@ export function BotSettings({
   signInPeers = [],
 }: {
   bot: Bot;
-  /** Names of the owner's other bots whose browsers share sign-ins. */
+  /** Names of the owner's other bots on the global browser. */
   signInPeers?: string[];
   tab?: BotPanelTab;
   onTabChange?: (tab: BotPanelTab) => void;
@@ -701,34 +701,48 @@ export function BotSettings({
             <SettingsGroup label={t`Computer`} plain>
               <ComputerModePicker value={computerMode} onChange={setComputerMode} />
               {bot.computerMode === "team" ? (
-                <div className="mt-4 rounded-xl bg-muted/50 px-4 py-2 text-sm">
-                  <div className="flex min-h-9 items-center justify-between gap-3">
-                    <label htmlFor={`${ids}-share-sign-ins`} className={rowLabelClass}>
-                      <Trans>Share sign-ins with my other bots</Trans>
-                    </label>
-                    <Switch
-                      id={`${ids}-share-sign-ins`}
-                      checked={shareSignIns}
-                      disabled={saving}
-                      aria-describedby={`${ids}-share-sign-ins-detail`}
-                      onCheckedChange={(checked) => {
-                        setShareSignIns(checked);
-                        setShareSignInsError(null);
-                        void enqueueSave({ shareSignIns: checked });
-                      }}
-                    />
+                <div className="mt-4">
+                  <div
+                    id={`${ids}-browser-label`}
+                    className="mb-2 text-xs font-medium text-muted-foreground"
+                  >
+                    <Trans>Browser</Trans>
                   </div>
-                  <div id={`${ids}-share-sign-ins-detail`}>
+                  <div
+                    role="group"
+                    aria-labelledby={`${ids}-browser-label`}
+                    aria-describedby={`${ids}-browser-detail`}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    {([true, false] as const).map((global) => (
+                      <Toggle
+                        key={String(global)}
+                        variant="outline"
+                        pressed={shareSignIns === global}
+                        disabled={saving}
+                        onPressedChange={(pressed) => {
+                          if (!pressed || shareSignIns === global) return;
+                          setShareSignIns(global);
+                          setShareSignInsError(null);
+                          void enqueueSave({ shareSignIns: global });
+                        }}
+                        className="aria-pressed:border-foreground/40 aria-pressed:text-foreground"
+                      >
+                        {global ? <Trans>Global</Trans> : <Trans>Independent</Trans>}
+                      </Toggle>
+                    ))}
+                  </div>
+                  <div id={`${ids}-browser-detail`}>
                     {shareSignInsError ? (
-                      <p role="alert" className="pb-1 text-[13px] text-destructive">
+                      <p role="alert" className="mt-2 text-[13px] text-destructive">
                         {shareSignInsError}
                       </p>
                     ) : shareSignIns && signInPeers.length ? (
                       <p
-                        className="truncate pb-1 text-[13px] text-muted-foreground"
+                        className="mt-2 truncate text-[13px] text-muted-foreground"
                         title={signInPeers.join(", ")}
                       >
-                        {t`With ${formatList(signInPeers)}`}
+                        {t`Shared with ${formatList(signInPeers)}`}
                       </p>
                     ) : null}
                   </div>

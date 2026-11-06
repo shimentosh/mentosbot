@@ -137,7 +137,7 @@ export const BotSchema = z.object({
   crossSpaceCommunication: z.boolean().optional(),
   dailyCheckIns: z.boolean().optional(),
   fleetManagement: z.boolean().default(true),
-  /** Its browser shares sign-ins with the owner's other bots that share theirs. */
+  /** On the owner's global browser (shared sign-ins); false means its own, independent one. */
   shareSignIns: z.boolean().optional(),
   disabledBuiltinTools: z.array(z.string()).default([]),
   webhookConfigured: z.boolean(),

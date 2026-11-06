@@ -59,24 +59,12 @@ describePostgres("new bots and shared sign-ins (PostgreSQL)", () => {
     await close?.();
   });
 
-  it("starts a new bot sharing sign-ins once the owner shares them, and fresh before", async () => {
+  it("starts every new bot on the global browser, even when the others are independent", async () => {
     const system = asSystem(prisma);
     await system.bot.updateMany({
       where: { spaceId: owner.spaceId, userId: owner.userId },
       data: { shareSignIns: false },
     });
-    const first = await create("First");
-    expect(first.shareSignIns).toBe(false);
-
-    await system.bot.update({ where: { id: first.id }, data: { shareSignIns: true } });
-    const second = await create("Second");
-    expect(second.shareSignIns).toBe(true);
-
-    // An archived bot's sharing does not count.
-    await system.bot.updateMany({
-      where: { spaceId: owner.spaceId, userId: owner.userId },
-      data: { archivedAt: new Date() },
-    });
-    expect((await create("Third")).shareSignIns).toBe(false);
+    expect((await create("First")).shareSignIns).toBe(true);
   });
 });

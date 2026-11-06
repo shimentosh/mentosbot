@@ -27,6 +27,7 @@ import { GrowingTextInput } from "../components/growing-text-input";
 import type { MenuPickerChoice } from "../components/menu-picker";
 import { MenuPicker, MenuPickerMenu } from "../components/menu-picker";
 import { NativeActionButton } from "../components/native-action-button";
+import { NativeSegmentedControl } from "../components/native-segmented-control";
 import { NativeSwitch } from "../components/native-switch";
 import { NativeSymbol } from "../components/native-symbol";
 import { ProfileEditDialog } from "../components/profile-edit-dialog";
@@ -83,7 +84,7 @@ export default function BotSettingsScreen() {
   const [dailyCheckIns, setDailyCheckIns] = useState(true);
   const [crossSpaceCommunication, setCrossSpaceCommunication] = useState(true);
   const [fleetManagement, setFleetManagement] = useState(true);
-  const [shareSignIns, setShareSignIns] = useState(false);
+  const [shareSignIns, setShareSignIns] = useState(true);
   const [credentials, setCredentials] = useState<MobileModelCredential[]>([]);
   const [catalog, setCatalog] = useState<MobileModel[]>([]);
   const [me, setMe] = useState<MobileMe | null>(null);
@@ -135,7 +136,7 @@ export default function BotSettingsScreen() {
 
   const shareSignInsSave = useMemo(
     () =>
-      createQueuedSave<boolean>(false, {
+      createQueuedSave<boolean>(true, {
         save: async (value) => {
           await rpc("bots/update", { botId, shareSignIns: value });
         },
@@ -212,8 +213,8 @@ export default function BotSettingsScreen() {
         crossSpaceSave.reset(next.crossSpaceCommunication ?? true);
         setFleetManagement(next.fleetManagement);
         fleetSave.reset(next.fleetManagement);
-        setShareSignIns(next.shareSignIns ?? false);
-        shareSignInsSave.reset(next.shareSignIns ?? false);
+        setShareSignIns(next.shareSignIns ?? true);
+        shareSignInsSave.reset(next.shareSignIns ?? true);
       })
       .catch((err) => setError(errorText(err, t("Could not load bot"))));
   }, [botId, dailyCheckInsSave, crossSpaceSave, fleetSave, shareSignInsSave, notifySave, nameSave]);
@@ -653,18 +654,22 @@ export default function BotSettingsScreen() {
             <SettingsGroup label={t("Computer")}>
               <ComputerModePicker plain value={computerMode} onChange={setComputerMode} />
               {bot?.computerMode === "team" ? (
-                <View style={styles.row}>
-                  <Text style={[styles.rowLabel, { color: tokens.foreground }]}>
-                    {t("Share sign-ins with my other bots")}
+                <View style={{ gap: 8, marginTop: 8 }}>
+                  <Text style={{ color: tokens.mutedForeground, fontSize: 14 }}>
+                    {t("Browser")}
                   </Text>
-                  <NativeSwitch
-                    accessibilityLabel={t("Share sign-ins with my other bots")}
-                    value={shareSignIns}
-                    onValueChange={(value) => {
+                  <NativeSegmentedControl
+                    accessibilityLabel={t("Browser")}
+                    value={shareSignIns ? "global" : "independent"}
+                    onChange={(value) => {
                       if (!botId) return;
                       setError(null);
-                      shareSignInsSave.update(value);
+                      shareSignInsSave.update(value === "global");
                     }}
+                    options={[
+                      { value: "global", label: t("Global") },
+                      { value: "independent", label: t("Independent") },
+                    ]}
                   />
                 </View>
               ) : null}
