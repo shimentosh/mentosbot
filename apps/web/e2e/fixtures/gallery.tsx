@@ -533,6 +533,15 @@ const rich: Scenario = {
     ]),
     bot([
       {
+        kind: "file",
+        artifactId: "video-1",
+        mimeType: "video/mp4",
+        name: "launch-reel.mp4",
+        size: 8_912_896,
+      },
+    ]),
+    bot([
+      {
         kind: "chart",
         name: "Revenue by month",
         spec: { marks: [{ type: "barY", options: { x: "month", y: "revenue" } }] },

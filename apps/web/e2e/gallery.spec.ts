@@ -37,6 +37,7 @@ test("gallery renders every chat scenario in both themes", async ({ page }, test
       if (label === "Rich content") {
         // Both load after mount and fall back quietly, so wait for the real content.
         await expect(page.locator("svg[class^='plot-']")).toBeVisible();
+        await expect(page.getByRole("button", { name: "Play launch-reel.mp4" })).toBeVisible();
         await expect
           .poll(() =>
             page

@@ -30,11 +30,7 @@ function isTextPreview(mimeType: string) {
 }
 
 function isPreviewable(mimeType: string) {
-  return (
-    isTextPreview(mimeType) ||
-    artifactPreviewKind(mimeType) === "pdf" ||
-    artifactPreviewKind(mimeType) === "video"
-  );
+  return isTextPreview(mimeType) || artifactPreviewKind(mimeType) === "pdf";
 }
 
 export function ArtifactFileCard(props: ArtifactFileCardProps) {
@@ -54,15 +50,29 @@ export function ArtifactFileCard(props: ArtifactFileCardProps) {
     }
   }
 
-  if (isAttachmentAudioMimeType(props.mimeType)) {
+  if (
+    isAttachmentAudioMimeType(props.mimeType) ||
+    artifactPreviewKind(props.mimeType) === "video"
+  ) {
+    const video = artifactPreviewKind(props.mimeType) === "video";
     return (
-      <BuiCard className="min-w-[280px] p-4 text-foreground">
-        <AudioArtifactPreview
+      <BuiCard
+        className={
+          video
+            ? "w-[420px] max-w-full overflow-hidden text-foreground"
+            : "min-w-[280px] p-4 text-foreground"
+        }
+      >
+        <MediaArtifactPreview
           key={JSON.stringify([props.target, props.artifactId, props.mimeType])}
           {...props}
           onDownload={startDownload}
         />
-        {downloadError ? <DownloadError message={downloadError} /> : null}
+        {downloadError ? (
+          <div className={video ? "px-4 pb-3" : undefined}>
+            <DownloadError message={downloadError} />
+          </div>
+        ) : null}
       </BuiCard>
     );
   }
@@ -239,8 +249,6 @@ function FilePreview({
           </div>
         ) : kind === "html" && state.text !== undefined ? (
           <SandboxedHtmlViewer html={state.text} title={name} />
-        ) : kind === "video" ? (
-          <VideoPreview bytes={state.bytes} name={name} />
         ) : kind === "pdf" ? (
           <PdfViewer bytes={state.bytes} title={name} />
         ) : state.text !== undefined && kind === "text" ? (
@@ -257,19 +265,22 @@ function FilePreview({
   );
 }
 
-function AudioArtifactPreview({
+/** Audio and video play in the message itself; the bytes load only when someone presses play. */
+function MediaArtifactPreview({
   target,
   artifactId,
   name,
   mimeType,
+  size,
   onDownload,
 }: ArtifactFileCardProps & { onDownload: () => Promise<void> }) {
   const { t } = useLingui();
+  const video = artifactPreviewKind(mimeType) === "video";
   const [state, setState] = useState<
     { status: "idle" | "loading" } | { status: "ready"; src: string } | { status: "error" }
   >({ status: "idle" });
   const lifetime = useRef<{ cancelled: boolean; started: boolean; url?: string }>(null);
-  const audio = useRef<HTMLAudioElement>(null);
+  const player = useRef<HTMLMediaElement>(null);
   useEffect(() => {
     const current = { cancelled: false, started: false, url: undefined as string | undefined };
     lifetime.current = current;
@@ -280,9 +291,9 @@ function AudioArtifactPreview({
   }, []);
   useEffect(() => {
     if (state.status !== "ready") return;
-    const player = audio.current;
-    void player?.play().catch(() => {});
-    return () => player?.pause();
+    const media = player.current;
+    void media?.play().catch(() => {});
+    return () => media?.pause();
   }, [state]);
 
   async function startPlayback() {
@@ -293,7 +304,7 @@ function AudioArtifactPreview({
     try {
       const bytes = await fetchArtifactBytes(target, artifactId);
       if (current.cancelled) return;
-      if (!isAttachmentAudioMimeType(mimeType)) throw new Error("Unsupported audio type");
+      if (!video && !isAttachmentAudioMimeType(mimeType)) throw new Error("Unsupported audio type");
       current.url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: mimeType }));
       setState({ status: "ready", src: current.url });
     } catch {
@@ -301,42 +312,87 @@ function AudioArtifactPreview({
     }
   }
 
+  const playButton =
+    state.status === "idle" || state.status === "loading" ? (
+      <Button
+        variant={video ? "secondary" : "ghost"}
+        size="icon-lg"
+        aria-label={t`Play ${name}`}
+        aria-busy={state.status === "loading"}
+        disabled={state.status === "loading"}
+        onClick={() => void startPlayback()}
+        className={video ? "size-14 rounded-full" : undefined}
+      >
+        <Play className={video ? "size-6" : undefined} />
+      </Button>
+    ) : null;
+  const downloadButton = (
+    <Button
+      variant="ghost"
+      size="icon-lg"
+      aria-label={t`Download ${name}`}
+      onClick={() => void onDownload()}
+      className="text-muted-foreground"
+    >
+      <Download strokeWidth={1.8} className="size-[19px]" />
+    </Button>
+  );
+  const spinner =
+    state.status === "loading" ? (
+      <span className="text-sm text-muted-foreground">
+        <Spinner aria-label={t`Loading preview…`} />
+      </span>
+    ) : null;
+  const error =
+    state.status === "error" ? <DownloadError message={t`Could not load this file.`} /> : null;
+
+  if (video)
+    return (
+      <>
+        {state.status === "ready" ? (
+          // biome-ignore lint/a11y/useMediaCaption: Attachment playback has no caption track supplied by the author.
+          <video
+            ref={(element) => {
+              player.current = element;
+            }}
+            src={state.src}
+            controls
+            playsInline
+            preload="metadata"
+            aria-label={name}
+            className="block max-h-[min(70vh,560px)] w-full bg-muted object-contain"
+          />
+        ) : (
+          <div className="grid aspect-video place-items-center bg-muted">
+            {state.status === "loading" ? spinner : playButton}
+          </div>
+        )}
+        <div className="flex items-center gap-3 py-2 pr-2 pl-4">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[14px] font-medium">{name}</span>
+            <span className="block text-[13px] text-muted-foreground">{formatSize(size)}</span>
+          </span>
+          {downloadButton}
+        </div>
+        {error ? <div className="px-4 pb-3">{error}</div> : null}
+      </>
+    );
+
   return (
     <>
       <div className="flex items-center gap-3">
-        {state.status === "idle" || state.status === "loading" ? (
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            aria-label={t`Play ${name}`}
-            aria-busy={state.status === "loading"}
-            disabled={state.status === "loading"}
-            onClick={() => void startPlayback()}
-          >
-            <Play />
-          </Button>
-        ) : null}
+        {playButton}
         <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{name}</span>
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          aria-label={t`Download ${name}`}
-          onClick={() => void onDownload()}
-          className="text-muted-foreground"
-        >
-          <Download strokeWidth={1.8} className="size-[19px]" />
-        </Button>
+        {downloadButton}
       </div>
-      {state.status === "loading" ? (
-        <span className="text-sm text-muted-foreground">
-          <Spinner aria-label={t`Loading preview…`} />
-        </span>
-      ) : state.status === "error" ? (
-        <DownloadError message={t`Could not load this file.`} />
-      ) : state.status === "ready" ? (
+      {spinner}
+      {error}
+      {state.status === "ready" ? (
         // biome-ignore lint/a11y/useMediaCaption: Attachment playback has no caption track supplied by the author.
         <audio
-          ref={audio}
+          ref={(element) => {
+            player.current = element;
+          }}
           src={state.src}
           controls
           preload="metadata"
