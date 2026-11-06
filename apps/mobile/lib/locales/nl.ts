@@ -100,6 +100,9 @@ export const NL_MESSAGES: Record<string, string> = {
   "Add provider": "Aanbieder toevoegen",
   "Choose a model": "Kies een model",
   "Use 80 characters or fewer": "Gebruik maximaal 80 tekens",
+  "Change email": "E-mailadres wijzigen",
+  "Could not update email": "Kan e-mailadres niet bijwerken",
+  "Open the link sent to {email}": "Open de link die naar {email} is gestuurd",
   "Could not update name": "Naam kon niet worden bijgewerkt",
   "{summary} Your backup models also failed.": "{summary} Je reservemodellen zijn ook mislukt.",
   "{summary} No backup model was usable for this request.":

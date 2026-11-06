@@ -118,6 +118,9 @@ export const ES_MESSAGES: Record<string, string> = {
   "{summary} Your backup models also failed.":
     "{summary} Tus modelos de respaldo también fallaron.",
   "Use 80 characters or fewer": "Usa 80 caracteres o menos",
+  "Change email": "Cambiar correo",
+  "Could not update email": "No se pudo cambiar el correo",
+  "Open the link sent to {email}": "Abre el enlace enviado a {email}",
   "Could not update name": "No se pudo actualizar el nombre",
   "Ollama Cloud": "Ollama Cloud",
   "Ollama API key": "Clave de API de Ollama",

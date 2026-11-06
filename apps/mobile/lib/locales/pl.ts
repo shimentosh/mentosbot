@@ -100,6 +100,9 @@ export const PL_MESSAGES: Record<string, string> = {
   "Add provider": "Dodaj dostawcę",
   "Choose a model": "Wybierz model",
   "Use 80 characters or fewer": "Użyj maksymalnie 80 znaków",
+  "Change email": "Zmień adres e-mail",
+  "Could not update email": "Nie udało się zmienić adresu e-mail",
+  "Open the link sent to {email}": "Otwórz link wysłany na {email}",
   "Could not update name": "Nie udało się zaktualizować nazwy",
   "{summary} Your backup models also failed.": "{summary} Modele zapasowe również zawiodły.",
   "{summary} No backup model was usable for this request.":

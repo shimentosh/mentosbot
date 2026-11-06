@@ -93,6 +93,9 @@ export const ZH_MESSAGES: Record<string, string> = {
   "Add provider": "添加提供商",
   "Choose a model": "选择模型",
   "Use 80 characters or fewer": "请使用不超过 80 个字符",
+  "Change email": "更改邮箱",
+  "Could not update email": "无法更新邮箱",
+  "Open the link sent to {email}": "打开发送到 {email} 的链接",
   "Could not update name": "无法更新姓名",
   "{summary} Your backup models also failed.": "{summary} 备用模型也失败了。",
   "{summary} No backup model was usable for this request.":

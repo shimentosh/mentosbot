@@ -770,6 +770,98 @@ describe("identity confirmation", () => {
   });
 });
 
+describe("email change", () => {
+  const confirm = (f: ReturnType<typeof fixture>, token: string) =>
+    f.request("/confirm-identity", { password: "offline-password12" }, token);
+  const change = (f: ReturnType<typeof fixture>, token: string, newEmail = "moved@example.test") =>
+    f.request("/change-email", { newEmail }, token);
+  const security = async (f: ReturnType<typeof fixture>, token: string) =>
+    (await (await f.request("/account-security", undefined, token)).json()) as {
+      emailChange?: boolean;
+    };
+  const verifiedAccount = async (f: ReturnType<typeof fixture>) => {
+    const { token } = (await (await f.signup()).json()) as { token: string };
+    await f.verify();
+    f.messages.length = 0;
+    return token;
+  };
+
+  it("moves the account only after confirming identity and opening the link at the new address", async () => {
+    const f = fixture();
+    const token = await verifiedAccount(f);
+    expect(await security(f, token)).toMatchObject({ emailChange: true });
+
+    const unconfirmed = await change(f, token);
+    expect(unconfirmed.status).toBe(403);
+    expect(await unconfirmed.json()).toMatchObject({ code: "IDENTITY_CONFIRMATION_REQUIRED" });
+    expect(f.messages).toHaveLength(0);
+
+    expect((await confirm(f, token)).status).toBe(200);
+    expect((await change(f, token)).status).toBe(200);
+    expect(f.messages.map((message) => message.to)).toEqual(["moved@example.test"]);
+    expect(f.data.user![0]).toMatchObject({ email: "approved@example.test" });
+    expect(recordSecurityEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "auth.email.changed" }),
+    );
+
+    await f.verify();
+    expect(f.data.user![0]).toMatchObject({ email: "moved@example.test", emailVerified: true });
+    expect(recordSecurityEvent).toHaveBeenCalledWith({
+      type: "auth.email.changed",
+      userId: f.data.user![0]!.id,
+    });
+    expect((await f.signin("moved@example.test")).status).toBe(200);
+    expect((await f.signin("approved@example.test")).status).toBe(401);
+  });
+
+  it("keeps the signup allowlist for the new address", async () => {
+    const f = fixture({ allowlist: "@example.test" });
+    await f.signup();
+    await f.verify();
+    const { token } = (await (await f.signin()).json()) as { token: string };
+    f.messages.length = 0;
+    expect((await confirm(f, token)).status).toBe(200);
+    const refused = await change(f, token, "outside@elsewhere.test");
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toMatchObject({ code: "EMAIL_NOT_ALLOWED" });
+    expect(f.messages).toHaveLength(0);
+  });
+
+  it("does not reveal or take an address another account uses", async () => {
+    const f = fixture();
+    await f.signup("other@example.test");
+    const token = await verifiedAccount(f);
+    expect((await confirm(f, token)).status).toBe(200);
+    expect((await change(f, token, "other@example.test")).status).toBe(200);
+    expect(f.messages).toHaveLength(0);
+  });
+
+  it("is unavailable without email delivery or with a linked SSO account", async () => {
+    const offline = fixture({ delivery: false });
+    const { token } = (await (await offline.signup()).json()) as { token: string };
+    expect(await security(offline, token)).toMatchObject({ emailChange: false });
+    expect((await confirm(offline, token)).status).toBe(200);
+    expect((await change(offline, token)).status).toBe(400);
+    expect(offline.data.user![0]).toMatchObject({ email: "approved@example.test" });
+
+    const f = fixture();
+    const linked = await verifiedAccount(f);
+    f.data.account!.push({
+      id: "oidc-link",
+      userId: f.data.user![0]!.id,
+      providerId: "oidc",
+      accountId: "sso-subject",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    expect(await security(f, linked)).toMatchObject({ emailChange: false });
+    const refused = await change(f, linked);
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ code: "EMAIL_CHANGE_UNAVAILABLE" });
+    expect(f.messages).toHaveLength(0);
+  });
+});
+
 describe("verification email without blocking", () => {
   it("signs an open password signup in at once and lets the emailed link mark it verified", async () => {
     const f = fixture();

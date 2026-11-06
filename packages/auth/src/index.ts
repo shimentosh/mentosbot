@@ -1,6 +1,7 @@
 import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import type { ProductAnalytics, TransactionalEmailProvider } from "@rakazo/adapter-kit";
+import { IDENTITY_CONFIRMATION_REQUIRED } from "@rakazo/contracts";
 import {
   displayName,
   emailAllowed,
@@ -30,6 +31,7 @@ import {
 } from "./account-export-token.js";
 import {
   accountSecurity,
+  hasSsoAccount,
   oidcProofKey,
   sessionForAuthHook,
   signedBearer,
@@ -214,6 +216,35 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
   // Better Auth's own token key, so every stored token shares one cipher and key.
   let authContext: Promise<{ secretConfig: TokenKey }> | undefined;
   const tokenKey = async () => (await authContext!).secretConfig;
+  /**
+   * A session alone must not move the account: the caller confirms who they are first, and the
+   * new address must pass the same signup allowlist. SSO accounts take theirs from the provider.
+   */
+  const guardEmailChange = async (ctx: Parameters<typeof sessionForAuthHook>[0]) => {
+    const session = await sessionForAuthHook(ctx);
+    if (!session) return;
+    const adapter = ctx.context.internalAdapter;
+    if (hasSsoAccount(await adapter.findAccounts(session.user.id)))
+      throw new APIError("FORBIDDEN", {
+        code: "EMAIL_CHANGE_UNAVAILABLE",
+        message: "Your sign-in provider sets this email",
+      });
+    if (
+      !(await hasRecentIdentityConfirmation(adapter, {
+        sessionId: session.session.id,
+        userId: session.user.id,
+      }))
+    )
+      throw new APIError("FORBIDDEN", {
+        code: IDENTITY_CONFIRMATION_REQUIRED,
+        message: "Confirm it's you",
+      });
+    if (!emailAllowed(String(ctx.body?.newEmail ?? ""), signupPolicyFromEnv(env).allowlist))
+      throw new APIError("BAD_REQUEST", {
+        code: "EMAIL_NOT_ALLOWED",
+        message: "Email is not allowed to register",
+      });
+  };
   const auth = betterAuth({
     appName: "Rakazo",
     logger: env.logger,
@@ -285,6 +316,12 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
         : undefined,
     },
     user: {
+      // The new address gets a link and changes only once it is opened; the before hook also
+      // asks the caller to confirm who they are. Without email delivery nothing can prove it.
+      changeEmail: {
+        enabled: Boolean(env.email) && env.passwordAuth !== false,
+        updateEmailWithoutVerification: false,
+      },
       validateUserInfo: async ({ user, source }, ctx) => {
         if (source.method !== "oauth" || source.oauth?.providerId !== "oidc") return;
         const expectedUser = (await getOAuthState())?.serverContext?.reauthUserId;
@@ -442,6 +479,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
             throw new APIError("BAD_REQUEST", { message: "Email is not available" });
           }
         }
+        if (ctx.path === "/change-email") await guardEmailChange(ctx);
         if (
           env.passwordAuth === false &&
           [...CREDENTIAL_PATHS, "/reset-password", "/change-password", "/set-password"].includes(
@@ -528,6 +566,21 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
                 : {}),
               internalAdapter: {
                 ...ctx.context.internalAdapter,
+                // Opening a change-email link is the only verify-email update that moves
+                // the address.
+                ...(ctx.path === "/verify-email"
+                  ? {
+                      updateUser: async (...args: Parameters<typeof updateUser>) => {
+                        const updated = await updateUser(...args);
+                        if (typeof args[1].email === "string")
+                          await recordSecurityEvent({
+                            type: "auth.email.changed",
+                            userId: args[0],
+                          });
+                        return updated;
+                      },
+                    }
+                  : {}),
                 // Better Auth drops an unverified account's logins and sessions when a
                 // code proves the mailbox; credentials Rakazo stores elsewhere go too.
                 ...(ctx.path === CODE_SIGN_IN_PATH

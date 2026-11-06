@@ -1,5 +1,6 @@
 import { MenuView } from "@expo/ui/community/menu";
 import type { AccountSecurity, UsageSummary } from "@rakazo/contracts";
+import { isIdentityConfirmationRequired } from "@rakazo/contracts";
 import { accountDisplay, displayName } from "@rakazo/core";
 import * as Notifications from "expo-notifications";
 import type { Href } from "expo-router";
@@ -19,7 +20,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAccountDeletion } from "../../components/account-deletion";
 import { AppMark } from "../../components/app-mark";
 import { ApprovalModeRow, ApprovalRulesRow } from "../../components/approval-settings-rows";
-import { NameDialog } from "../../components/name-dialog";
+import { useIdentityConfirmation } from "../../components/confirm-identity";
+import { NameDialog, TextFieldDialog } from "../../components/name-dialog";
 import { NativeActionButton } from "../../components/native-action-button";
 import { NativeSegmentedControl } from "../../components/native-segmented-control";
 import {
@@ -32,6 +34,7 @@ import {
 import { createAccountNameEditor } from "../../lib/account-name-editor";
 import type { MobileMe } from "../../lib/api";
 import {
+  changeAccountEmail,
   currentApiBase,
   fetchAccountSecurity,
   loadSessionToken,
@@ -131,6 +134,67 @@ export default function Account() {
   });
 
   const [security, setSecurity] = useState<AccountSecurity | null>(null);
+  const { withIdentityConfirmation, identityDialog } = useIdentityConfirmation();
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailPending, setEmailPending] = useState(false);
+  /** The address a change link went to; the account keeps its email until it is opened. */
+  const [emailSentTo, setEmailSentTo] = useState<string | null>(null);
+
+  function promptEmail(value: string, message?: string) {
+    Alert.prompt(
+      t("Change email"),
+      message,
+      [
+        { text: t("Cancel"), style: "cancel" },
+        {
+          text: t("Save"),
+          isPreferred: true,
+          onPress: (draft?: string) => void saveEmail(draft ?? ""),
+        },
+      ],
+      "plain-text",
+      value,
+      "email-address",
+    );
+  }
+
+  function editEmail() {
+    if (emailPending || !me?.email) return;
+    if (Platform.OS === "ios") promptEmail(me.email);
+    else {
+      setEmailDraft(me.email);
+      setEmailError(null);
+      setEmailDialogOpen(true);
+    }
+  }
+
+  async function saveEmail(value: string) {
+    if (emailPending) return;
+    const next = value.trim().toLowerCase();
+    if (!next || next === me?.email?.toLowerCase()) {
+      setEmailDialogOpen(false);
+      return;
+    }
+    setEmailPending(true);
+    setEmailError(null);
+    let failure: string | undefined;
+    try {
+      await withIdentityConfirmation(() => changeAccountEmail(next));
+      setEmailSentTo(next);
+      setEmailDialogOpen(false);
+    } catch (error) {
+      // A dismissed confirmation leaves things as they were.
+      if (!isIdentityConfirmationRequired(error))
+        failure = errorText(error, t("Could not update email"));
+    } finally {
+      setEmailPending(false);
+    }
+    if (!failure) return;
+    if (Platform.OS === "ios") promptEmail(value, failure);
+    else setEmailError(failure);
+  }
   const canChangePassword = security?.hasPassword && security.passwordChangeEnabled !== false;
   const deletion = useAccountDeletion({ onSecurity: setSecurity });
   const { run: securityAction } = deletion;
@@ -444,6 +508,19 @@ export default function Account() {
             dimmed={namePending}
             onPress={editName}
           />
+          {security?.emailChange && me?.email ? (
+            <SettingsRow
+              accessibilityRole="button"
+              chevron="right"
+              detail={
+                emailSentTo ? t("Open the link sent to {email}", { email: emailSentTo }) : undefined
+              }
+              dimmed={emailPending}
+              disabled={emailPending}
+              title={t("Change email")}
+              onPress={editEmail}
+            />
+          ) : null}
           {focus !== "usage" ? usageBlock : null}
         </SettingsGroup>
 
@@ -836,6 +913,31 @@ export default function Account() {
           onClose={closeNameDialog}
         />
       ) : null}
+      {emailDialogOpen ? (
+        <TextFieldDialog
+          title={t("Change email")}
+          label={t("Email")}
+          submitLabel={t("Save")}
+          value={emailDraft}
+          error={emailError}
+          saving={emailPending}
+          input={{
+            autoComplete: "email",
+            autoCapitalize: "none",
+            autoCorrect: false,
+            keyboardType: "email-address",
+          }}
+          onChange={(value) => {
+            setEmailDraft(value);
+            setEmailError(null);
+          }}
+          onSubmit={(value) => void saveEmail(value)}
+          onClose={() => {
+            if (!emailPending) setEmailDialogOpen(false);
+          }}
+        />
+      ) : null}
+      {identityDialog}
       {deletion.dialog}
     </SafeAreaView>
   );

@@ -1,5 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { AccountSecurity, BotAvatarSet, UsageSummary } from "@rakazo/contracts";
+import { isIdentityConfirmationRequired } from "@rakazo/contracts";
 import {
   accountDisplay,
   displayName,
@@ -38,6 +39,7 @@ import {
   ComputersUnavailableHint,
   computersAreUnavailable,
 } from "../components/ComputersUnavailableHint";
+import { useIdentityConfirmation } from "../components/ConfirmIdentityDialog";
 import { DesktopUpdateSection } from "../components/DesktopUpdates";
 import { PasskeySettings } from "../components/PasskeySettings";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
@@ -108,16 +110,24 @@ export function GeneralSettingsPanels({
   const [namePending, setNamePending] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const nameId = useId();
+  const [emailDraft, setEmailDraft] = useState("");
+  /** The address a change link went to; the account keeps its email until it is opened. */
+  const [emailSentTo, setEmailSentTo] = useState<string | null>(null);
+  const emailId = useId();
+  const { withIdentityConfirmation, identityDialog } = useIdentityConfirmation();
 
-  async function saveName() {
+  async function saveAccount() {
     const nextName = nameDraft.trim();
     if (namePending || !nextName || nextName.length > 80) return;
     if (!displayName(nextName, "")) {
       setNameError(t`Could not update name`);
       return;
     }
+    const nameChanged = nextName !== (account.label === email ? "" : displayName(name, ""));
+    const nextEmail = emailDraft.trim().toLowerCase();
+    const emailChanged = canChangeEmail && nextEmail !== "" && nextEmail !== email?.toLowerCase();
     // Nothing to save, so close without a request that could only fail.
-    if (nextName === (account.label === email ? "" : displayName(name, ""))) {
+    if (!nameChanged && !emailChanged) {
       setNameError(null);
       setEditingName(false);
       return;
@@ -125,15 +135,31 @@ export function GeneralSettingsPanels({
     setNamePending(true);
     setNameError(null);
     try {
-      const result = await authClient.updateUser({ name: nextName });
-      if (result.error) {
-        setNameError(authErrorText(result.error, t`Could not update name`));
-        return;
+      if (nameChanged) {
+        const result = await authClient.updateUser({ name: nextName });
+        if (result.error) {
+          setNameError(authErrorText(result.error, t`Could not update name`));
+          return;
+        }
+        void Promise.resolve()
+          .then(() => onNameSaved?.())
+          .catch(() => undefined);
+      }
+      if (emailChanged) {
+        try {
+          await withIdentityConfirmation(async () => {
+            const result = await authClient.changeEmail({ newEmail: nextEmail });
+            if (result.error) throw result.error;
+          });
+        } catch (cause) {
+          // A dismissed confirmation leaves the form open as it was.
+          if (!isIdentityConfirmationRequired(cause))
+            setNameError(authErrorText(cause, t`Could not update email`));
+          return;
+        }
+        setEmailSentTo(nextEmail);
       }
       setEditingName(false);
-      void Promise.resolve()
-        .then(() => onNameSaved?.())
-        .catch(() => undefined);
     } catch {
       setNameError(t`Could not update name`);
     } finally {
@@ -179,6 +205,7 @@ export function GeneralSettingsPanels({
   );
   const passkeysSupported = usePasskeysSupported();
   const canLinkSso = Boolean(accountSecurity?.sso && !accountSecurity.ssoLinked);
+  const canChangeEmail = Boolean(email && accountSecurity?.emailChange);
   const [timezonePending, setTimezonePending] = useState(false);
   const [timezoneError, setTimezoneError] = useState<string | null>(null);
   const deviceTimezone = localTimezone();
@@ -214,7 +241,7 @@ export function GeneralSettingsPanels({
             className="space-y-3 px-4 py-4"
             onSubmit={(event) => {
               event.preventDefault();
-              void saveName();
+              void saveAccount();
             }}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
@@ -241,6 +268,26 @@ export function GeneralSettingsPanels({
                 }}
               />
             </Field>
+            {canChangeEmail ? (
+              <Field>
+                <FieldLabel htmlFor={emailId}>
+                  <Trans>Email</Trans>
+                </FieldLabel>
+                <Input
+                  id={emailId}
+                  type="email"
+                  autoComplete="email"
+                  spellCheck={false}
+                  required
+                  value={emailDraft}
+                  disabled={namePending}
+                  onChange={(event) => {
+                    setEmailDraft(event.target.value);
+                    setNameError(null);
+                  }}
+                />
+              </Field>
+            ) : null}
             {nameError ? (
               <p role="alert" className="text-[12.5px] text-destructive">
                 {nameError}
@@ -268,6 +315,11 @@ export function GeneralSettingsPanels({
                 {email && account.label !== email ? (
                   <p className="mt-0.5 break-words text-[13px] text-muted-foreground">{email}</p>
                 ) : null}
+                {emailSentTo ? (
+                  <p role="status" className="mt-0.5 break-words text-[13px] text-muted-foreground">
+                    <Trans>Open the link sent to {emailSentTo}</Trans>
+                  </p>
+                ) : null}
               </>
             }
             control={
@@ -276,6 +328,7 @@ export function GeneralSettingsPanels({
                 size="sm"
                 onClick={() => {
                   setNameDraft(account.label === email ? "" : displayName(name, ""));
+                  setEmailDraft(email ?? "");
                   setNameError(null);
                   setEditingName(true);
                 }}
@@ -286,6 +339,7 @@ export function GeneralSettingsPanels({
           />
         )}
       </SettingsGroup>
+      {identityDialog}
 
       <SettingsGroup title={<Trans>Preferences</Trans>}>
         <SettingsRow
