@@ -156,7 +156,7 @@ function mapBot(
     crossSpaceCommunication: bot.crossSpaceCommunication ?? true,
     dailyCheckIns: bot.dailyCheckIns ?? true,
     fleetManagement: bot.fleetManagement ?? true,
-    shareSignIns: bot.shareSignIns ?? false,
+    shareSignIns: bot.shareSignIns ?? true,
     // Stored lists may name a tool that no longer exists; settings resend what they read.
     disabledBuiltinTools: [...disabledBuiltinToolSet(bot.disabledBuiltinTools)],
     webhookConfigured: Boolean(bot.webhookSecretId),
@@ -629,17 +629,8 @@ export function createRepos(
               notifyOnFinish: input.notifyOnFinish,
               dailyCheckIns: input.dailyCheckIns,
               fleetManagement: input.fleetManagement,
-              // A new bot starts signed in where its owner's sharing bots are; turning it off
-              // keeps a bot fresh.
-              shareSignIns:
-                (await tx.bot.count({
-                  where: {
-                    spaceId: actor.spaceId,
-                    userId: actor.userId,
-                    archivedAt: null,
-                    shareSignIns: true,
-                  },
-                })) > 0,
+              // Every bot starts on the owner's global browser; Independent gives it its own.
+              shareSignIns: true,
               color: avatar.color,
               avatarSet,
               avatarSetPinned: input.avatarSetPinned ?? avatarSet !== defaultSet,

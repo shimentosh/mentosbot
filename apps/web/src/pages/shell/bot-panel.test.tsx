@@ -65,7 +65,7 @@ vi.mock("@rakazo/ui-web", () => ({
     />
   ),
   Toggle: ({
-    onPressedChange: _onPressedChange,
+    onPressedChange,
     pressed,
     variant: _variant,
     size: _size,
@@ -76,7 +76,12 @@ vi.mock("@rakazo/ui-web", () => ({
     pressed?: boolean;
     onPressedChange?: (pressed: boolean) => void;
   }) => (
-    <button type="button" aria-pressed={pressed} {...props}>
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={() => onPressedChange?.(!pressed)}
+      {...props}
+    >
       {props.children}
     </button>
   ),
@@ -803,43 +808,44 @@ describe("BotSettings cached data", () => {
   });
 });
 
-describe("BotSettings sign-ins", () => {
-  const toggle = () => container.querySelector<HTMLButtonElement>('button[id$="-share-sign-ins"]');
+describe("BotSettings browser", () => {
+  const option = (label: "Global" | "Independent") =>
+    [...container.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
+      (button) => button.textContent === label,
+    );
+  const browser = () => option("Global")?.closest('[role="group"]')?.parentElement;
 
-  it("shares a team bot's sign-ins with one switch", async () => {
-    await render("Billing", { shareSignIns: false });
-    const share = toggle();
-    if (!share) throw new Error("Missing switch");
-    await act(async () => {
-      share.click();
-    });
-    expect(onSave).toHaveBeenCalledWith({ shareSignIns: true });
+  it("moves a team bot to its own browser and back", async () => {
+    await render("Billing", { shareSignIns: true });
+    expect(option("Global")?.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => option("Independent")?.click());
+    expect(onSave).toHaveBeenCalledWith({ shareSignIns: false });
+    expect(option("Independent")?.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => option("Global")?.click());
+    expect(onSave).toHaveBeenLastCalledWith({ shareSignIns: true });
   });
 
-  it("turns back off when the save fails", async () => {
+  it("goes back and says why when the save fails", async () => {
     await render("Billing", { shareSignIns: true });
     onSave.mockRejectedValueOnce(new Error("offline"));
-    await act(async () => {
-      toggle()?.click();
-    });
-    expect(toggle()?.getAttribute("aria-checked")).toBe("true");
-    // The reason sits under the switch, not at the foot of the panel.
-    const detail = toggle()?.closest("div.rounded-xl")?.querySelector('[role="alert"]');
-    expect(detail?.textContent).toBe("offline");
+    await act(async () => option("Independent")?.click());
+    expect(option("Global")?.getAttribute("aria-pressed")).toBe("true");
+    // The reason sits under the choice, not at the foot of the panel.
+    expect(browser()?.querySelector('[role="alert"]')?.textContent).toBe("offline");
   });
 
-  it("names the other bots it shares sign-ins with", async () => {
+  it("names the other bots on the global browser", async () => {
     await render("Billing", { shareSignIns: true }, false, 0, ["Noor X", "KODI"]);
-    expect(toggle()?.closest("div.rounded-xl")?.textContent).toContain("With Noor X and KODI");
+    expect(browser()?.textContent).toContain("Shared with Noor X and KODI");
   });
 
-  it("names no one while it is off", async () => {
+  it("names no one for an independent browser", async () => {
     await render("Billing", { shareSignIns: false }, false, 0, ["Noor X"]);
-    expect(toggle()?.closest("div.rounded-xl")?.textContent).not.toContain("Noor X");
+    expect(browser()?.textContent).not.toContain("Noor X");
   });
 
   it("is not offered to a bot with its own computer", async () => {
     await render("Billing", { computerMode: "dedicated" });
-    expect(toggle()).toBeNull();
+    expect(option("Global")).toBeUndefined();
   });
 });
