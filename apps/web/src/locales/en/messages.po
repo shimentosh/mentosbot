@@ -1232,6 +1232,10 @@ msgstr "Browse"
 msgid "Browse MCP servers"
 msgstr "Browse MCP servers"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Browser"
+msgstr "Browser"
+
 #: src/components/StorageSettings.tsx
 msgid "Bucket"
 msgstr "Bucket"
@@ -3500,6 +3504,10 @@ msgstr "Git event"
 msgid "Give a friend {weeks} weeks free"
 msgstr "Give a friend {weeks} weeks free"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Global"
+msgstr "Global"
+
 #: src/pages/InvitePage.tsx
 #: src/pages/NotFound.tsx
 msgid "Go home"
@@ -3722,6 +3730,10 @@ msgstr "Include API keys"
 #: src/components/call/VoiceChatCard.tsx
 msgid "Incoming call"
 msgstr "Incoming call"
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Independent"
+msgstr "Independent"
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Inherit default"
@@ -6289,10 +6301,6 @@ msgstr "Share"
 msgid "Share “{title}”"
 msgstr "Share “{title}”"
 
-#: src/pages/shell/bot-panel.tsx
-msgid "Share sign-ins with my other bots"
-msgstr "Share sign-ins with my other bots"
-
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "Share, anyone with the link can view"
@@ -6310,6 +6318,11 @@ msgstr "Shared memory"
 #: src/pages/shell/bot-share-section.tsx
 msgid "Shared with"
 msgstr "Shared with"
+
+#. placeholder {0}: formatList(signInPeers)
+#: src/pages/shell/bot-panel.tsx
+msgid "Shared with {0}"
+msgstr "Shared with {0}"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -7609,11 +7622,6 @@ msgstr "Where should bots run?"
 #: src/components/pages/SharePopover.tsx
 msgid "Who can open this page"
 msgstr "Who can open this page"
-
-#. placeholder {0}: formatList(signInPeers)
-#: src/pages/shell/bot-panel.tsx
-msgid "With {0}"
-msgstr "With {0}"
 
 #: src/lib/ticket-status.ts
 msgid "Won't do"
