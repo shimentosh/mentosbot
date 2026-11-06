@@ -4,17 +4,15 @@ import { useLingui } from "@lingui/react/macro";
 import { InputRevealLabelsProvider } from "@rakazo/ui-web";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { bootstrapI18n, getActiveUiLocale } from "../lib/i18n";
-import { resolveUiLocale } from "../lib/ui-locale";
+import { bootstrapI18n } from "../lib/i18n";
 import { MarkdownChrome } from "./markdown-copy";
 
 export function I18nBootstrap({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(() => i18n.locale === getActiveUiLocale());
+  const [ready, setReady] = useState(() => i18n.locale === "en");
 
   useEffect(() => {
     let cancelled = false;
-    // activateUiLocale already falls back to English on catalog failure.
-    void bootstrapI18n(resolveUiLocale()).finally(() => {
+    void bootstrapI18n().finally(() => {
       if (!cancelled) setReady(true);
     });
     return () => {

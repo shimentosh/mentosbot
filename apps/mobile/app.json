@@ -95,10 +95,6 @@
       "./plugins/with-android-r8",
       "./plugins/with-app-intents"
     ],
-    "locales": {
-      "es": "./locales/es.json",
-      "pl": "./locales/pl.json"
-    },
     "ios": {
       "bundleIdentifier": "com.mentosbot.app",
       "buildNumber": "1",

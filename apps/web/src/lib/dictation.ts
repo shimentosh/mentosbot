@@ -8,7 +8,6 @@ import {
 } from "@rakazo/core";
 import { desktopBridge } from "./desktop.js";
 import { DesktopSpeechRecognition } from "./desktop-speech.js";
-import { getActiveUiLocale } from "./i18n.js";
 import { selectedSpaceId, withSpaceHeaders } from "./rpc.js";
 import { errorText, voiceAccountErrorText } from "./user-error.js";
 
@@ -100,17 +99,17 @@ const RESTART_BACKOFF_AFTER = 2;
 const RESTART_BACKOFF_MS = 900;
 const RESTART_GIVE_UP_AFTER = 4;
 
-/** English UI follows the browser; other UI languages keep matching regional variants. */
+/** The app is in English, so recognition follows the browser's language. */
 export function recognitionLanguage(): string {
-  return recognitionLocaleTag(getActiveUiLocale(), navigator.language);
+  return recognitionLocaleTag("en", navigator.language);
 }
 
 /**
- * Language hint for server transcription: the primary subtag of the app's own locale
- * (`es`, `pt`, `zh`). Undefined leaves detection to the provider.
+ * Language hint for server transcription: the primary subtag of the app's own locale, English.
+ * Undefined leaves detection to the provider.
  */
 export function transcriptionLanguage(): string | undefined {
-  const tag = speechLocaleTag(getActiveUiLocale());
+  const tag = speechLocaleTag("en");
   return tag ? tag.split("-")[0]?.toLowerCase() : undefined;
 }
 

@@ -44,16 +44,7 @@ import {
   screenDriverInstaller,
   screenDriverRelease,
 } from "./host-screen.js";
-import {
-  createLocaleHandler,
-  desktopDirection,
-  desktopLocale,
-  desktopMessages,
-  errorDetail,
-  startDesktopLocale,
-  t,
-  withDetail,
-} from "./i18n.js";
+import { errorDetail, t, withDetail } from "./i18n.js";
 import { verifyDownloadedLinuxUpdate } from "./linux-update-signature.js";
 import { createLocalComputerChoice, saveLocalComputerHost } from "./local-settings.js";
 import {
@@ -100,7 +91,7 @@ import {
   servesBundledRenderer,
   sessionPartitionForServerUrl,
 } from "./setup-config.js";
-import { clearSetup, readSetup, readUiLocale, writeSetup, writeUiLocale } from "./setup-store.js";
+import { clearSetup, readSetup, writeSetup } from "./setup-store.js";
 import { createSystemSpeech } from "./system-speech.js";
 import type { UserDeviceAccess } from "./user-device.js";
 import { createUserDeviceAccess, deviceName } from "./user-device.js";
@@ -870,9 +861,8 @@ function installApplicationMenu() {
       // zoomIn's default accelerator is Cmd/Ctrl+Plus, which needs Shift on US layouts.
       { role: "zoomIn", accelerator: "CommandOrControl+=", visible: false },
       { role: "zoomOut", label: t("Zoom Out") },
-      // macOS adds its own Enter Full Screen item to a menu named "View"; a translated title
-      // may not be recognized, so it gets the item explicitly.
-      ...(process.platform === "darwin" && desktopLocale() === "en"
+      // macOS adds its own Enter Full Screen item to a menu named "View".
+      ...(process.platform === "darwin"
         ? []
         : ([
             { type: "separator" },
@@ -1346,10 +1336,6 @@ app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
   installSessionPermissions(session.defaultSession, permissionTarget);
   const userDataDir = app.getPath("userData");
-  startDesktopLocale(
-    await readUiLocale(userDataDir),
-    app.getPreferredSystemLanguages()[0] ?? app.getLocale(),
-  );
   desktopUpdater = new DesktopUpdateController(
     updaterEnvironment,
     // Loaded only when a packaged build actually checks for updates.
@@ -1587,14 +1573,6 @@ app.whenReady().then(async () => {
     return deviceState(remoteDeviceOrigin(event));
   });
   ipcMain.handle(
-    "desktop.locale.set",
-    createLocaleHandler(
-      permissionTarget,
-      (locale) => writeUiLocale(userDataDir, locale),
-      installApplicationMenu,
-    ),
-  );
-  ipcMain.handle(
     "desktop.badge.set",
     createBadgeHandler(permissionTarget, (count) => app.setBadgeCount(count)),
   );
@@ -1651,11 +1629,9 @@ app.whenReady().then(async () => {
   ipcMain.handle("desktop.update.install", (event) =>
     fromAppFrame(permissionTarget(), event) ? installUpdate() : desktopUpdater.state(),
   );
-  // Synchronous so the setup page has its language before it first paints.
+  // Synchronous so the setup page has its language before it first paints. The app is English.
   ipcMain.on("desktop.setup.locale", (event) => {
-    event.returnValue = fromSetupWindow(event)
-      ? { lang: desktopLocale(), dir: desktopDirection(), messages: desktopMessages() }
-      : null;
+    event.returnValue = fromSetupWindow(event) ? { lang: "en", dir: "ltr", messages: {} } : null;
   });
   ipcMain.handle("desktop.setup.state", (event) => {
     if (!fromSetupWindow(event)) return null;

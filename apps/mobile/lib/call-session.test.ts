@@ -12,7 +12,6 @@ import {
 } from "./call-session";
 import type { SpeechRecognizer } from "./dictation";
 import { ENDPOINT_SILENCE_MS, setSpeechRecognizer, stop as stopDictation } from "./dictation";
-import { activateUiLocale, getActiveUiLocale } from "./i18n";
 import { reportMobileError } from "./monitoring";
 import { saveServerHeaders } from "./server-headers";
 import {
@@ -23,7 +22,6 @@ import {
   rotateSessionTokenIfCurrent,
   saveSessionToken,
 } from "./session";
-import type { UiLocale } from "./ui-locale";
 
 const device = vi.hoisted(() => ({ languageTag: "en-US", os: "ios" }));
 
@@ -983,10 +981,7 @@ describe("mobile call speech locales", () => {
     "zh-CN",
     "zh-TW",
   ];
-  let previousLocale: UiLocale;
-
   beforeEach(() => {
-    previousLocale = getActiveUiLocale();
     vi.useFakeTimers();
   });
 
@@ -994,31 +989,25 @@ describe("mobile call speech locales", () => {
     endCall();
     stopDictation();
     setSpeechRecognizer(null);
-    activateUiLocale(previousLocale);
     device.languageTag = "en-US";
     device.os = "ios";
     vi.useRealTimers();
   });
 
   it.each([
-    ["en", "ios", "en-US", "en-US"],
-    ["de", "ios", "en-US", "de-DE"],
-    ["nl", "ios", "en-US", "nl-NL"],
-    ["ja", "ios", "en-US", "ja-JP"],
-    ["ru", "ios", "en-US", "ru-RU"],
-    ["zh-CN", "ios", "en-US", "zh-CN"],
-    // The app ships no Spanish, so a Spanish phone runs it in English.
-    ["en", "ios", "es-CL", "es-CL"],
-    ["en", "ios", "es-ES", "es-ES"],
-    ["en", "ios", "es-419", "es-MX"],
-    ["en", "android", "it-IT", "it-IT"],
-    ["en", "ios", "es-AR", "es-MX"],
-    ["en", "android", "es-AR", "es-AR"],
-    ["de", "ios", "de-AT", "de-AT"],
-    ["en", "ios", "ru-RU", "ru-RU"],
+    ["ios", "en-US", "en-US"],
+    // The app is English, so recognition follows the phone's language.
+    ["ios", "es-CL", "es-CL"],
+    ["ios", "es-ES", "es-ES"],
+    ["ios", "es-419", "es-MX"],
+    ["android", "it-IT", "it-IT"],
+    ["ios", "es-AR", "es-MX"],
+    ["android", "es-AR", "es-AR"],
+    ["ios", "de-AT", "de-AT"],
+    ["ios", "ru-RU", "ru-RU"],
   ] as const)(
-    "recognizes a %s call on an %s %s phone with %s and sends its live transcript after silence",
-    async (locale, os, phone, lang) => {
+    "recognizes a call on an %s %s phone with %s and sends its live transcript after silence",
+    async (os, phone, lang) => {
       device.os = os;
       device.languageTag = phone;
       const listeners = new Map<string, (payload: never) => void>();
@@ -1036,7 +1025,6 @@ describe("mobile call speech locales", () => {
         },
       };
       setSpeechRecognizer(recognizer);
-      activateUiLocale(locale);
       const fake = fakes();
       const { dictate: _dictate, ...deps } = fake.deps;
       startCall({ botId: "bot-1", botName: "Ada", transcribe: false }, deps);

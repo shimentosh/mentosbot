@@ -726,13 +726,13 @@ describe("identity confirmation", () => {
     expect(await reused.json()).toMatchObject({ code: "OTP_EXPIRED" });
   });
 
-  it("writes a code email in the language the account last used the app in", async () => {
+  it("writes a code email in English whatever language the account last used", async () => {
     const f = fixture();
     const token = await codeAccount(f);
     const user = f.data.user!.find((row) => row.email === "approved@example.test")!;
     user.locale = "es";
     expect((await f.request("/request-identity-code", {}, token)).status).toBe(200);
-    expect(f.messages.at(-1)).toMatchObject({ subject: "Tu código de confirmación de Rakazo" });
+    expect(f.messages.at(-1)).toMatchObject({ subject: "Your Rakazo confirmation code" });
   });
 
   it("binds an emailed code to the session that requested it", async () => {

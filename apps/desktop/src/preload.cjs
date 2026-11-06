@@ -30,9 +30,6 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     setRouteTraffic: (routeTraffic) =>
       ipcRenderer.invoke("desktop.device.setRouteTraffic", routeTraffic),
   },
-  locale: {
-    set: (locale) => ipcRenderer.invoke("desktop.locale.set", locale),
-  },
   menu: {
     onCommand: (listener) => {
       // The IpcRendererEvent stays in the preload: the renderer only sees the command.

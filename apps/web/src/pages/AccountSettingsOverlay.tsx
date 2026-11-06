@@ -15,7 +15,6 @@ import {
   Label,
   NativeSelect,
   NativeSelectOption,
-  OptionSelect,
   Switch,
   ToggleGroup,
   ToggleGroupItem,
@@ -29,7 +28,7 @@ import {
   TableRow,
 } from "@rakazo/ui-web/components/ui/table";
 import type { RefObject } from "react";
-import { useId, useRef, useState, useSyncExternalStore } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 import { AccountAccess, LinkSsoRow } from "../components/AccountAccess";
 import { AccountDataSettings } from "../components/AccountDataSettings";
 import { SuccessPop } from "../components/ai/primitives";
@@ -56,7 +55,6 @@ import {
   setComposerEnterToSend,
   subscribeComposerEnterToSend,
 } from "../lib/composer-enter-to-send-pref";
-import { getActiveUiLocale, setUiLocale } from "../lib/i18n";
 import { localTimezone, sameTimeZone, timezoneOptions } from "../lib/local-timezone";
 import { usePasskeysSupported } from "../lib/passkeys";
 import {
@@ -73,8 +71,6 @@ import {
 } from "../lib/tool-activity-preference";
 import type { AppearancePreference } from "../lib/ui-appearance";
 import { getUiAppearancePreference, setUiAppearance } from "../lib/ui-appearance";
-import type { UiLocale } from "../lib/ui-locale";
-import { UI_LOCALE_LABELS, UI_LOCALES } from "../lib/ui-locale";
 import { authErrorText } from "../lib/user-error";
 import { ComputerServersSettings } from "./ComputerServersSettings";
 
@@ -168,8 +164,6 @@ export function GeneralSettingsPanels({
   }
 
   const [accountSecurity, setAccountSecurity] = useState<AccountSecurity | null>(null);
-  const [locale, setLocale] = useState<UiLocale>(() => getActiveUiLocale());
-  const localeRequestRef = useRef(0);
   const [appearance, setAppearance] = useState<AppearancePreference>(() =>
     getUiAppearancePreference(),
   );
@@ -209,16 +203,6 @@ export function GeneralSettingsPanels({
   const [timezonePending, setTimezonePending] = useState(false);
   const [timezoneError, setTimezoneError] = useState<string | null>(null);
   const deviceTimezone = localTimezone();
-
-  function chooseLocale(next: UiLocale) {
-    if (next === locale) return;
-    const requestId = ++localeRequestRef.current;
-    setLocale(next);
-    void setUiLocale(next).then((activated) => {
-      if (requestId !== localeRequestRef.current) return;
-      setLocale(activated);
-    });
-  }
 
   async function chooseTimezone(next: string) {
     if (!onTimezoneChange || timezonePending || next === timezone) return;
@@ -432,10 +416,6 @@ export function GeneralSettingsPanels({
               </ToggleGroupItem>
             </ToggleGroup>
           }
-        />
-        <SettingsRow
-          label={<Trans>Language</Trans>}
-          control={<UiLocalePicker value={locale} onChange={chooseLocale} />}
         />
         {onTimezoneChange ? (
           <div data-testid="timezone-settings">
@@ -915,28 +895,5 @@ function AppearancePicker({
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
-  );
-}
-
-function UiLocalePicker({
-  value,
-  onChange,
-}: {
-  value: UiLocale;
-  onChange: (locale: UiLocale) => void;
-}) {
-  const { t } = useLingui();
-  return (
-    <OptionSelect
-      className="w-56 max-w-full"
-      data-testid="ui-locale-select"
-      aria-label={t`Language`}
-      options={UI_LOCALES.map((code) => ({
-        value: code,
-        label: UI_LOCALE_LABELS[code],
-      }))}
-      value={value}
-      onValueChange={onChange}
-    />
   );
 }

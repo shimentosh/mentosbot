@@ -58,7 +58,10 @@ export const TimeZoneSchema = z
   .max(64)
   .refine(isValidTimeZone, { message: "Unknown timezone" });
 
-/** An app language code, such as "es", "pt-BR" or "zh-TW". */
+/**
+ * A language code older apps still save, such as "es" or "pt-BR". The app and its emails are
+ * English only, so a saved value changes nothing.
+ */
 export const AppLocaleSchema = z.enum([
   "en",
   "de",

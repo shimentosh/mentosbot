@@ -300,7 +300,7 @@ describe("Dictation recorder fallback", () => {
     expect(track.stop).toHaveBeenCalled();
   });
 
-  it("tells the provider which language the caller speaks", async () => {
+  it("tells the provider the app's language", async () => {
     const track = { stop: vi.fn() };
     vi.stubGlobal("navigator", {
       userAgent:
@@ -337,7 +337,7 @@ describe("Dictation recorder fallback", () => {
     await vi.waitFor(() => expect(onFinal).toHaveBeenCalledWith("hola"));
 
     const sent = fetchMock.mock.calls[0]?.[1] as { body?: string } | undefined;
-    expect(JSON.parse(String(sent?.body)).language).toBe("es");
+    expect(JSON.parse(String(sent?.body)).language).toBe("en");
   });
 
   it("rejects oversized transcription responses without waiting for cancellation", async () => {
@@ -1044,42 +1044,13 @@ describe("Dictation web speech", () => {
     return { transcript, isFinal: true };
   }
 
-  it("listens in the language the app is set to", async () => {
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => (key === "rakazo.uiLocale" ? "nl" : null),
-      setItem: () => undefined,
-      removeItem: () => undefined,
-      clear: () => undefined,
-    });
-
-    const dictation = new Dictation();
-    await dictation.listen({ mode: "hold", onFinal: () => undefined });
-
-    expect(instances[0]?.lang).toBe("nl-NL");
-  });
-
-  it("hears the browser's regional variant of the app's language", async () => {
+  it("hears the browser's regional variant", async () => {
     vi.stubGlobal("navigator", { language: "es-CL" });
 
     const dictation = new Dictation();
     await dictation.listen({ mode: "hold", onFinal: () => undefined });
 
     expect(instances[0]?.lang).toBe("es-CL");
-  });
-
-  it("keeps the app's language when the browser speaks another one", async () => {
-    vi.stubGlobal("navigator", { language: "de-DE" });
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => (key === "rakazo.uiLocale" ? "es" : null),
-      setItem: () => undefined,
-      removeItem: () => undefined,
-      clear: () => undefined,
-    });
-
-    const dictation = new Dictation();
-    await dictation.listen({ mode: "hold", onFinal: () => undefined });
-
-    expect(instances[0]?.lang).toBe("es-ES");
   });
 
   it.each([
@@ -1936,8 +1907,8 @@ describe("Dictation web speech", () => {
 });
 
 describe("transcriptionLanguage", () => {
-  it("hints the provider with the language the caller picked", () => {
+  it("hints the provider with the app's language", () => {
     vi.stubGlobal("navigator", { language: "es-ES" });
-    expect(transcriptionLanguage()).toBe("es");
+    expect(transcriptionLanguage()).toBe("en");
   });
 });

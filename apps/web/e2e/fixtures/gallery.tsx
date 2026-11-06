@@ -825,7 +825,7 @@ function Gallery() {
   );
 }
 
-await bootstrapI18n("en");
+await bootstrapI18n();
 createRoot(document.getElementById("root")!).render(
   <I18nProvider i18n={i18n}>
     <QueryClientProvider client={queryClient}>

@@ -1,10 +1,8 @@
 import type { RunActivityRow } from "@rakazo/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { activityPreview, formatActivityRelativeTime, routineRunLateLabel } from "./activity";
-import { resetI18nForTests } from "./i18n";
 
 vi.mock("./api", () => ({ rpc: vi.fn() }));
-afterEach(() => resetI18nForTests());
 
 describe("formatActivityRelativeTime", () => {
   const now = new Date("2026-01-01T12:00:00.000Z");
@@ -26,7 +24,7 @@ describe("formatActivityRelativeTime", () => {
 });
 
 describe("activity preview", () => {
-  it("composes translated activity labels, including empty text and sender fallbacks", () => {
+  it("composes activity labels, including empty text and sender fallbacks", () => {
     const run = {
       trigger: "bot_message" as const,
       promptSnippet: "Legacy English label",
@@ -47,24 +45,14 @@ describe("activity preview", () => {
         ...overrides,
       });
     expect(preview()).toBe("Update from Maya: Ready");
-    resetI18nForTests("de");
-    expect(preview()).toBe("Update von Maya: Ready");
     expect(preview({ agentMessage: { fromBotName: "Maya", kind: "update", text: "" } })).toBe(
-      "Update von Maya",
-    );
-    expect(preview({ agentMessage: { fromBotName: " ", kind: "request", text: "Ready" } })).toBe(
-      "Ein anderer Agent fragt: Ready",
-    );
-    expect(preview({ agentMessage: { fromBotName: " ", kind: "request", text: "" } })).toBe(
-      "Ein anderer Agent fragt",
+      "Update from Maya",
     );
     expect(preview({ agentMessage: { fromBotName: "Maya", kind: "request", text: "Ready" } })).toBe(
-      "Maya fragt: Ready",
+      "Maya asked: Ready",
     );
     expect(preview({ agentMessage: null, promptSnippet: "" })).toBe("");
-    expect(preview({ agentMessage: { kind: "unknown" } })).toBe(
-      "Nachricht von einem anderen Agenten",
-    );
+    expect(preview({ agentMessage: { kind: "unknown" } })).toBe("Message from another agent");
   });
 
   it("preserves composed snippets from older servers without agentMessage", () => {
@@ -98,10 +86,6 @@ describe("routineRunLateLabel", () => {
     );
     expect(routineRunLateLabel({ ...run, lateSince: "2026-01-02T09:30:00Z" })).toBe(
       "Started 2h late",
-    );
-    resetI18nForTests("de");
-    expect(routineRunLateLabel({ ...run, lateSince: "2025-12-30T12:00:00Z" })).toBe(
-      "3 T. verspätet gestartet",
     );
   });
 });

@@ -15,7 +15,6 @@ const settingsScreens = new Set([
   "integration-setup",
   "integrations",
   "messaging",
-  "language",
   "models",
   "organization",
   "plugin",
