@@ -14,6 +14,7 @@ export * from "./background-job-handlers.js";
 export * from "./billing-emulator.js";
 export * from "./boat-sandbox.js";
 export * from "./bot-avatar.js";
+export * from "./bot-folders.js";
 export * from "./bot-messages.js";
 export {
   defaultVaultItemTitle,
@@ -207,11 +208,10 @@ export * from "./third-party-connector-emulator.js";
 export * from "./ticket-changes.js";
 export * from "./ticket-tools.js";
 export { dispatcherFetch } from "./undici-fetch.js";
+export * from "./user-computer-projects.js";
 export * from "./user-device-emulator.js";
 export * from "./user-device-gateway.js";
 export * from "./user-device-protocol.js";
-export * from "./user-computer-projects.js";
-export * from "./bot-folders.js";
 export * from "./voice-factory.js";
 export * from "./wakeup.js";
 export * from "./web-limits.js";

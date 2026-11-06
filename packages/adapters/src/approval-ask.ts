@@ -182,6 +182,31 @@ export function buildApprovalAskBlock(
       ],
     };
   }
+  if (toolName === "user_computer_request") {
+    const method = String(args.method ?? "GET").toUpperCase();
+    const body =
+      args.body === undefined || args.body === null
+        ? ""
+        : `\n${typeof args.body === "string" ? args.body : JSON.stringify(args.body)}`;
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text:
+        method === "GET"
+          ? "Read from an app on your computer?"
+          : "Send to an app on your computer?",
+      detail: truncate(
+        redactSecrets(`${method} ${String(args.url ?? "")}${body}`, secrets),
+        MAX_APPROVAL_DETAIL_LENGTH,
+      ),
+      detailFormat: "code",
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow in this space" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
   if (toolName === "user_computer_process" && args.action === "start") {
     return {
       kind: "ask",

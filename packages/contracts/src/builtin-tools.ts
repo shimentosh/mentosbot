@@ -36,6 +36,7 @@ export const BUILTIN_TOOL_NAMES = [
   "user_computer_agent",
   "user_computer_attach",
   "user_computer_process",
+  "user_computer_request",
   "user_computer_observe",
   "user_computer_act",
   "open_path",

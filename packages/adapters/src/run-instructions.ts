@@ -311,7 +311,7 @@ function userComputerInstruction(
     if (!folder) return base;
     if (folder.otherComputer)
       return `${base} Your project folder is ${JSON.stringify(folder.path)} on their computer ${JSON.stringify(folder.otherComputer)}, which is not connected.`;
-    return `${base} Your project folder there is ${JSON.stringify(folder.path)}, which the user chose; your commands start in it. Before working in it, read its AGENTS.md or CLAUDE.md for how the project works, and use the skills in its .claude/skills or .agents/skills folders when they fit, within these rules. Hand multi-step work there to user_computer_agent, and keep servers and watchers running with user_computer_process.`;
+    return `${base} Your project folder there is ${JSON.stringify(folder.path)}, which the user chose; your commands start in it. Before working in it, read its AGENTS.md or CLAUDE.md for how the project works, and use the skills in its .claude/skills or .agents/skills folders when they fit, within these rules. Hand multi-step work there to user_computer_agent, and keep servers and watchers running with user_computer_process. When the project is an app with its own local API, drive it with user_computer_request as its docs describe.`;
   }
   if (state === "offline")
     return 'The user\'s computer is not connected. If the task needs it, ask them to open the Rakazo desktop app and turn on "Let bots use this computer" in its settings.';

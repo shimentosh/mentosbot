@@ -136,9 +136,8 @@ export function selectBuiltinToolsForRun(options: {
           "user_computer_folder",
           "user_computer_attach",
           "user_computer_process",
-        ].includes(
-          tool.name,
-        )) &&
+          "user_computer_request",
+        ].includes(tool.name)) &&
       ((options.userComputer && options.userComputerFolder) ||
         tool.name !== "user_computer_agent") &&
       ((options.userComputer && options.userComputerScreen) ||

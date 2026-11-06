@@ -80,8 +80,15 @@ time an ordinary command is given. It keeps running after the chat moves on, eve
 quits, until the bot or you stop it. The **Project folder** section lists what each bot keeps
 running, with a link to each port it listens on and a **Stop** button. This needs macOS or Linux.
 
-Your own [routines](./routines.md) for a bot reach your computer too, as your messages do. A routine
-someone else set up, a bot shared with teammates, and messages from other bots or channels never do.
+When a project is an app with a local API, such as a studio running on `http://127.0.0.1:3000`, a
+bot can call that API from your computer instead of typing commands: it starts the app, sends it
+requests and reads the answers. Only addresses on the computer itself (`127.0.0.1` or `localhost`)
+can be called, and the first call asks like a command does.
+
+Your own [routines](./routines.md) for a bot reach your computer too, as your messages do, and so
+does work one of your bots hands to another when it began with your own message or routine. A
+routine someone else set up, a bot shared with teammates, and work that began in a channel, a
+webhook or another person's message never do.
 
 With a project folder set, a bot can hand bigger jobs to the coding agent installed on that
 computer (for example a command-line coding assistant you have signed in to in your terminal). The

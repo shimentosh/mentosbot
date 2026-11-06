@@ -531,6 +531,20 @@ export const builtinAgentTools: ConnectorTool[] = [
     },
   },
   {
+    name: "user_computer_request",
+    description:
+      "Call the HTTP API of an app running on the user's own computer, such as a local studio or dev server, from that computer: url is http://127.0.0.1:<port>/… or http://localhost:<port>/…. body is sent as JSON. Returns the status and the answer, parsed when it is JSON. Start the app with user_computer_process first when nothing answers.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        method: { type: "string", enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        url: { type: "string", maxLength: 4096 },
+        body: {},
+      },
+      required: ["url"],
+    },
+  },
+  {
     name: "user_computer_folder",
     description:
       "Set your project folder on the user's computer, only when they ask: your commands there start in it. An existing folder inside their home folder; an empty path clears it.",

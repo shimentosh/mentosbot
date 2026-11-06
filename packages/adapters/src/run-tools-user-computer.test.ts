@@ -7,6 +7,7 @@ import type { HostComputerRequest } from "./host-computer-protocol.js";
 import type { RunContext } from "./run-context.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
+  botMessageFromOwnersWork,
   userComputerAgent,
   userComputerAttach,
   userComputerAttachScript,
@@ -518,5 +519,73 @@ describe("userComputerAttach", () => {
       error: "unsupported attachment type",
     });
     expect(requests).toEqual([]);
+  });
+});
+
+describe("botMessageFromOwnersWork", () => {
+  type Run = {
+    trigger: string;
+    userId: string;
+    sourceMessageId: string | null;
+    bot: { id: string; userId: string };
+    sourceMessage: { role: string; authorUserId: string | null } | null;
+  };
+  /** Bot messages as rows: inbound (in the target's chat) points back at the sender's outbound. */
+  function world(runs: Record<string, Run>, shared: string[] = []) {
+    const messages: Record<string, { blocks?: unknown; runId?: string }> = {};
+    for (const [id] of Object.entries(runs)) {
+      messages[`out-${id}`] = { runId: id };
+      messages[`in-from-${id}`] = {
+        blocks: [{ kind: "bot_message_received", returnToMessageId: `out-${id}` }],
+      };
+    }
+    return {
+      message: {
+        findUnique: async ({ where }: { where: { id: string } }) => messages[where.id] ?? null,
+      },
+      run: { findUnique: async ({ where }: { where: { id: string } }) => runs[where.id] ?? null },
+      botAccess: {
+        count: async ({ where }: { where: { botId: string } }) =>
+          shared.includes(where.botId) ? 1 : 0,
+      },
+    } as unknown as Parameters<typeof botMessageFromOwnersWork>[0];
+  }
+  const ownersMessage: Run = {
+    trigger: "user",
+    userId: "ada",
+    sourceMessageId: "m1",
+    bot: { id: "social", userId: "ada" },
+    sourceMessage: { role: "user", authorUserId: null },
+  };
+
+  it("follows a handoff back to the owner's own message or routine", async () => {
+    expect(await botMessageFromOwnersWork(world({ a: ownersMessage }), "in-from-a")).toBe(true);
+    const routine = { ...ownersMessage, trigger: "routine", sourceMessage: null };
+    expect(await botMessageFromOwnersWork(world({ a: routine }), "in-from-a")).toBe(true);
+    // Social hands to Scout, which hands on: still the owner's work.
+    const relay = { ...ownersMessage, trigger: "bot_message", sourceMessageId: "in-from-a" };
+    expect(await botMessageFromOwnersWork(world({ a: ownersMessage, b: relay }), "in-from-b")).toBe(
+      true,
+    );
+  });
+
+  it("never follows work a channel, webhook, teammate or shared bot began", async () => {
+    for (const sender of [
+      { ...ownersMessage, trigger: "messaging" },
+      { ...ownersMessage, trigger: "webhook", sourceMessage: null },
+      { ...ownersMessage, sourceMessage: { role: "user", authorUserId: "grace" } },
+      { ...ownersMessage, userId: "grace" },
+    ])
+      expect(await botMessageFromOwnersWork(world({ a: sender }), "in-from-a")).toBe(false);
+    expect(
+      await botMessageFromOwnersWork(world({ a: ownersMessage }, ["social"]), "in-from-a"),
+    ).toBe(false);
+    expect(await botMessageFromOwnersWork(world({}), "in-from-a")).toBe(false);
+    expect(await botMessageFromOwnersWork(world({ a: ownersMessage }), null)).toBe(false);
+  });
+
+  it("stops following a loop of bots handing work to each other", async () => {
+    const loop = { ...ownersMessage, trigger: "bot_message", sourceMessageId: "in-from-a" };
+    expect(await botMessageFromOwnersWork(world({ a: loop }), "in-from-a")).toBe(false);
   });
 });

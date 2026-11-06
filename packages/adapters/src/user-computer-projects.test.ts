@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -13,6 +14,8 @@ import {
   keptCommandOutput,
   listKeptCommands,
   listUserComputerFolders,
+  localAppUrl,
+  requestLocalApp,
   startKeptCommand,
   stopKeptCommand,
 } from "./user-computer-projects.js";
@@ -151,6 +154,75 @@ posix("project folders and kept commands on the user's computer", () => {
     expect(await listKeptCommands(other)).toEqual([]);
     await expect(stopKeptCommand(other, "sleeper")).resolves.toMatchObject({ stopped: false });
     expect((await listKeptCommands(session))[0]?.running).toBe(true);
+  });
+});
+
+posix("calling an app on the user's computer", () => {
+  it("sends JSON to a local app and reads its answer back", async () => {
+    const seen: Array<{ method?: string; url?: string; body: string; type?: string }> = [];
+    const server = createHttpServer((req, res) => {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => {
+        seen.push({ method: req.method, url: req.url, body, type: req.headers["content-type"] });
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ id: "s1", ok: true }));
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as { port: number }).port;
+    const home = await realpath(tmpdir());
+    const session = {
+      devices: localDevice(home),
+      owner: "user-1",
+      deviceId: "mac",
+      botId: "bot-1",
+      environment: { platform: process.platform, home, shell: "/bin/sh" } as never,
+      signal: new AbortController().signal,
+    };
+    try {
+      await expect(
+        requestLocalApp(session, {
+          method: "post",
+          url: `http://127.0.0.1:${port}/api/agent`,
+          body: { page: "shimanto", prompt: "it's a test" },
+        }),
+      ).resolves.toEqual({ status: 200, body: { id: "s1", ok: true } });
+      expect(seen).toEqual([
+        {
+          method: "POST",
+          url: "/api/agent",
+          body: JSON.stringify({ page: "shimanto", prompt: "it's a test" }),
+          type: "application/json",
+        },
+      ]);
+      await expect(
+        requestLocalApp(session, { url: `http://localhost:${port}/api/agent?page=x` }),
+      ).resolves.toMatchObject({ status: 200 });
+      expect(seen[1]).toMatchObject({ method: "GET", url: "/api/agent?page=x", body: "" });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+    const closed = await freePort();
+    await expect(requestLocalApp(session, { url: `http://127.0.0.1:${closed}/` })).rejects.toThrow(
+      "Nothing answered",
+    );
+  });
+
+  it("only calls apps on the computer itself", () => {
+    expect(localAppUrl("http://127.0.0.1:3000/api")).toBe("http://127.0.0.1:3000/api");
+    expect(localAppUrl("http://localhost:3000")).toBe("http://localhost:3000/");
+    for (const url of [
+      "https://127.0.0.1:3000/",
+      "http://example.com/",
+      "http://10.0.0.2:3000/",
+      "http://user:pass@127.0.0.1/",
+      "file:///etc/passwd",
+      "not a url",
+    ])
+      expect(() => localAppUrl(url), url).toThrow();
   });
 });
 

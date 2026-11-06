@@ -85,6 +85,7 @@ export async function runUserComputerScript(
   script: string,
   env: Record<string, string>,
   cwd: string = session.environment.home,
+  timeoutMs = SCRIPT_TIMEOUT_MS,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
   let stdout = "";
   let stderr = "";
@@ -99,7 +100,7 @@ export async function runUserComputerScript(
         argv: nativeShellCommandArgv(script, session.environment),
         cwd,
         env,
-        timeoutMs: SCRIPT_TIMEOUT_MS,
+        timeoutMs,
       },
     },
     session.signal,
@@ -343,4 +344,84 @@ export async function keptCommandOutput(
   const result = await runUserComputerScript(session, LOGS, processEnv(session, processName(name)));
   if (result.code !== 0) throw new Error(result.stderr.trim() || "No output was kept.");
   return result.stdout;
+}
+
+const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
+const REQUEST_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+const MAX_REQUEST_BODY = 100_000;
+const MAX_RESPONSE_BODY = 60_000;
+const REQUEST_SECONDS = 60;
+
+/** An app's own address on the user's computer; anything else is refused. */
+export function localAppUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    throw new Error("Give the full address, such as http://127.0.0.1:3000/api/status.");
+  }
+  if (url.protocol !== "http:" || !LOCAL_HOSTS.has(url.hostname) || url.username || url.password)
+    throw new Error(
+      "Only apps on the user's computer itself can be called: http://127.0.0.1 or http://localhost.",
+    );
+  return url.href;
+}
+
+const REQUEST = `tmp=$(mktemp) || exit 1
+trap 'rm -f "$tmp"' EXIT
+if [ -n "$RAKAZO_BODY" ]; then
+  code=$(curl -sS --max-time ${REQUEST_SECONDS} -X "$RAKAZO_METHOD" -H 'accept: application/json' -H 'content-type: application/json' --data-binary "$RAKAZO_BODY" -o "$tmp" -w '%{http_code}' "$RAKAZO_URL") || exit 7
+else
+  code=$(curl -sS --max-time ${REQUEST_SECONDS} -X "$RAKAZO_METHOD" -H 'accept: application/json' -o "$tmp" -w '%{http_code}' "$RAKAZO_URL") || exit 7
+fi
+printf '%s\\n' "$code"
+head -c ${MAX_RESPONSE_BODY + 1} "$tmp"`;
+
+/**
+ * Calls the HTTP API of an app running on the user's computer, such as a local studio, from that
+ * computer itself. A JSON answer comes back parsed.
+ */
+export async function requestLocalApp(
+  session: UserComputerSession,
+  input: { method?: string; url: string; body?: unknown },
+): Promise<{ status: number; body: unknown; truncated?: true }> {
+  const message = unsupported(session.environment);
+  if (message)
+    throw new Error(message.replace("Project folders and kept commands", "Calling apps"));
+  const method = (input.method ?? "GET").toUpperCase();
+  if (!REQUEST_METHODS.has(method)) throw new Error("method is GET, POST, PUT, PATCH or DELETE.");
+  const url = localAppUrl(input.url);
+  const body =
+    input.body === undefined || input.body === null || input.body === ""
+      ? ""
+      : typeof input.body === "string"
+        ? input.body
+        : JSON.stringify(input.body);
+  if (body.length > MAX_REQUEST_BODY) throw new Error("The request body is too large.");
+  const result = await runUserComputerScript(
+    session,
+    REQUEST,
+    { RAKAZO_METHOD: method, RAKAZO_URL: url, RAKAZO_BODY: body },
+    session.environment.home,
+    (REQUEST_SECONDS + 15) * 1000,
+  );
+  if (result.code === 7)
+    throw new Error(
+      `Nothing answered at ${url}: ${result.stderr.trim() || "the app may not be running"}.`,
+    );
+  if (result.code !== 0) throw new Error(result.stderr.trim() || "The request failed.");
+  const newline = result.stdout.indexOf("\n");
+  const status = Number(result.stdout.slice(0, newline));
+  let text = result.stdout.slice(newline + 1);
+  const truncated = text.length > MAX_RESPONSE_BODY;
+  if (truncated) text = text.slice(0, MAX_RESPONSE_BODY);
+  let parsed: unknown = text;
+  if (!truncated) {
+    try {
+      parsed = text ? JSON.parse(text) : "";
+    } catch {
+      parsed = text;
+    }
+  }
+  return { status, body: parsed, ...(truncated ? { truncated: true as const } : {}) };
 }

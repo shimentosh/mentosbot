@@ -201,7 +201,11 @@ import {
 import { applyTool } from "./run-tools.js";
 import { historyMyChatsAllowed } from "./run-tools-memory.js";
 import type { UserComputerState } from "./run-tools-user-computer.js";
-import { USER_COMPUTER_SHELL_TOOL, userComputerOwner } from "./run-tools-user-computer.js";
+import {
+  botMessageFromOwnersWork,
+  USER_COMPUTER_SHELL_TOOL,
+  userComputerOwner,
+} from "./run-tools-user-computer.js";
 import { createRunTrustLoaders } from "./run-trust.js";
 import { completeRun, consumeRunEvents, failRun, handoffEndedTurn } from "./run-turn.js";
 import {
@@ -1328,14 +1332,22 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
         const pageBrowserAllowed =
           graphical && browser.describe().capabilities.page && !heldForTakeover;
         const disabledBuiltinTools = disabledBuiltinToolSet(bot.disabledBuiltinTools);
-        const ownComputerOwnerId = userComputerOwner({
-          trigger: run.trigger,
-          sourceRole: sourceMessage?.role,
-          messagingChannelRun: nonOwnerChatRun,
-          runUserId: run.userId,
-          botUserId: bot.userId,
-          sharedWithTeammates: Boolean(sourceMessage?.authorUserId),
-        });
+        const ownComputerOwnerId =
+          userComputerOwner({
+            trigger: run.trigger,
+            sourceRole: sourceMessage?.role,
+            messagingChannelRun: nonOwnerChatRun,
+            runUserId: run.userId,
+            botUserId: bot.userId,
+            sharedWithTeammates: Boolean(sourceMessage?.authorUserId),
+          }) ??
+          // Another of the owner's bots handing over work the owner began.
+          (run.trigger === "bot_message" &&
+          run.userId === bot.userId &&
+          deps.userDevices &&
+          (await botMessageFromOwnersWork(deps.prisma, run.sourceMessageId))
+            ? run.userId
+            : undefined);
         // Asked only when the run could reach the owner's own computer at all.
         const userComputerOwnerId =
           ownComputerOwnerId &&

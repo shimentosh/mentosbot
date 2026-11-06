@@ -40,6 +40,7 @@ import {
   keptCommandOutput,
   listKeptCommands,
   openUserComputer,
+  requestLocalApp,
   startKeptCommand,
   stopKeptCommand,
 } from "./user-computer-projects.js";
@@ -50,6 +51,7 @@ import {
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_PROCESS_TOOL,
+  USER_COMPUTER_REQUEST_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
   USER_COMPUTER_TOOLS,
@@ -63,11 +65,70 @@ export {
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_PROCESS_TOOL,
+  USER_COMPUTER_REQUEST_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
   USER_COMPUTER_TOOLS,
   userComputerAppName,
 };
+
+/** How far back a chain of bot messages is followed to the person or routine that began it. */
+const MAX_BOT_MESSAGE_HOPS = 6;
+
+/**
+ * Whether a bot's message to another of its owner's bots comes from the owner's own work: a
+ * message or routine of theirs started the chain, and no bot along it is shared with teammates.
+ * Work a channel, webhook or someone else began never reaches the owner's computer this way.
+ */
+export async function botMessageFromOwnersWork(
+  prisma: RunContext["deps"]["prisma"],
+  sourceMessageId: string | null | undefined,
+  hops = 0,
+): Promise<boolean> {
+  if (!sourceMessageId || hops >= MAX_BOT_MESSAGE_HOPS) return false;
+  const inbound = await prisma.message.findUnique({
+    where: { id: sourceMessageId },
+    select: { blocks: true },
+  });
+  const blocks = (Array.isArray(inbound?.blocks) ? inbound.blocks : []) as Array<{
+    kind?: unknown;
+    returnToMessageId?: unknown;
+  } | null>;
+  const returnTo = blocks.find(
+    (block) => block?.kind === "bot_message_received",
+  )?.returnToMessageId;
+  if (typeof returnTo !== "string") return false;
+  const outbound = await prisma.message.findUnique({
+    where: { id: returnTo },
+    select: { runId: true },
+  });
+  const sender = outbound?.runId
+    ? await prisma.run.findUnique({
+        where: { id: outbound.runId },
+        select: {
+          trigger: true,
+          userId: true,
+          sourceMessageId: true,
+          bot: { select: { id: true, userId: true } },
+          sourceMessage: { select: { role: true, authorUserId: true } },
+        },
+      })
+    : null;
+  if (!sender || sender.userId !== sender.bot.userId) return false;
+  if ((await prisma.botAccess.count({ where: { botId: sender.bot.id } })) > 0) return false;
+  if (sender.trigger === "bot_message")
+    return botMessageFromOwnersWork(prisma, sender.sourceMessageId, hops + 1);
+  return (
+    userComputerOwner({
+      trigger: sender.trigger,
+      sourceRole: sender.sourceMessage?.role,
+      messagingChannelRun: false,
+      runUserId: sender.userId,
+      botUserId: sender.bot.userId,
+      sharedWithTeammates: Boolean(sender.sourceMessage?.authorUserId),
+    }) !== undefined
+  );
+}
 
 /** Whether the run's owner has their desktop connected, or could connect one. */
 export type UserComputerState = "connected" | "offline" | undefined;
@@ -362,6 +423,30 @@ export async function userComputerProcess(ctx: RunContext, call: ToolCall) {
       ctx.secrets,
     );
     return call.finish({ error: reason });
+  }
+}
+
+/** Calls the HTTP API of an app running on the user's computer, from that computer. */
+export async function userComputerRequest(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { signal } = ctx.context;
+  try {
+    const session = await userComputerSession(ctx, connected);
+    if (!session) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+    const answer = await requestLocalApp(session, {
+      method: typeof call.args.method === "string" ? call.args.method : undefined,
+      url: String(call.args.url ?? ""),
+      body: call.args.body,
+    });
+    return call.finish(
+      JSON.parse(redactSecrets(JSON.stringify(answer), ctx.secrets)) as typeof answer,
+    );
+  } catch (error) {
+    if (signal.aborted) throw error;
+    return call.finish({
+      error: redactSecrets(error instanceof Error ? error.message : "request failed", ctx.secrets),
+    });
   }
 }
 
