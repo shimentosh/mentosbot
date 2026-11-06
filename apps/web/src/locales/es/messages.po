@@ -218,6 +218,10 @@ msgstr "hace {days} d"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, one {# archivo} other {# archivos}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, one {¿Eliminar # archivo de más de {age}?} other {¿Eliminar # archivos de más de {age}?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from} pasó el trabajo a {to}"
@@ -449,6 +453,22 @@ msgstr "/ mes"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr "1 espacio"
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "1 año"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 días"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 meses"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 días"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1278,6 +1298,7 @@ msgstr "No puede leer imágenes"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1453,6 +1474,7 @@ msgstr "Comprobando la conexión…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr "Comprobando…"
@@ -1505,9 +1527,14 @@ msgstr ""
 msgid "Claude subscription"
 msgstr "Suscripción de Claude"
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "Liberar espacio"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "Limpieza hecha"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2001,6 +2028,10 @@ msgstr "No se pudo cambiar dónde está disponible"
 msgid "Could not change who can view this page. Try again."
 msgstr "No se pudo cambiar quién puede ver esta página. Inténtalo de nuevo."
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "No se pudieron revisar los archivos antiguos"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "No se pudieron comprobar las credenciales guardadas."
@@ -2094,6 +2125,10 @@ msgstr "No se pudo eliminar el grupo"
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "No se pudo eliminar el servidor MCP"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "No se pudieron eliminar los archivos antiguos"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2734,6 +2769,7 @@ msgstr "Alcance predeterminado"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2805,6 +2841,7 @@ msgid "deleted"
 msgstr "eliminado"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3304,6 +3341,10 @@ msgstr "Campos para comparar, p. ej. id, modifiedTime (opcional)"
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "Archivo"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "Archivos de más de"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4778,6 +4819,10 @@ msgstr "No funciona"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "Aún no hay recuerdos"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "Nada que limpiar"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6847,6 +6892,10 @@ msgstr "Estos archivos o la selección ya no coinciden. Vuelve a elegir los arch
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "No se puede leer esta configuración guardada. Quítala y vuelve a agregarla."
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "Se quitan de todos los chats. No se puede deshacer."
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."

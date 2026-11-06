@@ -3,8 +3,26 @@ import type {
   ObjectStorageSettings,
   ObjectStorageUpdate,
   ObjectStorageUsage,
+  StorageCleanupResult,
 } from "@rakazo/contracts";
-import { Button, Field, FieldLabel, Input, Label, Switch } from "@rakazo/ui-web";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Field,
+  FieldLabel,
+  Input,
+  Label,
+  NativeSelect,
+  NativeSelectOption,
+  Switch,
+} from "@rakazo/ui-web";
 import {
   Collapsible,
   CollapsibleContent,
@@ -18,6 +36,8 @@ import { Shimmer, SuccessPop } from "./ai/primitives";
 
 /** API and worker restart onto a new bucket; poll until the server reports it in use. */
 const APPLY_POLL_MS = 3_000;
+/** Cleanup cutoffs offered, in days. */
+const CLEANUP_AGES = [30, 90, 180, 365] as const;
 
 function draftFrom(settings: ObjectStorageSettings): ObjectStorageUpdate {
   return {
@@ -40,6 +60,7 @@ export function StorageSettingsPanel() {
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usageRevision, setUsageRevision] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -104,113 +125,265 @@ export function StorageSettingsPanel() {
   }
 
   return (
-    <div data-testid="storage-settings" className="rounded-xl border border-border px-4 py-4">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-heading3 font-medium text-foreground">
-          <Trans>Storage</Trans>
-        </h3>
-        {connected ? (
-          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-            <span aria-hidden className="size-1.5 rounded-full bg-success" />
-            <Trans>Connected</Trans>
-          </span>
-        ) : null}
-      </div>
-      {connected ? <StorageUsage /> : null}
-      {fromEnvironment ? (
-        <p className="mt-2 text-[13px] text-muted-foreground">
-          <Trans>Set by the server environment.</Trans>
-        </p>
-      ) : null}
-      <form
-        className="mt-4 grid gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <fieldset disabled={fromEnvironment || pending} className="grid gap-3">
-          <TextField
-            label={t`Endpoint`}
-            type="url"
-            value={draft.endpoint}
-            onChange={(endpoint) => set({ endpoint })}
-            placeholder="https://"
-            required
-            disabled={locked}
-          />
-          <TextField
-            label={t`Bucket`}
-            value={draft.bucket}
-            onChange={(bucket) => set({ bucket })}
-            required
-            disabled={locked}
-          />
-          <TextField
-            label={t`Access key ID`}
-            value={draft.accessKeyId}
-            onChange={(accessKeyId) => set({ accessKeyId })}
-            required
-          />
-          <TextField
-            label={t`Secret access key`}
-            secret
-            value={draft.secretAccessKey}
-            onChange={(secretAccessKey) => set({ secretAccessKey })}
-            placeholder={settings.hasSecret ? t`Saved` : undefined}
-            required={!settings.hasSecret}
-          />
-          <Collapsible>
-            <CollapsibleTrigger className="text-[13px] text-muted-foreground">
-              <Trans>Advanced</Trans>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 grid gap-3">
-              <TextField
-                label={t`Region`}
-                value={draft.region}
-                onChange={(region) => set({ region })}
-              />
-              <TextField
-                label={t`Folder`}
-                value={draft.prefix}
-                onChange={(prefix) => set({ prefix })}
-                disabled={locked}
-              />
-              <div className="flex items-center justify-between gap-3">
-                <Label htmlFor={pathStyleId} className="text-[14px] font-normal text-foreground">
-                  <Trans>Bucket name in path</Trans>
-                </Label>
-                <Switch
-                  id={pathStyleId}
-                  checked={draft.pathStyle}
-                  onCheckedChange={(pathStyle) => set({ pathStyle })}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </fieldset>
-        {error ? (
-          <p role="alert" className="text-[13px] text-destructive">
-            {error}
+    <div className="grid gap-4">
+      <div data-testid="storage-settings" className="rounded-xl border border-border px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-heading3 font-medium text-foreground">
+            <Trans>Storage</Trans>
+          </h3>
+          {connected ? (
+            <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <span aria-hidden className="size-1.5 rounded-full bg-success" />
+              <Trans>Connected</Trans>
+            </span>
+          ) : null}
+        </div>
+        {connected ? <StorageUsage key={usageRevision} /> : null}
+        {fromEnvironment ? (
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            <Trans>Set by the server environment.</Trans>
           </p>
         ) : null}
-        {fromEnvironment ? null : (
-          <div className="flex items-center gap-3">
-            <Button type="submit" size="sm" disabled={pending || applying}>
-              <Trans>Save</Trans>
-            </Button>
-            {applying ? (
-              <span className="text-[13px] text-muted-foreground">
-                <Shimmer>
-                  <Trans>Switching storage…</Trans>
-                </Shimmer>
-              </span>
-            ) : saved ? (
-              <SuccessPop label={t`Saved`} />
-            ) : null}
-          </div>
-        )}
-      </form>
+        <form
+          className="mt-4 grid gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <fieldset disabled={fromEnvironment || pending} className="grid gap-3">
+            <TextField
+              label={t`Endpoint`}
+              type="url"
+              value={draft.endpoint}
+              onChange={(endpoint) => set({ endpoint })}
+              placeholder="https://"
+              required
+              disabled={locked}
+            />
+            <TextField
+              label={t`Bucket`}
+              value={draft.bucket}
+              onChange={(bucket) => set({ bucket })}
+              required
+              disabled={locked}
+            />
+            <TextField
+              label={t`Access key ID`}
+              value={draft.accessKeyId}
+              onChange={(accessKeyId) => set({ accessKeyId })}
+              required
+            />
+            <TextField
+              label={t`Secret access key`}
+              secret
+              value={draft.secretAccessKey}
+              onChange={(secretAccessKey) => set({ secretAccessKey })}
+              placeholder={settings.hasSecret ? t`Saved` : undefined}
+              required={!settings.hasSecret}
+            />
+            <Collapsible>
+              <CollapsibleTrigger className="text-[13px] text-muted-foreground">
+                <Trans>Advanced</Trans>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 grid gap-3">
+                <TextField
+                  label={t`Region`}
+                  value={draft.region}
+                  onChange={(region) => set({ region })}
+                />
+                <TextField
+                  label={t`Folder`}
+                  value={draft.prefix}
+                  onChange={(prefix) => set({ prefix })}
+                  disabled={locked}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={pathStyleId} className="text-[14px] font-normal text-foreground">
+                    <Trans>Bucket name in path</Trans>
+                  </Label>
+                  <Switch
+                    id={pathStyleId}
+                    checked={draft.pathStyle}
+                    onCheckedChange={(pathStyle) => set({ pathStyle })}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </fieldset>
+          {error ? (
+            <p role="alert" className="text-[13px] text-destructive">
+              {error}
+            </p>
+          ) : null}
+          {fromEnvironment ? null : (
+            <div className="flex items-center gap-3">
+              <Button type="submit" size="sm" disabled={pending || applying}>
+                <Trans>Save</Trans>
+              </Button>
+              {applying ? (
+                <span className="text-[13px] text-muted-foreground">
+                  <Shimmer>
+                    <Trans>Switching storage…</Trans>
+                  </Shimmer>
+                </span>
+              ) : saved ? (
+                <SuccessPop label={t`Saved`} />
+              ) : null}
+            </div>
+          )}
+        </form>
+      </div>
+      <StorageCleanup onCleaned={() => setUsageRevision((revision) => revision + 1)} />
+    </div>
+  );
+}
+
+/** Deletes chat and bot files older than a chosen age, after showing what that would remove. */
+function StorageCleanup({ onCleaned }: { onCleaned: () => void }) {
+  const { t } = useLingui();
+  const ageId = useId();
+  const [days, setDays] = useState<number>(CLEANUP_AGES[0]);
+  const [preview, setPreview] = useState<StorageCleanupResult | null>(null);
+  const [revision, setRevision] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [cleaned, setCleaned] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setPreview(null);
+    rpc.objectStorage
+      .cleanupPreview({ olderThanDays: days })
+      .then((next) => {
+        if (alive) setPreview(next);
+      })
+      .catch((caught: unknown) => {
+        if (alive) setError(errorText(caught, t`Could not check old files`));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [days, revision, t]);
+
+  async function clean() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await rpc.objectStorage.cleanup({ olderThanDays: days });
+      setConfirming(false);
+      setCleaned(true);
+      setRevision((value) => value + 1);
+      onCleaned();
+    } catch (caught) {
+      setError(errorText(caught, t`Could not delete old files`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const ageLabel = (age: number) =>
+    age === 30 ? t`30 days` : age === 90 ? t`90 days` : age === 180 ? t`6 months` : t`1 year`;
+  const files = preview?.files ?? 0;
+  const age = ageLabel(days);
+
+  return (
+    <div data-testid="storage-cleanup" className="rounded-xl border border-border px-4 py-4">
+      <h3 className="text-heading3 font-medium text-foreground">
+        <Trans>Clean up</Trans>
+      </h3>
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <label htmlFor={ageId} className="text-[14px] text-foreground">
+          <Trans>Files older than</Trans>
+        </label>
+        <NativeSelect
+          id={ageId}
+          value={String(days)}
+          disabled={busy}
+          onChange={(event) => {
+            setCleaned(false);
+            setError(null);
+            setDays(Number(event.target.value));
+          }}
+        >
+          {CLEANUP_AGES.map((age) => (
+            <NativeSelectOption key={age} value={String(age)}>
+              {ageLabel(age)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="mt-3 flex min-h-8 items-center justify-between gap-3">
+        <span className="text-[13px] tabular-nums text-muted-foreground">
+          {!preview ? (
+            error ? null : (
+              <Shimmer>
+                <Trans>Checking…</Trans>
+              </Shimmer>
+            )
+          ) : files ? (
+            <>
+              <Plural value={files} one="# file" other="# files" /> · {formatSize(preview.bytes)}
+            </>
+          ) : cleaned ? (
+            <SuccessPop label={t`Cleaned up`} />
+          ) : (
+            <Trans>Nothing to clean up</Trans>
+          )}
+        </span>
+        {files ? (
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={busy}
+            onClick={() => {
+              setError(null);
+              setConfirming(true);
+            }}
+          >
+            <Trans>Delete</Trans>
+          </Button>
+        ) : null}
+      </div>
+      {error && !confirming ? (
+        <p role="alert" className="mt-2 text-[13px] text-destructive">
+          {error}
+        </p>
+      ) : null}
+      {confirming && preview ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !busy) setConfirming(false);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                <Plural
+                  value={files}
+                  one={`Delete # file older than ${age}?`}
+                  other={`Delete # files older than ${age}?`}
+                />
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                <Trans>They are removed from every chat. This can't be undone.</Trans>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? <p className="text-[13.5px] text-destructive">{error}</p> : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>
+                <Trans>Cancel</Trans>
+              </AlertDialogCancel>
+              <AlertDialogAction variant="destructive" disabled={busy} onClick={() => void clean()}>
+                {busy ? <Trans>Deleting…</Trans> : <Trans>Delete</Trans>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
     </div>
   );
 }

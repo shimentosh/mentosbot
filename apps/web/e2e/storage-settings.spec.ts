@@ -49,6 +49,9 @@ test("an admin connects a bucket for bot files", async ({ page }, testInfo) => {
     current = saved;
     await route.fulfill({ json: { json: saved } });
   });
+  await page.route(/\/rpc\/objectStorage\/cleanupPreview(\?|$)/, (route) =>
+    route.fulfill({ json: { json: { files: 212, bytes: 1288490189 } } }),
+  );
   await page.reload();
   const settings = await openUserSettings(page, "storage");
   const form = settings.getByTestId("storage-settings");
@@ -95,6 +98,9 @@ test("an admin sees how much of a connected bucket is used", async ({ page }, te
       },
     }),
   );
+  await page.route(/\/rpc\/objectStorage\/cleanupPreview(\?|$)/, (route) =>
+    route.fulfill({ json: { json: { files: 212, bytes: 1288490189 } } }),
+  );
   await page.reload();
   const settings = await openUserSettings(page, "storage");
   const form = settings.getByTestId("storage-settings");
@@ -103,5 +109,8 @@ test("an admin sees how much of a connected bucket is used", async ({ page }, te
   await expect(usage.getByText("3.4 GB")).toBeVisible();
   await expect(usage.getByText("1,284 files")).toBeVisible();
   await expect(usage.getByText("Workspaces")).toBeVisible();
+  await expect(
+    settings.getByTestId("storage-cleanup").getByText("212 files · 1.2 GB"),
+  ).toBeVisible();
   await captureScreenshot(page, testInfo, "storage-usage");
 });

@@ -218,6 +218,10 @@ msgstr "{days} g önce"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, one {# dosya} other {# dosya}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, one {{age} süresinden eski # dosya silinsin mi?} other {{age} süresinden eski # dosya silinsin mi?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from}, işi {to} adlı bota devretti"
@@ -449,6 +453,22 @@ msgstr "/ ay"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr "1 alan"
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "1 yıl"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 gün"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 ay"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 gün"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1278,6 +1298,7 @@ msgstr "Görselleri okuyamaz"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1453,6 +1474,7 @@ msgstr "Bağlantı kontrol ediliyor…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr "Kontrol ediliyor…"
@@ -1505,9 +1527,14 @@ msgstr "Şehir"
 msgid "Claude subscription"
 msgstr "Claude aboneliği"
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "Temizle"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "Temizlendi"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2001,6 +2028,10 @@ msgstr "Kullanılabilir alanlar değiştirilemedi"
 msgid "Could not change who can view this page. Try again."
 msgstr "Bu sayfayı kimin görebileceği değiştirilemedi. Tekrar deneyin."
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "Eski dosyalar kontrol edilemedi"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "Kayıtlı kimlik bilgileri kontrol edilemedi."
@@ -2094,6 +2125,10 @@ msgstr "Grup silinemedi"
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "MCP sunucusu silinemedi"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "Eski dosyalar silinemedi"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2734,6 +2769,7 @@ msgstr "Varsayılan kapsam"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2805,6 +2841,7 @@ msgid "deleted"
 msgstr "silindi"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3304,6 +3341,10 @@ msgstr "Karşılaştırılacak alanlar, ör. id, modifiedTime (isteğe bağlı)"
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "Dosya"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "Şundan eski dosyalar"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4778,6 +4819,10 @@ msgstr "Çalışmıyor"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "Henüz hatırlanan bir şey yok"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "Temizlenecek bir şey yok"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6847,6 +6892,10 @@ msgstr "Bu dosyalar veya seçimler artık eşleşmiyor. Dosyaları yeniden seç.
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "Bu kayıtlı ayarlar okunamıyor. Kaldırıp yeniden ekle."
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "Tüm sohbetlerden kaldırılırlar. Bu geri alınamaz."
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."

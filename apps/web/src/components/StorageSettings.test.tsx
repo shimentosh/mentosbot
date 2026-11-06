@@ -17,9 +17,11 @@ vi.mock("@lingui/react/macro", () => {
   };
 });
 vi.mock("@rakazo/ui-web", () => ({
-  Button: ({ size: _size, ...props }: ComponentProps<"button"> & { size?: string }) => (
-    <button {...props} />
-  ),
+  Button: ({
+    size: _size,
+    variant: _variant,
+    ...props
+  }: ComponentProps<"button"> & { size?: string; variant?: string }) => <button {...props} />,
   Field: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   FieldLabel: ({ children, htmlFor }: ComponentProps<"label">) => (
     <label htmlFor={htmlFor}>{children}</label>
@@ -28,6 +30,28 @@ vi.mock("@rakazo/ui-web", () => ({
     <label htmlFor={htmlFor}>{children}</label>
   ),
   Input: (props: ComponentProps<"input">) => <input {...props} />,
+  NativeSelect: (props: ComponentProps<"select">) => <select {...props} />,
+  NativeSelectOption: (props: ComponentProps<"option">) => <option {...props} />,
+  AlertDialog: ({ children }: { children?: ReactNode }) => <div role="alertdialog">{children}</div>,
+  AlertDialogContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AlertDialogFooter: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: { children?: ReactNode }) => <h2>{children}</h2>,
+  AlertDialogDescription: ({ children }: { children?: ReactNode }) => <p>{children}</p>,
+  AlertDialogCancel: ({ children, ...props }: ComponentProps<"button">) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
+  AlertDialogAction: ({
+    children,
+    variant: _variant,
+    ...props
+  }: ComponentProps<"button"> & { variant?: string }) => (
+    <button type="button" data-confirm {...props}>
+      {children}
+    </button>
+  ),
   Switch: ({ checked, id }: { checked?: boolean; id?: string }) => (
     <input id={id} type="checkbox" checked={checked} readOnly />
   ),
@@ -43,7 +67,13 @@ vi.mock("./ai/primitives", () => ({
 }));
 vi.mock("../lib/file-size", () => ({ formatSize: (bytes: number) => `${bytes} B` }));
 const { storage } = vi.hoisted(() => ({
-  storage: { get: vi.fn(), update: vi.fn(), usage: vi.fn() },
+  storage: {
+    get: vi.fn(),
+    update: vi.fn(),
+    usage: vi.fn(),
+    cleanupPreview: vi.fn(),
+    cleanup: vi.fn(),
+  },
 }));
 vi.mock("../lib/rpc", () => ({
   rpc: {
@@ -80,6 +110,7 @@ let root: ReturnType<typeof createRoot>;
 beforeEach(() => {
   vi.clearAllMocks();
   storage.usage.mockResolvedValue(null);
+  storage.cleanupPreview.mockResolvedValue({ files: 0, bytes: 0 });
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -185,4 +216,36 @@ it("measures nothing until the server runs on the bucket", async () => {
   await act(async () => root.render(<StorageSettingsPanel />));
   expect(storage.usage).not.toHaveBeenCalled();
   expect(host.textContent).not.toContain("Connected");
+});
+
+it("deletes old files after showing what goes, then measures again", async () => {
+  storage.get.mockResolvedValue(saved);
+  storage.cleanupPreview.mockResolvedValueOnce({ files: 3, bytes: 900 });
+  storage.cleanupPreview.mockResolvedValue({ files: 0, bytes: 0 });
+  storage.cleanup.mockResolvedValue({ files: 3, bytes: 900 });
+  await act(async () => root.render(<StorageSettingsPanel />));
+  const cleanup = () => host.querySelector('[data-testid="storage-cleanup"]');
+  expect(storage.cleanupPreview).toHaveBeenCalledWith({ olderThanDays: 30 });
+  expect(cleanup()?.textContent).toContain("3 files · 900 B");
+  const deleteButton = [...(cleanup()?.querySelectorAll("button") ?? [])].find(
+    (button) => button.textContent === "Delete",
+  );
+  await act(async () => deleteButton?.click());
+  expect(storage.cleanup).not.toHaveBeenCalled();
+  expect(cleanup()?.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "Delete 3 files older than 30 days?",
+  );
+  const usageCalls = storage.usage.mock.calls.length;
+  await act(async () => cleanup()?.querySelector<HTMLButtonElement>("[data-confirm]")?.click());
+  expect(storage.cleanup).toHaveBeenCalledWith({ olderThanDays: 30 });
+  expect(storage.usage.mock.calls.length).toBeGreaterThan(usageCalls);
+  expect(cleanup()?.querySelector('[role="alertdialog"]')).toBeNull();
+});
+
+it("offers nothing to delete when no file is that old", async () => {
+  storage.get.mockResolvedValue(none);
+  await act(async () => root.render(<StorageSettingsPanel />));
+  const cleanup = host.querySelector('[data-testid="storage-cleanup"]');
+  expect(cleanup?.textContent).toContain("Nothing to clean up");
+  expect(cleanup?.querySelector("button")).toBeNull();
 });

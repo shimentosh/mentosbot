@@ -147,6 +147,8 @@ import {
   SpaceMemoryConfigSchema,
   SpaceNavigationSchema,
   SpaceSchema,
+  StorageCleanupInputSchema,
+  StorageCleanupResultSchema,
   TaughtSkillSchema,
   TeachRecordingEventSchema,
   ThreadMessagePageSchema,
@@ -581,6 +583,10 @@ export const appContract = {
     update: oc.input(ObjectStorageUpdateSchema).output(ObjectStorageSettingsSchema),
     /** Measures the bucket the server is running on; null on local disk or while switching. */
     usage: oc.output(ObjectStorageUsageSchema.nullable()),
+    /** What `cleanup` would remove; deployment admins only. */
+    cleanupPreview: oc.input(StorageCleanupInputSchema).output(StorageCleanupResultSchema),
+    /** Deletes every user's chat and bot files older than the cutoff; deployment admins only. */
+    cleanup: oc.input(StorageCleanupInputSchema).output(StorageCleanupResultSchema),
   },
   /** Deployment-owner view of the append-only security event log, newest first. */
   security: {

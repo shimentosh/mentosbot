@@ -3,6 +3,7 @@ import {
   getObjectStorageUsage,
   updateObjectStorageSettings,
 } from "../object-storage-config.js";
+import { previewStorageCleanup, runStorageCleanup } from "../storage-cleanup.js";
 import type { RouterContext } from "./context.js";
 
 export function objectStorageRoutes(ctx: RouterContext) {
@@ -17,6 +18,12 @@ export function objectStorageRoutes(ctx: RouterContext) {
       ),
       usage: authed.objectStorage.usage.handler(({ context }) =>
         getObjectStorageUsage(deps, context.actor),
+      ),
+      cleanupPreview: authed.objectStorage.cleanupPreview.handler(({ context, input }) =>
+        previewStorageCleanup(deps, context.actor, input),
+      ),
+      cleanup: authed.objectStorage.cleanup.handler(({ context, input }) =>
+        runStorageCleanup(deps, context.actor, input),
       ),
     },
   };

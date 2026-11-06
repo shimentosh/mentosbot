@@ -249,6 +249,8 @@ describeWithDatabase("API authorization and resource isolation", () => {
         { endpoint: "https://storage.example.com", bucket: "files", accessKeyId: "key-id" },
       ],
       ["objectStorage/usage"],
+      ["objectStorage/cleanupPreview", { olderThanDays: 30 }],
+      ["objectStorage/cleanup", { olderThanDays: 30 }],
       ["projectFolder/get", { botId: "missing-bot" }],
       ["projectFolder/browse", {}],
       ["projectFolder/set", { botId: "missing-bot", path: null }],

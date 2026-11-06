@@ -1958,6 +1958,17 @@ export const ObjectStorageUsageSchema = z.object({
   partial: z.boolean(),
 });
 export type ObjectStorageUsage = z.infer<typeof ObjectStorageUsageSchema>;
+/** Files whose whole family (every version) is older than this many days. */
+export const StorageCleanupInputSchema = z.object({
+  olderThanDays: z.number().int().min(1).max(3650),
+});
+export type StorageCleanupInput = z.infer<typeof StorageCleanupInputSchema>;
+/** Files and bytes a cleanup would remove, or did. */
+export const StorageCleanupResultSchema = z.object({
+  files: z.number().int().nonnegative(),
+  bytes: z.number().int().nonnegative(),
+});
+export type StorageCleanupResult = z.infer<typeof StorageCleanupResultSchema>;
 export const ObjectStorageUpdateSchema = z.object({
   endpoint: z.string().trim().url().max(2048),
   bucket: z.string().trim().min(1).max(255),

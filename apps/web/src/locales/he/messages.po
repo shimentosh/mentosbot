@@ -218,6 +218,10 @@ msgstr "לפני {days} ימים"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, one {קובץ #} other {# קבצים}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, one {למחוק קובץ # שישן מ־{age}?} other {למחוק # קבצים שישנים מ־{age}?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from} העביר/ה את העבודה אל {to}"
@@ -449,6 +453,22 @@ msgstr "/ חודש"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "שנה"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 יום"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 חודשים"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 יום"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1278,6 +1298,7 @@ msgstr "לא ניתן לקרוא תמונות"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1453,6 +1474,7 @@ msgstr "בודק חיבור…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr "בודק…"
@@ -1505,9 +1527,14 @@ msgstr ""
 msgid "Claude subscription"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "ניקוי"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "נוקה"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2001,6 +2028,10 @@ msgstr ""
 msgid "Could not change who can view this page. Try again."
 msgstr "לא ניתן היה לשנות מי יכול לצפות בדף הזה. נסו שוב."
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "לא ניתן לבדוק קבצים ישנים"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "לא ניתן לבדוק את פרטי הגישה השמורים."
@@ -2094,6 +2125,10 @@ msgstr "לא ניתן למחוק את הקבוצה"
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "לא ניתן למחוק את שרת ה-MCP"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "לא ניתן למחוק קבצים ישנים"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2734,6 +2769,7 @@ msgstr "היקף ברירת מחדל"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2805,6 +2841,7 @@ msgid "deleted"
 msgstr "נמחק"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3304,6 +3341,10 @@ msgstr ""
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "קובץ"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "קבצים ישנים מ־"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4778,6 +4819,10 @@ msgstr "לא עובד"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "עדיין אין זיכרונות"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "אין מה לנקות"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6847,6 +6892,10 @@ msgstr "הקבצים או הבחירות כבר לא תואמים. יש לבחו
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "לא ניתן לקרוא את ההגדרות השמורות. יש להסיר ולהוסיף מחדש."
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "הם יוסרו מכל הצ׳אטים. אי אפשר לבטל את הפעולה."
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."

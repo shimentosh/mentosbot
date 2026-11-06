@@ -219,6 +219,10 @@ msgstr "{days} 天前"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, other {# 個檔案}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, other {刪除 # 個早於 {age} 的檔案?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from} 已移交給 {to}"
@@ -450,6 +454,22 @@ msgstr "/ 月"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "1 年"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 天"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 個月"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 天"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1279,6 +1299,7 @@ msgstr "無法讀取影像"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1454,6 +1475,7 @@ msgstr "正在檢查連線…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr "正在檢查…"
@@ -1506,9 +1528,14 @@ msgstr ""
 msgid "Claude subscription"
 msgstr "Claude 訂閱"
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "清理"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "已清理"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2002,6 +2029,10 @@ msgstr ""
 msgid "Could not change who can view this page. Try again."
 msgstr "無法變更誰可以檢視此頁面。請再試一次。"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "無法檢查舊檔案"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "無法檢查已儲存的憑證。"
@@ -2095,6 +2126,10 @@ msgstr "無法刪除群組"
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "無法刪除 MCP 伺服器"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "無法刪除舊檔案"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2735,6 +2770,7 @@ msgstr "預設範圍"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2806,6 +2842,7 @@ msgid "deleted"
 msgstr "已刪除"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3305,6 +3342,10 @@ msgstr "要比較的欄位，例如 id, modifiedTime（選填）"
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "檔案"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "早於以下時間的檔案"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4779,6 +4820,10 @@ msgstr "無法正常工作"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "尚無記憶"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "沒有可清理的內容"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6848,6 +6893,10 @@ msgstr "這些檔案或選項已不再相符。請重新選擇檔案。"
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "無法讀取已儲存的設定，請移除後重新新增。"
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "它們會從所有聊天中移除,且無法復原。"
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."

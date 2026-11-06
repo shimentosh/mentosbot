@@ -218,6 +218,10 @@ msgstr "{days} дн. назад"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, one {# файл} few {# файла} many {# файлов} other {# файла}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, one {Удалить # файл старше {age}?} few {Удалить # файла старше {age}?} many {Удалить # файлов старше {age}?} other {Удалить # файла старше {age}?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from} передал работу {to}"
@@ -449,6 +453,22 @@ msgstr "/ месяц"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "1 год"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 дней"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 месяцев"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 дней"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1278,6 +1298,7 @@ msgstr "Не может читать изображения"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1453,6 +1474,7 @@ msgstr "Проверка подключения…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr "Проверка…"
@@ -1505,9 +1527,14 @@ msgstr ""
 msgid "Claude subscription"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "Очистить"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "Очищено"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2001,6 +2028,10 @@ msgstr ""
 msgid "Could not change who can view this page. Try again."
 msgstr "Не удалось изменить, кто может видеть эту страницу. Попробуйте ещё раз."
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "Не удалось проверить старые файлы"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "Не удалось проверить сохраненные учётные данные."
@@ -2094,6 +2125,10 @@ msgstr "Не удалось удалить группу"
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "Не удалось удалить сервер MCP."
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "Не удалось удалить старые файлы"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2734,6 +2769,7 @@ msgstr "Область действия по умолчанию"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2805,6 +2841,7 @@ msgid "deleted"
 msgstr "удалено"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3304,6 +3341,10 @@ msgstr "Поля для сравнения, например id, modifiedTime (�
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "Файл"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "Файлы старше"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4778,6 +4819,10 @@ msgstr "Не работает"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "Пока ничего не запомнено"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "Нечего очищать"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6847,6 +6892,10 @@ msgstr "Эти файлы или выбор больше не совпадают
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "Они исчезнут из всех чатов. Это нельзя отменить."
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."

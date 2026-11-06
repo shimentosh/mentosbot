@@ -218,6 +218,10 @@ msgstr "{days} दिन पहले"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, one {# फ़ाइल} other {# फ़ाइलें}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, one {{age} से पुरानी # फ़ाइल मिटाएँ?} other {{age} से पुरानी # फ़ाइलें मिटाएँ?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from} ने काम {to} को सौंपा"
@@ -449,6 +453,22 @@ msgstr "/ महीना"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "1 साल"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 दिन"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 महीने"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 दिन"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1278,6 +1298,7 @@ msgstr "तस्वीरें नहीं पढ़ सकता"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1453,6 +1474,7 @@ msgstr "कनेक्शन जाँचा जा रहा है…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr ""
@@ -1505,9 +1527,14 @@ msgstr ""
 msgid "Claude subscription"
 msgstr ""
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "साफ़ करें"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "साफ़ हो गया"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2001,6 +2028,10 @@ msgstr ""
 msgid "Could not change who can view this page. Try again."
 msgstr "यह नहीं बदला जा सका कि इस पेज को कौन देख सकता है। फिर कोशिश करें।"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "पुरानी फ़ाइलें जाँची नहीं जा सकीं"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "संग्रहीत क्रेडेंशियल जाँचे नहीं जा सके।"
@@ -2094,6 +2125,10 @@ msgstr ""
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "MCP सर्वर डिलीट नहीं किया जा सका"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "पुरानी फ़ाइलें मिटाई नहीं जा सकीं"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2734,6 +2769,7 @@ msgstr "डिफ़ॉल्ट स्कोप"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2805,6 +2841,7 @@ msgid "deleted"
 msgstr "डिलीट किया गया"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3304,6 +3341,10 @@ msgstr "तुलना के लिए फ़ील्ड, जैसे id, mo
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "फ़ाइल"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "इससे पुरानी फ़ाइलें"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4778,6 +4819,10 @@ msgstr "काम नहीं कर रहा"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "अभी तक कुछ याद नहीं किया गया"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "साफ़ करने को कुछ नहीं"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6847,6 +6892,10 @@ msgstr "ये फ़ाइलें या विकल्प अब मेल 
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "ये हर चैट से हट जाएँगी। इसे वापस नहीं किया जा सकता।"
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."

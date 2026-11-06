@@ -218,6 +218,10 @@ msgstr "{days}日前"
 msgid "{files, plural, one {# file} other {# files}}"
 msgstr "{files, plural, other {# ファイル}}"
 
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {Delete # file older than {age}?} other {Delete # files older than {age}?}}"
+msgstr "{files, plural, other {{age} より古いファイル # 件を削除しますか?}}"
+
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
 msgstr "{from}が{to}に引き継ぎました"
@@ -449,6 +453,22 @@ msgstr "/ 月"
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "1 year"
+msgstr "1 年"
+
+#: src/components/StorageSettings.tsx
+msgid "30 days"
+msgstr "30 日"
+
+#: src/components/StorageSettings.tsx
+msgid "6 months"
+msgstr "6 か月"
+
+#: src/components/StorageSettings.tsx
+msgid "90 days"
+msgstr "90 日"
 
 #: src/pages/shell/message-cards.tsx
 msgid "A bit of everything"
@@ -1278,6 +1298,7 @@ msgstr "画像を読み取れません"
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1453,6 +1474,7 @@ msgstr "接続を確認中…"
 
 #: src/components/ComputersUnavailableHint.tsx
 #: src/components/DesktopUpdates.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/HostComputerPrompt.tsx
 msgid "Checking…"
 msgstr "確認中…"
@@ -1505,9 +1527,14 @@ msgstr ""
 msgid "Claude subscription"
 msgstr "Claudeサブスクリプション"
 
+#: src/components/StorageSettings.tsx
 #: src/pages/shell/computer-panel.tsx
 msgid "Clean up"
 msgstr "整理する"
+
+#: src/components/StorageSettings.tsx
+msgid "Cleaned up"
+msgstr "整理しました"
 
 #: src/components/SecretAskCard.tsx
 #: src/pages/shell/dialogs.tsx
@@ -2001,6 +2028,10 @@ msgstr ""
 msgid "Could not change who can view this page. Try again."
 msgstr "このページを閲覧できる人を変更できませんでした。もう一度お試しください。"
 
+#: src/components/StorageSettings.tsx
+msgid "Could not check old files"
+msgstr "古いファイルを確認できませんでした"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not check stored credentials."
 msgstr "保存された認証情報を確認できませんでした。"
@@ -2094,6 +2125,10 @@ msgstr "グループを削除できませんでした"
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not delete MCP server"
 msgstr "MCPサーバーを削除できませんでした"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not delete old files"
+msgstr "古いファイルを削除できませんでした"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete page"
@@ -2734,6 +2769,7 @@ msgstr "デフォルトの範囲"
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -2805,6 +2841,7 @@ msgid "deleted"
 msgstr "削除済み"
 
 #: src/components/PasskeySettings.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -3304,6 +3341,10 @@ msgstr "比較するフィールド（例: id, modifiedTime）（任意）"
 #: src/pages/SpaceSearch.tsx
 msgid "File"
 msgstr "ファイル"
+
+#: src/components/StorageSettings.tsx
+msgid "Files older than"
+msgstr "次より古いファイル"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Files or folders on the computer"
@@ -4778,6 +4819,10 @@ msgstr "動作していません"
 #: src/pages/KnowledgeSection.tsx
 msgid "Nothing remembered yet"
 msgstr "記憶はまだありません"
+
+#: src/components/StorageSettings.tsx
+msgid "Nothing to clean up"
+msgstr "整理するものはありません"
 
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/shell/notification-bell.tsx
@@ -6847,6 +6892,10 @@ msgstr "ファイルまたは選択内容が一致しなくなりました。も
 #: src/components/VaultSettings.tsx
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "保存された設定を読み取れません。削除してから再度追加してください。"
+
+#: src/components/StorageSettings.tsx
+msgid "They are removed from every chat. This can't be undone."
+msgstr "すべてのチャットから削除されます。元に戻せません。"
 
 #: src/components/InviteDialog.tsx
 msgid "They get {weeks} weeks free."
