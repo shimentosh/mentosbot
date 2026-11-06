@@ -1061,6 +1061,7 @@ msgstr "Shell 命令可通过 {commandVariable} 使用"
 msgid "Avatar Studio"
 msgstr "头像工作室"
 
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
@@ -1272,6 +1273,7 @@ msgstr "无法读取图像"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
@@ -1336,6 +1338,10 @@ msgstr "卡片视图"
 
 #: src/components/vault/kinds.tsx
 msgid "Cards"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Change"
 msgstr ""
 
 #: src/pages/ModelRoleSettings.tsx
@@ -1464,6 +1470,10 @@ msgstr "选择模型"
 msgid "Choose a new password"
 msgstr "设置新密码"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Choose a project folder"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Choose a provider"
 msgstr "选择提供方"
@@ -1477,6 +1487,7 @@ msgstr "选择备份"
 msgid "Choose file"
 msgstr "选择文件"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Choose folder"
 msgstr "选择文件夹"
@@ -4600,6 +4611,10 @@ msgstr ""
 msgid "No bots match"
 msgstr "没有匹配的 Bot"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "No folders here"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4808,6 +4823,11 @@ msgstr "Ollama API 密钥"
 msgid "Ollama Cloud"
 msgstr "Ollama Cloud"
 
+#. placeholder {0}: folder.otherComputer
+#: src/components/ProjectFolderSection.tsx
+msgid "On {0}"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "按计划"
@@ -4891,6 +4911,10 @@ msgstr "在完整窗口中打开"
 #: src/components/pages/SharePopover.tsx
 msgid "Open link"
 msgstr "打开链接"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Open localhost:{port}"
+msgstr ""
 
 #: src/pages/shell/chat-header.tsx
 msgid "Open navigation"
@@ -5266,6 +5290,10 @@ msgstr "效率"
 msgid "Program: {name}"
 msgstr "程序：{name}"
 
+#: src/components/ProjectFolderSection.tsx
+msgid "Project folder"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Protected input"
 msgstr "受保护输入"
@@ -5529,6 +5557,10 @@ msgstr "移除 {site}"
 #: src/pages/RoutineEditor.tsx
 msgid "Remove change trigger"
 msgstr "移除变化触发器"
+
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Remove folder"
+msgstr ""
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -6466,6 +6498,10 @@ msgstr "启动"
 msgid "Start {trialDays}-day free trial"
 msgstr "开始 {trialDays} 天免费试用"
 
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Start from a project folder"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Start plan"
 msgstr "开始套餐"
@@ -6518,6 +6554,7 @@ msgstr "状态"
 msgid "Steps"
 msgstr "步骤"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6541,6 +6578,14 @@ msgstr "停止朗读"
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Stop teaching"
 msgstr "停止示范"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stop using this folder"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stopped"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -7228,6 +7273,10 @@ msgstr "紧急"
 msgid "Usage"
 msgstr "用量"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Use"
+msgstr ""
+
 #. Switches the saved timezone to this device's, e.g. 'Use Pacific/Auckland'
 #. placeholder {0}: deviceTimezone.replaceAll("_", " ")
 #: src/pages/AccountSettingsOverlay.tsx
@@ -7278,6 +7327,10 @@ msgstr "使用 Rakazo 额度"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Use space default"
 msgstr "使用工作区默认"
+
+#: src/components/FolderPickerDialog.tsx
+msgid "Use this folder"
+msgstr ""
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Use up to 512 letters, digits, _ or -."

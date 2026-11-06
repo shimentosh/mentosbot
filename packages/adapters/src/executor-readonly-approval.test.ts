@@ -3325,24 +3325,29 @@ describe("user_computer_shell", () => {
       { userDevices: devices().gateway, trigger: "follow_up", sourceRole: "bot" },
     ],
     ["another member's bot", { userDevices: devices().gateway, botUserId: "user-2" }],
-    ...[
-      "webhook",
-      "routine",
-      "messaging",
-      "bot_message",
-      "spawn",
-      "tickets",
-      "reaction",
-      "call_end",
-    ].map((trigger): [string, Parameters<typeof fixture>[0]] => [
-      `a ${trigger} run`,
-      { userDevices: devices().gateway, trigger },
-    ]),
+    ...["webhook", "messaging", "bot_message", "spawn", "tickets", "reaction", "call_end"].map(
+      (trigger): [string, Parameters<typeof fixture>[0]] => [
+        `a ${trigger} run`,
+        { userDevices: devices().gateway, trigger },
+      ],
+    ),
   ])("is not offered for %s", async (_label, options) => {
     const f = fixture({ ...ownRun, ...options });
     await f.run();
     expect(f.offeredTools()).not.toContain("user_computer_shell");
     expect(f.instructions()).not.toContain(line);
+  });
+
+  it("is offered to the owner's own routine, keeping servers running with user_computer_process", async () => {
+    const f = fixture({
+      ...ownRun,
+      trigger: "routine",
+      sourceRole: undefined,
+      userDevices: devices().gateway,
+    });
+    await f.run();
+    expect(f.offeredTools()).toContain("user_computer_shell");
+    expect(f.instructions()).toContain(line);
   });
 
   it("refuses a call from a run that may not reach the device without an approval card", async () => {

@@ -9,6 +9,10 @@ export const USER_COMPUTER_FOLDER_TOOL = "user_computer_folder";
 export const USER_COMPUTER_AGENT_TOOL = "user_computer_agent";
 /** Sends a file from the user's computer to the chat. */
 export const USER_COMPUTER_ATTACH_TOOL = "user_computer_attach";
+/** Keeps a command running on the user's computer, such as a dev server, and stops it. */
+export const USER_COMPUTER_PROCESS_TOOL = "user_computer_process";
+/** Calls the HTTP API of an app running on the user's computer. */
+export const USER_COMPUTER_REQUEST_TOOL = "user_computer_request";
 /** Both look at or drive one app, so one approval covers that app for the chat. */
 export const USER_COMPUTER_SCREEN_TOOLS: ReadonlySet<string> = new Set([
   USER_COMPUTER_OBSERVE_TOOL,
@@ -19,6 +23,8 @@ export const USER_COMPUTER_TOOLS: ReadonlySet<string> = new Set([
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_AGENT_TOOL,
   USER_COMPUTER_ATTACH_TOOL,
+  USER_COMPUTER_PROCESS_TOOL,
+  USER_COMPUTER_REQUEST_TOOL,
   ...USER_COMPUTER_SCREEN_TOOLS,
 ]);
 

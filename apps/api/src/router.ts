@@ -30,6 +30,7 @@ import type {
   RemoteConnectorDependencies,
   ResolvedObjectStorage,
   TicketChangeNotifier,
+  UserDeviceGateway,
   verifyModelServesAgents,
 } from "@rakazo/adapters";
 import type { Auth } from "@rakazo/auth";
@@ -56,6 +57,7 @@ import { objectStorageRoutes } from "./routes/object-storage.js";
 import { organizationsRoutes } from "./routes/organizations.js";
 import { pagesRoutes } from "./routes/pages.js";
 import { paymentWalletRoutes } from "./routes/payment-wallet.js";
+import { projectFolderRoutes } from "./routes/project-folder.js";
 import { routinesRoutes } from "./routes/routines.js";
 import { spacesRoutes } from "./routes/spaces.js";
 import { teamRoutes } from "./routes/team.js";
@@ -69,6 +71,8 @@ export { callMarkerClientNonce } from "./routes/threads.js";
 
 export interface RouterDeps {
   pushTokens: PushTokenStore;
+  /** The owners' connected desktops, for their bots' project folders; absent hides them. */
+  userDevices?: UserDeviceGateway;
   /** Stops a call's ring on the owner's other devices once it is settled. */
   notifications?: NotificationProvider;
   analytics?: ProductAnalytics;
@@ -173,6 +177,7 @@ export function createRouter(deps: RouterDeps) {
     ...computerRoutes(ctx),
     ...computerProviderRoutes(ctx),
     ...networkExitRoutes(ctx),
+    ...projectFolderRoutes(ctx),
     ...computerServerRoutes(ctx),
     ...objectStorageRoutes(ctx),
     ...memoryRoutes(ctx),

@@ -21,6 +21,7 @@ vi.mock("@rakazo/ui-web", () => ({
     <button type="button" {...props} />
   ),
 }));
+vi.mock("../../components/ProjectFolderSection", () => ({ ProjectFolderSection: () => null }));
 vi.mock("../../components/ComputersUnavailableHint", () => ({
   ComputersUnavailableHint: () => null,
 }));

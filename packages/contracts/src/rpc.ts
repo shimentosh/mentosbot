@@ -180,6 +180,14 @@ import {
   PageVisibilitySchema,
 } from "./pages.js";
 import { PaymentWalletStatusSchema } from "./payments.js";
+import {
+  FolderListingSchema,
+  ProjectFolderBrowseInput,
+  ProjectFolderInput,
+  ProjectFolderSetInput,
+  ProjectFolderStatusSchema,
+  ProjectFolderStopInput,
+} from "./project-folder.js";
 import { MessageReactionSchema } from "./reactions.js";
 import { RoutineWatchSchema } from "./routine-watch.js";
 import {
@@ -544,6 +552,13 @@ export const appContract = {
     },
   },
   /** The signed-in person's own network for their computers' browsers in the current Space. */
+  /** A bot's project folder on its owner's own computer, and the commands it keeps running there. */
+  projectFolder: {
+    get: oc.input(ProjectFolderInput).output(ProjectFolderStatusSchema),
+    browse: oc.input(ProjectFolderBrowseInput).output(FolderListingSchema),
+    set: oc.input(ProjectFolderSetInput).output(ProjectFolderStatusSchema),
+    stop: oc.input(ProjectFolderStopInput).output(ProjectFolderStatusSchema),
+  },
   networkExit: {
     get: oc.output(NetworkExitStatusSchema),
     connect: oc.input(NetworkExitConnectSchema).output(NetworkExitStatusSchema),

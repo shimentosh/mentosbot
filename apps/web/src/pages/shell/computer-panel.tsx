@@ -5,6 +5,7 @@ import { BotAvatar, Button } from "@rakazo/ui-web";
 import { HardDrive, Maximize2, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { ComputersUnavailableHint } from "../../components/ComputersUnavailableHint";
+import { ProjectFolderSection } from "../../components/ProjectFolderSection";
 import { screenIframeSandbox } from "../../lib/computer-screen";
 import { computerLabel, computerPlaceholder, DesktopKindEmptyState } from "./computer-view";
 
@@ -65,6 +66,7 @@ export function ComputerPanel({
           </Button>
         </div>
       )}
+      <ProjectFolderSection botId={props.bot.id} />
     </>
   );
 }

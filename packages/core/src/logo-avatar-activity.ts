@@ -77,6 +77,8 @@ const COMPUTER_TOOLS = new Set([
   "user_computer_folder",
   "user_computer_agent",
   "user_computer_attach",
+  "user_computer_process",
+  "user_computer_request",
   "user_computer_observe",
   "user_computer_act",
   "shell",

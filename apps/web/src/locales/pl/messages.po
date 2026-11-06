@@ -1061,6 +1061,7 @@ msgstr "Dostępne dla poleceń powłoki jako {commandVariable}"
 msgid "Avatar Studio"
 msgstr "Studio awatara"
 
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
@@ -1272,6 +1273,7 @@ msgstr "Nie odczytuje obrazów"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
@@ -1337,6 +1339,10 @@ msgstr "Widok kart"
 #: src/components/vault/kinds.tsx
 msgid "Cards"
 msgstr "Karty"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Change"
+msgstr ""
 
 #: src/pages/ModelRoleSettings.tsx
 msgid "Change {name}"
@@ -1464,6 +1470,10 @@ msgstr "Wybierz model"
 msgid "Choose a new password"
 msgstr "Wybierz nowe hasło"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Choose a project folder"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Choose a provider"
 msgstr "Wybierz dostawcę"
@@ -1477,6 +1487,7 @@ msgstr "Wybierz model zapasowy"
 msgid "Choose file"
 msgstr "Wybierz plik"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Choose folder"
 msgstr "Wybierz folder"
@@ -4600,6 +4611,10 @@ msgstr "Brak botów"
 msgid "No bots match"
 msgstr "Brak pasujących botów"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "No folders here"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4808,6 +4823,11 @@ msgstr "Klucz API Ollama"
 msgid "Ollama Cloud"
 msgstr "Ollama Cloud"
 
+#. placeholder {0}: folder.otherComputer
+#: src/components/ProjectFolderSection.tsx
+msgid "On {0}"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "Według harmonogramu"
@@ -4891,6 +4911,10 @@ msgstr "Otwórz w pełnym oknie"
 #: src/components/pages/SharePopover.tsx
 msgid "Open link"
 msgstr "Otwórz link"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Open localhost:{port}"
+msgstr ""
 
 #: src/pages/shell/chat-header.tsx
 msgid "Open navigation"
@@ -5266,6 +5290,10 @@ msgstr "Produktywność"
 msgid "Program: {name}"
 msgstr "Program: {name}"
 
+#: src/components/ProjectFolderSection.tsx
+msgid "Project folder"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Protected input"
 msgstr "Chronione wprowadzanie"
@@ -5529,6 +5557,10 @@ msgstr "Usuń {site}"
 #: src/pages/RoutineEditor.tsx
 msgid "Remove change trigger"
 msgstr "Usuń wyzwalacz zmiany"
+
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Remove folder"
+msgstr ""
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -6466,6 +6498,10 @@ msgstr "Rozpocznij"
 msgid "Start {trialDays}-day free trial"
 msgstr "Rozpocznij bezpłatny okres próbny na {trialDays} dni"
 
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Start from a project folder"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Start plan"
 msgstr "Uruchom plan"
@@ -6518,6 +6554,7 @@ msgstr "Status"
 msgid "Steps"
 msgstr "Kroki"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6541,6 +6578,14 @@ msgstr "Zatrzymaj odczytywanie"
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Stop teaching"
 msgstr "Zatrzymaj naukę"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stop using this folder"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stopped"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -7228,6 +7273,10 @@ msgstr "Pilne"
 msgid "Usage"
 msgstr "Użycie"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Use"
+msgstr ""
+
 #. Switches the saved timezone to this device's, e.g. 'Use Pacific/Auckland'
 #. placeholder {0}: deviceTimezone.replaceAll("_", " ")
 #: src/pages/AccountSettingsOverlay.tsx
@@ -7278,6 +7327,10 @@ msgstr "Użyj środków Rakazo"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Use space default"
 msgstr "Użyj domyślnych przestrzeni"
+
+#: src/components/FolderPickerDialog.tsx
+msgid "Use this folder"
+msgstr ""
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Use up to 512 letters, digits, _ or -."

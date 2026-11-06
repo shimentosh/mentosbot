@@ -803,6 +803,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       : undefined;
 
   const router = createRouter({
+    userDevices: userDevicesOverride ?? userDevices,
     speechSummary:
       env.voiceSummaryMinChars === undefined
         ? undefined
