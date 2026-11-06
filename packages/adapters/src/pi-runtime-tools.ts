@@ -188,6 +188,10 @@ export function describeToolActivity(toolName: string, args: unknown): string {
   if (toolName === "shell") return `Running: ${detail(record.command)}`;
   if (toolName === "user_computer_shell")
     return `Running on your computer: ${detail(record.command)}`;
+  if (toolName === "user_computer_attach")
+    return `Sending from your computer: ${detail(record.path)}`;
+  if (toolName === "user_computer_agent") return `Working in your project: ${detail(record.task)}`;
+  if (toolName === "user_computer_folder") return `Setting project folder: ${detail(record.path)}`;
   if (toolName === "user_computer_observe") return `Looking at ${detail(record.app)}`;
   if (toolName === "user_computer_act") return `Using ${detail(record.app)}`;
   if (toolName === "read_file") return `Reading ${detail(record.path)}`;

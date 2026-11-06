@@ -1,7 +1,22 @@
 import path from "node:path";
 import type { AgentToolExecutionResult, ProcessEvent } from "@rakazo/adapter-kit";
-import { redactSecrets, sandboxCommandTimeoutMs } from "@rakazo/core";
+import { ATTACHMENT_MAX_BYTES, attachmentSizeLabel } from "@rakazo/contracts";
+import {
+  inferAttachmentMimeType,
+  MAX_SANDBOX_COMMAND_TIMEOUT_MS,
+  redactSecrets,
+  sandboxCommandTimeoutMs,
+} from "@rakazo/core";
 import { z } from "zod";
+import type { CodingAgentCli } from "./coding-agent-cli.js";
+import {
+  AGENT_SESSION_VARIABLE,
+  AGENT_TASK_VARIABLE,
+  codingAgentReader,
+  codingAgentScript,
+  NO_CODING_AGENT_EXIT,
+} from "./coding-agent-cli.js";
+import { claudeCodeCli } from "./coding-agent-cli-claude-code.js";
 import type { HostComputerEnvironment } from "./host-computer-protocol.js";
 import type {
   HostScreenAction,
@@ -11,14 +26,19 @@ import type {
 import { HOST_SCREEN_MAX_ACTIONS, hostScreenAction } from "./host-screen.js";
 import { nativeShellCommandArgv } from "./native-shell.js";
 import type { RunContext } from "./run-context.js";
+import { publishMessage } from "./run-messages.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
   isRunningShellCommand,
   observeShellCommand,
   SHELL_STILL_RUNNING_NOTICE,
 } from "./shell-command-stream.js";
+import { attachWorkspaceFileToThread } from "./thread-artifacts.js";
 import {
   USER_COMPUTER_ACT_TOOL,
+  USER_COMPUTER_AGENT_TOOL,
+  USER_COMPUTER_ATTACH_TOOL,
+  USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
@@ -28,6 +48,9 @@ import {
 
 export {
   USER_COMPUTER_ACT_TOOL,
+  USER_COMPUTER_AGENT_TOOL,
+  USER_COMPUTER_ATTACH_TOOL,
+  USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
@@ -86,7 +109,13 @@ export async function userComputerGate(
   };
   if (!USER_COMPUTER_SCREEN_TOOLS.has(name)) {
     const allowed = await deps.prisma.externalEffect.findFirst({
-      where: { ...where, kind: USER_COMPUTER_SHELL_TOOL },
+      where: {
+        ...where,
+        kind:
+          name === USER_COMPUTER_SHELL_TOOL
+            ? USER_COMPUTER_SHELL_TOOL
+            : { in: [USER_COMPUTER_SHELL_TOOL, name] },
+      },
       select: { id: true },
     });
     return allowed ? "allow" : "ask";
@@ -118,15 +147,22 @@ export async function userComputerGate(
 
 const SCREEN_APPROVAL_PAGE = 200;
 
-/** The working directory on the user's computer: their home or a folder inside it. */
-export function userComputerCwd(environment: HostComputerEnvironment, cwd: unknown): string {
+/**
+ * The working directory on the user's computer: their home or a folder inside it. A relative
+ * path, or none, starts from `base` (the bot's project folder there) when given.
+ */
+export function userComputerCwd(
+  environment: HostComputerEnvironment,
+  cwd: unknown,
+  base?: string,
+): string {
   const paths = environment.platform === "win32" ? path.win32 : path.posix;
   const requested = typeof cwd === "string" ? cwd.trim() : "";
-  if (!requested || requested === "~") return environment.home;
+  if (requested === "~") return environment.home;
   const expanded = /^~[\\/]/.test(requested)
     ? paths.join(environment.home, requested.slice(2))
     : requested;
-  const resolved = paths.resolve(environment.home, expanded);
+  const resolved = paths.resolve(environment.home, base ?? "", expanded);
   const relative = paths.relative(environment.home, resolved);
   if (relative === ".." || relative.startsWith(`..${paths.sep}`) || paths.isAbsolute(relative))
     throw new Error("cwd must be inside the user's home folder; cd elsewhere within the command");
@@ -146,6 +182,15 @@ async function connectedUserComputer(ctx: RunContext) {
   const devices = ctx.deps.userDevices;
   const device = owner && devices ? await devices.connected(owner).catch(() => null) : null;
   return owner && devices && device ? { owner, devices, deviceId: device.deviceId } : undefined;
+}
+
+/** This bot's project folder for the user, when it is on the computer that is connected. */
+async function projectFolder(ctx: RunContext, owner: string, deviceId: string) {
+  const folder = await ctx.deps.prisma.botFolder.findUnique({
+    where: { botId_userId: { botId: ctx.bot.id, userId: owner } },
+    select: { deviceId: true, path: true },
+  });
+  return folder?.deviceId === deviceId ? folder.path : undefined;
 }
 
 export async function userComputerShell(ctx: RunContext, call: ToolCall) {
@@ -177,7 +222,11 @@ export async function userComputerShell(ctx: RunContext, call: ToolCall) {
           runId,
           command: {
             argv: nativeShellCommandArgv(command, environment),
-            cwd: userComputerCwd(environment, call.args.cwd),
+            cwd: userComputerCwd(
+              environment,
+              call.args.cwd,
+              await projectFolder(ctx, owner, deviceId),
+            ),
             timeoutMs: sandboxCommandTimeoutMs(),
           },
         },
@@ -198,6 +247,301 @@ export async function userComputerShell(ctx: RunContext, call: ToolCall) {
       ctx.secrets,
     );
     return call.finish({ error: `The user's computer did not finish the command: ${reason}` });
+  }
+}
+
+const FOLDER_VARIABLE = "RAKAZO_PROJECT_FOLDER";
+const FOLDER_CHECK_TIMEOUT_MS = 30_000;
+
+/** Sets or clears this bot's project folder for the user, once the folder is found there. */
+export async function userComputerFolder(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { owner, devices, deviceId } = connected;
+  const { bot, runId, run } = ctx;
+  const requested = typeof call.args.path === "string" ? call.args.path.trim() : "";
+  if (!requested) {
+    await ctx.deps.prisma.botFolder.deleteMany({ where: { botId: bot.id, userId: owner } });
+    return call.finish({ ok: true, folder: null });
+  }
+  const { signal } = ctx.context;
+  try {
+    await lastValue(
+      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
+    );
+    const environment = await lastValue(
+      devices.request<HostComputerEnvironment>(
+        owner,
+        { method: "environment", botId: bot.id, runId },
+        signal,
+        deviceId,
+      ),
+    );
+    let folder: string;
+    try {
+      folder = userComputerCwd(environment, requested);
+    } catch {
+      return call.finish({ error: "The folder must be inside the user's home folder." });
+    }
+    if (folder === environment.home)
+      return call.finish({ error: "Pick a folder inside the user's home folder." });
+    // The path reaches the shell as a variable, never as command text.
+    const check =
+      environment.platform === "win32"
+        ? `if (Test-Path -LiteralPath $env:${FOLDER_VARIABLE} -PathType Container) { exit 0 } else { exit 1 }`
+        : `test -d "$${FOLDER_VARIABLE}"`;
+    let exitCode: number | undefined;
+    for await (const event of devices.request<ProcessEvent>(
+      owner,
+      {
+        method: "execute",
+        botId: bot.id,
+        runId,
+        command: {
+          argv: nativeShellCommandArgv(check, environment),
+          cwd: environment.home,
+          env: { [FOLDER_VARIABLE]: folder },
+          timeoutMs: FOLDER_CHECK_TIMEOUT_MS,
+        },
+      },
+      signal,
+      deviceId,
+    ))
+      if (event.type === "exit") exitCode = event.code;
+    if (exitCode !== 0)
+      return call.finish({ error: `There is no folder at ${folder} on the user's computer.` });
+    await ctx.deps.prisma.botFolder.upsert({
+      where: { botId_userId: { botId: bot.id, userId: owner } },
+      create: { botId: bot.id, userId: owner, spaceId: run.spaceId, deviceId, path: folder },
+      update: { deviceId, path: folder },
+    });
+    return call.finish({ ok: true, folder });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "folder check failed",
+      ctx.secrets,
+    );
+    return call.finish({ error: `The user's computer did not answer: ${reason}` });
+  }
+}
+
+/** Coding agents tried in order on the user's computer; the first one installed runs. */
+const CODING_AGENTS: readonly CodingAgentCli[] = [claudeCodeCli];
+const AGENT_STEPS_SHOWN = 30;
+const AGENT_ERROR_TAIL = 2_000;
+
+/**
+ * Hands a task to the coding agent installed on the user's computer, in this bot's project
+ * folder there, and waits for its answer (up to the longest command time).
+ */
+export async function userComputerAgent(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { owner, devices, deviceId } = connected;
+  const task = typeof call.args.task === "string" ? call.args.task.trim() : "";
+  if (!task) return call.finish({ error: "task must say what the coding agent should do." });
+  const session = typeof call.args.session === "string" ? call.args.session.trim() : "";
+  const folder = await projectFolder(ctx, owner, deviceId);
+  if (!folder)
+    return call.finish({
+      error: "Set your project folder on the user's computer first with user_computer_folder.",
+    });
+  const { bot, runId } = ctx;
+  const { signal } = ctx.context;
+  const reader = codingAgentReader(CODING_AGENTS);
+  let stderr = "";
+  let exitCode: number | undefined;
+  try {
+    await lastValue(
+      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
+    );
+    const environment = await lastValue(
+      devices.request<HostComputerEnvironment>(
+        owner,
+        { method: "environment", botId: bot.id, runId },
+        signal,
+        deviceId,
+      ),
+    );
+    for await (const event of devices.request<ProcessEvent>(
+      owner,
+      {
+        method: "execute",
+        botId: bot.id,
+        runId,
+        command: {
+          argv: nativeShellCommandArgv(
+            codingAgentScript(environment, Boolean(session), CODING_AGENTS),
+            environment,
+          ),
+          cwd: folder,
+          env: {
+            [AGENT_TASK_VARIABLE]: task,
+            ...(session ? { [AGENT_SESSION_VARIABLE]: session } : {}),
+          },
+          timeoutMs: MAX_SANDBOX_COMMAND_TIMEOUT_MS,
+        },
+      },
+      signal,
+      deviceId,
+    )) {
+      if (event.type === "stdout") reader.write(event.data);
+      else if (event.type === "stderr") stderr = (stderr + event.data).slice(-AGENT_ERROR_TAIL);
+      else exitCode = event.code;
+    }
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "the coding agent stopped",
+      ctx.secrets,
+    );
+    return call.finish({ error: `The user's computer did not finish: ${reason}` });
+  }
+  const outcome = reader.end();
+  if (exitCode === NO_CODING_AGENT_EXIT && outcome.result === undefined)
+    return call.finish({
+      error:
+        "No coding agent is installed on the user's computer. Tell them to install one and sign in to it in their terminal.",
+    });
+  const redact = (text: string) => redactSecrets(text, ctx.secrets);
+  const steps = outcome.steps.slice(-AGENT_STEPS_SHOWN).map(redact);
+  if (outcome.result === undefined)
+    return call.finish({
+      error: `The coding agent stopped without an answer (exit code ${exitCode ?? "unknown"}).`,
+      ...(stderr.trim() ? { output: redact(stderr.trim()) } : {}),
+      ...(outcome.session ? { session: outcome.session } : {}),
+      steps,
+    });
+  return call.finish({
+    result: redact(outcome.result),
+    ...(outcome.session ? { session: outcome.session } : {}),
+    ...(outcome.failed ? { failed: true } : {}),
+    ...(outcome.denied.length ? { denied: outcome.denied } : {}),
+    steps,
+  });
+}
+
+const ATTACH_FILE_VARIABLE = "RAKAZO_ATTACH_FILE";
+const ATTACH_MAX_VARIABLE = "RAKAZO_ATTACH_MAX";
+const ATTACH_MISSING_EXIT = 66;
+const ATTACH_TOO_LARGE_EXIT = 65;
+
+/**
+ * Prints the file as base64, or exits early when it is missing or over the limit. The path and
+ * the limit reach the shell as variables, never as command text.
+ */
+export function userComputerAttachScript(environment: Pick<HostComputerEnvironment, "platform">) {
+  if (environment.platform === "win32")
+    return [
+      `$f = $env:${ATTACH_FILE_VARIABLE}`,
+      `if (-not (Test-Path -LiteralPath $f -PathType Leaf)) { exit ${ATTACH_MISSING_EXIT} }`,
+      `if ((Get-Item -LiteralPath $f).Length -gt [int64]$env:${ATTACH_MAX_VARIABLE}) { exit ${ATTACH_TOO_LARGE_EXIT} }`,
+      "[Convert]::ToBase64String([IO.File]::ReadAllBytes($f))",
+    ].join("\n");
+  return [
+    `f="$${ATTACH_FILE_VARIABLE}"`,
+    `[ -f "$f" ] || exit ${ATTACH_MISSING_EXIT}`,
+    `[ "$(wc -c < "$f" | tr -d '[:space:]')" -le "$${ATTACH_MAX_VARIABLE}" ] || exit ${ATTACH_TOO_LARGE_EXIT}`,
+    `base64 < "$f"`,
+  ].join("\n");
+}
+
+/** Sends a file from the user's computer to this chat, through the server's artifact storage. */
+export async function userComputerAttach(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { deps, bot, run, runId, thread } = ctx;
+  if (!deps.artifacts) return call.finish({ error: "artifact storage unavailable" });
+  const { owner, devices, deviceId } = connected;
+  const requested = typeof call.args.path === "string" ? call.args.path.trim() : "";
+  if (!requested) return call.finish({ error: "path must name a file on the user's computer." });
+  if (!inferAttachmentMimeType(requested))
+    return call.finish({ error: "unsupported attachment type", path: requested });
+  const limit = deps.maxUploadSizeBytes ?? ATTACHMENT_MAX_BYTES;
+  const { signal } = ctx.context;
+  let encoded = "";
+  let exitCode: number | undefined;
+  let file = requested;
+  try {
+    await lastValue(
+      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
+    );
+    const environment = await lastValue(
+      devices.request<HostComputerEnvironment>(
+        owner,
+        { method: "environment", botId: bot.id, runId },
+        signal,
+        deviceId,
+      ),
+    );
+    try {
+      file = userComputerCwd(environment, requested, await projectFolder(ctx, owner, deviceId));
+    } catch {
+      return call.finish({ error: "The file must be inside the user's home folder." });
+    }
+    // Base64 adds a third, plus line breaks on some systems.
+    const encodedLimit = Math.ceil(limit / 3) * 4 + Math.ceil(limit / 48) + 16;
+    for await (const event of devices.request<ProcessEvent>(
+      owner,
+      {
+        method: "execute",
+        botId: bot.id,
+        runId,
+        command: {
+          argv: nativeShellCommandArgv(userComputerAttachScript(environment), environment),
+          cwd: environment.home,
+          env: { [ATTACH_FILE_VARIABLE]: file, [ATTACH_MAX_VARIABLE]: String(limit) },
+          timeoutMs: MAX_SANDBOX_COMMAND_TIMEOUT_MS,
+        },
+      },
+      signal,
+      deviceId,
+    )) {
+      if (event.type === "stdout") {
+        encoded += event.data;
+        if (encoded.length > encodedLimit) throw new Error("the file grew past the limit");
+      } else if (event.type === "exit") exitCode = event.code;
+    }
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "the transfer stopped",
+      ctx.secrets,
+    );
+    return call.finish({ error: `The user's computer did not send the file: ${reason}` });
+  }
+  if (exitCode === ATTACH_MISSING_EXIT)
+    return call.finish({ error: `There is no file at ${file} on the user's computer.` });
+  if (exitCode === ATTACH_TOO_LARGE_EXIT)
+    return call.finish({
+      error: `${file} is larger than the ${attachmentSizeLabel(limit)} attachment limit.`,
+    });
+  if (exitCode !== 0) return call.finish({ error: `The user's computer could not read ${file}.` });
+  const bytes = Buffer.from(encoded, "base64");
+  try {
+    const attached = await attachWorkspaceFileToThread(
+      { prisma: deps.prisma, artifacts: deps.artifacts, maxUploadSizeBytes: limit },
+      {
+        spaceId: run.spaceId,
+        userId: run.userId,
+        botId: bot.id,
+        groupId: thread.groupId ?? undefined,
+        runId: run.id,
+        filePath: file,
+        bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+        operationId: call.executionId,
+        name: typeof call.args.name === "string" ? call.args.name : undefined,
+        description: typeof call.args.description === "string" ? call.args.description : undefined,
+      },
+    );
+    await publishMessage(deps, run, "bot", [attached.block]);
+    return call.finish({ ok: true, artifactId: attached.artifactId, path: file });
+  } catch (error) {
+    return call.finish({
+      error: error instanceof Error ? error.message : "could not attach file",
+      path: file,
+    });
   }
 }
 

@@ -61,3 +61,23 @@ rest of that space, in any chat, until you remove the computer from the same lis
 > [!WARNING]
 > A bot with access to your computer can read your files and run programs as you. Only turn it on
 > for a computer you would let your bots use unattended.
+
+### Project folder
+
+Ask a bot to work in a folder on your computer, such as a code or content project, and it keeps
+that folder as its project folder. Its commands start there, and it follows the folder's
+`AGENTS.md` or `CLAUDE.md` and uses the skills in `.claude/skills` or `.agents/skills`. The folder
+must be inside your home folder. A bot asks before setting one, and each person has their own. Ask
+the bot to stop using it to clear it.
+
+With a project folder set, a bot can hand bigger jobs to the coding agent installed on that
+computer (for example a command-line coding assistant you have signed in to in your terminal). The
+agent works in the folder with the project's own instructions, can run for up to an hour, and
+answers the bot, which keeps the same agent session going with your replies. The bot asks before it
+first hands work to the agent in a space; **Allow in this space** covers the rest of that space.
+Anything the agent would need a person to approve is refused, not left waiting.
+
+A bot can also send a file from your computer to the chat, such as a video rendered there. It goes
+through the server into [artifact storage](./self-host-storage.md#shared-storage-migration), so with
+object storage connected it is kept in your bucket, encrypted. Files over `MAX_UPLOAD_SIZE_MB`
+(10 MB by default) are refused; raise it on the server for longer videos.

@@ -136,6 +136,52 @@ export function buildApprovalAskBlock(
       ],
     };
   }
+  if (toolName === "user_computer_attach") {
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: "Send this file from your computer to the chat?",
+      detail: truncate(redactSecrets(String(args.path ?? ""), secrets), MAX_APPROVAL_DETAIL_LENGTH),
+      detailFormat: "code",
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow in this space" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
+  if (toolName === "user_computer_agent") {
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: "Let the coding agent on your computer work on this?",
+      detail: truncate(redactSecrets(String(args.task ?? ""), secrets), MAX_APPROVAL_DETAIL_LENGTH),
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow in this space" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
+  if (toolName === "user_computer_folder") {
+    const folder = String(args.path ?? "").trim();
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: folder ? "Work in this folder on your computer?" : "Stop using the project folder?",
+      ...(folder
+        ? {
+            detail: truncate(redactSecrets(folder, secrets), MAX_APPROVAL_DETAIL_LENGTH),
+            detailFormat: "code" as const,
+          }
+        : {}),
+      status: "pending",
+      actions: [
+        { id: "allow", label: "Allow" },
+        { id: "deny", label: "Deny" },
+      ],
+    };
+  }
   if (toolName === "user_computer_shell") {
     const cwd = typeof args.cwd === "string" && args.cwd.trim() ? `cd ${args.cwd.trim()}\n` : "";
     return {
