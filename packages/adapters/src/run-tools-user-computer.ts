@@ -8,6 +8,7 @@ import {
   sandboxCommandTimeoutMs,
 } from "@rakazo/core";
 import { z } from "zod";
+import { setBotFolder } from "./bot-folders.js";
 import type { CodingAgentCli } from "./coding-agent-cli.js";
 import {
   AGENT_SESSION_VARIABLE,
@@ -35,11 +36,20 @@ import {
 } from "./shell-command-stream.js";
 import { attachWorkspaceFileToThread } from "./thread-artifacts.js";
 import {
+  checkUserComputerFolder,
+  keptCommandOutput,
+  listKeptCommands,
+  openUserComputer,
+  startKeptCommand,
+  stopKeptCommand,
+} from "./user-computer-projects.js";
+import {
   USER_COMPUTER_ACT_TOOL,
   USER_COMPUTER_AGENT_TOOL,
   USER_COMPUTER_ATTACH_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
+  USER_COMPUTER_PROCESS_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
   USER_COMPUTER_TOOLS,
@@ -52,6 +62,7 @@ export {
   USER_COMPUTER_ATTACH_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
+  USER_COMPUTER_PROCESS_TOOL,
   USER_COMPUTER_SCREEN_TOOLS,
   USER_COMPUTER_SHELL_TOOL,
   USER_COMPUTER_TOOLS,
@@ -65,8 +76,8 @@ const USER_COMPUTER_UNAVAILABLE =
   "The user's computer is not connected. Ask them to open the Rakazo desktop app.";
 
 /**
- * Whose own computer this run may reach: the person whose message started it, when they own the
- * bot. Routines, webhooks, channels, other bots and other people's messages reach no one's, and
+ * Whose own computer this run may reach: the person whose message or routine started it, when
+ * they own the bot. Webhooks, channels, other bots and other people's messages reach no one's, and
  * neither does a bot shared with teammates: they share its chat, so they could steer the run or
  * answer its approval cards.
  */
@@ -78,9 +89,12 @@ export function userComputerOwner(input: {
   botUserId: string;
   sharedWithTeammates?: boolean;
 }): string | undefined {
-  if (input.sharedWithTeammates) return undefined;
-  if (input.trigger !== "user" && input.trigger !== "follow_up") return undefined;
-  if (input.sourceRole !== "user" || input.messagingChannelRun) return undefined;
+  if (input.sharedWithTeammates || input.messagingChannelRun) return undefined;
+  // The owner's own routines run on their computer too, as they set them up.
+  const ownRoutine = input.trigger === "routine";
+  const ownMessage =
+    (input.trigger === "user" || input.trigger === "follow_up") && input.sourceRole === "user";
+  if (!ownRoutine && !ownMessage) return undefined;
   return input.runUserId === input.botUserId ? input.runUserId : undefined;
 }
 
@@ -250,15 +264,12 @@ export async function userComputerShell(ctx: RunContext, call: ToolCall) {
   }
 }
 
-const FOLDER_VARIABLE = "RAKAZO_PROJECT_FOLDER";
-const FOLDER_CHECK_TIMEOUT_MS = 30_000;
-
 /** Sets or clears this bot's project folder for the user, once the folder is found there. */
 export async function userComputerFolder(ctx: RunContext, call: ToolCall) {
   const connected = await connectedUserComputer(ctx);
   if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
-  const { owner, devices, deviceId } = connected;
-  const { bot, runId, run } = ctx;
+  const { owner } = connected;
+  const { bot, run } = ctx;
   const requested = typeof call.args.path === "string" ? call.args.path.trim() : "";
   if (!requested) {
     await ctx.deps.prisma.botFolder.deleteMany({ where: { botId: bot.id, userId: owner } });
@@ -266,54 +277,21 @@ export async function userComputerFolder(ctx: RunContext, call: ToolCall) {
   }
   const { signal } = ctx.context;
   try {
-    await lastValue(
-      devices.request(owner, { method: "provision", botId: bot.id, runId }, signal, deviceId),
-    );
-    const environment = await lastValue(
-      devices.request<HostComputerEnvironment>(
-        owner,
-        { method: "environment", botId: bot.id, runId },
-        signal,
-        deviceId,
-      ),
-    );
+    const session = await userComputerSession(ctx, connected);
+    if (!session) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
     let folder: string;
     try {
-      folder = userComputerCwd(environment, requested);
-    } catch {
-      return call.finish({ error: "The folder must be inside the user's home folder." });
+      folder = await checkUserComputerFolder(session, requested);
+    } catch (error) {
+      if (signal.aborted) throw error;
+      return call.finish({ error: error instanceof Error ? error.message : "No such folder." });
     }
-    if (folder === environment.home)
-      return call.finish({ error: "Pick a folder inside the user's home folder." });
-    // The path reaches the shell as a variable, never as command text.
-    const check =
-      environment.platform === "win32"
-        ? `if (Test-Path -LiteralPath $env:${FOLDER_VARIABLE} -PathType Container) { exit 0 } else { exit 1 }`
-        : `test -d "$${FOLDER_VARIABLE}"`;
-    let exitCode: number | undefined;
-    for await (const event of devices.request<ProcessEvent>(
-      owner,
-      {
-        method: "execute",
-        botId: bot.id,
-        runId,
-        command: {
-          argv: nativeShellCommandArgv(check, environment),
-          cwd: environment.home,
-          env: { [FOLDER_VARIABLE]: folder },
-          timeoutMs: FOLDER_CHECK_TIMEOUT_MS,
-        },
-      },
-      signal,
-      deviceId,
-    ))
-      if (event.type === "exit") exitCode = event.code;
-    if (exitCode !== 0)
-      return call.finish({ error: `There is no folder at ${folder} on the user's computer.` });
-    await ctx.deps.prisma.botFolder.upsert({
-      where: { botId_userId: { botId: bot.id, userId: owner } },
-      create: { botId: bot.id, userId: owner, spaceId: run.spaceId, deviceId, path: folder },
-      update: { deviceId, path: folder },
+    await setBotFolder(ctx.deps.prisma, {
+      botId: bot.id,
+      userId: owner,
+      spaceId: run.spaceId,
+      deviceId: session.deviceId,
+      path: folder,
     });
     return call.finish({ ok: true, folder });
   } catch (error) {
@@ -323,6 +301,67 @@ export async function userComputerFolder(ctx: RunContext, call: ToolCall) {
       ctx.secrets,
     );
     return call.finish({ error: `The user's computer did not answer: ${reason}` });
+  }
+}
+
+/** The connected computer, opened for this bot's run. */
+async function userComputerSession(
+  ctx: RunContext,
+  connected: NonNullable<Awaited<ReturnType<typeof connectedUserComputer>>>,
+) {
+  return openUserComputer({
+    devices: connected.devices,
+    owner: connected.owner,
+    botId: ctx.bot.id,
+    runId: ctx.runId,
+    signal: ctx.context.signal,
+  });
+}
+
+/** Keeps a command running on the user's computer, lists those kept, reads one's output or stops it. */
+export async function userComputerProcess(ctx: RunContext, call: ToolCall) {
+  const connected = await connectedUserComputer(ctx);
+  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const { signal } = ctx.context;
+  const action = String(call.args.action ?? "");
+  const name = String(call.args.name ?? "").trim() || (action === "start" ? "app" : "");
+  try {
+    const session = await userComputerSession(ctx, connected);
+    if (!session) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+    if (action === "list") return call.finish({ processes: await listKeptCommands(session) });
+    if (!name) return call.finish({ error: "Say which one by its name." });
+    if (action === "logs")
+      return call.finish({
+        name,
+        output: redactSecrets(await keptCommandOutput(session, name), ctx.secrets),
+      });
+    if (action === "stop") return call.finish(await stopKeptCommand(session, name));
+    if (action !== "start") return call.finish({ error: "action is start, list, logs or stop." });
+    const folder = userComputerCwd(
+      session.environment,
+      call.args.cwd,
+      await projectFolder(ctx, connected.owner, session.deviceId),
+    );
+    const started = await startKeptCommand(session, {
+      name,
+      command: String(call.args.command ?? ""),
+      folder,
+    });
+    return call.finish({
+      ...started,
+      output: redactSecrets(started.output, ctx.secrets),
+      folder,
+      ...(started.running
+        ? {}
+        : { notice: "It stopped on its own; its output says why. Fix it and start it again." }),
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    const reason = redactSecrets(
+      error instanceof Error ? error.message : "command failed",
+      ctx.secrets,
+    );
+    return call.finish({ error: reason });
   }
 }
 

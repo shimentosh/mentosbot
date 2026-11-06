@@ -131,7 +131,12 @@ export function selectBuiltinToolsForRun(options: {
         ].includes(tool.name)) &&
       (options.voiceCall || tool.name !== "end_call") &&
       (options.userComputer ||
-        !["user_computer_shell", "user_computer_folder", "user_computer_attach"].includes(
+        ![
+          "user_computer_shell",
+          "user_computer_folder",
+          "user_computer_attach",
+          "user_computer_process",
+        ].includes(
           tool.name,
         )) &&
       ((options.userComputer && options.userComputerFolder) ||

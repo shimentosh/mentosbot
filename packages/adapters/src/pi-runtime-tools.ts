@@ -192,6 +192,10 @@ export function describeToolActivity(toolName: string, args: unknown): string {
     return `Sending from your computer: ${detail(record.path)}`;
   if (toolName === "user_computer_agent") return `Working in your project: ${detail(record.task)}`;
   if (toolName === "user_computer_folder") return `Setting project folder: ${detail(record.path)}`;
+  if (toolName === "user_computer_process")
+    return record.action === "start"
+      ? `Keeping running on your computer: ${detail(record.command)}`
+      : `Checking what runs on your computer`;
   if (toolName === "user_computer_observe") return `Looking at ${detail(record.app)}`;
   if (toolName === "user_computer_act") return `Using ${detail(record.app)}`;
   if (toolName === "read_file") return `Reading ${detail(record.path)}`;

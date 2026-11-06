@@ -70,6 +70,19 @@ that folder as its project folder. Its commands start there, and it follows the 
 must be inside your home folder. A bot asks before setting one, and each person has their own. Ask
 the bot to stop using it to clear it.
 
+You can also choose it yourself: open the bot's **Computer** tab and press **Choose folder** under
+**Project folder**, then **Use** beside a project (folders with a `.git`, `package.json` or similar
+are marked) or **Use this folder** inside one. In the desktop app, **New bot** also offers **Start
+from a project folder**, which names the bot after the folder.
+
+A bot can keep a command running on your computer, such as a dev server or a watcher, past the
+time an ordinary command is given. It keeps running after the chat moves on, even if the desktop app
+quits, until the bot or you stop it. The **Project folder** section lists what each bot keeps
+running, with a link to each port it listens on and a **Stop** button. This needs macOS or Linux.
+
+Your own [routines](./routines.md) for a bot reach your computer too, as your messages do. A routine
+someone else set up, a bot shared with teammates, and messages from other bots or channels never do.
+
 With a project folder set, a bot can hand bigger jobs to the coding agent installed on that
 computer (for example a command-line coding assistant you have signed in to in your terminal). The
 agent works in the folder with the project's own instructions, can run for up to an hour, and

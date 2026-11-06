@@ -26,12 +26,14 @@ import {
   USER_COMPUTER_ATTACH_TOOL,
   USER_COMPUTER_FOLDER_TOOL,
   USER_COMPUTER_OBSERVE_TOOL,
+  USER_COMPUTER_PROCESS_TOOL,
   USER_COMPUTER_SHELL_TOOL,
   userComputerAct,
   userComputerAgent,
   userComputerAttach,
   userComputerFolder,
   userComputerObserve,
+  userComputerProcess,
   userComputerShell,
 } from "./run-tools-user-computer.js";
 import { strategicInitiativeToolAllowed } from "./strategic-initiative.js";
@@ -51,6 +53,7 @@ const TOOL_HANDLERS = new Map<string, ToolHandler>([
   [USER_COMPUTER_FOLDER_TOOL, userComputerFolder],
   [USER_COMPUTER_AGENT_TOOL, userComputerAgent],
   [USER_COMPUTER_ATTACH_TOOL, userComputerAttach],
+  [USER_COMPUTER_PROCESS_TOOL, userComputerProcess],
   [USER_COMPUTER_OBSERVE_TOOL, userComputerObserve],
   [USER_COMPUTER_ACT_TOOL, userComputerAct],
   ...Object.entries(purchaseTools),

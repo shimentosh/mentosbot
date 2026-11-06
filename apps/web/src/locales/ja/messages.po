@@ -1061,6 +1061,7 @@ msgstr "シェルコマンドで{commandVariable}として利用可能"
 msgid "Avatar Studio"
 msgstr "Avatar Studio"
 
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
@@ -1272,6 +1273,7 @@ msgstr "画像を読み取れません"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
@@ -1336,6 +1338,10 @@ msgstr "カード表示"
 
 #: src/components/vault/kinds.tsx
 msgid "Cards"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Change"
 msgstr ""
 
 #: src/pages/ModelRoleSettings.tsx
@@ -1464,6 +1470,10 @@ msgstr "モデルを選択"
 msgid "Choose a new password"
 msgstr "新しいパスワードを設定"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Choose a project folder"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Choose a provider"
 msgstr "プロバイダーを選択"
@@ -1477,6 +1487,7 @@ msgstr "バックアップを選択"
 msgid "Choose file"
 msgstr "ファイルを選択"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Choose folder"
 msgstr "フォルダを選択"
@@ -4600,6 +4611,10 @@ msgstr ""
 msgid "No bots match"
 msgstr "一致するボットはありません"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "No folders here"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4808,6 +4823,11 @@ msgstr "OllamaのAPIキー"
 msgid "Ollama Cloud"
 msgstr "Ollama Cloud"
 
+#. placeholder {0}: folder.otherComputer
+#: src/components/ProjectFolderSection.tsx
+msgid "On {0}"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr "スケジュール"
@@ -4891,6 +4911,10 @@ msgstr "フルウィンドウで開く"
 #: src/components/pages/SharePopover.tsx
 msgid "Open link"
 msgstr "リンクを開く"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Open localhost:{port}"
+msgstr ""
 
 #: src/pages/shell/chat-header.tsx
 msgid "Open navigation"
@@ -5266,6 +5290,10 @@ msgstr ""
 msgid "Program: {name}"
 msgstr "プログラム: {name}"
 
+#: src/components/ProjectFolderSection.tsx
+msgid "Project folder"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Protected input"
 msgstr "保護された入力"
@@ -5529,6 +5557,10 @@ msgstr "{site} を削除"
 #: src/pages/RoutineEditor.tsx
 msgid "Remove change trigger"
 msgstr "変更トリガーを削除"
+
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Remove folder"
+msgstr ""
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -6466,6 +6498,10 @@ msgstr ""
 msgid "Start {trialDays}-day free trial"
 msgstr "{trialDays}日間の無料トライアルを開始"
 
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Start from a project folder"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Start plan"
 msgstr "プランを開始"
@@ -6518,6 +6554,7 @@ msgstr "ステータス"
 msgid "Steps"
 msgstr "手順"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6541,6 +6578,14 @@ msgstr "読み上げを停止"
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Stop teaching"
 msgstr "ティーチングを停止"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stop using this folder"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stopped"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -7228,6 +7273,10 @@ msgstr "緊急"
 msgid "Usage"
 msgstr "使用量"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Use"
+msgstr ""
+
 #. Switches the saved timezone to this device's, e.g. 'Use Pacific/Auckland'
 #. placeholder {0}: deviceTimezone.replaceAll("_", " ")
 #: src/pages/AccountSettingsOverlay.tsx
@@ -7278,6 +7327,10 @@ msgstr "Rakazoクレジットを使用"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Use space default"
 msgstr "スペースのデフォルトを使用"
+
+#: src/components/FolderPickerDialog.tsx
+msgid "Use this folder"
+msgstr ""
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Use up to 512 letters, digits, _ or -."

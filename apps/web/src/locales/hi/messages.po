@@ -1061,6 +1061,7 @@ msgstr "शेल कमांड के लिए {commandVariable} के र�
 msgid "Avatar Studio"
 msgstr "अवतार स्टूडियो"
 
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
@@ -1272,6 +1273,7 @@ msgstr "तस्वीरें नहीं पढ़ सकता"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/FolderPickerDialog.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/ModelCredits.tsx
@@ -1336,6 +1338,10 @@ msgstr ""
 
 #: src/components/vault/kinds.tsx
 msgid "Cards"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Change"
 msgstr ""
 
 #: src/pages/ModelRoleSettings.tsx
@@ -1464,6 +1470,10 @@ msgstr "मॉडल चुनें"
 msgid "Choose a new password"
 msgstr "नया पासवर्ड चुनें"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Choose a project folder"
+msgstr ""
+
 #: src/pages/Onboarding.tsx
 msgid "Choose a provider"
 msgstr ""
@@ -1477,6 +1487,7 @@ msgstr "बैकअप चुनें"
 msgid "Choose file"
 msgstr "फ़ाइल चुनें"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Choose folder"
 msgstr "फ़ोल्डर चुनें"
@@ -4600,6 +4611,10 @@ msgstr ""
 msgid "No bots match"
 msgstr ""
 
+#: src/components/FolderPickerDialog.tsx
+msgid "No folders here"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4808,6 +4823,11 @@ msgstr ""
 msgid "Ollama Cloud"
 msgstr ""
 
+#. placeholder {0}: folder.otherComputer
+#: src/components/ProjectFolderSection.tsx
+msgid "On {0}"
+msgstr ""
+
 #: src/pages/RoutineEditor.tsx
 msgid "On a schedule"
 msgstr ""
@@ -4891,6 +4911,10 @@ msgstr "पूरी विंडो में खोलें"
 #: src/components/pages/SharePopover.tsx
 msgid "Open link"
 msgstr "लिंक खोलें"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Open localhost:{port}"
+msgstr ""
 
 #: src/pages/shell/chat-header.tsx
 msgid "Open navigation"
@@ -5266,6 +5290,10 @@ msgstr ""
 msgid "Program: {name}"
 msgstr "प्रोग्राम: {name}"
 
+#: src/components/ProjectFolderSection.tsx
+msgid "Project folder"
+msgstr ""
+
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Protected input"
 msgstr ""
@@ -5529,6 +5557,10 @@ msgstr "{site} हटाएं"
 #: src/pages/RoutineEditor.tsx
 msgid "Remove change trigger"
 msgstr "बदलाव ट्रिगर हटाएँ"
+
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Remove folder"
+msgstr ""
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -6466,6 +6498,10 @@ msgstr ""
 msgid "Start {trialDays}-day free trial"
 msgstr "{trialDays} दिन का मुफ़्त ट्रायल शुरू करें"
 
+#: src/pages/shell/create-bot-dialog.tsx
+msgid "Start from a project folder"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Start plan"
 msgstr "प्लान शुरू करें"
@@ -6518,6 +6554,7 @@ msgstr ""
 msgid "Steps"
 msgstr "चरण"
 
+#: src/components/ProjectFolderSection.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6541,6 +6578,14 @@ msgstr "बोलना रोकें"
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Stop teaching"
 msgstr "सिखाना रोकें"
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stop using this folder"
+msgstr ""
+
+#: src/components/ProjectFolderSection.tsx
+msgid "Stopped"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/browser-notifications.ts
@@ -7228,6 +7273,10 @@ msgstr ""
 msgid "Usage"
 msgstr "उपयोग"
 
+#: src/components/FolderPickerDialog.tsx
+msgid "Use"
+msgstr ""
+
 #. Switches the saved timezone to this device's, e.g. 'Use Pacific/Auckland'
 #. placeholder {0}: deviceTimezone.replaceAll("_", " ")
 #: src/pages/AccountSettingsOverlay.tsx
@@ -7277,6 +7326,10 @@ msgstr ""
 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Use space default"
+msgstr ""
+
+#: src/components/FolderPickerDialog.tsx
+msgid "Use this folder"
 msgstr ""
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx

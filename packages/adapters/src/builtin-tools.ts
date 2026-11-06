@@ -516,6 +516,21 @@ export const builtinAgentTools: ConnectorTool[] = [
     },
   },
   {
+    name: "user_computer_process",
+    description:
+      "Keep a command running on the user's own computer, such as a dev server or a watcher, which user_computer_shell would stop when it times out. start runs command in cwd (default: your project folder) and returns its first output; list shows yours with the ports they listen on; logs returns the latest output of one; stop ends one. name identifies it, such as dev-server.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["start", "list", "logs", "stop"] },
+        name: { type: "string", maxLength: 40 },
+        command: { type: "string" },
+        cwd: { type: "string" },
+      },
+      required: ["action"],
+    },
+  },
+  {
     name: "user_computer_folder",
     description:
       "Set your project folder on the user's computer, only when they ask: your commands there start in it. An existing folder inside their home folder; an empty path clears it.",

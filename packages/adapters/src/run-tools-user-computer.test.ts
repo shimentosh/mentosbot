@@ -160,8 +160,14 @@ describe("userComputerOwner", () => {
     expect(userComputerOwner({ ...own, sharedWithTeammates: true })).toBeUndefined();
   });
 
+  it("is the bot owner for their own routine, and nobody for a teammate's", () => {
+    const routine = { ...own, trigger: "routine", sourceRole: undefined };
+    expect(userComputerOwner(routine)).toBe("user-1");
+    expect(userComputerOwner({ ...routine, runUserId: "user-2" })).toBeUndefined();
+    expect(userComputerOwner({ ...routine, sharedWithTeammates: true })).toBeUndefined();
+  });
+
   it.each([
-    { trigger: "routine" },
     { trigger: "webhook" },
     { trigger: "messaging" },
     { trigger: "call_end" },
@@ -316,7 +322,7 @@ describe("userComputerFolder", () => {
     const result = await userComputerFolder(ctx, call({ path: "~/Projects/it's mine" }));
     expect(result).toEqual({ ok: true, folder: "/Users/fake/Projects/it's mine" });
     const check = requests.at(-1) as Extract<HostComputerRequest, { method: "execute" }>;
-    expect(check.command.env).toEqual({ RAKAZO_PROJECT_FOLDER: "/Users/fake/Projects/it's mine" });
+    expect(check.command.env).toEqual({ RAKAZO_PATH: "/Users/fake/Projects/it's mine" });
     expect(check.command.argv.join(" ")).not.toContain("it's mine");
     expect(botFolder.upsert).toHaveBeenCalledWith({
       where: { botId_userId: { botId: "bot-1", userId: "user-1" } },
