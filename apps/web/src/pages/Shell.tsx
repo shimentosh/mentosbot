@@ -105,7 +105,6 @@ import { useMessageAuthorName } from "./shell/use-message-author";
 import { useMessageJump } from "./shell/use-message-jump";
 import { useMobileSidebar } from "./shell/use-mobile-sidebar";
 import { useReadAloud } from "./shell/use-read-aloud";
-import { useReportedUiLocale } from "./shell/use-reported-ui-locale";
 import { useRightPanel, useRightPanelRestore } from "./shell/use-right-panel";
 import { useRoutineEditor } from "./shell/use-routine-editor";
 import { useShellNavigation } from "./shell/use-shell-navigation";
@@ -314,7 +313,6 @@ function SpaceShell() {
       });
     return rpc.computer.dismissDiskWarning({ botId }).catch(() => undefined);
   };
-  useReportedUiLocale(rpc, bootstrapMe?.locale);
   const cycleBots = useMemo(
     () => groupBotsForSidebar(bots, botSections).flatMap((group) => group.bots),
     [bots, botSections],

@@ -1,10 +1,7 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { i18n } from "@lingui/core";
 import { ORPCError } from "@orpc/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { agentImportErrorText } from "./agent-import-errors";
-import { UI_LOCALES } from "./ui-locale";
 
 beforeEach(() => {
   i18n.load("en", {});
@@ -41,29 +38,6 @@ describe("an import the server refused", () => {
         }),
       ),
     ).toBe("An imported API key could not be used. Untick it and try again.");
-  });
-
-  it("is translated in every language", () => {
-    for (const locale of UI_LOCALES.filter((item) => item !== "en")) {
-      const catalog = readFileSync(
-        fileURLToPath(new URL(`../locales/${locale}/messages.po`, import.meta.url)),
-        "utf8",
-      );
-      for (const message of [
-        "{provider} rejected the API key. Check your connection settings.",
-        "An imported API key could not be checked. Try again.",
-        "An imported API key could not be used. Untick it and try again.",
-        "Something with the same name was just added. Try again.",
-      ]) {
-        const entry = catalog
-          .split("\n\n")
-          .find((block) => block.includes(`msgid ${JSON.stringify(message)}\n`));
-        const translated = entry?.split("msgstr ")[1]?.trim();
-        expect(translated, `${locale}: ${message}`).toBeTruthy();
-        expect(translated, `${locale}: ${message}`).not.toBe('""');
-        expect(translated, `${locale}: ${message}`).not.toBe(JSON.stringify(message));
-      }
-    }
   });
 
   it("leaves any other error to the usual handling", () => {

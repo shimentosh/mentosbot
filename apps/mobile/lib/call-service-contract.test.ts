@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { UI_LOCALES } from "./ui-locale";
 
 const mobileRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const nativeRoot = resolve(mobileRoot, "modules/rakazo-notifications/android/src/main");
@@ -32,18 +31,7 @@ describe("Android call foreground service", () => {
     expect(service).toMatch(/catch \(_: Exception\)/);
   });
 
-  it("provides call strings in every shipped mobile locale", () => {
-    const directories = {
-      en: "values",
-      "zh-CN": "values-zh-rCN",
-      "zh-TW": "values-zh-rTW",
-      ru: "values-ru",
-      de: "values-de",
-      nl: "values-nl",
-      ja: "values-ja",
-      es: "values-es",
-      pl: "values-pl",
-    } as const satisfies Record<(typeof UI_LOCALES)[number], string>;
+  it("provides the call strings", () => {
     const keys = [
       "rakazo_call_channel",
       "rakazo_call_title",
@@ -51,10 +39,8 @@ describe("Android call foreground service", () => {
       "rakazo_call_answer",
       "rakazo_call_decline",
     ];
-    for (const locale of UI_LOCALES) {
-      const xml = source(`res/${directories[locale]}/call_strings.xml`);
-      for (const key of keys) expect(xml).toContain(`name="${key}"`);
-    }
+    const xml = source("res/values/call_strings.xml");
+    for (const key of keys) expect(xml).toContain(`name="${key}"`);
   });
 
   // call-card-keep-awake.test.tsx covers the call card starting the service instead of keep-awake.

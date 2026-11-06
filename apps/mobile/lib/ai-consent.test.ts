@@ -31,7 +31,7 @@ import type { AiRecipient } from "@rakazo/contracts";
 import { AI_DATA_DISCLOSURES } from "@rakazo/contracts";
 import { Alert } from "react-native";
 import { FOREGROUND_FALLBACK_MS, promptAiConsent } from "./ai-consent";
-import { resetI18nForTests, t } from "./i18n";
+import { t } from "./i18n";
 
 type AlertButton = { text?: string; onPress?: () => void };
 type AlertOptions = { onDismiss?: () => void };
@@ -59,7 +59,6 @@ function flushTimers() {
 
 describe("mobile AI consent prompt", () => {
   beforeEach(() => {
-    resetI18nForTests();
     vi.useRealTimers();
     native.alert.mockReset();
     native.openURL.mockReset().mockResolvedValue(undefined);
@@ -67,10 +66,9 @@ describe("mobile AI consent prompt", () => {
     native.listeners.clear();
   });
 
-  it.each(["en", "de", "ru", "zh-CN"] as const)(
-    "translates the consent copy in %s without changing recipient detail",
-    async (locale) => {
-      resetI18nForTests(locale);
+  it.each(["en"] as const)(
+    "shows the consent copy in %s without changing recipient detail",
+    async () => {
       const pending = promptAiConsent(recipient);
       expect(native.alert.mock.calls[0]?.slice(0, 2)).toEqual([
         t("Share data with {name}?", { name: recipient.name }),

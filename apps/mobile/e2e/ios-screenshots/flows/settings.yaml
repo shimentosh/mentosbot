@@ -155,21 +155,6 @@ name: Settings
     timeout: 3000
 - takeScreenshot: 17-delete-prompt
 - tapOn: "Cancel"
-# Account reopens where it was scrolled, below Language.
-- openLink: "rakazo:///account"
-- scrollUntilVisible:
-    element: "Language"
-    direction: UP
-    timeout: 15000
-    visibilityPercentage: 100
-    centerElement: true
-- tapOn: "Language"
-- extendedWaitUntil:
-    visible: "Deutsch"
-    timeout: 10000
-- waitForAnimationToEnd:
-    timeout: 3000
-- takeScreenshot: 18-language
 - openLink: "rakazo:///account"
 - scrollUntilVisible:
     element: "Artifacts"

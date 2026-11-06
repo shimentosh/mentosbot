@@ -1,13 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { askActionLabel } from "./ask-action-label";
-import { resetI18nForTests, t } from "./i18n";
 
 const fakeT = (message: string, values?: Record<string, string | number>) =>
   message.replace(/\{site\}/g, () => String(values?.site));
 
 describe("askActionLabel", () => {
-  afterEach(() => resetI18nForTests());
-
   it.each([
     ["allow", "created", "Create space"],
     ["deny", "created", "Create space"],
@@ -55,15 +52,4 @@ describe("askActionLabel", () => {
       }
     },
   );
-
-  it("uses the real mobile translator with site interpolation", () => {
-    resetI18nForTests("de");
-    expect(
-      askActionLabel(
-        { id: "always", label: "Server label" },
-        { approval: true, site: "example.test" },
-        t,
-      ),
-    ).toBe("example.test immer erlauben");
-  });
 });

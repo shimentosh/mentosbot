@@ -122,10 +122,6 @@ vi.mock("../components/DesktopUpdates", () => ({ DesktopUpdateSection: () => nul
 vi.mock("../lib/auth", () => ({
   authClient: { changePassword: vi.fn(), changeEmail: vi.fn(), updateUser: vi.fn() },
 }));
-vi.mock("../lib/i18n", () => ({
-  getActiveUiLocale: () => "en",
-  setUiLocale: (locale: string) => Promise.resolve(locale),
-}));
 vi.mock("../lib/ui-appearance", () => ({
   getUiAppearancePreference: () => "system",
   setUiAppearance: vi.fn(),

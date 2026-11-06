@@ -1,6 +1,6 @@
 /** @jsxRuntime automatic */
 import type { TransactionalEmail } from "@rakazo/adapter-kit";
-import { displayName, matchUiLocale, textDirectionForLocale, translate } from "@rakazo/core";
+import { displayName, textDirectionForLocale, translate } from "@rakazo/core";
 import { webLightTokens as lightTokens, webDarkTokens } from "@rakazo/ui-tokens";
 import type { ReactNode } from "react";
 import {
@@ -15,53 +15,9 @@ import {
   Text,
   toPlainText,
 } from "react-email";
-import { DE_MESSAGES } from "./locales/de.js";
-import { ES_MESSAGES } from "./locales/es.js";
-import { FR_MESSAGES } from "./locales/fr.js";
-import { HE_MESSAGES } from "./locales/he.js";
-import { HI_MESSAGES } from "./locales/hi.js";
-import { JA_MESSAGES } from "./locales/ja.js";
-import { KO_MESSAGES } from "./locales/ko.js";
-import { NL_MESSAGES } from "./locales/nl.js";
-import { PL_MESSAGES } from "./locales/pl.js";
-import { PT_BR_MESSAGES } from "./locales/pt-BR.js";
-import { RU_MESSAGES } from "./locales/ru.js";
-import { TR_MESSAGES } from "./locales/tr.js";
-import { ZH_CN_MESSAGES } from "./locales/zh-CN.js";
-import { ZH_TW_MESSAGES } from "./locales/zh-TW.js";
 
-/** Email copy by app language, keyed by the English text. Any other language reads English. */
-export const CATALOGS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  de: DE_MESSAGES,
-  es: ES_MESSAGES,
-  fr: FR_MESSAGES,
-  he: HE_MESSAGES,
-  hi: HI_MESSAGES,
-  ja: JA_MESSAGES,
-  ko: KO_MESSAGES,
-  nl: NL_MESSAGES,
-  pl: PL_MESSAGES,
-  "pt-BR": PT_BR_MESSAGES,
-  ru: RU_MESSAGES,
-  tr: TR_MESSAGES,
-  "zh-CN": ZH_CN_MESSAGES,
-  "zh-TW": ZH_TW_MESSAGES,
-};
-const LOCALES = Object.keys(CATALOGS);
-
-/**
- * The language to write an email in: the person's saved app language, else the language of the
- * browser that asked for it, else English.
- */
-export function emailLocale(saved: string | null | undefined, headers?: Headers | null): string {
-  if (saved) return matchUiLocale(saved, LOCALES);
-  // Browsers list languages best first: take the first one emails are written in.
-  for (const part of headers?.get("accept-language")?.split(",") ?? []) {
-    const tag = part.split(";")[0]?.trim() ?? "";
-    if (/^en(?:-|$)/i.test(tag)) return "en";
-    const locale = matchUiLocale(tag, LOCALES);
-    if (locale !== "en") return locale;
-  }
+/** Emails are written in English, whatever language the account or the asking browser uses. */
+export function emailLocale(_saved?: string | null, _headers?: Headers | null): string {
   return "en";
 }
 
@@ -71,11 +27,10 @@ export type EmailLocaleOf = (
   headers?: Headers | null,
 ) => Promise<string>;
 
-/** Translates email copy into `locale`, filling `{name}` placeholders. */
-export function emailText(locale: string) {
-  const catalog = CATALOGS[locale];
+/** Email copy with its `{name}` placeholders filled in; every email is English. */
+export function emailText(_locale: string) {
   return (text: string, values?: Record<string, string | number>) =>
-    translate(catalog, text, values);
+    translate(undefined, text, values);
 }
 
 export function greeting(say: ReturnType<typeof emailText>, name: string): string {

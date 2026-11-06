@@ -1,12 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { resetI18nForTests, t } from "./i18n";
+import { describe, expect, it } from "vitest";
+import { t } from "./i18n";
 import { secretDestinationLabel, siteHost } from "./secret-destination";
 
 describe("mobile credential destination label", () => {
-  afterEach(() => {
-    resetI18nForTests("en");
-  });
-
   it("shows the derived variable for a command credential, not the empty origin", () => {
     const label = secretDestinationLabel({
       name: "netbird-setup-key",
@@ -35,19 +31,6 @@ describe("mobile credential destination label", () => {
         auth: { type: "login" },
       }),
     ).toBe("xn--bcher-kva.example.test");
-  });
-
-  it("localizes the command label for the active locale", () => {
-    resetI18nForTests("zh-CN");
-    const localized = t("Command variable");
-    expect(localized).not.toBe("Command variable");
-    const label = secretDestinationLabel({
-      name: "api-token",
-      origin: "",
-      auth: { type: "command" },
-    });
-    expect(label).toBe(`${localized} $API_TOKEN`);
-    expect(label).not.toContain("Command variable");
   });
 });
 

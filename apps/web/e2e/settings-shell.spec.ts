@@ -1,34 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { captureScreenshot, completeOnboarding, openUserSettings, signup } from "./helpers";
 
-test("changing language updates settings overflow without resizing", async ({ page }, testInfo) => {
-  const stamp = Date.now();
-  await signup(page, `settings-language-${stamp}@rakazo.test`, "password12", "Settings");
-  await completeOnboarding(page);
-  const settings = await openUserSettings(page);
-  // Below the desktop breakpoint, where the section list scrolls sideways.
-  await page.setViewportSize({ width: 640, height: 700 });
-  const nav = settings.getByTestId("settings-nav");
-  const next = settings.getByRole("button", { name: "Next settings sections" });
-  const overflow = () => nav.evaluate((node) => node.scrollWidth - node.clientWidth);
-  const english = await overflow();
-
-  const language = settings.getByTestId("ui-locale-select");
-  await language.click();
-  await page.getByRole("option", { name: "Deutsch", exact: true }).click();
-  await expect(settings.getByRole("heading", { name: "Allgemein", exact: true })).toBeVisible();
-  // Longer German labels overflow further, and the scroll control follows without a resize.
-  await expect.poll(overflow).toBeGreaterThan(english);
-  await expect(next).toBeVisible();
-  await expect(next).toBeEnabled();
-  await captureScreenshot(page, testInfo, "settings-tabs-language-overflow");
-
-  await language.click();
-  await page.getByRole("option", { name: "English", exact: true }).click();
-  await expect(settings.getByRole("heading", { name: "General", exact: true })).toBeVisible();
-  await expect.poll(overflow).toBe(english);
-});
-
 test("narrow settings reveals the active section and offers scroll controls", async ({
   page,
 }, testInfo) => {

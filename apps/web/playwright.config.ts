@@ -62,7 +62,6 @@ const nightlySpecs = [
   "time-separators-replies",
   "tool-activity",
   "ui-appearance",
-  "ui-locale",
 ];
 // GitHub Actions shards the suite; each shard writes a blob that the merge job turns into one report.
 const reporters = [

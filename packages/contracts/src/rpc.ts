@@ -443,7 +443,7 @@ export const appContract = {
             /** Restyles every bot not pinned to another set, and is what new bots get. */
             botAvatarSet: BotAvatarSetSchema.optional(),
             timezone: TimeZoneSchema.nullable().optional(),
-            /** The language the app runs in, so emails can be written in it. */
+            /** Older apps still send their language; it is stored and otherwise unused. */
             locale: AppLocaleSchema.optional(),
           })
           .refine(

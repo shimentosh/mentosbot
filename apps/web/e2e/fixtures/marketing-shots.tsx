@@ -321,7 +321,7 @@ if (view === "subscription") {
   demoRpc["models/backups"] = [];
 }
 
-void bootstrapI18n("en").then(() => {
+void bootstrapI18n().then(() => {
   const shot =
     view === "model" ? (
       <ModelShot />

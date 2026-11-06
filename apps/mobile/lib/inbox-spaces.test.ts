@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MobileBot } from "./api";
 import { adoptDeletedSpaceFallback, rpc, selectedSpaceId, selectSpace } from "./api";
-import { activateUiLocale } from "./i18n";
 import type { InboxSpace } from "./inbox-spaces";
 import {
   canDeleteInboxSpace,
@@ -78,26 +77,15 @@ describe("spaceInboxItems", () => {
         },
       ],
     });
-    try {
-      activateUiLocale("de");
-      expect(
-        spaceInboxItems([input])
-          .filter((item) => item.type === "heading")
-          .map((item) => [item.key, item.title]),
-      ).toEqual([
-        [`${input.id}:pinned`, "Angeheftet"],
-        [`${input.id}:section:custom`, "Pinned"],
-        [`${input.id}:unassigned`, "Nicht zugewiesen"],
-      ]);
-      activateUiLocale("en");
-      expect(
-        spaceInboxItems([input])
-          .filter((item) => item.type === "heading")
-          .map((item) => item.title),
-      ).toEqual(["Pinned", "Pinned", "Unassigned"]);
-    } finally {
-      activateUiLocale("en");
-    }
+    expect(
+      spaceInboxItems([input])
+        .filter((item) => item.type === "heading")
+        .map((item) => [item.key, item.title]),
+    ).toEqual([
+      [`${input.id}:pinned`, "Pinned"],
+      [`${input.id}:section:custom`, "Pinned"],
+      [`${input.id}:unassigned`, "Unassigned"],
+    ]);
   });
   it("keeps an empty space visible and selectable by its own id", () => {
     const empty = space();

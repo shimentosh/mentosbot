@@ -96,7 +96,6 @@ import {
   removeTrustedLinkSite,
   useTrustedLinkSites,
 } from "../../lib/trusted-link-sites";
-import { UI_LOCALE_LABELS } from "../../lib/ui-locale";
 import { errorText } from "../../lib/user-error";
 
 export default function Account() {
@@ -701,18 +700,6 @@ export default function Account() {
             />
           </View>
         ) : null}
-
-        <SettingsGroup>
-          <SettingsRow
-            accessibilityRole="button"
-            accessibilityLabel={t("Language")}
-            accessibilityValue={{ text: UI_LOCALE_LABELS[locale] }}
-            chevron="right"
-            onPress={() => router.push("/language")}
-            title={t("Language")}
-            value={UI_LOCALE_LABELS[locale]}
-          />
-        </SettingsGroup>
 
         {Platform.OS === "android" ? (
           <SettingsGroup accessibilityLabel={t("Notifications")} label={t("Notifications")}>

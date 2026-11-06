@@ -84,7 +84,7 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
   useChatOnScreen();
   const tokens = mobileTokens();
   const styles = useThemedStyles(createThreadHeaderStyles);
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const focused = useIsFocused();
   const foreground = useAppForeground();
   const router = useRouter();
@@ -233,9 +233,9 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
           botName: routine.botName,
         })),
         connectors: mentionConnectors,
-        cronLabels: cronLabels(locale),
+        cronLabels: cronLabels(),
       }),
-    [groupId, inGroup, locale, mentionBots, mentionConnectors, mentionGroups, mentionRoutines],
+    [groupId, inGroup, mentionBots, mentionConnectors, mentionGroups, mentionRoutines],
   );
   const currentBot = botId ? mentionBots.find((bot) => bot.id === botId) : undefined;
   // Until the chat's own roster arrives, the bot as the inbox last loaded it.

@@ -20,7 +20,7 @@ const block = buildApprovalAskBlock(
 );
 
 if (block.kind !== "ask") throw new Error("Expected approval card");
-void bootstrapI18n("en").then(() => {
+void bootstrapI18n().then(() => {
   createRoot(document.getElementById("root")!).render(
     <I18nProvider i18n={i18n}>
       <main className="mx-auto max-w-xl p-6">
