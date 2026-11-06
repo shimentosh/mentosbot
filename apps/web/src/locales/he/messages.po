@@ -3805,10 +3805,6 @@ msgstr ""
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "השיחה, הקבצים והרוטינות שלו יימחקו לצמיתות. בוטים שהוא יצר יישארו ברשימה."
 
-#: src/pages/shell/bot-panel.tsx
-msgid "Its own"
-msgstr ""
-
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "הקישור המשותף יפסיק לעבוד והכרטיסים שלו בצ'אט יוצגו כמחוקים. אי אפשר לבטל את הפעולה."
@@ -6209,6 +6205,10 @@ msgstr "שיתוף"
 msgid "Share “{title}”"
 msgstr "שיתוף „{title}”"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Share sign-ins with my other bots"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "שיתוף, כל מי שיש לו את הקישור יכול לצפות"
@@ -6225,11 +6225,6 @@ msgstr "זיכרון משותף"
 
 #: src/pages/shell/bot-share-section.tsx
 msgid "Shared with"
-msgstr ""
-
-#. placeholder {0}: other.name
-#: src/pages/shell/bot-panel.tsx
-msgid "Shared with {0}"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -6330,10 +6325,6 @@ msgstr "הרשמה"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
-msgstr ""
-
-#: src/pages/shell/bot-panel.tsx
-msgid "Sign-ins"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx

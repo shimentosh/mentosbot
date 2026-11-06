@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   AdapterContext,
   BrowserActRequest,
@@ -50,6 +51,11 @@ type LivePayload = Partial<PageBrowserResult>;
 
 /** The sign-in group a bot's browser shares cookies with, if any. */
 export type SignInsLookup = (botId: string) => Promise<string | undefined>;
+
+/** One group per owner and Space: the bots that share sign-ins all share the same ones. */
+export function signInGroupKey(spaceId: string, userId: string): string {
+  return createHash("sha256").update(`sign-ins\0${spaceId}\0${userId}`).digest("hex").slice(0, 32);
+}
 
 export type LivePageBrowserDriver = (
   computer: ComputerRef,

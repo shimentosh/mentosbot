@@ -137,8 +137,8 @@ export const BotSchema = z.object({
   crossSpaceCommunication: z.boolean().optional(),
   dailyCheckIns: z.boolean().optional(),
   fleetManagement: z.boolean().default(true),
-  /** Bots with the same group share their browsers' sign-ins; null keeps its own. */
-  signInGroup: z.string().nullable().optional(),
+  /** Its browser shares sign-ins with the owner's other bots that share theirs. */
+  shareSignIns: z.boolean().optional(),
   disabledBuiltinTools: z.array(z.string()).default([]),
   webhookConfigured: z.boolean(),
   /** Present when created with an idempotency key (e.g. onboarding:first). */
@@ -493,6 +493,7 @@ export const UpdateBotInput = z
     crossSpaceCommunication: z.boolean().optional(),
     dailyCheckIns: z.boolean().optional(),
     fleetManagement: z.boolean().optional(),
+    shareSignIns: z.boolean().optional(),
     disabledBuiltinTools: DisabledBuiltinToolsSchema.optional(),
     /** Write only while these settings still hold, as an undo does. */
     expectedSettings: BotSettingsValuesSchema.optional(),

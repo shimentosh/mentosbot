@@ -3805,10 +3805,6 @@ msgstr ""
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "Seine Unterhaltung, Dateien und Routinen werden dauerhaft gelöscht. Von ihm erstellte Bots bleiben in deiner Liste."
 
-#: src/pages/shell/bot-panel.tsx
-msgid "Its own"
-msgstr ""
-
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "Der geteilte Link funktioniert dann nicht mehr und die Karten im Chat zeigen sie als gelöscht. Das lässt sich nicht rückgängig machen."
@@ -6209,6 +6205,10 @@ msgstr "Teilen"
 msgid "Share “{title}”"
 msgstr "„{title}“ teilen"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Share sign-ins with my other bots"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "Teilen, jeder mit dem Link kann sie ansehen"
@@ -6225,11 +6225,6 @@ msgstr "Gemeinsame Erinnerungen"
 
 #: src/pages/shell/bot-share-section.tsx
 msgid "Shared with"
-msgstr ""
-
-#. placeholder {0}: other.name
-#: src/pages/shell/bot-panel.tsx
-msgid "Shared with {0}"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -6330,10 +6325,6 @@ msgstr "Registrieren"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
-msgstr ""
-
-#: src/pages/shell/bot-panel.tsx
-msgid "Sign-ins"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx

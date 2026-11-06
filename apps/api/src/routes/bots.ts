@@ -50,7 +50,6 @@ import type { AgentImportServices } from "../agent-import.js";
 import { agentImportSetupState, createImportedBot, previewAgentImport } from "../agent-import.js";
 import { deleteAgentSecret, listAgentSecrets, putAgentSecret } from "../agent-secrets.js";
 import { changedBotSettings } from "../bot-setting-analytics.js";
-import { setBotSignIns } from "../bot-sign-ins.js";
 import { requireIdentityConfirmation } from "../identity-confirmation.js";
 import type { RouterDeps } from "../router.js";
 import { listBotsSharedWith } from "../shared-bot-access.js";
@@ -471,6 +470,7 @@ export function botsRoutes(ctx: RouterContext) {
             ...(input.fleetManagement !== undefined
               ? { fleetManagement: input.fleetManagement }
               : {}),
+            ...(input.shareSignIns !== undefined ? { shareSignIns: input.shareSignIns } : {}),
             ...(input.disabledBuiltinTools !== undefined
               ? { disabledBuiltinTools: input.disabledBuiltinTools }
               : {}),
@@ -511,12 +511,6 @@ export function botsRoutes(ctx: RouterContext) {
           throw new ORPCError("CONFLICT", { message: error.message });
         }
         return (await repos.listBots(context.actor)).find((bot) => bot.id === input.botId)!;
-      }),
-      setSignIns: authed.bots.setSignIns.handler(async ({ context, input }) => {
-        await setBotSignIns(deps.prisma, context.actor, input.botId, input.withBotId);
-        const bot = (await repos.listBots(context.actor)).find((entry) => entry.id === input.botId);
-        if (!bot) throw new IsolationError();
-        return bot;
       }),
       setComputer: authed.bots.setComputer.handler(async ({ context, input }) => {
         const bot = await repos.getBot(context.actor, input.botId);

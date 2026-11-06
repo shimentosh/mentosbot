@@ -1,7 +1,7 @@
 import type { AdapterContext, ComputerRef, PageBrowserCommand } from "@rakazo/adapter-kit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBrowserProvider, resolveBrowserProviderKind } from "./browser-provider-factory.js";
-import { ComputerBrowserProvider } from "./computer-browser.js";
+import { ComputerBrowserProvider, signInGroupKey } from "./computer-browser.js";
 import { FakeBrowserProvider } from "./fake-browser.js";
 import { pageBrowserSessionKey } from "./page-browser-session.js";
 
@@ -139,15 +139,22 @@ describe("computer browser provider", () => {
       { url: "https://example.test/live" },
       { ...baseContext, botId: "bot-b" },
     );
-    expect(liveDriver.mock.calls.map(([, request]) => request.signIns)).toEqual([
-      "f".repeat(32),
-      undefined,
-      undefined,
-    ]);
+    expect(
+      liveDriver.mock.calls.map(([, request]) =>
+        "signIns" in request ? request.signIns : undefined,
+      ),
+    ).toEqual(["f".repeat(32), undefined, undefined]);
+  });
+
+  it("gives each owner one sign-in group per Space", () => {
+    expect(signInGroupKey("space-1", "ada")).toMatch(/^[0-9a-f]{32}$/);
+    expect(signInGroupKey("space-1", "ada")).toBe(signInGroupKey("space-1", "ada"));
+    expect(signInGroupKey("space-1", "grace")).not.toBe(signInGroupKey("space-1", "ada"));
+    expect(signInGroupKey("space-2", "ada")).not.toBe(signInGroupKey("space-1", "ada"));
   });
 
   it("browses with the browser's own sign-ins when its group cannot be read", async () => {
-    const liveDriver = vi.fn(async () => ({
+    const liveDriver = vi.fn(async (_c: ComputerRef, _request: PageBrowserCommand) => ({
       ok: true,
       url: "https://example.test/live",
       title: "Live",

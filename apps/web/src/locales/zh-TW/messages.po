@@ -3806,10 +3806,6 @@ msgstr ""
 msgid "Its conversation, files, and routines will be permanently deleted. Bots it created stay in your list."
 msgstr "它的對話、檔案和例行任務將被永久刪除。它建立的機器人仍留在清單中。"
 
-#: src/pages/shell/bot-panel.tsx
-msgid "Its own"
-msgstr ""
-
 #: src/components/pages/PagesList.tsx
 msgid "Its shared link stops working and its cards in chat show it as deleted. This can't be undone."
 msgstr "其共用連結將失效，聊天中的卡片會顯示為已刪除。此操作無法復原。"
@@ -6210,6 +6206,10 @@ msgstr "分享"
 msgid "Share “{title}”"
 msgstr "分享「{title}」"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Share sign-ins with my other bots"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "共用，任何擁有連結的人都能檢視"
@@ -6226,11 +6226,6 @@ msgstr "共用記憶"
 
 #: src/pages/shell/bot-share-section.tsx
 msgid "Shared with"
-msgstr ""
-
-#. placeholder {0}: other.name
-#: src/pages/shell/bot-panel.tsx
-msgid "Shared with {0}"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -6331,10 +6326,6 @@ msgstr "註冊"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
-msgstr ""
-
-#: src/pages/shell/bot-panel.tsx
-msgid "Sign-ins"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx

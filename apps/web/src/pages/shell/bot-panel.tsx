@@ -101,62 +101,6 @@ export function ComputerModePicker({
   );
 }
 
-/**
- * Which of the owner's other bots on the same computer this bot's browser shares sign-ins with.
- * Bots with their own computer are left out: their browsers are on another machine.
- */
-function SignInsPicker({
-  id,
-  bot,
-  bots,
-  onChange,
-}: {
-  id: string;
-  bot: Bot;
-  bots: Bot[];
-  onChange: (withBotId: string | null) => Promise<void>;
-}) {
-  const { t } = useLingui();
-  const [saving, setSaving] = useState(false);
-  const others = bots.filter(
-    (other) =>
-      other.id !== bot.id &&
-      other.spaceId === bot.spaceId &&
-      !other.share &&
-      !other.archivedAt &&
-      other.computerMode === "team",
-  );
-  if (!others.length) return null;
-  const sharing = bot.signInGroup
-    ? (others.find((other) => other.signInGroup === bot.signInGroup)?.id ?? "")
-    : "";
-  return (
-    <label
-      htmlFor={id}
-      className="mt-4 flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
-    >
-      <Trans>Sign-ins</Trans>
-      <NativeSelect
-        id={id}
-        className="max-w-2/3"
-        value={sharing}
-        disabled={saving}
-        onChange={(event) => {
-          setSaving(true);
-          void onChange(event.target.value || null).finally(() => setSaving(false));
-        }}
-      >
-        <NativeSelectOption value="">{t`Its own`}</NativeSelectOption>
-        {others.map((other) => (
-          <NativeSelectOption key={other.id} value={other.id}>
-            {t`Shared with ${other.name}`}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-    </label>
-  );
-}
-
 export type BotPanelTab = "computer" | "routines" | "pages" | "settings";
 
 /** A bot's profile above its Computer, Routines, Pages and Advanced tabs. */
@@ -172,13 +116,8 @@ export function BotSettings({
   onClear,
   focusModel = 0,
   onOpenConnections,
-  bots = [],
-  onSignInsChange,
 }: {
   bot: Bot;
-  /** The roster, for the bots this one can share browser sign-ins with. */
-  bots?: Bot[];
-  onSignInsChange?: (withBotId: string | null) => Promise<void>;
   tab?: BotPanelTab;
   onTabChange?: (tab: BotPanelTab) => void;
   computer?: ReactNode;
@@ -199,6 +138,7 @@ export function BotSettings({
     memoryScope?: "isolated" | "shared" | null;
     autoSpeak?: boolean;
     fleetManagement?: boolean;
+    shareSignIns?: boolean;
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     voiceId?: string | null;
@@ -250,6 +190,8 @@ export function BotSettings({
   useEffect(() => setDailyCheckIns(bot.dailyCheckIns ?? true), [bot.dailyCheckIns]);
   const [fleetManagement, setFleetManagement] = useState(bot.fleetManagement);
   useEffect(() => setFleetManagement(bot.fleetManagement), [bot.fleetManagement]);
+  const [shareSignIns, setShareSignIns] = useState(bot.shareSignIns ?? false);
+  useEffect(() => setShareSignIns(bot.shareSignIns ?? false), [bot.shareSignIns]);
   const [voiceId, setVoiceId] = useState(bot.voiceId ?? "");
   const [modelKey, setModelKey] = useState(
     bot.modelProvider && bot.modelId ? modelOptionKey(bot.modelProvider, bot.modelId) : "",
@@ -310,6 +252,7 @@ export function BotSettings({
         avatarSet?: BotAvatarSet;
         notifyOnFinish?: boolean;
         fleetManagement?: boolean;
+        shareSignIns?: boolean;
         crossSpaceCommunication?: boolean;
         dailyCheckIns?: boolean;
         disabledBuiltinTools?: string[];
@@ -399,6 +342,7 @@ export function BotSettings({
       avatarSet?: BotAvatarSet;
       notifyOnFinish?: boolean;
       fleetManagement?: boolean;
+      shareSignIns?: boolean;
       crossSpaceCommunication?: boolean;
       dailyCheckIns?: boolean;
       disabledBuiltinTools?: string[];
@@ -419,6 +363,10 @@ export function BotSettings({
       }
       if (patchOverrides?.fleetManagement !== undefined) {
         await onSave({ fleetManagement: patchOverrides.fleetManagement });
+        return;
+      }
+      if (patchOverrides?.shareSignIns !== undefined) {
+        await onSave({ shareSignIns: patchOverrides.shareSignIns });
         return;
       }
       const selected = selectedModel;
@@ -527,6 +475,7 @@ export function BotSettings({
         setDailyCheckIns(!patchOverrides.dailyCheckIns);
       if (patchOverrides?.fleetManagement !== undefined)
         setFleetManagement(!patchOverrides.fleetManagement);
+      if (patchOverrides?.shareSignIns !== undefined) setShareSignIns(!patchOverrides.shareSignIns);
       setError(errorText(err, t`Could not save`));
     } finally {
       pendingSavesRef.current -= 1;
@@ -556,6 +505,7 @@ export function BotSettings({
     avatarSet?: BotAvatarSet;
     notifyOnFinish?: boolean;
     fleetManagement?: boolean;
+    shareSignIns?: boolean;
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     disabledBuiltinTools?: string[];
@@ -735,20 +685,21 @@ export function BotSettings({
             </div>
             <SettingsGroup label={t`Computer`} plain>
               <ComputerModePicker value={computerMode} onChange={setComputerMode} />
-              {onSignInsChange && bot.computerMode === "team" ? (
-                <SignInsPicker
-                  id={`${ids}-sign-ins`}
-                  bot={bot}
-                  bots={bots}
-                  onChange={async (withBotId) => {
-                    setError(null);
-                    try {
-                      await onSignInsChange(withBotId);
-                    } catch (err) {
-                      setError(errorText(err, t`Could not save`));
-                    }
-                  }}
-                />
+              {bot.computerMode === "team" ? (
+                <div className="mt-4 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 text-sm">
+                  <label htmlFor={`${ids}-share-sign-ins`} className={rowLabelClass}>
+                    <Trans>Share sign-ins with my other bots</Trans>
+                  </label>
+                  <Switch
+                    id={`${ids}-share-sign-ins`}
+                    checked={shareSignIns}
+                    disabled={saving}
+                    onCheckedChange={(checked) => {
+                      setShareSignIns(checked);
+                      void enqueueSave({ shareSignIns: checked });
+                    }}
+                  />
+                </div>
               ) : null}
               {memoryProviderConfigured ? (
                 <div className="mt-4 text-sm text-foreground">

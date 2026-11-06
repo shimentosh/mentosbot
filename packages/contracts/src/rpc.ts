@@ -702,8 +702,6 @@ export const appContract = {
       )
       .output(BotSchema),
     setComputer: oc.input(z.object({ botId: Id, mode: ComputerModeSchema })).output(BotSchema),
-    /** Share sign-ins with another of the owner's bots on the same computer, or null for its own. */
-    setSignIns: oc.input(z.object({ botId: Id, withBotId: Id.nullable() })).output(BotSchema),
     archive: oc.input(botId).output(z.object({ ok: z.literal(true) })),
     restore: oc.input(botId).output(z.object({ ok: z.literal(true) })),
     remove: oc
