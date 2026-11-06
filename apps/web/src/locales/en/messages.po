@@ -2244,6 +2244,7 @@ msgid "Could not load this chat."
 msgstr "Could not load this chat."
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Could not load this file."
 msgstr "Could not load this file."
 
@@ -3002,6 +3003,11 @@ msgstr "Download CSV"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Download PDF"
 msgstr "Download PDF"
+
+#. placeholder {0}: props.name
+#: src/components/ArtifactFileCard.tsx
+msgid "Downloading {0}"
+msgstr "Downloading {0}"
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3959,6 +3965,10 @@ msgstr "Load older runs"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Load web images automatically"
 msgstr "Load web images automatically"
+
+#: src/pages/shell/message-cards.tsx
+msgid "Loading {name}"
+msgstr "Loading {name}"
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7135,6 +7145,7 @@ msgstr "Trusted sites"
 #: src/pages/ActivityList.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
+#: src/pages/shell/message-cards.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Try again"
 msgstr "Try again"
@@ -7264,6 +7275,16 @@ msgstr "Upgrade now"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Upload"
 msgstr "Upload"
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploaded {0}"
+msgstr "Uploaded {0}"
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploading {0}"
+msgstr "Uploading {0}"
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

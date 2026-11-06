@@ -2245,6 +2245,7 @@ msgid "Could not load this chat."
 msgstr "無法載入此對話。"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Could not load this file."
 msgstr "無法載入此檔案。"
 
@@ -3003,6 +3004,11 @@ msgstr "下載 CSV"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Download PDF"
 msgstr "下載 PDF"
+
+#. placeholder {0}: props.name
+#: src/components/ArtifactFileCard.tsx
+msgid "Downloading {0}"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3960,6 +3966,10 @@ msgstr "載入更早的執行紀錄"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Load web images automatically"
 msgstr "自動載入網路圖片"
+
+#: src/pages/shell/message-cards.tsx
+msgid "Loading {name}"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7136,6 +7146,7 @@ msgstr "受信任的網站"
 #: src/pages/ActivityList.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
+#: src/pages/shell/message-cards.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Try again"
 msgstr "重試"
@@ -7265,6 +7276,16 @@ msgstr "立即升級"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Upload"
 msgstr "上傳"
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploaded {0}"
+msgstr ""
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploading {0}"
+msgstr ""
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

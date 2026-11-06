@@ -2244,6 +2244,7 @@ msgid "Could not load this chat."
 msgstr "このチャットを読み込めませんでした。"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Could not load this file."
 msgstr "このファイルを読み込めませんでした。"
 
@@ -3002,6 +3003,11 @@ msgstr "CSV をダウンロード"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Download PDF"
 msgstr "PDF をダウンロード"
+
+#. placeholder {0}: props.name
+#: src/components/ArtifactFileCard.tsx
+msgid "Downloading {0}"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3959,6 +3965,10 @@ msgstr "過去の実行を読み込む"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Load web images automatically"
 msgstr "Web画像を自動で読み込む"
+
+#: src/pages/shell/message-cards.tsx
+msgid "Loading {name}"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7135,6 +7145,7 @@ msgstr "信頼済みサイト"
 #: src/pages/ActivityList.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
+#: src/pages/shell/message-cards.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Try again"
 msgstr "再試行"
@@ -7264,6 +7275,16 @@ msgstr "今すぐアップグレード"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Upload"
 msgstr "アップロード"
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploaded {0}"
+msgstr ""
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploading {0}"
+msgstr ""
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

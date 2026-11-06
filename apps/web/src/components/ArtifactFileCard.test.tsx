@@ -301,3 +301,25 @@ it("says when a video cannot be loaded", async () => {
   expect(container.querySelector('[role="alert"]')?.textContent).toContain("Could not load");
   expect(container.querySelector("video")).toBeNull();
 });
+
+it("shows a file downloading until it is saved", async () => {
+  let finish!: () => void;
+  mocks.download.mockImplementationOnce(() => new Promise<void>((resolve) => (finish = resolve)));
+  await act(async () =>
+    root?.render(
+      <ArtifactFileCard
+        target={{ botId: "bot-1" }}
+        artifactId="archive"
+        name="report.zip"
+        mimeType="application/zip"
+        size={2048}
+      />,
+    ),
+  );
+  await act(async () => container.querySelector("button")?.click());
+  expect(container.querySelector('[aria-label="Downloading report.zip"]')).not.toBeNull();
+  await act(async () => container.querySelector("button")?.click());
+  expect(mocks.download).toHaveBeenCalledTimes(1);
+  await act(async () => finish());
+  expect(container.querySelector('[aria-label="Downloading report.zip"]')).toBeNull();
+});

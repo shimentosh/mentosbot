@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ArtifactTarget } from "./artifact-open";
 import { decodeArtifactBase64 } from "./artifact-open";
 import { rpc } from "./rpc";
@@ -63,16 +63,25 @@ function acquireDownload(target: ArtifactTarget, artifactId: string) {
   };
 }
 
-export function useArtifactImage(
+export type ArtifactImageState = {
+  src: string | null;
+  failed: boolean;
+  retry: () => void;
+};
+
+export function useArtifactImageState(
   target: ArtifactTarget | undefined,
   artifactId: string,
   enabled = true,
-) {
+): ArtifactImageState {
   const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const botId = target && "botId" in target ? target.botId : undefined;
   const groupId = target && "groupId" in target ? target.groupId : undefined;
   useEffect(() => {
     setSrc(null);
+    setFailed(false);
     if (!enabled || (!botId && !groupId)) return;
     let cancelled = false;
     const download = acquireDownload(botId ? { botId } : { groupId: groupId! }, artifactId);
@@ -80,11 +89,22 @@ export function useArtifactImage(
       .then((objectUrl) => {
         if (!cancelled) setSrc(objectUrl);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
     return () => {
       cancelled = true;
       download.release();
     };
-  }, [artifactId, botId, groupId, enabled]);
-  return src;
+  }, [artifactId, botId, groupId, enabled, attempt]);
+  const retry = useCallback(() => setAttempt((count) => count + 1), []);
+  return { src, failed, retry };
+}
+
+export function useArtifactImage(
+  target: ArtifactTarget | undefined,
+  artifactId: string,
+  enabled = true,
+) {
+  return useArtifactImageState(target, artifactId, enabled).src;
 }

@@ -3,7 +3,7 @@ import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import { artifactPreviewKind, isAttachmentAudioMimeType } from "@rakazo/contracts";
 import { Button, Dialog, DialogClose, DialogContent, DialogTitle, Spinner } from "@rakazo/ui-web";
 import { Code2, Download, FileText, Play, X } from "lucide-react";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { ArtifactTarget } from "../lib/artifact-open";
 import { downloadArtifact, downloadArtifactBytes, fetchArtifactBytes } from "../lib/artifact-open";
@@ -38,15 +38,25 @@ export function ArtifactFileCard(props: ArtifactFileCardProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   async function startDownload() {
+    if (downloading) return;
     setDownloadError(null);
+    setDownloading(true);
     try {
       await downloadArtifact(props.target, props.artifactId, props.name, props.mimeType);
     } catch {
       setDownloadError(t`Could not download ${props.name}. Try again.`);
+    } finally {
+      setDownloading(false);
     }
   }
+  const downloadIcon = downloading ? (
+    <Spinner aria-label={t`Downloading ${props.name}`} className="size-[19px]" />
+  ) : (
+    <Download strokeWidth={1.8} className="size-[19px]" />
+  );
 
   if (
     isAttachmentAudioMimeType(props.mimeType) ||
@@ -65,6 +75,8 @@ export function ArtifactFileCard(props: ArtifactFileCardProps) {
           key={JSON.stringify([props.target, props.artifactId, props.mimeType])}
           {...props}
           onDownload={startDownload}
+          downloadIcon={downloadIcon}
+          downloading={downloading}
         />
         {downloadError ? (
           <div className={video ? "px-4 pb-3" : undefined}>
@@ -81,13 +93,22 @@ export function ArtifactFileCard(props: ArtifactFileCardProps) {
         <button
           type="button"
           onClick={() => void startDownload()}
-          className="rounded-[20px] bg-card px-4 py-3 text-left text-[14px] text-foreground hover:bg-accent"
+          aria-busy={downloading || undefined}
+          className="flex items-center gap-3 rounded-[20px] bg-card px-4 py-3 text-left text-[14px] text-foreground hover:bg-accent"
         >
-          <div className="font-medium">{props.name}</div>
-          <div className="mt-1 flex gap-2 text-muted-foreground">
-            <span>{props.mimeType}</span>
-            <span>{formatSize(props.size)}</span>
+          <div>
+            <div className="font-medium">{props.name}</div>
+            <div className="mt-1 flex gap-2 text-muted-foreground">
+              <span>{props.mimeType}</span>
+              <span>{formatSize(props.size)}</span>
+            </div>
           </div>
+          {downloading ? (
+            <Spinner
+              aria-label={t`Downloading ${props.name}`}
+              className="size-[19px] text-muted-foreground"
+            />
+          ) : null}
         </button>
         {downloadError ? <DownloadError message={downloadError} /> : null}
       </div>
@@ -123,10 +144,11 @@ export function ArtifactFileCard(props: ArtifactFileCardProps) {
             <button
               type="button"
               aria-label={t`Download ${props.name}`}
+              aria-busy={downloading || undefined}
               onClick={() => void startDownload()}
               className="grid w-14 shrink-0 place-items-center border-l border-border text-muted-foreground hover:bg-accent hover:text-foreground"
             >
-              <Download size={19} strokeWidth={1.8} />
+              {downloadIcon}
             </button>
           </IconTooltip>
         </BuiCard>
@@ -271,7 +293,13 @@ function MediaArtifactPreview({
   mimeType,
   size,
   onDownload,
-}: ArtifactFileCardProps & { onDownload: () => Promise<void> }) {
+  downloadIcon,
+  downloading,
+}: ArtifactFileCardProps & {
+  onDownload: () => Promise<void>;
+  downloadIcon: ReactNode;
+  downloading: boolean;
+}) {
   const { t } = useLingui();
   const video = artifactPreviewKind(mimeType) === "video";
   const [state, setState] = useState<
@@ -306,12 +334,14 @@ function MediaArtifactPreview({
       current.url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: mimeType }));
       setState({ status: "ready", src: current.url });
     } catch {
-      if (!current.cancelled) setState({ status: "error" });
+      if (current.cancelled) return;
+      current.started = false;
+      setState({ status: "error" });
     }
   }
 
   const playButton =
-    state.status === "idle" || state.status === "loading" ? (
+    state.status !== "ready" ? (
       <Button
         variant={video ? "secondary" : "ghost"}
         size="icon-lg"
@@ -329,10 +359,11 @@ function MediaArtifactPreview({
       variant="ghost"
       size="icon-lg"
       aria-label={t`Download ${name}`}
+      aria-busy={downloading || undefined}
       onClick={() => void onDownload()}
       className="text-muted-foreground"
     >
-      <Download strokeWidth={1.8} className="size-[19px]" />
+      {downloadIcon}
     </Button>
   );
   const spinner =

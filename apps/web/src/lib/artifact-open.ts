@@ -19,13 +19,18 @@ export async function fetchArtifactBytes(
   return decodeArtifactBase64(artifact.contentBase64);
 }
 
-export function downloadArtifactBytes(name: string, mimeType: string, bytes: Uint8Array): void {
-  const blob = new Blob([new Uint8Array(bytes)], { type: mimeType });
-  const url = URL.createObjectURL(blob);
+/** Saves a URL the page already holds, such as a loaded image's object URL. */
+export function downloadUrl(url: string, name: string): void {
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = name;
   anchor.click();
+}
+
+export function downloadArtifactBytes(name: string, mimeType: string, bytes: Uint8Array): void {
+  const blob = new Blob([new Uint8Array(bytes)], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  downloadUrl(url, name);
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 

@@ -7,6 +7,8 @@ export type PendingAttachment = {
   threadKey: string;
   file: File;
   previewUrl?: string;
+  /** Set only while a send carries this file. */
+  upload?: "uploading" | "uploaded";
 };
 
 /** Identity colour for bots the roster no longer knows about. */

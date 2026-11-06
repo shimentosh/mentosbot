@@ -2244,6 +2244,7 @@ msgid "Could not load this chat."
 msgstr "이 채팅을 불러오지 못했습니다."
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Could not load this file."
 msgstr "파일을 불러오지 못했습니다."
 
@@ -3002,6 +3003,11 @@ msgstr "CSV 다운로드"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Download PDF"
 msgstr "PDF 다운로드"
+
+#. placeholder {0}: props.name
+#: src/components/ArtifactFileCard.tsx
+msgid "Downloading {0}"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3959,6 +3965,10 @@ msgstr "이전 실행 불러오기"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Load web images automatically"
 msgstr "웹 이미지 자동으로 불러오기"
+
+#: src/pages/shell/message-cards.tsx
+msgid "Loading {name}"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7135,6 +7145,7 @@ msgstr "신뢰할 수 있는 사이트"
 #: src/pages/ActivityList.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
+#: src/pages/shell/message-cards.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Try again"
 msgstr "다시 시도"
@@ -7264,6 +7275,16 @@ msgstr ""
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Upload"
 msgstr "업로드"
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploaded {0}"
+msgstr ""
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploading {0}"
+msgstr ""
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

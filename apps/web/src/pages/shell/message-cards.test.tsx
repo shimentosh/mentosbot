@@ -13,12 +13,14 @@ const calls = vi.hoisted(() => ({
     authorizationUrl: "https://identity.example.test/authorize",
   })),
   approve: vi.fn(async () => ({ ok: true })),
+  artifact: vi.fn(async () => ({ mimeType: "image/png", contentBase64: btoa("png") })),
 }));
 vi.mock("../../lib/rpc", () => ({
   rpc: {
     connections: { begin: calls.begin, complete: calls.complete },
     onboarding: { appConnected: calls.mark },
     mcp: { oauth: { begin: calls.oauthBegin }, assignments: { approve: calls.approve } },
+    artifacts: { get: calls.artifact },
   },
 }));
 vi.mock("@lingui/react/macro", () => ({
@@ -30,7 +32,7 @@ vi.mock("@lingui/react/macro", () => ({
 }));
 
 import { connectMcpOauth } from "../../lib/mcp-connect";
-import { AppConnectCard, McpApprovalCard } from "./message-cards";
+import { AppConnectCard, ArtifactImage, McpApprovalCard } from "./message-cards";
 
 function popupFlow({ focused }: { focused: boolean }) {
   const channels: FakeChannel[] = [];
@@ -140,5 +142,56 @@ it("authorizes a card in a normal chat and marks its thread connected", async ()
   } finally {
     await act(async () => root.unmount());
     host.remove();
+  }
+});
+
+it("downloads an opened chat image under its own name", async () => {
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:image" }));
+  const saved: { href: string; download: string }[] = [];
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    saved.push({ href: this.href, download: this.download });
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(<ArtifactImage target={{ botId: "bot" }} artifactId="image" name="post.png" />),
+    );
+    const thumbnail = host.querySelector("button");
+    await act(async () => thumbnail?.click());
+    const download = document.querySelector<HTMLButtonElement>('[aria-label="Download post.png"]');
+    await act(async () => download?.click());
+    expect(saved).toEqual([{ href: "blob:image", download: "post.png" }]);
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+  }
+});
+
+it("shows a loading image, then lets a failed one try again", async () => {
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:image" }));
+  let fail!: (error: Error) => void;
+  calls.artifact.mockImplementationOnce(
+    () => new Promise((_, reject) => (fail = reject)) as ReturnType<typeof calls.artifact>,
+  );
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(<ArtifactImage target={{ botId: "bot" }} artifactId="flaky" name="chart.png" />),
+    );
+    expect(host.querySelector('[aria-label="Loading chart.png"]')).not.toBeNull();
+    await act(async () => fail(new Error("offline")));
+    expect(host.textContent).toContain("Could not load this file.");
+    const retry = Array.from(host.querySelectorAll("button")).find(
+      (button) => button.textContent === "Try again",
+    );
+    await act(async () => retry?.click());
+    expect(host.querySelector('img[alt="chart.png"]')?.getAttribute("src")).toBe("blob:image");
+  } finally {
+    act(() => root.unmount());
   }
 });

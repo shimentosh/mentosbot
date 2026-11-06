@@ -17,8 +17,8 @@ import {
   truncateSlashDescription,
   updateComposerMentionBindings,
 } from "@rakazo/core";
-import { Button } from "@rakazo/ui-web";
-import { ArrowUp, Box, Paperclip, Plus, Settings, Square, X } from "lucide-react";
+import { Button, Spinner } from "@rakazo/ui-web";
+import { ArrowUp, Box, Check, Paperclip, Plus, Settings, Square, X } from "lucide-react";
 import type { ClipboardEvent, ComponentProps, DragEvent, RefObject } from "react";
 import {
   memo,
@@ -668,13 +668,14 @@ const ComposerBody = memo(function Composer({
           {pendingAttachments.map((attachment) => (
             <div
               key={attachment.id}
+              aria-busy={attachment.upload === "uploading" || undefined}
               className="flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-[13px] text-foreground/75"
             >
               {attachment.previewUrl ? (
                 <img
                   src={attachment.previewUrl}
                   alt={attachment.file.name}
-                  className="h-8 w-8 rounded object-cover"
+                  className={`h-8 w-8 rounded object-cover transition-opacity ${attachment.upload === "uploading" ? "opacity-50" : ""}`}
                 />
               ) : (
                 <Paperclip size={14} strokeWidth={1.8} />
@@ -682,17 +683,32 @@ const ComposerBody = memo(function Composer({
               <span className="max-w-[180px] truncate" dir="auto">
                 {attachment.file.name}
               </span>
-              <button
-                type="button"
-                aria-label={t`Remove ${attachment.file.name}`}
-                onClick={() => {
-                  markEdited();
-                  onRemoveAttachment(attachment);
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X size={13} strokeWidth={2} />
-              </button>
+              {attachment.upload === "uploading" ? (
+                <Spinner
+                  aria-label={t`Uploading ${attachment.file.name}`}
+                  className="size-[13px] text-muted-foreground"
+                />
+              ) : attachment.upload === "uploaded" ? (
+                <Check
+                  role="img"
+                  aria-label={t`Uploaded ${attachment.file.name}`}
+                  size={13}
+                  strokeWidth={2.2}
+                  className="text-success"
+                />
+              ) : (
+                <button
+                  type="button"
+                  aria-label={t`Remove ${attachment.file.name}`}
+                  onClick={() => {
+                    markEdited();
+                    onRemoveAttachment(attachment);
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X size={13} strokeWidth={2} />
+                </button>
+              )}
             </div>
           ))}
         </div>

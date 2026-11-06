@@ -96,6 +96,9 @@ export function useComposerActions({
   const [replyTarget, setReplyTarget] = useState<ThreadMessage | null>(null);
   const [replyQuote, setReplyQuote] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [uploads, setUploads] = useState<ReadonlyMap<string, "uploading" | "uploaded">>(
+    () => new Map(),
+  );
   const [sentCount, setSentCount] = useState(0);
   useEffect(() => {
     setComposerUnsavedWork({ sending, attachments: pendingAttachments.length > 0 });
@@ -126,8 +129,12 @@ export function useComposerActions({
   const focusPromptBotIdRef = useRef<string | null>(null);
 
   const activePendingAttachments = useMemo(
-    () => attachmentsForThread(pendingAttachments, inGroup ? groupId : activeId),
-    [activeId, groupId, inGroup, pendingAttachments],
+    () =>
+      attachmentsForThread(pendingAttachments, inGroup ? groupId : activeId).map((attachment) => {
+        const upload = uploads.get(attachment.id);
+        return upload ? { ...attachment, upload } : attachment;
+      }),
+    [activeId, groupId, inGroup, pendingAttachments, uploads],
   );
   // Keep the armed reply even when its parent leaves the loaded page: the
   // server resolves a paged-out target and degrades a deleted one to a plain
@@ -405,6 +412,16 @@ export function useComposerActions({
         const uploaded =
           uploadedSendArtifacts.current.get(clientNonce) ?? new WeakMap<File, string>();
         uploadedSendArtifacts.current.set(clientNonce, uploaded);
+        const markUploaded = (id: string) =>
+          setUploads((current) => new Map(current).set(id, "uploaded"));
+        setUploads(
+          new Map(
+            attachments.map((pending) => [
+              pending.id,
+              uploaded.has(pending.file) ? "uploaded" : "uploading",
+            ]),
+          ),
+        );
         for (const pending of attachments) {
           const existing = uploaded.get(pending.file);
           if (existing) {
@@ -424,6 +441,7 @@ export function useComposerActions({
           );
           uploaded.set(pending.file, artifact.id);
           artifactIds.push(artifact.id);
+          markUploaded(pending.id);
         }
         const payload = {
           ...(groupTarget ? { groupId: groupTarget } : { botId: botTarget! }),
@@ -500,6 +518,7 @@ export function useComposerActions({
       } finally {
         sendingRef.current = false;
         setSending(false);
+        setUploads(new Map());
       }
     },
     [

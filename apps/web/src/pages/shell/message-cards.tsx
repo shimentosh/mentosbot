@@ -3,16 +3,17 @@ import { useLinkPrompt } from "@rakazo/chat-ui/web";
 import type { MessageBlock } from "@rakazo/contracts";
 import { appConnectedInput, waitForConnection } from "@rakazo/core";
 import { Button, Dialog, DialogClose, DialogContent, DialogTitle } from "@rakazo/ui-web";
-import { X } from "lucide-react";
+import { Download, Image as ImageIcon, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BuiCard, SuccessPop } from "../../components/ai/primitives";
 import { OptionRow } from "../../components/OptionRow";
 import type { ArtifactTarget } from "../../lib/artifact-open";
+import { downloadUrl } from "../../lib/artifact-open";
 import { chartViewport } from "../../lib/chart-viewport";
 import { connectMcpOauth } from "../../lib/mcp-connect";
 import { importChunk } from "../../lib/preload-recovery";
 import { rpc } from "../../lib/rpc";
-import { useArtifactImage } from "../../lib/use-artifact-image";
+import { useArtifactImageState } from "../../lib/use-artifact-image";
 import { errorText } from "../../lib/user-error";
 
 export function ChoiceCard({
@@ -517,7 +518,7 @@ export function ArtifactImage({
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const container = useRef<HTMLDivElement>(null);
-  const src = useArtifactImage(target, artifactId, visible);
+  const { src, failed, retry } = useArtifactImageState(target, artifactId, visible);
 
   useEffect(() => {
     const element = container.current;
@@ -546,11 +547,27 @@ export function ArtifactImage({
           onClick={() => setOpen(true)}
           className="max-w-[240px] overflow-hidden rounded-[20px]"
         >
-          <img src={src} alt={name} className="max-h-48 w-full object-cover" />
+          <img
+            src={src}
+            alt={name}
+            className="max-h-48 w-full object-cover animate-in fade-in-0 duration-300 motion-reduce:animate-none"
+          />
         </button>
+      ) : failed ? (
+        <div className="flex w-[240px] max-w-full flex-col items-start gap-2 rounded-[20px] bg-muted px-4 py-3 text-[14px]">
+          <span className="w-full truncate text-muted-foreground">{name}</span>
+          <span className="text-[13px] text-destructive">{t`Could not load this file.`}</span>
+          <Button variant="outline" size="xs" onClick={retry}>
+            <Trans>Try again</Trans>
+          </Button>
+        </div>
       ) : (
-        <div className="rounded-[20px] bg-muted px-4 py-3 text-[14px] text-muted-foreground">
-          {name}
+        <div
+          role="status"
+          aria-label={t`Loading ${name}`}
+          className="grid h-48 w-[240px] max-w-full place-items-center rounded-[20px] bg-muted text-muted-foreground animate-pulse motion-reduce:animate-none"
+        >
+          <ImageIcon aria-hidden size={28} strokeWidth={1.5} />
         </div>
       )}
       {src ? (
@@ -560,12 +577,22 @@ export function ArtifactImage({
             className="w-auto max-w-none bg-transparent p-0 ring-0 sm:max-w-none"
           >
             <DialogTitle className="sr-only">{name}</DialogTitle>
-            <DialogClose
-              aria-label={t`Close image preview`}
-              render={<Button variant="ghost" size="icon-sm" className="absolute end-2 top-2" />}
-            >
-              <X />
-            </DialogClose>
+            <div className="absolute end-2 top-2 flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t`Download ${name}`}
+                onClick={() => downloadUrl(src, name)}
+              >
+                <Download />
+              </Button>
+              <DialogClose
+                aria-label={t`Close image preview`}
+                render={<Button variant="ghost" size="icon-sm" />}
+              >
+                <X />
+              </DialogClose>
+            </div>
             <img
               src={src}
               alt={name}

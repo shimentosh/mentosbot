@@ -1493,3 +1493,19 @@ it("answers the page, not an earlier picked message, when the page's reply butto
   expect(onClearReply).toHaveBeenCalledTimes(1);
   expect(container?.querySelector("textarea")?.value).toBe("Mark task 3 done");
 });
+
+it("shows each file uploading, then uploaded, in place of its remove button", () => {
+  const file = (name: string) => ({ id: name, file: new File(["x"], name), threadKey: "bot-1" });
+  renderComposer(async () => false, {
+    sending: true,
+    pendingAttachments: [
+      { ...file("a.txt"), upload: "uploaded" },
+      { ...file("b.txt"), upload: "uploading" },
+    ],
+  });
+  const label = (name: string) => container!.querySelector(`[aria-label="${name}"]`);
+  expect(label("Uploaded a.txt")).not.toBeNull();
+  expect(label("Uploading b.txt")).not.toBeNull();
+  expect(label("Remove a.txt")).toBeNull();
+  expect(label("Remove b.txt")).toBeNull();
+});

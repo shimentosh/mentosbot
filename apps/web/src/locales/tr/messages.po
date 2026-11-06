@@ -2244,6 +2244,7 @@ msgid "Could not load this chat."
 msgstr "Bu sohbet yüklenemedi."
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Could not load this file."
 msgstr "Bu dosya yüklenemedi."
 
@@ -3002,6 +3003,11 @@ msgstr "CSV indir"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Download PDF"
 msgstr "PDF indir"
+
+#. placeholder {0}: props.name
+#: src/components/ArtifactFileCard.tsx
+msgid "Downloading {0}"
+msgstr ""
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3959,6 +3965,10 @@ msgstr "Daha eski çalıştırmaları yükle"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Load web images automatically"
 msgstr "Web görsellerini otomatik yükle"
+
+#: src/pages/shell/message-cards.tsx
+msgid "Loading {name}"
+msgstr ""
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7135,6 +7145,7 @@ msgstr "Güvenilen siteler"
 #: src/pages/ActivityList.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
+#: src/pages/shell/message-cards.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Try again"
 msgstr "Tekrar dene"
@@ -7264,6 +7275,16 @@ msgstr "Şimdi yükselt"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Upload"
 msgstr "Yükle"
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploaded {0}"
+msgstr ""
+
+#. placeholder {0}: attachment.file.name
+#: src/pages/shell/composer.tsx
+msgid "Uploading {0}"
+msgstr ""
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"
