@@ -9,6 +9,7 @@ export const SECURITY_EVENT_TYPES = [
   "auth.sign_out",
   "auth.session.revoked",
   "auth.password.changed",
+  "auth.email.changed",
   "auth.passkey.added",
   "auth.passkey.changed",
   "auth.passkey.removed",

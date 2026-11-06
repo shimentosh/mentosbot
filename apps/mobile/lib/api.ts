@@ -684,6 +684,32 @@ export async function requestPasswordReset(email: string, redirectTo: string): P
     );
 }
 
+/** Sends a link to the new address; the account moves to it once the link is opened. */
+export async function changeAccountEmail(newEmail: string): Promise<void> {
+  const { response, body, invalidJson } = await fetchMobileJson<unknown>(
+    `${currentApiBase()}/api/auth/change-email`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "rakazo://",
+        ...(await authHeaders()),
+      },
+      body: JSON.stringify({ newEmail }),
+    },
+    null,
+  );
+  if (response.ok) return;
+  // Keeps the server's code, so a request for identity confirmation can be answered and retried.
+  const code = body && typeof body === "object" && "code" in body ? body.code : undefined;
+  throw Object.assign(
+    new Error(
+      authResponseErrorText(response.status, body, invalidJson, t("Could not update email")),
+    ),
+    { code },
+  );
+}
+
 export async function updateAccountName(name: string): Promise<void> {
   const nextName = name.trim();
   if (!nextName || nextName.length > 80 || !displayName(nextName, "")) {

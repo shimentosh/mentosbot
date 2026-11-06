@@ -102,6 +102,9 @@ export const DE_MESSAGES: Record<string, string> = {
   "Add provider": "Anbieter hinzufügen",
   "Choose a model": "Modell auswählen",
   "Use 80 characters or fewer": "Höchstens 80 Zeichen verwenden",
+  "Change email": "E-Mail ändern",
+  "Could not update email": "E-Mail konnte nicht geändert werden",
+  "Open the link sent to {email}": "Öffne den Link, der an {email} gesendet wurde",
   "Could not update name": "Name konnte nicht aktualisiert werden",
   "{summary} Your backup models also failed.":
     "{summary} Auch deine Ersatzmodelle sind fehlgeschlagen.",

@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { act, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@lingui/react/macro", () => ({
   useLingui: () => ({
@@ -76,7 +76,19 @@ vi.mock("@rakazo/ui-web", async (importOriginal) => ({
 
 const accountPolicy = vi.hoisted(() => ({
   passwordChangeEnabled: undefined as boolean | undefined,
+  emailChange: undefined as boolean | undefined,
 }));
+const identity = vi.hoisted(() => ({ confirm: vi.fn(async () => true) }));
+vi.mock("../components/ConfirmIdentityDialog", async () => {
+  const { runWithIdentityConfirmation } = await import("@rakazo/contracts");
+  return {
+    useIdentityConfirmation: () => ({
+      withIdentityConfirmation: <T,>(action: () => Promise<T>) =>
+        runWithIdentityConfirmation(action, identity.confirm),
+      identityDialog: null,
+    }),
+  };
+});
 vi.mock("../components/AccountAccess", () => ({
   AccountAccess: ({ onSecurity }: { onSecurity: (value: AccountSecurity) => void }) => {
     useEffect(
@@ -87,6 +99,7 @@ vi.mock("../components/AccountAccess", () => ({
           freshOidcAuth: false,
           ssoLinked: false,
           emailDeletion: false,
+          emailChange: accountPolicy.emailChange,
           sso: null,
         }),
       [onSecurity],
@@ -106,7 +119,9 @@ vi.mock("../components/ComputersUnavailableHint", () => ({
 }));
 vi.mock("../components/ComputerDeviceSettings", () => ({ ComputerDeviceSettings: () => null }));
 vi.mock("../components/DesktopUpdates", () => ({ DesktopUpdateSection: () => null }));
-vi.mock("../lib/auth", () => ({ authClient: { changePassword: vi.fn(), updateUser: vi.fn() } }));
+vi.mock("../lib/auth", () => ({
+  authClient: { changePassword: vi.fn(), changeEmail: vi.fn(), updateUser: vi.fn() },
+}));
 vi.mock("../lib/i18n", () => ({
   getActiveUiLocale: () => "en",
   setUiLocale: (locale: string) => Promise.resolve(locale),
@@ -577,4 +592,78 @@ it("closes the name editor before refresh finishes and ignores a refresh failure
   } finally {
     await editor.cleanup();
   }
+});
+
+describe("email change", () => {
+  const confirmationRequired = {
+    data: null,
+    error: { status: 403, code: "IDENTITY_CONFIRMATION_REQUIRED", message: "Confirm it's you" },
+  };
+  beforeEach(() => {
+    accountPolicy.emailChange = true;
+    vi.mocked(authClient.updateUser).mockClear();
+    vi.mocked(authClient.changeEmail).mockReset();
+    identity.confirm.mockReset();
+  });
+  afterEach(() => {
+    accountPolicy.emailChange = undefined;
+  });
+  const emailInput = (card: HTMLElement) =>
+    card.querySelector<HTMLInputElement>('input[type="email"]')!;
+  const typeEmail = (input: HTMLInputElement, value: string) =>
+    act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+  it("confirms identity, then sends a link and keeps the current address", async () => {
+    vi.mocked(authClient.changeEmail)
+      .mockResolvedValueOnce(confirmationRequired as never)
+      .mockResolvedValueOnce({ data: { status: true }, error: null } as never);
+    identity.confirm.mockResolvedValue(true);
+    const editor = await renderNameEditor();
+    try {
+      expect(emailInput(editor.card).value).toBe("demo@example.com");
+      await typeEmail(emailInput(editor.card), "  New@Example.com ");
+      await editor.submit();
+      expect(identity.confirm).toHaveBeenCalledOnce();
+      expect(authClient.changeEmail).toHaveBeenCalledTimes(2);
+      expect(authClient.changeEmail).toHaveBeenLastCalledWith({ newEmail: "new@example.com" });
+      expect(authClient.updateUser).not.toHaveBeenCalled();
+      expect(editor.card.querySelector("form")).toBeNull();
+      expect(editor.card.textContent).toContain("demo@example.com");
+      expect(editor.card.querySelector('[role="status"]')!.textContent).toBe(
+        "Open the link sent to new@example.com",
+      );
+    } finally {
+      await editor.cleanup();
+    }
+  });
+
+  it("keeps the form open when confirmation is dismissed", async () => {
+    vi.mocked(authClient.changeEmail).mockResolvedValue(confirmationRequired as never);
+    identity.confirm.mockResolvedValue(false);
+    const editor = await renderNameEditor();
+    try {
+      await typeEmail(emailInput(editor.card), "new@example.com");
+      await editor.submit();
+      expect(authClient.changeEmail).toHaveBeenCalledOnce();
+      expect(emailInput(editor.card).value).toBe("new@example.com");
+      expect(editor.card.querySelector('[role="alert"]')).toBeNull();
+      expect(editor.card.querySelector('[role="status"]')).toBeNull();
+    } finally {
+      await editor.cleanup();
+    }
+  });
+
+  it("is not offered when the server does not allow it", async () => {
+    accountPolicy.emailChange = false;
+    const editor = await renderNameEditor();
+    try {
+      expect(emailInput(editor.card)).toBeNull();
+      expect(editor.card.querySelectorAll("input")).toHaveLength(1);
+    } finally {
+      await editor.cleanup();
+    }
+  });
 });

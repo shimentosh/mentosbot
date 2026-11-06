@@ -86,6 +86,9 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Manage {provider}": "管理 {provider}",
   "Choose a model": "選擇模型",
   "Use 80 characters or fewer": "請使用不超過 80 個字元",
+  "Change email": "變更電子郵件",
+  "Could not update email": "無法更新電子郵件",
+  "Open the link sent to {email}": "開啟寄到 {email} 的連結",
   "Could not update name": "無法更新姓名",
   "{summary} Your backup models also failed.": "{summary} 備援模型也失敗。",
   "{summary} No backup model was usable for this request.":

@@ -2474,6 +2474,10 @@ msgid "Could not update computer"
 msgstr "Computer bijwerken mislukt"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "Kan e-mailadres niet bijwerken"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "Naam kon niet worden bijgewerkt"
 
@@ -3021,6 +3025,7 @@ msgstr "Profiel bewerken"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4878,6 +4883,10 @@ msgstr "Navigatie openen"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "Rakazo openen"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "Open de link die naar {emailSentTo} is gestuurd"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"

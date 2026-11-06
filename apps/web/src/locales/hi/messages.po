@@ -2474,6 +2474,10 @@ msgid "Could not update computer"
 msgstr "कंप्यूटर अपडेट नहीं हो सका"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "ईमेल अपडेट नहीं हो सका"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "नाम अपडेट नहीं किया जा सका"
 
@@ -3021,6 +3025,7 @@ msgstr "प्रोफ़ाइल संपादित करें"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4878,6 +4883,10 @@ msgstr "नेविगेशन खोलें"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "Rakazo खोलें"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "{emailSentTo} पर भेजा गया लिंक खोलें"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"

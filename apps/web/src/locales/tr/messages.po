@@ -2474,6 +2474,10 @@ msgid "Could not update computer"
 msgstr "Bilgisayar güncellenemedi"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "E-posta güncellenemedi"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "Ad güncellenemedi"
 
@@ -3021,6 +3025,7 @@ msgstr "Profili Düzenle"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4878,6 +4883,10 @@ msgstr "Gezinmeyi aç"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "Rakazo'yu aç"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "{emailSentTo} adresine gönderilen bağlantıyı açın"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"

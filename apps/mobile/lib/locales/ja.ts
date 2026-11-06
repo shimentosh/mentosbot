@@ -115,6 +115,9 @@ export const JA_MESSAGES: Record<string, string> = {
   "{summary} Your backup models also failed.": "{summary} 予備のモデルでもエラーが発生しました。",
 
   "Use 80 characters or fewer": "80文字以内で入力してください",
+  "Change email": "メールアドレスを変更",
+  "Could not update email": "メールアドレスを更新できませんでした",
+  "Open the link sent to {email}": "{email} に送信されたリンクを開いてください",
   "Could not update name": "名前を更新できませんでした",
   "Ollama Cloud": "Ollama Cloud",
   "Ollama API key": "OllamaのAPIキー",

@@ -2475,6 +2475,10 @@ msgid "Could not update computer"
 msgstr "無法更新電腦"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "無法更新電子郵件"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "無法更新姓名"
 
@@ -3022,6 +3026,7 @@ msgstr "編輯資料"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4879,6 +4884,10 @@ msgstr "開啟導覽"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "開啟 Rakazo"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "開啟寄到 {emailSentTo} 的連結"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"

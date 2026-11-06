@@ -2474,6 +2474,10 @@ msgid "Could not update computer"
 msgstr "コンピューターを更新できませんでした"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "メールアドレスを更新できませんでした"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "名前を更新できませんでした"
 
@@ -3021,6 +3025,7 @@ msgstr "プロフィールを編集"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4878,6 +4883,10 @@ msgstr "ナビゲーションを開く"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "Rakazo を開く"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "{emailSentTo} に送信されたリンクを開いてください"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"

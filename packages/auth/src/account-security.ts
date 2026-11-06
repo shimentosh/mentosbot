@@ -15,6 +15,10 @@ import { isCurrentOidcAccount } from "./oidc.js";
 
 export const oidcProofKey = (sessionId: string) => `oidc-reauth-${sessionId}`;
 
+/** SSO sign-in takes the address from the identity provider, so a linked account keeps it. */
+export const hasSsoAccount = (accounts: readonly { providerId: string }[]) =>
+  accounts.some((account) => account.providerId === "oidc");
+
 export function accountSecurity(
   email: TransactionalEmailProvider | undefined,
   emailLocaleOf: EmailLocaleOf,
@@ -54,6 +58,7 @@ export function accountSecurity(
             hasPassword: Boolean(credential?.password),
             passwordChangeEnabled,
             emailDeletion: Boolean(email),
+            emailChange: Boolean(email) && passwordChangeEnabled && !hasSsoAccount(accounts),
             sso: ssoName ? { name: ssoName } : null,
           });
         },

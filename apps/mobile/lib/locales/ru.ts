@@ -99,6 +99,9 @@ export const RU_MESSAGES: Record<string, string> = {
   "Add provider": "Добавить провайдера",
   "Choose a model": "Выберите модель",
   "Use 80 characters or fewer": "Не более 80 символов",
+  "Change email": "Изменить email",
+  "Could not update email": "Не удалось изменить email",
+  "Open the link sent to {email}": "Откройте ссылку, отправленную на {email}",
   "Could not update name": "Не удалось обновить имя",
   "{summary} Your backup models also failed.":
     "{summary} Резервные модели тоже завершились с ошибкой.",

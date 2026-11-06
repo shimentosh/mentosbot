@@ -2474,6 +2474,10 @@ msgid "Could not update computer"
 msgstr "컴퓨터를 업데이트할 수 없습니다"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "이메일을 변경할 수 없습니다"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "이름을 업데이트하지 못했습니다"
 
@@ -3021,6 +3025,7 @@ msgstr "Bot 정보 수정"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4878,6 +4883,10 @@ msgstr "메뉴 열기"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "Rakazo 열기"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "{emailSentTo}(으)로 보낸 링크를 여세요"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"

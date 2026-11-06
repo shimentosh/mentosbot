@@ -2474,6 +2474,10 @@ msgid "Could not update computer"
 msgstr "Impossible de mettre à jour l'ordinateur"
 
 #: src/pages/AccountSettingsOverlay.tsx
+msgid "Could not update email"
+msgstr "Impossible de modifier l’e-mail"
+
+#: src/pages/AccountSettingsOverlay.tsx
 msgid "Could not update name"
 msgstr "Impossible de mettre à jour le nom"
 
@@ -3021,6 +3025,7 @@ msgstr "Modifier le profil"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/TeamMembersSettings.tsx
@@ -4878,6 +4883,10 @@ msgstr "Ouvrir la navigation"
 #: src/pages/SharedPage.tsx
 msgid "Open Rakazo"
 msgstr "Ouvrir Rakazo"
+
+#: src/pages/AccountSettingsOverlay.tsx
+msgid "Open the link sent to {emailSentTo}"
+msgstr "Ouvrez le lien envoyé à {emailSentTo}"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Open work"
