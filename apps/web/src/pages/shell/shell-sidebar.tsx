@@ -11,13 +11,14 @@ import {
 } from "@rakazo/ui-web";
 import { Search, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { InviteDialog } from "../../components/InviteDialog";
 import { PasskeyOffer } from "../../components/PasskeyOffer";
 import { SidebarFooter } from "../../components/SidebarFooter";
 import { useBilling } from "../../components/SubscriptionGate";
 import { formatBillingDate } from "../../lib/billing";
 import type { BotsSidebarDensity } from "../../lib/bots-sidebar-density-pref";
+import { useDragEdgeScroll } from "../../lib/drag-edge-scroll";
 import { switchOrganization, useOrganizations } from "../../lib/organizations";
 import { useQueryUserId } from "../../lib/query";
 import type { Panel } from "../../lib/right-panel-state";
@@ -101,6 +102,8 @@ export function ShellSidebar({
   openSpaceChat: (spaceId: string, path: string) => void;
 }) {
   const { t } = useLingui();
+  const listRef = useRef<HTMLDivElement>(null);
+  useDragEdgeScroll(listRef);
   const {
     query,
     setQuery,
@@ -237,7 +240,10 @@ export function ShellSidebar({
             ) : null}
           </InputGroup>
         )}
-        <div className="rk-scroll scroll-fade-y scroll-fade-12 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5 pb-2.5">
+        <div
+          ref={listRef}
+          className="rk-scroll scroll-fade-y scroll-fade-12 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5 pb-2.5"
+        >
           {showSpaceSearch && !mini ? (
             <SpaceSearchResults
               hits={searchHits}
