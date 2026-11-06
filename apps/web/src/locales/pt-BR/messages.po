@@ -109,7 +109,7 @@ msgid "{0} connection"
 msgstr "Conexão {0}"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} GB"
 msgstr "{0} GB"
 
@@ -139,12 +139,12 @@ msgid "{0} is running"
 msgstr "{0} está em execução"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} KB"
 msgstr "{0} KB"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} MB"
 msgstr "{0} MB"
 
@@ -154,7 +154,7 @@ msgid "{0} rollup hours"
 msgstr ""
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
 
@@ -213,6 +213,10 @@ msgstr ""
 #: src/lib/relative-time.ts
 msgid "{days}d ago"
 msgstr "{days}d atrás"
+
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {# file} other {# files}}"
+msgstr "{files, plural, one {# arquivo} other {# arquivos}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
@@ -388,7 +392,7 @@ msgstr "{remaining} restantes"
 msgid "{seats, plural, one {# seat} other {# seats}}"
 msgstr ""
 
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{size} B"
 msgstr "{size} B"
 
@@ -1370,6 +1374,10 @@ msgstr ""
 msgid "Chat details"
 msgstr "Detalhes do chat"
 
+#: src/components/StorageSettings.tsx
+msgid "Chat files"
+msgstr "Arquivos do chat"
+
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
 msgstr "Configurações do chat"
@@ -1804,6 +1812,7 @@ msgstr "Conecte sua própria chave de API em Modelos ou escolha créditos Rakazo
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -2271,6 +2280,10 @@ msgstr "Não foi possível acessar o servidor"
 #: src/pages/shell/agent-import.tsx
 msgid "Could not read these files"
 msgstr "Não foi possível ler estes arquivos"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not read this bucket"
+msgstr "Não foi possível ler este bucket"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not reject plugin"
@@ -4117,6 +4130,10 @@ msgstr ""
 msgid "MCP servers"
 msgstr "Servidores MCP"
 
+#: src/components/StorageSettings.tsx
+msgid "Measuring…"
+msgstr "Medindo…"
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4938,6 +4955,10 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "Mensagem original indisponível"
+
+#: src/components/StorageSettings.tsx
+msgid "Other"
+msgstr "Outros"
 
 #: src/components/FoundModelPicker.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -7486,6 +7507,10 @@ msgstr "Funciona com seu plano do ChatGPT ou do Claude."
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Workspaces"
+msgstr "Espaços de trabalho"
 
 #: src/lib/billing.ts
 msgid "year"

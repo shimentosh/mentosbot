@@ -97,6 +97,47 @@ export async function verifyObjectStorage(
   }
 }
 
+/** Bytes and objects in a bucket, under its prefix, by what they hold. */
+export interface ObjectStorageUsage {
+  bytes: number;
+  objects: number;
+  /** Bot homes. */
+  homes: number;
+  /** Files in chats. */
+  artifacts: number;
+  /** Counting stopped at the limit, so the totals are a lower bound. */
+  partial: boolean;
+}
+
+/** Enough for any deployment the settings panel serves without listing for minutes. */
+const MEASURE_LIMIT = 250_000;
+
+/** Lists every object once and adds up its size; listing is the only portable way to measure. */
+export async function measureObjectStorage(
+  config: S3ObjectStorageConfig,
+  storage: ObjectStorage = new S3ObjectStorage(config),
+  limit = MEASURE_LIMIT,
+): Promise<ObjectStorageUsage> {
+  const usage: ObjectStorageUsage = {
+    bytes: 0,
+    objects: 0,
+    homes: 0,
+    artifacts: 0,
+    partial: false,
+  };
+  for await (const object of storage.list("")) {
+    if (usage.objects >= limit) {
+      usage.partial = true;
+      break;
+    }
+    usage.objects += 1;
+    usage.bytes += object.size;
+    if (object.key.startsWith("homes/")) usage.homes += object.size;
+    else if (object.key.startsWith("artifacts/")) usage.artifacts += object.size;
+  }
+  return usage;
+}
+
 /**
  * Calls `onChange` once when the connection saved in Settings no longer matches the one this
  * process started with. Homes and artifacts pick their store at startup, so the caller restarts:

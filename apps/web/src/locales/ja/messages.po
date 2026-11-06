@@ -109,7 +109,7 @@ msgid "{0} connection"
 msgstr "{0}の接続"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} GB"
 msgstr "{0} GB"
 
@@ -139,12 +139,12 @@ msgid "{0} is running"
 msgstr "{0}は実行中です"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} KB"
 msgstr "{0} KB"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} MB"
 msgstr "{0} MB"
 
@@ -154,7 +154,7 @@ msgid "{0} rollup hours"
 msgstr "{0}のまとめ間隔（時間）"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
 
@@ -213,6 +213,10 @@ msgstr "{count}年"
 #: src/lib/relative-time.ts
 msgid "{days}d ago"
 msgstr "{days}日前"
+
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {# file} other {# files}}"
+msgstr "{files, plural, other {# ファイル}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
@@ -388,7 +392,7 @@ msgstr "残り{remaining}"
 msgid "{seats, plural, one {# seat} other {# seats}}"
 msgstr "{seats, plural, one {#席} other {#席}}"
 
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{size} B"
 msgstr "{size} B"
 
@@ -1370,6 +1374,10 @@ msgstr ""
 msgid "Chat details"
 msgstr "チャットの詳細"
 
+#: src/components/StorageSettings.tsx
+msgid "Chat files"
+msgstr "チャットのファイル"
+
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
 msgstr "チャット設定"
@@ -1804,6 +1812,7 @@ msgstr "モデルで自分のAPIキーを接続するか、請求でRakazoクレ
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -2271,6 +2280,10 @@ msgstr "サーバーに接続できませんでした"
 #: src/pages/shell/agent-import.tsx
 msgid "Could not read these files"
 msgstr "これらのファイルを読み込めませんでした"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not read this bucket"
+msgstr "このバケットを読み取れませんでした"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not reject plugin"
@@ -4117,6 +4130,10 @@ msgstr ""
 msgid "MCP servers"
 msgstr "MCPサーバー"
 
+#: src/components/StorageSettings.tsx
+msgid "Measuring…"
+msgstr "計測中…"
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4938,6 +4955,10 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "元のメッセージを表示できません"
+
+#: src/components/StorageSettings.tsx
+msgid "Other"
+msgstr "その他"
 
 #: src/components/FoundModelPicker.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -7485,6 +7506,10 @@ msgstr "ChatGPT または Claude のプランで使えます。"
 
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
+msgstr "ワークスペース"
+
+#: src/components/StorageSettings.tsx
+msgid "Workspaces"
 msgstr "ワークスペース"
 
 #: src/lib/billing.ts

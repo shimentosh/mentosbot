@@ -1,15 +1,13 @@
-import { i18n } from "@lingui/core";
-import { t as translate } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import { artifactPreviewKind, isAttachmentAudioMimeType } from "@rakazo/contracts";
-import { fileSizeParts } from "@rakazo/core";
 import { Button, Dialog, DialogClose, DialogContent, DialogTitle, Spinner } from "@rakazo/ui-web";
 import { Code2, Download, FileText, Play, X } from "lucide-react";
 import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { ArtifactTarget } from "../lib/artifact-open";
 import { downloadArtifact, downloadArtifactBytes, fetchArtifactBytes } from "../lib/artifact-open";
+import { formatSize } from "../lib/file-size";
 import { errorText } from "../lib/user-error";
 import { BuiCard } from "./ai/primitives";
 import { IconTooltip } from "./IconTooltip";
@@ -430,22 +428,4 @@ function DownloadError({ message }: { message: string }) {
       {message}
     </div>
   );
-}
-
-function formatSize(bytes: number): string {
-  const parts = fileSizeParts(bytes, i18n.locale || "en");
-  if (!parts) return "";
-  const size = parts.amount;
-  switch (parts.unit) {
-    case "B":
-      return translate`${size} B`;
-    case "KB":
-      return translate`${parts.amount} KB`;
-    case "MB":
-      return translate`${parts.amount} MB`;
-    case "GB":
-      return translate`${parts.amount} GB`;
-    case "TB":
-      return translate`${parts.amount} TB`;
-  }
 }

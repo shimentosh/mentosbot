@@ -109,7 +109,7 @@ msgid "{0} connection"
 msgstr "{0} कनेक्शन"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} GB"
 msgstr "{0} GB"
 
@@ -139,12 +139,12 @@ msgid "{0} is running"
 msgstr "{0} चल रहा है"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} KB"
 msgstr "{0} KB"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} MB"
 msgstr "{0} MB"
 
@@ -154,7 +154,7 @@ msgid "{0} rollup hours"
 msgstr ""
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
 
@@ -213,6 +213,10 @@ msgstr ""
 #: src/lib/relative-time.ts
 msgid "{days}d ago"
 msgstr "{days} दिन पहले"
+
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {# file} other {# files}}"
+msgstr "{files, plural, one {# फ़ाइल} other {# फ़ाइलें}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
@@ -388,7 +392,7 @@ msgstr "{remaining} शेष"
 msgid "{seats, plural, one {# seat} other {# seats}}"
 msgstr ""
 
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{size} B"
 msgstr "{size} B"
 
@@ -1370,6 +1374,10 @@ msgstr ""
 msgid "Chat details"
 msgstr "चैट विवरण"
 
+#: src/components/StorageSettings.tsx
+msgid "Chat files"
+msgstr "चैट फ़ाइलें"
+
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
 msgstr "चैट सेटिंग्स"
@@ -1804,6 +1812,7 @@ msgstr "मॉडल्स में अपनी API कुंजी कने�
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -2271,6 +2280,10 @@ msgstr "सर्वर से संपर्क नहीं हो सका"
 #: src/pages/shell/agent-import.tsx
 msgid "Could not read these files"
 msgstr "ये फ़ाइलें पढ़ी नहीं जा सकीं"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not read this bucket"
+msgstr "यह बकेट पढ़ा नहीं जा सका"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not reject plugin"
@@ -4117,6 +4130,10 @@ msgstr ""
 msgid "MCP servers"
 msgstr "MCP सर्वर"
 
+#: src/components/StorageSettings.tsx
+msgid "Measuring…"
+msgstr "माप रहे हैं…"
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4938,6 +4955,10 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "मूल संदेश उपलब्ध नहीं है"
+
+#: src/components/StorageSettings.tsx
+msgid "Other"
+msgstr "अन्य"
 
 #: src/components/FoundModelPicker.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -7486,6 +7507,10 @@ msgstr "आपके ChatGPT या Claude प्लान के साथ क�
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Workspaces"
+msgstr "वर्कस्पेस"
 
 #: src/lib/billing.ts
 msgid "year"

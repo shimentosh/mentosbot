@@ -1,8 +1,10 @@
 import type { ObjectStorage } from "@rakazo/adapter-kit";
 import type { PrismaClient } from "@rakazo/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MemoryObjectStorage } from "./object-storage.test-support.js";
 import type { S3ObjectStorageConfig } from "./object-storage-settings.js";
 import {
+  measureObjectStorage,
   objectStorageFingerprint,
   parseObjectStorageConfig,
   resolveObjectStorage,
@@ -75,6 +77,34 @@ describe("verifyObjectStorage", () => {
     });
     await expect(verifyObjectStorage(config, storage)).rejects.toThrow("different content");
     expect(objects.size).toBe(0);
+  });
+});
+
+describe("measureObjectStorage", () => {
+  it("adds up every object, split by what it holds", async () => {
+    const storage = new MemoryObjectStorage();
+    const put = (key: string, size: number) =>
+      storage.put(
+        key,
+        (async function* () {
+          yield Buffer.alloc(size);
+        })(),
+      );
+    await put("homes/bot-1/a", 300);
+    await put("homes/bot-2/a", 200);
+    await put("artifacts/space-1/b", 40);
+    await put("other", 5);
+    expect(await measureObjectStorage(config, storage)).toEqual({
+      bytes: 545,
+      objects: 4,
+      homes: 500,
+      artifacts: 40,
+      partial: false,
+    });
+    expect(await measureObjectStorage(config, storage, 2)).toMatchObject({
+      objects: 2,
+      partial: true,
+    });
   });
 });
 

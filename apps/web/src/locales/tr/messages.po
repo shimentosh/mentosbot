@@ -109,7 +109,7 @@ msgid "{0} connection"
 msgstr "{0} bağlantısı"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} GB"
 msgstr "{0} GB"
 
@@ -139,12 +139,12 @@ msgid "{0} is running"
 msgstr "{0} çalışıyor"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} KB"
 msgstr "{0} KB"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} MB"
 msgstr "{0} MB"
 
@@ -154,7 +154,7 @@ msgid "{0} rollup hours"
 msgstr "{0} toplama saatleri"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
 
@@ -213,6 +213,10 @@ msgstr "{count} yıl"
 #: src/lib/relative-time.ts
 msgid "{days}d ago"
 msgstr "{days} g önce"
+
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {# file} other {# files}}"
+msgstr "{files, plural, one {# dosya} other {# dosya}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
@@ -388,7 +392,7 @@ msgstr "{remaining} kaldı"
 msgid "{seats, plural, one {# seat} other {# seats}}"
 msgstr "{seats, plural, one {# koltuk} other {# koltuk}}"
 
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{size} B"
 msgstr "{size} B"
 
@@ -1370,6 +1374,10 @@ msgstr "Chat Completions"
 msgid "Chat details"
 msgstr "Sohbet ayrıntıları"
 
+#: src/components/StorageSettings.tsx
+msgid "Chat files"
+msgstr "Sohbet dosyaları"
+
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
 msgstr "Sohbet Ayarları"
@@ -1804,6 +1812,7 @@ msgstr "Modeller bölümünde kendi API anahtarınızı bağlayın veya Faturala
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -2271,6 +2280,10 @@ msgstr "Sunucuya ulaşılamadı"
 #: src/pages/shell/agent-import.tsx
 msgid "Could not read these files"
 msgstr "Bu dosyalar okunamadı"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not read this bucket"
+msgstr "Bu bucket okunamadı"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not reject plugin"
@@ -4117,6 +4130,10 @@ msgstr "MCP sunucusu"
 msgid "MCP servers"
 msgstr "MCP sunucuları"
 
+#: src/components/StorageSettings.tsx
+msgid "Measuring…"
+msgstr "Ölçülüyor…"
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4938,6 +4955,10 @@ msgstr "Orijinal"
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "Orijinal mesaj kullanılamıyor"
+
+#: src/components/StorageSettings.tsx
+msgid "Other"
+msgstr "Diğer"
 
 #: src/components/FoundModelPicker.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -7486,6 +7507,10 @@ msgstr "ChatGPT veya Claude aboneliğinle çalışır."
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr "Çalışma alanı"
+
+#: src/components/StorageSettings.tsx
+msgid "Workspaces"
+msgstr "Çalışma alanları"
 
 #: src/lib/billing.ts
 msgid "year"
