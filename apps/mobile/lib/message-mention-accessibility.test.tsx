@@ -51,6 +51,7 @@ vi.mock("@rakazo/chat-ui/native", () => ({
           : { type: "text", value: piece };
       }),
   withBlockMentions: <T,>(blocks: T) => blocks,
+  withBlockNameLinks: <T,>(blocks: T) => blocks,
 }));
 
 vi.mock("../components/message-caption", () => ({

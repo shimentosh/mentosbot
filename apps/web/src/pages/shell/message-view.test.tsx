@@ -140,6 +140,41 @@ it("names a new bot inline in the reply, in its color", () => {
   expect(onOpenBot).toHaveBeenCalledWith("child");
 });
 
+it("links another of the viewer's bots where a reply first names it, and opens its chat", () => {
+  const onOpenBot = vi.fn();
+  renderView("bot", [{ kind: "text", text: "Sent the posts to KODI. KODI will add them." }], {
+    onOpenBot,
+    peerBot: existingBot,
+    linkBots: [
+      { id: "kodi", name: "KODI" },
+      { id: "quiet", name: "Archivist" },
+    ],
+  });
+  const links = container.querySelectorAll<HTMLButtonElement>('[data-testid="bot-name-link"]');
+  expect([...links].map((link) => link.textContent)).toEqual(["KODI"]);
+  act(() => links[0]!.click());
+  expect(onOpenBot).toHaveBeenCalledWith("kodi");
+});
+
+it("does not link a bot's own name, or names in a person's message", () => {
+  const linkBots = [{ id: "kodi", name: "KODI" }];
+  renderView("bot", [], {
+    linkBots,
+    message: {
+      id: "own",
+      threadId: "thread",
+      seq: 1,
+      role: "bot",
+      botId: "kodi",
+      createdAt: new Date().toISOString(),
+      blocks: [{ kind: "text", text: "I am KODI." }],
+    },
+  });
+  expect(container.querySelector('[data-testid="bot-name-link"]')).toBeNull();
+  renderView("user", [{ kind: "text", text: "Ask KODI." }], { linkBots });
+  expect(container.querySelector('[data-testid="bot-name-link"]')).toBeNull();
+});
+
 it("puts the bot first when the reply does not name it", () => {
   renderMessage([{ kind: "text", text: "Ready when you are." }], existingBot, [planner()]);
   expect(container.querySelector('[data-testid="message-bot-bubble"]')?.textContent).toBe(

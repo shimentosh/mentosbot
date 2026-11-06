@@ -1,6 +1,8 @@
 import { runContinueJob } from "@rakazo/adapter-kit";
-import { BotSecretName, botSecretSubmissionSchema } from "@rakazo/contracts";
+import type { MessageBlock } from "@rakazo/contracts";
+import { BotSecretName, botSecretSubmissionSchema, saveSecretInputSchema } from "@rakazo/contracts";
 import { createStreamingRedactor, displayName } from "@rakazo/core";
+import type { Prisma } from "@rakazo/db";
 import { runCodeKind, runLoginKind, runSecretKind } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import {
@@ -20,6 +22,7 @@ import {
   findSiteLogin,
   forgetBotSecret,
   generateBotSecret,
+  isSecretAlreadySaved,
   listBotSecrets,
   normalizeSecretDestination,
   oneTimeCodeRedactions,
@@ -28,6 +31,7 @@ import {
   requestWithBotSecret,
   resolveRequestSecretDestination,
   sameSecretDestination,
+  storeBotSecret,
 } from "./bot-secrets.js";
 import { addRunSecrets, pauseForSecret, persistTurnCheckpoint } from "./run-context.js";
 import { recordEffect } from "./run-effects.js";
@@ -41,6 +45,13 @@ import {
   tryCompleteConnectionWithCode,
 } from "./run-secret.js";
 import type { ToolHandlers } from "./run-tool-gate.js";
+
+/** How far back save_secret looks for the user's message holding the value. */
+const PASTED_SECRET_MESSAGE_LIMIT = 50;
+
+function textBlocks(blocks: unknown): MessageBlock[] {
+  return Array.isArray(blocks) ? (blocks as MessageBlock[]) : [];
+}
 
 /** Saved credentials and protected input. */
 export const secretTools: ToolHandlers = {
@@ -83,6 +94,84 @@ export const secretTools: ToolHandlers = {
     });
     if (redactions) addRunSecrets(ctx, redactions);
     return call.finish(result);
+  },
+  async save_secret(ctx, call) {
+    const { deps, run, bot, thread } = ctx;
+    const parsed = saveSecretInputSchema({
+      allowPrivateHttpOrigin: allowPrivateHttpSecretOrigins(),
+    }).safeParse(call.args);
+    if (!parsed.success) {
+      return call.finish({ error: parsed.error.issues[0]?.message ?? "Invalid credential." });
+    }
+    const { credential, value, replace } = parsed.data;
+    // Hidden from everything this run writes from here on, errors included.
+    addRunSecrets(ctx, [value]);
+    // Only the owner's own words: a page, file or another bot cannot plant a value in the vault.
+    const pasted = (
+      await deps.prisma.message.findMany({
+        where: {
+          threadId: thread.id,
+          role: "user",
+          OR: [{ authorUserId: null }, { authorUserId: run.userId }],
+        },
+        orderBy: { seq: "desc" },
+        take: PASTED_SECRET_MESSAGE_LIMIT,
+        select: { id: true, blocks: true },
+      })
+    ).filter((message) =>
+      textBlocks(message.blocks).some(
+        (block) => block.kind === "text" && block.text.includes(value),
+      ),
+    );
+    if (!pasted.length) {
+      return call.finish({
+        error:
+          "Only a value the user pasted in this chat can be saved this way. Use request_secret to ask for it.",
+      });
+    }
+    try {
+      await storeBotSecret({
+        prisma: deps.prisma,
+        secretStore: deps.secretStore,
+        scope: run,
+        destination: credential,
+        plaintext: value,
+        createOnly: replace !== true,
+      });
+    } catch (error) {
+      if (isSecretAlreadySaved(error)) {
+        return call.finish({
+          error: `A credential named ${credential.name} is already saved. Use another name, or replace true if the user asked to replace it.`,
+        });
+      }
+      return call.finish({
+        error: error instanceof Error ? error.message : "Could not save the credential.",
+      });
+    }
+    // Saved, so the chat no longer needs to hold the value in the clear.
+    const placeholder = `[saved to vault as ${credential.name}]`;
+    for (const message of pasted) {
+      const blocks = textBlocks(message.blocks).map((block) =>
+        block.kind === "text"
+          ? { ...block, text: block.text.replaceAll(value, placeholder) }
+          : block,
+      );
+      await deps.prisma.message.update({
+        where: { id: message.id },
+        data: { blocks: blocks as Prisma.InputJsonValue },
+      });
+      await deps.events.append({
+        spaceId: run.spaceId,
+        threadId: thread.id,
+        botId: bot.id,
+        type: "thread.message.updated",
+        payload: { messageId: message.id, role: "user", blocks },
+      });
+    }
+    return call.finish({
+      saved: botSecretToolView(credential),
+      removedFromChat: true,
+    });
   },
   async secret_request(ctx, call) {
     const { deps, run, context } = ctx;

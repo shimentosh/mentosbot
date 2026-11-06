@@ -17,6 +17,7 @@ import {
   sanitizeMarkdownImageUrl,
   sanitizeMarkdownUrl,
   withBlockMentions,
+  withBlockNameLinks,
   withMentions,
 } from "./markdown";
 
@@ -550,5 +551,39 @@ describe("linkPreviewUrls", () => {
         plain: true,
       }),
     ).toEqual(["https://site.example.test/a", "https://b.example.test/"]);
+  });
+});
+
+describe("withBlockNameLinks", () => {
+  const bots = [
+    { id: "kodi", name: "KODI" },
+    { id: "social", name: "Noor Social" },
+    { id: "x", name: "Noor X" },
+    { id: "ab", name: "AB" },
+  ];
+  const text = (value: string) => ({ kind: "text" as const, text: value });
+
+  it("links each bot's name where it first appears, and adds nothing for a bot not named", () => {
+    const [first, second] = withBlockNameLinks(
+      [text("Sent it to KODI and Noor Social."), text("KODI confirmed.")],
+      bots,
+    ) as Array<{ text: string }>;
+    expect(first!.text).toBe(
+      "Sent it to [KODI](rakazo-mention:kodi) and [Noor Social](rakazo-mention:social).",
+    );
+    expect(second!.text).toBe("KODI confirmed.");
+  });
+
+  it("leaves code, existing links, other words and very short names alone", () => {
+    const [block] = withBlockNameLinks(
+      [text("`KODI` and [KODI](https://example.test) and KODIAK and AB")],
+      bots,
+    ) as Array<{ text: string }>;
+    expect(block!.text).toBe("`KODI` and [KODI](https://example.test) and KODIAK and AB");
+  });
+
+  it("leaves tool activity unchanged", () => {
+    const steps = { kind: "steps" as const, steps: [] };
+    expect(withBlockNameLinks([steps], bots)).toEqual([steps]);
   });
 });

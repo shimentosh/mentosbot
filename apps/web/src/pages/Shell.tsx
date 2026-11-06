@@ -597,6 +597,11 @@ function SpaceShell() {
     [active?.id, groupId, inGroup],
   );
   const transcriptMembers = activeSnapshot?.members ?? activeGroup?.members;
+  // The viewer's own bots a reply may name, linked to their chats.
+  const linkBots = useMemo(
+    () => bots.filter((bot) => !bot.archivedAt).map((bot) => ({ id: bot.id, name: bot.name })),
+    [bots],
+  );
   const resolveTranscriptBot = useCallback(
     (botId: string) => {
       const bot = bots.find((candidate) => candidate.id === botId);
@@ -1170,6 +1175,7 @@ function SpaceShell() {
               memberName={resolveTranscriptMemberName}
               authorName={resolveMessageAuthor}
               peerBot={resolveTranscriptBot}
+              linkBots={linkBots}
               onRefresh={refreshActiveThread}
               onBotChanged={refreshBots}
               onAddRoutine={addSkillRoutine}

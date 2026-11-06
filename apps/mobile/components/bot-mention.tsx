@@ -59,26 +59,45 @@ export function MessageMentions({
   avatarSetOf,
   tokens,
   onOpenBot,
+  named = [],
   children,
 }: {
   mentions: readonly ChildBotBlock[];
+  /** Other bots the reply names, linked to their chats. */
+  named?: readonly { id: string; name: string }[];
   colorOf: (botId: string) => string | undefined;
   avatarSetOf?: (botId: string) => BotAvatarSet | undefined;
   tokens: ColorTokens;
   onOpenBot: (botId: string, name: string) => void;
   children: ReactNode;
 }) {
-  const render = (id: string) => {
+  const render = (id: string, name: string) => {
     const block = mentions.find((mention) => mention.botId === id);
-    return block ? (
-      <BotMention
-        block={block}
-        color={colorOf(id)}
-        avatarSet={avatarSetOf?.(id)}
-        tokens={tokens}
-        onOpenBot={onOpenBot}
-      />
-    ) : undefined;
+    if (block)
+      return (
+        <BotMention
+          block={block}
+          color={colorOf(id)}
+          avatarSet={avatarSetOf?.(id)}
+          tokens={tokens}
+          onOpenBot={onOpenBot}
+        />
+      );
+    if (!named.some((bot) => bot.id === id)) return undefined;
+    const color = colorOf(id);
+    return (
+      <Text
+        accessibilityRole="link"
+        onPress={() => onOpenBot(id, name)}
+        style={{
+          color: color ? resolvePersonaColorDef(id, color).hex : tokens.foreground,
+          fontWeight: "500",
+          textDecorationLine: "underline",
+        }}
+      >
+        {name}
+      </Text>
+    );
   };
   return (
     <MessageMentionsContext.Provider value={render}>{children}</MessageMentionsContext.Provider>

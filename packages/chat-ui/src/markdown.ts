@@ -95,6 +95,35 @@ export function withMentions(
   return result;
 }
 
+/**
+ * Message blocks whose prose links each name where it first appears, as a mention link; a name
+ * the prose does not use adds nothing. Tool activity, code and existing links are left alone.
+ */
+export function withBlockNameLinks(
+  blocks: readonly MessageBlock[],
+  names: readonly { id: string; name: string }[],
+): MessageBlock[] {
+  // Longer names first, so "Noor Social" is linked before a bot called "Noor" could take it.
+  const ordered = [...names]
+    .filter((entry) => entry.name.trim().length >= 3)
+    .sort((a, b) => b.name.trim().length - a.name.trim().length);
+  if (!ordered.length) return [...blocks];
+  const result = [...blocks];
+  for (const entry of ordered) {
+    const name = entry.name.trim();
+    const link = `[${name.replace(/[\\[\]*_`<>]/g, "\\$&")}](${MENTION_URL_PREFIX}${encodeURIComponent(entry.id)})`;
+    for (let index = 0; index < result.length; index++) {
+      const block = result[index]!;
+      if (!(block.kind === "text" || (block.kind === "progress" && !block.activity))) continue;
+      const linked = linkFirstName(block.text, name, link);
+      if (linked === undefined) continue;
+      result[index] = { ...block, text: linked } as MessageBlock;
+      break;
+    }
+  }
+  return result;
+}
+
 /** Message blocks whose prose names each entry once as a mention link. Tool activity is left alone. */
 export function withBlockMentions(
   blocks: readonly MessageBlock[],

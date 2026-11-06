@@ -193,6 +193,11 @@ function secretGuidance(disabled?: ReadonlySet<string>): string[] {
       "For a code a site texts or emails, use request_secret oneTimeCode and browser_act fill_code, never chat.",
     );
   }
+  if (builtinOffered(disabled, "save_secret")) {
+    clauses.push(
+      "When the user pastes an API key, token or other credential in chat and wants it kept, save it with save_secret instead of asking them to paste it again; every bot of theirs can then use it.",
+    );
+  }
   if (builtinOffered(disabled, "generate_secret")) {
     clauses.push(
       "When you need a new password or key, such as for a website sign-up or a database you set up, use generate_secret instead of choosing one.",
@@ -290,6 +295,7 @@ export function replyShapeClause(disabled?: ReadonlySet<string>): string {
       ? "After an outward action succeeds (posted, sent, created, booked), show a receipt with show_card that links to the result, then keep your reply to a few words."
       : "After an outward action succeeds, give the link to the result.",
     "Write a result's link as its full address so it shows a preview.",
+    "Whenever you name something that has an address, such as a sheet, document, post, file or page, link it the first time you name it, in replies and in messages to other bots alike, and pass on the links other bots give you; never say you added, made or changed something without its link when you have one.",
   ]
     .filter(Boolean)
     .join(" ");

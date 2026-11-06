@@ -562,6 +562,22 @@ export function loginCommandName(loginName: string): string {
 }
 export type GenerateSecretInput = z.infer<typeof GenerateSecretInput>;
 
+/**
+ * A credential the user pasted in chat, saved to the vault at their request. Only kinds whose value
+ * is one string: logins, cards and contacts still go through request_secret's card.
+ */
+export function saveSecretInputSchema(options?: { allowPrivateHttpOrigin?: boolean }) {
+  return z.object({
+    credential: botSecretDestinationSchema(options).refine(
+      (destination) => ["bearer", "header", "basic", "command"].includes(destination.auth.type),
+      { message: "Use request_secret for a login, card or contact", path: ["auth"] },
+    ),
+    value: z.string().min(1).max(16_384),
+    replace: z.boolean().optional(),
+  });
+}
+export const SaveSecretInput = saveSecretInputSchema();
+
 /** Written atomically with the protected value, distinct from action approval. */
 export function botSecretSubmissionSchema(options?: { allowPrivateHttpOrigin?: boolean }) {
   return z.object({ credentialSaved: botSecretDestinationSchema(options) });

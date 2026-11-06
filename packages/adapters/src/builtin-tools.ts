@@ -21,6 +21,7 @@ import {
   SecretAskPurpose,
   SecretHttpRequest,
   ShowCardInput,
+  saveSecretInputSchema,
   ThinkingLevelSchema,
   TICKET_COMMENT_MAX_LENGTH,
   TICKET_DESCRIPTION_MAX_LENGTH,
@@ -725,6 +726,17 @@ export const builtinAgentTools: ConnectorTool[] = [
     description:
       'Create a random password or key and save it for this bot and user; you never see the value. For a new website account, use type "login" with the sign-up site and the username, then type both into the form with browser_act fill_secret; add command: true only when a CLI also needs the password and the site offers no token or browser sign-in for it; that saves it as the command variable <name>-password too. For a value shell commands need, such as a database password you are setting up, use type "command"; it is exported like a request_secret command variable, so pass it from the environment instead of writing it out. Set rules only when the site or tool restricts characters, for example symbols: false for a value inside a URL. An existing credential is never replaced.',
     inputSchema: z.toJSONSchema(GenerateSecretInput, { io: "input" }),
+  },
+  {
+    name: "save_secret",
+    description:
+      "Save a credential the user pasted in this chat to their vault, when they ask you to keep it. Pass the exact value from their message; only a value they wrote here is accepted, and it is then removed from their message. Use auth bearer, header or basic with the API's HTTPS origin for secret_request, or auth command with no origin for shell commands. For a login, card or contact, or a value not pasted in chat, use request_secret. Set replace true only when the user asks to replace a saved value.",
+    get inputSchema() {
+      return z.toJSONSchema(
+        saveSecretInputSchema({ allowPrivateHttpOrigin: allowPrivateHttpSecretOrigins() }),
+        { io: "input" },
+      );
+    },
   },
   {
     name: "list_secrets",

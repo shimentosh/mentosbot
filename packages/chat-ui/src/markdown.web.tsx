@@ -879,6 +879,7 @@ export {
   useLinkFavicon,
   useLinkPreview,
   withBlockMentions,
+  withBlockNameLinks,
 } from "./markdown";
 export type { MarkdownCopy } from "./markdown-copy";
 export { defaultMarkdownCopy, MarkdownCopyProvider } from "./markdown-copy";

@@ -6,9 +6,9 @@ import type { ReactNode } from "react";
 import { createContext } from "react";
 
 /** Draws the bots a reply announces where its text names them. */
-export const MessageMentionsContext = createContext<((id: string) => ReactNode) | undefined>(
-  undefined,
-);
+export const MessageMentionsContext = createContext<
+  ((id: string, name: string) => ReactNode) | undefined
+>(undefined);
 
 /** A group member a sent message can name with `@Name`, or everyone in the group. */
 export type UserMentionTarget =

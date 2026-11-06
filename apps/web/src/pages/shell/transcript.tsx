@@ -85,6 +85,7 @@ export const Transcript = memo(function Transcript({
   memberName,
   authorName,
   peerBot,
+  linkBots,
   onRefresh,
   onBotChanged,
   onAddRoutine,
@@ -137,6 +138,8 @@ export const Transcript = memo(function Transcript({
   peerBot: (
     botId: string,
   ) => { name?: string; color: string; status?: string; avatarSet?: BotAvatarSet } | undefined;
+  /** The viewer's bots a bot's reply may name; each name links to that bot's chat. */
+  linkBots?: readonly { id: string; name: string }[];
   onRefresh: () => Promise<void>;
   onBotChanged: () => Promise<void>;
   onAddRoutine: (name: string, prompt: string) => void;
@@ -598,6 +601,7 @@ export const Transcript = memo(function Transcript({
                       memberName={memberName}
                       authorName={authorName?.(message)}
                       peerBot={peerBot}
+                      linkBots={linkBots}
                       replyParent={
                         message.replyToMessageId
                           ? messageById.get(message.replyToMessageId)

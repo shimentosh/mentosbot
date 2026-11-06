@@ -1,4 +1,8 @@
-import { MarkdownLongPressContext, withBlockMentions } from "@rakazo/chat-ui/native";
+import {
+  MarkdownLongPressContext,
+  withBlockMentions,
+  withBlockNameLinks,
+} from "@rakazo/chat-ui/native";
 import type { LoginFieldInput, MessageBlock } from "@rakazo/contracts";
 import { artifactPreviewKind, isAttachmentAudioMimeType } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
@@ -102,10 +106,29 @@ function MessageBubbleWithMentions({
   mentions,
   ...props
 }: ComponentProps<typeof MessageBubbleContent> & { mentions?: readonly ChildBotBlock[] }) {
-  if (!mentions?.length) return <MessageBubbleBody {...props} />;
+  // A bot naming another of the viewer's bots links that name to its chat, where it first appears.
+  const named =
+    props.message.role === "bot"
+      ? props.bots
+          .filter(
+            (bot) =>
+              !bot.archivedAt &&
+              bot.id !== props.message.botId &&
+              !mentions?.some((mention) => mention.botId === bot.id),
+          )
+          .map((bot) => ({ id: bot.id, name: bot.name }))
+      : [];
+  if (!mentions?.length && !named.length) return <MessageBubbleBody {...props} />;
+  const mentioned = mentions?.length
+    ? withBlockMentions(
+        props.message.blocks,
+        mentions.map((bot) => ({ id: bot.botId, name: bot.name })),
+      )
+    : props.message.blocks;
   return (
     <MessageMentions
-      mentions={mentions}
+      mentions={mentions ?? []}
+      named={named}
       colorOf={(id) =>
         props.bots.find((bot) => bot.id === id)?.color ??
         props.members?.find((member) => member.botId === id)?.color
@@ -121,10 +144,7 @@ function MessageBubbleWithMentions({
         {...props}
         message={{
           ...props.message,
-          blocks: withBlockMentions(
-            props.message.blocks,
-            mentions.map((bot) => ({ id: bot.botId, name: bot.name })),
-          ),
+          blocks: named.length ? withBlockNameLinks(mentioned, named) : mentioned,
         }}
       />
     </MessageMentions>

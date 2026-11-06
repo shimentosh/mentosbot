@@ -1828,5 +1828,6 @@ export {
   useLinkFavicon,
   useLinkPreview,
   withBlockMentions,
+  withBlockNameLinks,
 } from "./markdown";
 export { MarkdownLinkPromptProvider } from "./markdown-link-prompt";

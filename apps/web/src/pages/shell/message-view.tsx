@@ -5,6 +5,7 @@ import {
   LinkifiedText,
   linkPreviewUrls,
   withBlockMentions,
+  withBlockNameLinks,
 } from "@rakazo/chat-ui/web";
 import type {
   BotAvatarSet,
@@ -73,6 +74,7 @@ export const MessageView = memo(function MessageView({
   authorName,
   memberName,
   peerBot,
+  linkBots,
   replyParent,
   onJumpToMessage,
   onRefresh,
@@ -118,6 +120,8 @@ export const MessageView = memo(function MessageView({
   peerBot: (
     botId: string,
   ) => { name?: string; color: string; status?: string; avatarSet?: BotAvatarSet } | undefined;
+  /** The viewer's bots a bot's reply may name; each name links to that bot's chat. */
+  linkBots?: readonly { id: string; name: string }[];
   replyParent?: ThreadMessage;
   onJumpToMessage?: (messageId: string) => void;
   onRefresh: () => Promise<void>;
@@ -147,16 +151,26 @@ export const MessageView = memo(function MessageView({
   const quoteMessageId = message.id.includes(":") ? undefined : message.id;
 
   // Only what is drawn names the mentioned bots; copy, quote, and speech keep the original text.
-  const blocks = useMemo(
+  // A bot naming another of the viewer's bots links that name to its chat, where it first appears.
+  const namedBots = useMemo(
     () =>
-      mentions?.length
-        ? withBlockMentions(
-            message.blocks,
-            mentions.map((bot) => ({ id: bot.botId, name: bot.name })),
+      message.role === "bot" && !isLive
+        ? (linkBots ?? []).filter(
+            (bot) =>
+              bot.id !== message.botId && !mentions?.some((mention) => mention.botId === bot.id),
           )
-        : message.blocks,
-    [message.blocks, mentions],
+        : [],
+    [linkBots, message.role, message.botId, isLive, mentions],
   );
+  const blocks = useMemo(() => {
+    const mentioned = mentions?.length
+      ? withBlockMentions(
+          message.blocks,
+          mentions.map((bot) => ({ id: bot.botId, name: bot.name })),
+        )
+      : message.blocks;
+    return namedBots.length ? withBlockNameLinks(mentioned, namedBots) : mentioned;
+  }, [message.blocks, mentions, namedBots]);
   const openPage = useOpenPage();
   const pageCards = pages?.length ? (
     <div className="mt-3 flex flex-col gap-3">
@@ -183,18 +197,33 @@ export const MessageView = memo(function MessageView({
   const linkCards = <LinkPreviewCards urls={previewUrls} end={message.role === "user"} />;
   const visibleNarrationBlocks = renderableMessageBlocks(blocks, showToolActivity);
   const renderMention = useCallback(
-    (id: string) => {
+    (id: string, name: string) => {
       const block = mentions?.find((bot) => bot.botId === id);
-      return block ? (
-        <BotMention
-          block={block}
-          avatarSet={peerBot(id)?.avatarSet}
-          color={peerBot(id)?.color}
-          onOpenBot={onOpenBot}
-        />
-      ) : undefined;
+      if (block)
+        return (
+          <BotMention
+            block={block}
+            avatarSet={peerBot(id)?.avatarSet}
+            color={peerBot(id)?.color}
+            onOpenBot={onOpenBot}
+          />
+        );
+      if (!namedBots.some((bot) => bot.id === id)) return undefined;
+      const bot = peerBot(id);
+      return (
+        <button
+          type="button"
+          data-testid="bot-name-link"
+          dir="auto"
+          className="cursor-pointer font-medium underline decoration-current/30 underline-offset-2 hover:decoration-current"
+          style={bot ? { color: resolvePersonaColorDef(id, bot.color).hex } : undefined}
+          onClick={() => onOpenBot(id)}
+        >
+          {name}
+        </button>
+      );
     },
-    [mentions, onOpenBot, peerBot],
+    [mentions, namedBots, onOpenBot, peerBot],
   );
   const speak = () => onSpeak(message);
   const replyBotId = message.replyPreview?.botId ?? replyParent?.botId;

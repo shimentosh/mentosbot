@@ -48,6 +48,7 @@ export const BUILTIN_TOOL_NAMES = [
   "show_card",
   "request_secret",
   "generate_secret",
+  "save_secret",
   "list_secrets",
   "secret_request",
   "forget_secret",
