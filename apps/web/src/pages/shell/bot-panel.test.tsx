@@ -810,10 +810,10 @@ describe("BotSettings cached data", () => {
 
 describe("BotSettings browser", () => {
   const option = (label: "Global" | "Independent") =>
-    [...container.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
+    [...container.querySelectorAll<HTMLButtonElement>("fieldset button")].find(
       (button) => button.textContent === label,
     );
-  const browser = () => option("Global")?.closest('[role="group"]')?.parentElement;
+  const browser = () => option("Global")?.closest("fieldset");
 
   it("moves a team bot to its own browser and back", async () => {
     await render("Billing", { shareSignIns: true });

@@ -701,19 +701,11 @@ export function BotSettings({
             <SettingsGroup label={t`Computer`} plain>
               <ComputerModePicker value={computerMode} onChange={setComputerMode} />
               {bot.computerMode === "team" ? (
-                <div className="mt-4">
-                  <div
-                    id={`${ids}-browser-label`}
-                    className="mb-2 text-xs font-medium text-muted-foreground"
-                  >
+                <fieldset className="mt-4" aria-describedby={`${ids}-browser-detail`}>
+                  <legend className="mb-2 text-xs font-medium text-muted-foreground">
                     <Trans>Browser</Trans>
-                  </div>
-                  <div
-                    role="group"
-                    aria-labelledby={`${ids}-browser-label`}
-                    aria-describedby={`${ids}-browser-detail`}
-                    className="grid grid-cols-2 gap-2"
-                  >
+                  </legend>
+                  <div className="grid grid-cols-2 gap-2">
                     {([true, false] as const).map((global) => (
                       <Toggle
                         key={String(global)}
@@ -746,7 +738,7 @@ export function BotSettings({
                       </p>
                     ) : null}
                   </div>
-                </div>
+                </fieldset>
               ) : null}
               {memoryProviderConfigured ? (
                 <div className="mt-4 text-sm text-foreground">
