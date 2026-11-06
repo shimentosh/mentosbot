@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@rakazo/db";
 import { describe, expect, it, vi } from "vitest";
-import { getObjectStorageSettings, updateObjectStorageSettings } from "./object-storage-config.js";
+import {
+  getObjectStorageSettings,
+  getObjectStorageUsage,
+  updateObjectStorageSettings,
+} from "./object-storage-config.js";
 
 const actor = { userId: "user-1", spaceId: "space-1", email: "admin@example.com" } as never;
 
@@ -61,6 +65,7 @@ describe("object storage settings", () => {
     const { deps } = makeDeps({ admin: false });
     await expect(getObjectStorageSettings(deps, actor)).rejects.toThrow("Admins only");
     await expect(updateObjectStorageSettings(deps, actor, input)).rejects.toThrow("Admins only");
+    await expect(getObjectStorageUsage(deps, actor)).rejects.toThrow("Admins only");
   });
 
   it("starts on local disk", async () => {
@@ -163,5 +168,27 @@ describe("object storage settings", () => {
     await expect(updateObjectStorageSettings(deps, actor, input)).rejects.toThrow(
       "Storage is set by the server environment",
     );
+  });
+
+  it("measures only the bucket the server runs on", async () => {
+    const { deps } = makeDeps();
+    const usage = { bytes: 10, objects: 1, homes: 10, artifacts: 0, partial: false };
+    const measure = vi.fn(async () => usage);
+    expect(await getObjectStorageUsage({ ...deps, measure }, actor)).toBeNull();
+    const running = { source: "settings" as const, config: { ...input, prefix: "" } };
+    expect(
+      await getObjectStorageUsage({ ...deps, measure, objectStorage: running }, actor),
+    ).toEqual(usage);
+    expect(measure).toHaveBeenCalledWith(running.config);
+    await expect(
+      getObjectStorageUsage(
+        {
+          ...deps,
+          objectStorage: running,
+          measure: vi.fn(async () => Promise.reject(new Error("key-secret"))),
+        },
+        actor,
+      ),
+    ).rejects.toThrow("Could not read this bucket");
   });
 });

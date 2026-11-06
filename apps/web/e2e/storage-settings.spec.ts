@@ -63,3 +63,45 @@ test("an admin connects a bucket for bot files", async ({ page }, testInfo) => {
   expect(sent).toMatchObject({ bucket: "rakazo-files", secretAccessKey: "example-secret" });
   await expect(form.getByLabel("Bucket", { exact: true })).toBeDisabled();
 });
+
+test("an admin sees how much of a connected bucket is used", async ({ page }, testInfo) => {
+  await signup(page, `storage-usage-${randomUUID()}@rakazo.test`, "password12", "Storage");
+  await completeOnboarding(page);
+  await page.route("**/rpc/me", asAdmin);
+  await page.route("**/rpc/bootstrap", asAdmin);
+  const connected = {
+    ...none,
+    source: "settings",
+    endpoint: "https://storage.example.com",
+    bucket: "rakazo-files",
+    region: "us-east-1",
+    accessKeyId: "example-key-id",
+    hasSecret: true,
+  };
+  const gib = 1024 * 1024 * 1024;
+  await page.route(/\/rpc\/objectStorage\/get(\?|$)/, (route) =>
+    route.fulfill({ json: { json: connected } }),
+  );
+  await page.route(/\/rpc\/objectStorage\/usage(\?|$)/, (route) =>
+    route.fulfill({
+      json: {
+        json: {
+          bytes: Math.round(3.4 * gib),
+          objects: 1284,
+          homes: Math.round(2.6 * gib),
+          artifacts: Math.round(0.7 * gib),
+          partial: false,
+        },
+      },
+    }),
+  );
+  await page.reload();
+  const settings = await openUserSettings(page, "storage");
+  const form = settings.getByTestId("storage-settings");
+  await expect(form.getByText("Connected")).toBeVisible();
+  const usage = form.getByTestId("storage-usage");
+  await expect(usage.getByText("3.4 GB")).toBeVisible();
+  await expect(usage.getByText("1,284 files")).toBeVisible();
+  await expect(usage.getByText("Workspaces")).toBeVisible();
+  await captureScreenshot(page, testInfo, "storage-usage");
+});

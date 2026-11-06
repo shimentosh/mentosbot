@@ -1945,6 +1945,16 @@ export const ObjectStorageSettingsSchema = z.object({
   hasSecret: z.boolean(),
 });
 export type ObjectStorageSettings = z.infer<typeof ObjectStorageSettingsSchema>;
+/** Space used in the running bucket; homes and artifacts are subsets of bytes. */
+export const ObjectStorageUsageSchema = z.object({
+  bytes: z.number().int().nonnegative(),
+  objects: z.number().int().nonnegative(),
+  homes: z.number().int().nonnegative(),
+  artifacts: z.number().int().nonnegative(),
+  /** Counting stopped early; the totals are at least these. */
+  partial: z.boolean(),
+});
+export type ObjectStorageUsage = z.infer<typeof ObjectStorageUsageSchema>;
 export const ObjectStorageUpdateSchema = z.object({
   endpoint: z.string().trim().url().max(2048),
   bucket: z.string().trim().min(1).max(255),

@@ -109,7 +109,7 @@ msgid "{0} connection"
 msgstr "Połączenie {0}"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} GB"
 msgstr "{0} GB"
 
@@ -139,12 +139,12 @@ msgid "{0} is running"
 msgstr "{0} działa"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} KB"
 msgstr "{0} KB"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} MB"
 msgstr "{0} MB"
 
@@ -154,7 +154,7 @@ msgid "{0} rollup hours"
 msgstr "Godziny podsumowań {0}"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
 
@@ -213,6 +213,10 @@ msgstr "{count} lat"
 #: src/lib/relative-time.ts
 msgid "{days}d ago"
 msgstr "{days} dn. temu"
+
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {# file} other {# files}}"
+msgstr "{files, plural, one {# plik} few {# pliki} many {# plików} other {# pliku}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
@@ -388,7 +392,7 @@ msgstr "Pozostało {remaining}"
 msgid "{seats, plural, one {# seat} other {# seats}}"
 msgstr "{seats, plural, one {# stanowisko} few {# stanowiska} many {# stanowisk} other {# stanowiska}}"
 
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{size} B"
 msgstr "{size} B"
 
@@ -1370,6 +1374,10 @@ msgstr "Chat Completions"
 msgid "Chat details"
 msgstr "Szczegóły czatu"
 
+#: src/components/StorageSettings.tsx
+msgid "Chat files"
+msgstr "Pliki czatu"
+
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
 msgstr "Ustawienia czatu"
@@ -1804,6 +1812,7 @@ msgstr "Połącz własny klucz API w Modelach lub wybierz środki Rakazo w Rozli
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -2271,6 +2280,10 @@ msgstr "Nie udało się połączyć z serwerem"
 #: src/pages/shell/agent-import.tsx
 msgid "Could not read these files"
 msgstr "Nie udało się odczytać tych plików"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not read this bucket"
+msgstr "Nie udało się odczytać tego bucketu"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not reject plugin"
@@ -4117,6 +4130,10 @@ msgstr "Serwer MCP"
 msgid "MCP servers"
 msgstr "Serwery MCP"
 
+#: src/components/StorageSettings.tsx
+msgid "Measuring…"
+msgstr "Mierzenie…"
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4938,6 +4955,10 @@ msgstr "Oryginał"
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "Oryginalna wiadomość jest niedostępna"
+
+#: src/components/StorageSettings.tsx
+msgid "Other"
+msgstr "Inne"
 
 #: src/components/FoundModelPicker.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -7486,6 +7507,10 @@ msgstr "Działa z Twoim planem ChatGPT lub Claude."
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr "Obszar roboczy"
+
+#: src/components/StorageSettings.tsx
+msgid "Workspaces"
+msgstr "Obszary robocze"
 
 #: src/lib/billing.ts
 msgid "year"

@@ -12,6 +12,8 @@ vi.mock("@lingui/react/macro", () => {
   return {
     useLingui: () => ({ t }),
     Trans: ({ children }: { children: ReactNode }) => children,
+    Plural: ({ value, one, other }: { value: number; one: string; other: string }) =>
+      (value === 1 ? one : other).replace("#", String(value)),
   };
 });
 vi.mock("@rakazo/ui-web", () => ({
@@ -39,7 +41,10 @@ vi.mock("./ai/primitives", () => ({
   SuccessPop: () => null,
   Shimmer: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
 }));
-const { storage } = vi.hoisted(() => ({ storage: { get: vi.fn(), update: vi.fn() } }));
+vi.mock("../lib/file-size", () => ({ formatSize: (bytes: number) => `${bytes} B` }));
+const { storage } = vi.hoisted(() => ({
+  storage: { get: vi.fn(), update: vi.fn(), usage: vi.fn() },
+}));
 vi.mock("../lib/rpc", () => ({
   rpc: {
     get objectStorage() {
@@ -74,6 +79,7 @@ let root: ReturnType<typeof createRoot>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  storage.usage.mockResolvedValue(null);
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -153,4 +159,30 @@ it("shows a bucket from the server environment without letting it change", async
   expect(host.textContent).toContain("Set by the server environment.");
   expect(host.querySelector("fieldset")?.disabled).toBe(true);
   expect(host.querySelector('button[type="submit"]')).toBeNull();
+});
+
+it("shows how much of a connected bucket is used", async () => {
+  storage.get.mockResolvedValue(saved);
+  storage.usage.mockResolvedValue({
+    bytes: 1000,
+    objects: 3,
+    homes: 900,
+    artifacts: 100,
+    partial: false,
+  });
+  await act(async () => root.render(<StorageSettingsPanel />));
+  expect(host.textContent).toContain("Connected");
+  const usage = host.querySelector('[data-testid="storage-usage"]');
+  expect(usage?.textContent).toContain("1000 B");
+  expect(usage?.textContent).toContain("3 files");
+  expect(usage?.textContent).toContain("Workspaces900 B");
+  expect(usage?.textContent).toContain("Chat files100 B");
+  expect(usage?.textContent).not.toContain("Other");
+});
+
+it("measures nothing until the server runs on the bucket", async () => {
+  storage.get.mockResolvedValue({ ...saved, active: false });
+  await act(async () => root.render(<StorageSettingsPanel />));
+  expect(storage.usage).not.toHaveBeenCalled();
+  expect(host.textContent).not.toContain("Connected");
 });

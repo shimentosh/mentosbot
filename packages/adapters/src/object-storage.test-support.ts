@@ -21,7 +21,8 @@ export class MemoryObjectStorage implements ObjectStorage {
 
   async *list(prefix: string) {
     for (const [key, object] of [...this.objects].sort(([a], [b]) => a.localeCompare(b)))
-      if (key.startsWith(prefix)) yield { key, lastModified: object.lastModified };
+      if (key.startsWith(prefix))
+        yield { key, lastModified: object.lastModified, size: object.bytes.length };
   }
 
   async delete(keys: readonly string[]) {
@@ -56,6 +57,9 @@ export function objectStorageConformance(create: () => Promise<ObjectStorage>) {
     expect((await read(storage, "homes/a/1")).toString()).toBe("first object");
     expect((await read(storage, "homes/a/2")).length).toBe(0);
     expect(await keys(storage, "homes/")).toEqual(["homes/a/1", "homes/a/2"]);
+    const sizes: number[] = [];
+    for await (const object of storage.list("homes/")) sizes.push(object.size);
+    expect(sizes.sort()).toEqual([0, 12]);
 
     await storage.delete(["homes/a/1", "homes/missing"]);
     expect(await keys(storage, "homes/")).toEqual(["homes/a/2"]);

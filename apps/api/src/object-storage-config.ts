@@ -9,11 +9,17 @@ import {
   assertSafeWebUrl,
   DEPLOYMENT_OBJECT_STORAGE_RECORD,
   loadSavedObjectStorage,
+  measureObjectStorage,
   objectStorageConfigFromEnv,
   objectStorageFingerprint,
   verifyObjectStorage,
 } from "@rakazo/adapters";
-import type { Actor, ObjectStorageSettings, ObjectStorageUpdate } from "@rakazo/contracts";
+import type {
+  Actor,
+  ObjectStorageSettings,
+  ObjectStorageUpdate,
+  ObjectStorageUsage,
+} from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { Prisma, runAsSystem } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
@@ -30,6 +36,8 @@ export interface ObjectStorageConfigDeps {
   resolveHostname?: ResolveHostname;
   /** Test seam: confirm the bucket accepts a write before saving. */
   verify?: (config: ObjectStorageConnection) => Promise<void>;
+  /** Test seam: add up the bucket's objects. */
+  measure?: (config: ObjectStorageConnection) => Promise<ObjectStorageUsage>;
   /** Process environment; a test seam for OBJECT_STORAGE_*. */
   processEnv?: NodeJS.ProcessEnv;
 }
@@ -63,6 +71,25 @@ export async function getObjectStorageSettings(
   if (fromEnv) return view("environment", fromEnv, deps.objectStorage);
   const saved = await loadSavedObjectStorage(deps.prisma, deps.secrets);
   return view(saved ? "settings" : "none", saved, deps.objectStorage);
+}
+
+/** Space used in the bucket this server runs on; none on local disk. */
+export async function getObjectStorageUsage(
+  deps: ObjectStorageConfigDeps,
+  actor: Actor,
+): Promise<ObjectStorageUsage | null> {
+  await requireAdmin(deps, actor.userId);
+  if (!deps.objectStorage) return null;
+  try {
+    return await (deps.measure ?? measureObjectStorage)(deps.objectStorage.config);
+  } catch (error) {
+    // Storage errors can echo the endpoint or key: log only the error's class.
+    getLogger().warn("object_storage.measure_failed", {
+      "user.id": actor.userId,
+      "error.name": error instanceof Error ? error.name : typeof error,
+    });
+    throw new ORPCError("BAD_GATEWAY", { message: "Could not read this bucket" });
+  }
 }
 
 /**

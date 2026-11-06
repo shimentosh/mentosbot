@@ -1,4 +1,8 @@
-import { getObjectStorageSettings, updateObjectStorageSettings } from "../object-storage-config.js";
+import {
+  getObjectStorageSettings,
+  getObjectStorageUsage,
+  updateObjectStorageSettings,
+} from "../object-storage-config.js";
 import type { RouterContext } from "./context.js";
 
 export function objectStorageRoutes(ctx: RouterContext) {
@@ -10,6 +14,9 @@ export function objectStorageRoutes(ctx: RouterContext) {
       ),
       update: authed.objectStorage.update.handler(({ context, input }) =>
         updateObjectStorageSettings(deps, context.actor, input),
+      ),
+      usage: authed.objectStorage.usage.handler(({ context }) =>
+        getObjectStorageUsage(deps, context.actor),
       ),
     },
   };

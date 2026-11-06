@@ -1,5 +1,9 @@
-import { Trans, useLingui } from "@lingui/react/macro";
-import type { ObjectStorageSettings, ObjectStorageUpdate } from "@rakazo/contracts";
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
+import type {
+  ObjectStorageSettings,
+  ObjectStorageUpdate,
+  ObjectStorageUsage,
+} from "@rakazo/contracts";
 import { Button, Field, FieldLabel, Input, Label, Switch } from "@rakazo/ui-web";
 import {
   Collapsible,
@@ -7,6 +11,7 @@ import {
   CollapsibleTrigger,
 } from "@rakazo/ui-web/components/ui/collapsible";
 import { useEffect, useId, useState } from "react";
+import { formatSize } from "../lib/file-size";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
 import { Shimmer, SuccessPop } from "./ai/primitives";
@@ -75,6 +80,7 @@ export function StorageSettingsPanel() {
   }
 
   const fromEnvironment = settings.source === "environment";
+  const connected = settings.source !== "none" && settings.active;
   // Saved files live in this bucket, so only its keys and addressing can change.
   const locked = fromEnvironment || settings.source === "settings";
   const set = (patch: Partial<ObjectStorageUpdate>) => {
@@ -99,9 +105,18 @@ export function StorageSettingsPanel() {
 
   return (
     <div data-testid="storage-settings" className="rounded-xl border border-border px-4 py-4">
-      <h3 className="text-heading3 font-medium text-foreground">
-        <Trans>Storage</Trans>
-      </h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-heading3 font-medium text-foreground">
+          <Trans>Storage</Trans>
+        </h3>
+        {connected ? (
+          <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <span aria-hidden className="size-1.5 rounded-full bg-success" />
+            <Trans>Connected</Trans>
+          </span>
+        ) : null}
+      </div>
+      {connected ? <StorageUsage /> : null}
       {fromEnvironment ? (
         <p className="mt-2 text-[13px] text-muted-foreground">
           <Trans>Set by the server environment.</Trans>
@@ -196,6 +211,85 @@ export function StorageSettingsPanel() {
           </div>
         )}
       </form>
+    </div>
+  );
+}
+
+/** How much of the bucket the server is running on is in use, measured each time it opens. */
+function StorageUsage() {
+  const { t } = useLingui();
+  const [usage, setUsage] = useState<ObjectStorageUsage | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    rpc.objectStorage
+      .usage()
+      .then((next) => {
+        if (alive) setUsage(next);
+      })
+      .catch((caught: unknown) => {
+        if (alive) setError(errorText(caught, t`Could not read this bucket`));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [t]);
+
+  if (error)
+    return (
+      <p role="alert" className="mt-3 text-[13px] text-destructive">
+        {error}
+      </p>
+    );
+  if (!usage)
+    return (
+      <p className="mt-3 text-[13px] text-muted-foreground">
+        <Shimmer>
+          <Trans>Measuring…</Trans>
+        </Shimmer>
+      </p>
+    );
+
+  const other = Math.max(0, usage.bytes - usage.homes - usage.artifacts);
+  const parts = [
+    { label: t`Workspaces`, bytes: usage.homes, className: "bg-foreground" },
+    { label: t`Chat files`, bytes: usage.artifacts, className: "bg-foreground/50" },
+    { label: t`Other`, bytes: other, className: "bg-foreground/20" },
+  ].filter((part) => part.bytes > 0);
+  const total = `${formatSize(usage.bytes)}${usage.partial ? "+" : ""}`;
+  const files = usage.objects;
+
+  return (
+    <div data-testid="storage-usage" className="mt-4 grid gap-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[22px] font-medium tabular-nums text-foreground">{total}</span>
+        <span className="text-[13px] tabular-nums text-muted-foreground">
+          <Plural value={files} one="# file" other="# files" />
+        </span>
+      </div>
+      {parts.length ? (
+        <>
+          <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
+            {parts.map((part) => (
+              <span
+                key={part.label}
+                className={part.className}
+                style={{ width: `${(part.bytes / usage.bytes) * 100}%` }}
+              />
+            ))}
+          </div>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+            {parts.map((part) => (
+              <li key={part.label} className="flex items-center gap-1.5">
+                <span aria-hidden className={`size-1.5 rounded-full ${part.className}`} />
+                {part.label}
+                <span className="tabular-nums text-foreground">{formatSize(part.bytes)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -109,7 +109,7 @@ msgid "{0} connection"
 msgstr "חיבור {0}"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} GB"
 msgstr "{0} GB"
 
@@ -139,12 +139,12 @@ msgid "{0} is running"
 msgstr "{0} פעיל"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} KB"
 msgstr "{0} KB"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} MB"
 msgstr "{0} MB"
 
@@ -154,7 +154,7 @@ msgid "{0} rollup hours"
 msgstr "שעות סיכום של {0}"
 
 #. placeholder {0}: parts.amount
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
 
@@ -213,6 +213,10 @@ msgstr "{count} שנים"
 #: src/lib/relative-time.ts
 msgid "{days}d ago"
 msgstr "לפני {days} ימים"
+
+#: src/components/StorageSettings.tsx
+msgid "{files, plural, one {# file} other {# files}}"
+msgstr "{files, plural, one {קובץ #} other {# קבצים}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{from} handed off to {to}"
@@ -388,7 +392,7 @@ msgstr "נותרו {remaining}"
 msgid "{seats, plural, one {# seat} other {# seats}}"
 msgstr "{seats, plural, one {# מושב} other {# מושבים}}"
 
-#: src/components/ArtifactFileCard.tsx
+#: src/lib/file-size.ts
 msgid "{size} B"
 msgstr "{size} B"
 
@@ -1370,6 +1374,10 @@ msgstr ""
 msgid "Chat details"
 msgstr "פרטי הצ׳אט"
 
+#: src/components/StorageSettings.tsx
+msgid "Chat files"
+msgstr "קבצי צ׳אט"
+
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
 msgstr "הגדרות צ׳אט"
@@ -1804,6 +1812,7 @@ msgstr "חבר מפתח API משלך במודלים או בחר בקרדיטים
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -2271,6 +2280,10 @@ msgstr "אין גישה לשרת"
 #: src/pages/shell/agent-import.tsx
 msgid "Could not read these files"
 msgstr "לא ניתן לקרוא את הקבצים האלה"
+
+#: src/components/StorageSettings.tsx
+msgid "Could not read this bucket"
+msgstr "לא ניתן לקרוא את הבאקט הזה"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not reject plugin"
@@ -4117,6 +4130,10 @@ msgstr ""
 msgid "MCP servers"
 msgstr "שרתי MCP"
 
+#: src/components/StorageSettings.tsx
+msgid "Measuring…"
+msgstr "מודד…"
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4938,6 +4955,10 @@ msgstr ""
 #: src/pages/shell/chat-context.tsx
 msgid "Original message unavailable"
 msgstr "ההודעה המקורית אינה זמינה"
+
+#: src/components/StorageSettings.tsx
+msgid "Other"
+msgstr "אחר"
 
 #: src/components/FoundModelPicker.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -7486,6 +7507,10 @@ msgstr "עובד עם המינוי שלך ל-ChatGPT או ל-Claude."
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 msgid "Workspace"
 msgstr ""
+
+#: src/components/StorageSettings.tsx
+msgid "Workspaces"
+msgstr "סביבות עבודה"
 
 #: src/lib/billing.ts
 msgid "year"

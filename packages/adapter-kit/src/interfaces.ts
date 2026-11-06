@@ -406,7 +406,7 @@ export interface ObjectStorage {
   put(key: string, body: AsyncIterable<Uint8Array>): Promise<void>;
   /** Throws when the object does not exist. */
   get(key: string): AsyncIterable<Uint8Array>;
-  list(prefix: string): AsyncIterable<{ key: string; lastModified: Date }>;
+  list(prefix: string): AsyncIterable<{ key: string; lastModified: Date; size: number }>;
   /** Missing keys are not an error. */
   delete(keys: readonly string[]): Promise<void>;
 }

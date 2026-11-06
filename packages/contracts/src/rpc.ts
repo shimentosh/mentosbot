@@ -123,6 +123,7 @@ import {
   NetworkExitStatusSchema,
   ObjectStorageSettingsSchema,
   ObjectStorageUpdateSchema,
+  ObjectStorageUsageSchema,
   OPENAI_COMPATIBLE_PROVIDER_ID,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
@@ -563,6 +564,8 @@ export const appContract = {
   objectStorage: {
     get: oc.output(ObjectStorageSettingsSchema),
     update: oc.input(ObjectStorageUpdateSchema).output(ObjectStorageSettingsSchema),
+    /** Measures the bucket the server is running on; null on local disk or while switching. */
+    usage: oc.output(ObjectStorageUsageSchema.nullable()),
   },
   /** Deployment-owner view of the append-only security event log, newest first. */
   security: {
