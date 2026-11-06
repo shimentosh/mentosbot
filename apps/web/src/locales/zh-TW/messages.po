@@ -2994,6 +2994,7 @@ msgid "Download {0}"
 msgstr "下載 {0}"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "下載 {name}"
 
@@ -3008,7 +3009,7 @@ msgstr "下載 PDF"
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 msgid "Downloading {0}"
-msgstr ""
+msgstr "正在下載 {0}"
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3969,7 +3970,7 @@ msgstr "自動載入網路圖片"
 
 #: src/pages/shell/message-cards.tsx
 msgid "Loading {name}"
-msgstr ""
+msgstr "正在載入 {name}"
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7280,12 +7281,12 @@ msgstr "上傳"
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploaded {0}"
-msgstr ""
+msgstr "已上傳 {0}"
 
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploading {0}"
-msgstr ""
+msgstr "正在上傳 {0}"
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

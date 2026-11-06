@@ -2993,6 +2993,7 @@ msgid "Download {0}"
 msgstr "{0} 다운로드"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "{name} 다운로드"
 
@@ -3007,7 +3008,7 @@ msgstr "PDF 다운로드"
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 msgid "Downloading {0}"
-msgstr ""
+msgstr "{0} 다운로드 중"
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3968,7 +3969,7 @@ msgstr "웹 이미지 자동으로 불러오기"
 
 #: src/pages/shell/message-cards.tsx
 msgid "Loading {name}"
-msgstr ""
+msgstr "{name} 불러오는 중"
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7279,12 +7280,12 @@ msgstr "업로드"
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploaded {0}"
-msgstr ""
+msgstr "{0} 업로드됨"
 
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploading {0}"
-msgstr ""
+msgstr "{0} 업로드 중"
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

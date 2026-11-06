@@ -2993,6 +2993,7 @@ msgid "Download {0}"
 msgstr "{0} herunterladen"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "{name} herunterladen"
 
@@ -3007,7 +3008,7 @@ msgstr "PDF herunterladen"
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 msgid "Downloading {0}"
-msgstr ""
+msgstr "{0} wird heruntergeladen"
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3968,7 +3969,7 @@ msgstr "Webbilder automatisch laden"
 
 #: src/pages/shell/message-cards.tsx
 msgid "Loading {name}"
-msgstr ""
+msgstr "{name} wird geladen"
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7279,12 +7280,12 @@ msgstr "Hochladen"
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploaded {0}"
-msgstr ""
+msgstr "{0} hochgeladen"
 
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploading {0}"
-msgstr ""
+msgstr "{0} wird hochgeladen"
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"

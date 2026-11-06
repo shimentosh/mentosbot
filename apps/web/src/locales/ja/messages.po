@@ -2993,6 +2993,7 @@ msgid "Download {0}"
 msgstr "{0}をダウンロード"
 
 #: src/components/ArtifactFileCard.tsx
+#: src/pages/shell/message-cards.tsx
 msgid "Download {name}"
 msgstr "{name}をダウンロード"
 
@@ -3007,7 +3008,7 @@ msgstr "PDF をダウンロード"
 #. placeholder {0}: props.name
 #: src/components/ArtifactFileCard.tsx
 msgid "Downloading {0}"
-msgstr ""
+msgstr "{0} をダウンロード中"
 
 #: src/components/DesktopUpdates.tsx
 msgid "Downloading…"
@@ -3968,7 +3969,7 @@ msgstr "Web画像を自動で読み込む"
 
 #: src/pages/shell/message-cards.tsx
 msgid "Loading {name}"
-msgstr ""
+msgstr "{name} を読み込み中"
 
 #: src/pages/ActivityList.tsx
 msgid "Loading activity…"
@@ -7279,12 +7280,12 @@ msgstr "アップロード"
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploaded {0}"
-msgstr ""
+msgstr "{0} をアップロードしました"
 
 #. placeholder {0}: attachment.file.name
 #: src/pages/shell/composer.tsx
 msgid "Uploading {0}"
-msgstr ""
+msgstr "{0} をアップロード中"
 
 #: src/lib/ticket-priority.ts
 msgid "Urgent"
