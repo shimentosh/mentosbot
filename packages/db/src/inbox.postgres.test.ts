@@ -188,6 +188,38 @@ describePostgres("the bell (PostgreSQL)", () => {
     await expect(listApprovals(system, ada)).resolves.toHaveLength(1);
   });
 
+  it("names the bot that handed a waiting run its work", async () => {
+    const ada = await person();
+    const manager = await botRun(ada, "Manager", "completed");
+    const worker = await botRun(ada, "Worker", "waiting_input");
+    const delivery = await runAsTenant(ada, () =>
+      prisma.message.create({
+        data: {
+          threadId: worker.bot.threadId,
+          seq: 1,
+          role: "user",
+          blocks: [
+            {
+              kind: "bot_message_received",
+              fromBotId: manager.bot.id,
+              fromBotName: "Manager",
+              text: "Publish the replies",
+            },
+          ] as object[],
+        },
+      }),
+    );
+    await system.run.update({
+      where: { id: worker.run.id },
+      data: { trigger: "bot_message", sourceMessageId: delivery.id },
+    });
+
+    const approvals = await listApprovals(system, ada);
+    expect(approvals.map((entry) => [entry.bot.name, entry.requestedByBotId])).toEqual([
+      ["Worker", manager.bot.id],
+    ]);
+  });
+
   it("shows finished and failed work as unread until the person has seen it", async () => {
     const ada = await person();
     const done = await botRun(ada, "Writer", "completed");

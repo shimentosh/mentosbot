@@ -9,7 +9,11 @@ import {
 } from "@rakazo/db";
 import { describe, expect, it, vi } from "vitest";
 import { PARTIAL_REPLY_NOTE } from "./automated-messages.js";
-import { loadBotMessageContext, returnBotMessageOutcome } from "./bot-messages.js";
+import {
+  loadBotMessageContext,
+  returnBotMessageOutcome,
+  tellRequesterAwaitingApproval,
+} from "./bot-messages.js";
 import type * as ComputerLifecycleModule from "./computer-lifecycle.js";
 import { createRunExecutor } from "./executor.js";
 import { createJobReconciler } from "./job-reconciler.js";
@@ -871,6 +875,12 @@ describe("text written before a question", () => {
       pauseRunForInput.mock.invocationCallOrder[0]!,
     );
     expect(finalizeRun).not.toHaveBeenCalled();
+    expect(vi.mocked(tellRequesterAwaitingApproval)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      { key: expect.stringMatching(/^run-[^:]*:[0-9a-f]{16}$/), summary: "Which order?" },
+    );
   });
 
   it("puts a draft on the question card with secrets redacted, and its choice flags", async () => {

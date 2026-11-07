@@ -36,6 +36,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useParams } from "react-router-dom";
+import { chatPath } from "../components/ApprovalItem";
 import { ComputerUpdateProgress } from "../components/ComputerUpdateProgress";
 import { CallCard, CallReturnBar } from "../components/call/CallCard";
 import { IncomingCall } from "../components/call/IncomingCall";
@@ -85,6 +86,7 @@ import { Composer } from "./shell/composer";
 import { ComputerOverlay } from "./shell/computer-overlay";
 import { ComputerPanel } from "./shell/computer-panel";
 import type { CreateBotDialogInput } from "./shell/create-bot-dialog";
+import { DelegatedCards } from "./shell/delegated-cards";
 import type { ImportSetupTarget } from "./shell/import-setup-card";
 import { KeyboardShortcutsDialog } from "./shell/keyboard-shortcuts-dialog";
 import { ShellDialogs, useShellDialogs } from "./shell/shell-dialogs";
@@ -1190,6 +1192,15 @@ function SpaceShell() {
         {active || activeGroup ? (
           // Let messages continue behind the composer's rounded top corners.
           <div className="pointer-events-none relative z-30 -mt-7">
+            {active && !inGroup ? (
+              <DelegatedCards
+                botId={active.id}
+                onOpen={(approval) => {
+                  if (approval.spaceId === selectedSpaceId()) navigate(chatPath(approval));
+                  else openSpaceChat(approval.spaceId, chatPath(approval));
+                }}
+              />
+            ) : null}
             {recordingSkill ? (
               <div className="pointer-events-auto bg-background px-6 pb-2 text-center text-[13px] text-destructive">
                 <Trans>Teaching in progress. Stop teaching before sending a new message.</Trans>

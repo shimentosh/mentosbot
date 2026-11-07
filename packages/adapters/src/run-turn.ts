@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { AgentRuntimeEvent } from "@rakazo/adapter-kit";
 import {
   DEFAULT_CONTEXT_STRATEGY,
@@ -25,7 +26,7 @@ import { RunHistoryWriteError, recordUsage } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { sanitizedError } from "@rakazo/logging/monitoring";
 import { isToolPauseResult } from "./approval-effect.js";
-import { returnBotMessageOutcome } from "./bot-messages.js";
+import { returnBotMessageOutcome, tellRequesterAwaitingApproval } from "./bot-messages.js";
 import { scheduleComputerSleep } from "./computer-idle.js";
 import { holdComputerExecutionLeaseForTakeover } from "./computer-lifecycle.js";
 import { resolveBotWorkspacePath } from "./computer-support.js";
@@ -398,6 +399,17 @@ async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
     label: redactSecrets(action.label, ctx.secrets),
   }));
   const previewImages = await askPreviewImages(deps, run, event.previewImages);
+  // Sent while this run still holds its lease; a failed notice never blocks the card.
+  await tellRequesterAwaitingApproval(
+    deps,
+    { ...run, id: runId },
+    { id: bot.id, name: bot.name },
+    {
+      // A retried turn repeats the same call; without its id the question itself names the card.
+      key: `${runId}:${event.executionId ?? createHash("sha256").update(safeText).digest("hex").slice(0, 16)}`,
+      summary: safeText,
+    },
+  ).catch((error) => getLogger().warn("ask wait notice", error));
   await ctx.computer.checkpoint.flush();
   await persistTurnCheckpoint(ctx, event.executionId);
   await ctx.settleRunningHelpers();

@@ -4524,7 +4524,7 @@ msgstr "Needs takeover"
 msgid "Needs you"
 msgstr "Needs you"
 
-#: src/pages/ApprovalsOverlay.tsx
+#: src/components/ApprovalItem.tsx
 msgid "Needs you in the chat"
 msgstr "Needs you in the chat"
 
@@ -4893,6 +4893,7 @@ msgid "Only you"
 msgstr "Only you"
 
 #: src/components/ai/CollaborationMarker.tsx
+#: src/components/ApprovalItem.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
 #: src/pages/ApprovalsOverlay.tsx
@@ -4927,7 +4928,7 @@ msgstr "Open <0>{0}</0> and enter this code:"
 msgid "Open call"
 msgstr "Open call"
 
-#: src/pages/ApprovalsOverlay.tsx
+#: src/components/ApprovalItem.tsx
 msgid "Open chat"
 msgstr "Open chat"
 

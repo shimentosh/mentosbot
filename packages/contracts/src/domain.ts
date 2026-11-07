@@ -241,6 +241,8 @@ export const ApprovalSchema = z.object({
   at: z.string().datetime({ offset: true }),
   /** Absent while the run waits for someone to take over its screen, or its card is gone. */
   ask: z.object({ messageId: Id, block: MessageBlock }).nullable(),
+  /** The bot that handed this run its work; its chat shows the card too. */
+  requestedByBotId: Id.nullable(),
 });
 export type Approval = z.infer<typeof ApprovalSchema>;
 

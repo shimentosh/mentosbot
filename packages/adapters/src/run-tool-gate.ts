@@ -724,7 +724,7 @@ async function showApprovalCard(ctx: RunContext, call: ToolCall, card: ApprovalC
     deps,
     { ...run, id: runId },
     { id: bot.id, name: bot.name },
-    { effectId: applied!.effect.id, summary: ask.kind === "ask" ? ask.text : name },
+    { key: applied!.effect.id, summary: ask.kind === "ask" ? ask.text : name },
   ).catch((error) => getLogger().warn("approval wait notice", error));
   const paused = await deps.events.pauseRunForInput({
     spaceId: run.spaceId,

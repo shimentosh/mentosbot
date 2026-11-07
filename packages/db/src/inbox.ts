@@ -1,6 +1,6 @@
 import type { MessageBlock } from "@rakazo/contracts";
 import { MessageBlock as MessageBlockSchema } from "@rakazo/contracts";
-import { WAITING_ON_USER_RUN_STATUSES } from "@rakazo/core";
+import { botMessageContext, WAITING_ON_USER_RUN_STATUSES } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 
 export type InboxNeedKind = "approval" | "answer" | "takeover";
@@ -176,6 +176,8 @@ export interface ApprovalEntry {
   groupId: string | null;
   at: Date;
   ask: { messageId: string; block: Extract<MessageBlock, { kind: "ask" }> } | null;
+  /** The bot that handed this run its work, so the card can show in that bot's chat too. */
+  requestedByBotId: string | null;
 }
 
 /**
@@ -208,8 +210,25 @@ export async function listApprovals(
       space: { select: { name: true } },
       bot: { select: BOT_SELECT },
       thread: { select: { groupId: true } },
+      trigger: true,
+      sourceMessageId: true,
     },
   });
+  const delegated = runs.flatMap((run) =>
+    run.trigger === "bot_message" && run.sourceMessageId ? [run.sourceMessageId] : [],
+  );
+  const sources = delegated.length
+    ? await prisma.message.findMany({
+        where: { id: { in: delegated } },
+        select: { id: true, blocks: true },
+      })
+    : [];
+  const requesters = new Map<string, string>();
+  for (const source of sources) {
+    const parsed = MessageBlockSchema.array().safeParse(source.blocks);
+    const fromBotId = parsed.success ? botMessageContext(parsed.data)?.fromBotId : undefined;
+    if (fromBotId) requesters.set(source.id, fromBotId);
+  }
   const asking = runs.filter((run) => run.status === "waiting_input").map((run) => run.id);
   const messages = asking.length
     ? await prisma.message.findMany({
@@ -238,6 +257,7 @@ export async function listApprovals(
     groupId: run.thread.groupId,
     at: run.updatedAt,
     ask: asks.get(run.id) ?? null,
+    requestedByBotId: (run.sourceMessageId && requesters.get(run.sourceMessageId)) || null,
   }));
 }
 

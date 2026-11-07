@@ -903,7 +903,7 @@ describe("waiting on the person's approval", () => {
   it("tells the bot that asked, once per approval", async () => {
     const harness = deps({ hopBlocks: request() });
     await tellRequesterAwaitingApproval(harness.deps as never, delegated, sender, {
-      effectId: "effect-1",
+      key: "effect-1",
       summary: "Post on X",
     });
 
@@ -917,7 +917,7 @@ describe("waiting on the person's approval", () => {
               kind: "bot_message_received",
               intent: "status",
               text: expect.stringContaining(
-                "Waiting for the user's approval in my chat: Post on X",
+                "Waiting for the user's answer in my chat: Post on X",
               ),
               userRequest: "publish the post",
             }),
@@ -941,7 +941,7 @@ describe("waiting on the person's approval", () => {
         { ...delegated, trigger },
         sender,
         {
-          effectId: "effect-1",
+          key: "effect-1",
           summary: "Post on X",
         },
       );

@@ -414,8 +414,8 @@ export async function returnBotMessageOutcome(
 }
 
 /**
- * Tell the bot that delegated this run that it now waits on the person's approval. The card sits
- * in this bot's own chat, which the person may not be reading, and without word the requester
+ * Tell the bot that delegated this run that it now waits on the person's answer to a card. The card
+ * sits in this bot's own chat and is also shown in the requester's, and without word the requester
  * keeps asking for progress until the chain's message limit runs out.
  */
 export async function tellRequesterAwaitingApproval(
@@ -430,7 +430,8 @@ export async function tellRequesterAwaitingApproval(
     sourceMessageId?: string | null;
   },
   sender: { id: string; name: string },
-  approval: { effectId: string; summary: string },
+  /** `key` names the card, so a retried turn sends one notice. */
+  approval: { key: string; summary: string },
 ): Promise<void> {
   if (run.trigger !== "bot_message") return;
   const source = await loadBotMessageContext(deps.prisma, run.sourceMessageId);
@@ -440,11 +441,11 @@ export async function tellRequesterAwaitingApproval(
   const sent = await messageBot(deps, run, sender, {
     bot_id: source.fromBotId,
     message: clampBotMessage(
-      `Waiting for the user's approval in my chat: ${approval.summary}\nThey can answer it there; I continue once they do, so you don't need to message me again.`,
+      `Waiting for the user's answer in my chat: ${approval.summary}\nThe card also shows in your chat with them, so they can answer it from either; I continue once they do, so you don't need to message me again.`,
     ),
     intent: "status",
     // One notice per approval, however often this turn is retried.
-    deliveryKey: `approval-wait:${approval.effectId}`,
+    deliveryKey: `approval-wait:${approval.key}`,
     userRequest: source.userRequest,
   });
   if (!sent.ok) getLogger().warn("approval wait notice not delivered", { error: sent.error });
