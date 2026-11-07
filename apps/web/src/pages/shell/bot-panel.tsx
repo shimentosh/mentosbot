@@ -701,7 +701,7 @@ export function BotSettings({
             <SettingsGroup label={t`Computer`} plain>
               <ComputerModePicker value={computerMode} onChange={setComputerMode} />
               {bot.computerMode === "team" ? (
-                <fieldset className="mt-4" aria-describedby={`${ids}-browser-detail`}>
+                <fieldset className="mt-4 min-w-0" aria-describedby={`${ids}-browser-detail`}>
                   <legend className="mb-2 text-xs font-medium text-muted-foreground">
                     <Trans>Browser</Trans>
                   </legend>
