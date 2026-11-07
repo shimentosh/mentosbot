@@ -30,6 +30,7 @@ import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
 import { queryClient, useQueryUserId } from "../lib/query";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
+import { ServerUsage } from "./ServerUsage";
 
 function computerServersQuery(userId: string | null) {
   return queryOptions({
@@ -72,6 +73,7 @@ export function ComputerServersSettings() {
   };
   return (
     <div className="mt-4 space-y-3" data-testid="computer-servers">
+      <ServerUsage />
       {data.servers.length > 0 ? (
         <SettingsGroup title={<Trans>Servers</Trans>}>
           {data.servers.map((server) => (

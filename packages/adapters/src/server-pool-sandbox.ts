@@ -408,6 +408,37 @@ function assertOnServer(url: string, serverUrl: string) {
  * Checks that a server answers with this token. A missing computer is the expected answer, so
  * anything but a refused token or no answer at all means the server is ready.
  */
+/** What a server's supervisor reports about its load (see its /usage route); null when unreachable. */
+export interface SupervisorUsage {
+  cpus: number;
+  load: number;
+  memory: { total: number; available: number };
+  disk: { total: number; available: number } | null;
+  computers: { key: string; running: boolean; memory: number | null }[];
+}
+
+export async function readComputerServerUsage(
+  url: string,
+  token: string,
+  signal?: AbortSignal,
+): Promise<SupervisorUsage | null> {
+  const timeout = AbortSignal.timeout(10_000);
+  try {
+    const res = await fetch(`${url}/usage`, {
+      headers: { authorization: `Bearer ${token}` },
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+    if (!res.ok) {
+      await res.body?.cancel();
+      return null;
+    }
+    const body = (await res.json()) as SupervisorUsage;
+    return Array.isArray(body?.computers) && typeof body.cpus === "number" ? body : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function verifyComputerServer(
   url: string,
   token: string,

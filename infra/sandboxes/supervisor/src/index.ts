@@ -77,6 +77,7 @@ import {
   networkExitContainerOptions,
   networkExitFingerprint,
 } from "./network-exit.js";
+import { readServerUsage } from "./server-usage.js";
 import type { ScreenAssignment } from "./supervisor-logic.js";
 import {
   assertRequestIdentity,
@@ -226,6 +227,34 @@ export function resolveDockerSocketPath(
 }
 
 app.get("/health", (c) => c.json({ ok: true, image: COMPUTER_IMAGE }));
+
+// How busy this server is, for the deployment's Servers settings. The computers' token guards it.
+app.get("/usage", async (c) => {
+  if (!hasValidBearerToken(c.req.header("authorization"), supervisorToken)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  const listed = await docker.listContainers({
+    all: true,
+    filters: { label: ["rakazo.managed=true"] },
+  });
+  return c.json(
+    await readServerUsage({
+      dataDir,
+      computers: listed.flatMap((item) => {
+        const key = item.Labels?.["rakazo.botId"];
+        if (!key) return [];
+        const container = docker.getContainer(item.Id);
+        return [
+          {
+            key,
+            running: item.State === "running",
+            stats: () => container.stats({ stream: false }),
+          },
+        ];
+      }),
+    }),
+  );
+});
 
 app.use("/computers", async (c, next) => {
   if (!hasValidBearerToken(c.req.header("authorization"), supervisorToken)) {

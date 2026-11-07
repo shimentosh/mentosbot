@@ -81,6 +81,7 @@ import {
   ComputerServerSetupSchema,
   ComputerServerStatusSchema,
   ComputerServerUpdateSchema,
+  ComputerServerUsageSchema,
   ComputerStatusSchema,
   ComputerUpdateSchema,
   ConnectionCatalogItemSchema,
@@ -581,6 +582,8 @@ export const appContract = {
     remove: oc
       .input(z.object({ id: z.string().min(1).max(64) }))
       .output(ComputerServerStatusSchema),
+    /** CPU, memory, disk and computers on this deployment's server and each added one. */
+    usage: oc.output(z.array(ComputerServerUsageSchema)),
   },
   /** Admin choice of the bucket that holds bot homes and artifacts. */
   objectStorage: {

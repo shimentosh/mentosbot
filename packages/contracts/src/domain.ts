@@ -1896,6 +1896,33 @@ export const ComputerServerStatusSchema = z.object({
   servers: z.array(ComputerServerSchema),
 });
 export type ComputerServerStatus = z.infer<typeof ComputerServerStatusSchema>;
+/** How busy one server that runs computers is, so its owner can tell when to add another. */
+export const ComputerServerUsageSchema = z.object({
+  /** The server row's id; null for the server this deployment runs on. */
+  id: z.string().nullable(),
+  name: z.string(),
+  /** Null when the server did not answer. */
+  usage: z
+    .object({
+      cpus: z.number().int(),
+      /** Runnable processes over the last minute; near `cpus` means every core is busy. */
+      load: z.number(),
+      memory: z.object({ total: z.number(), available: z.number() }),
+      disk: z.object({ total: z.number(), available: z.number() }).nullable(),
+      computers: z.array(
+        z.object({
+          /** A bot's name, or the Space whose team computer it is. */
+          name: z.string(),
+          team: z.boolean(),
+          running: z.boolean(),
+          /** Bytes in use while running. */
+          memory: z.number().nullable(),
+        }),
+      ),
+    })
+    .nullable(),
+});
+export type ComputerServerUsage = z.infer<typeof ComputerServerUsageSchema>;
 const ServerHostSchema = z
   .string()
   .trim()

@@ -29,6 +29,11 @@ msgstr "{0, plural, one {{1} of # computer} other {{2} of # computers}}"
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
 msgstr "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
 
+#. placeholder {0}: running.length
+#: src/pages/ServerUsage.tsx
+msgid "{0, plural, one {# computer running} other {# computers running}}"
+msgstr "{0, plural, one {# computer running} other {# computers running}}"
+
 #. placeholder {0}: skill.files.length
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "{0, plural, one {# file} other {# files}}"
@@ -143,6 +148,14 @@ msgstr "{0} KB"
 msgid "{0} MB"
 msgstr "{0} MB"
 
+#. placeholder {0}: formatSize(diskUsed)
+#. placeholder {0}: formatSize(memoryUsed)
+#. placeholder {1}: formatSize(usage.disk.total)
+#. placeholder {1}: formatSize(usage.memory.total)
+#: src/pages/ServerUsage.tsx
+msgid "{0} of {1}"
+msgstr "{0} of {1}"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -152,6 +165,12 @@ msgstr "{0} rollup hours"
 #: src/lib/file-size.ts
 msgid "{0} TB"
 msgstr "{0} TB"
+
+#. placeholder {0}: Math.min(100, Math.round(shares[2]! * 100))
+#. placeholder {1}: usage.cpus
+#: src/pages/ServerUsage.tsx
+msgid "{0}% of {1} cores"
+msgstr "{0}% of {1} cores"
 
 #: src/lib/billing.ts
 msgid "{amount} / {period}"
@@ -770,6 +789,10 @@ msgstr "Allowed in this space"
 #: src/components/AskCard.tsx
 msgid "Allowed once"
 msgstr "Allowed once"
+
+#: src/pages/ServerUsage.tsx
+msgid "Almost full. Add a server before adding more bots."
+msgstr "Almost full. Add a server before adding more bots."
 
 #: src/pages/shell/agent-import.tsx
 msgid "Already connected"
@@ -2552,6 +2575,10 @@ msgstr "Couldn't update your wallet"
 msgid "Country"
 msgstr "Country"
 
+#: src/pages/ServerUsage.tsx
+msgid "CPU"
+msgstr "CPU"
+
 #: src/components/CreateOrganizationDialog.tsx
 #: src/pages/Board.tsx
 #: src/pages/shell/agent-import.tsx
@@ -2885,6 +2912,10 @@ msgstr "Disconnected {disconnectName}."
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Disconnecting…"
 msgstr "Disconnecting…"
+
+#: src/pages/ServerUsage.tsx
+msgid "Disk"
+msgstr "Disk"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
@@ -4137,6 +4168,7 @@ msgstr "Members ({0})"
 
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MemorySettingsOverlay.tsx
+#: src/pages/ServerUsage.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/agent-import.tsx
 msgid "Memory"
@@ -4669,6 +4701,7 @@ msgid "Not added: {0}"
 msgstr "Not added: {0}"
 
 #: src/pages/ComputerServersSettings.tsx
+#: src/pages/ServerUsage.tsx
 msgid "Not answering"
 msgstr "Not answering"
 
@@ -6624,6 +6657,11 @@ msgstr "Teaching in progress. Stop teaching before sending a new message."
 msgid "Team"
 msgstr "Team"
 
+#. placeholder {0}: computer.name
+#: src/pages/ServerUsage.tsx
+msgid "Team · {0}"
+msgstr "Team · {0}"
+
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "Team Computer"
@@ -6900,6 +6938,10 @@ msgstr "This removes the connection from every space."
 #: src/pages/Auth.tsx
 msgid "This reset link is invalid or expired"
 msgstr "This reset link is invalid or expired"
+
+#: src/pages/ServerUsage.tsx
+msgid "This server"
+msgstr "This server"
 
 #: src/pages/shell/message-cards.tsx
 msgid "This server cannot be assigned without a bot."
@@ -7183,6 +7225,7 @@ msgstr "Uploading {0}"
 msgid "Urgent"
 msgstr "Urgent"
 
+#: src/pages/ServerUsage.tsx
 #: src/pages/settings-nav.ts
 msgid "Usage"
 msgstr "Usage"

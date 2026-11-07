@@ -882,6 +882,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       privacyPolicyUrl: env.privacyPolicyUrl,
       screenProxySecret: env.screenProxySecret,
       sandboxProvider: env.sandboxProvider,
+      sandboxSupervisorUrl: env.sandboxSupervisorUrl,
+      sandboxSupervisorToken: env.sandboxSupervisorToken,
       gitSha: env.gitSha,
       integrationsCatalogUrl: env.integrationsCatalogUrl,
       mcpAllowPrivateEndpoint: env.mcpAllowPrivateEndpoint,

@@ -314,6 +314,7 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["computerServers/setup", { id: "missing-server", username: "root", password: "x" }],
       ["computerServers/update", { id: "missing-server", paused: true }],
       ["computerServers/remove", { id: "missing-server" }],
+      ["computerServers/usage"],
       ["inbox/list"],
       ["inbox/markRead"],
       ["bots/list"],

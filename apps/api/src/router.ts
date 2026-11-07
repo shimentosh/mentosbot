@@ -153,6 +153,9 @@ export interface RouterDeps {
     privacyPolicyUrl?: string;
     screenProxySecret: string;
     sandboxProvider: string;
+    /** This deployment's own computer server, asked how busy it is. */
+    sandboxSupervisorUrl?: string;
+    sandboxSupervisorToken?: string;
     gitSha?: string;
     integrationsCatalogUrl?: string;
     mcpAllowPrivateEndpoint?: boolean;

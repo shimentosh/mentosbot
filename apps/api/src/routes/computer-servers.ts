@@ -1,7 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { ORPCError } from "@orpc/server";
-import { ServerSetupError, setUpServerOverSsh, verifyComputerServer } from "@rakazo/adapters";
-import type { Actor, ComputerServerStatus } from "@rakazo/contracts";
+import {
+  readComputerServerUsage,
+  ServerSetupError,
+  setUpServerOverSsh,
+  verifyComputerServer,
+} from "@rakazo/adapters";
+import type { Actor, ComputerServerStatus, ComputerServerUsage } from "@rakazo/contracts";
 import type { ComputerServerRecord } from "@rakazo/db";
 import {
   addComputerServer,
@@ -12,6 +17,7 @@ import {
   listComputerServers,
   recordAuditEvent,
   removeComputerServer,
+  runAsSystem,
   updateComputerServer,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
@@ -87,6 +93,83 @@ export function computerServerRoutes(ctx: RouterContext) {
         ...setupOf(server, now),
       })),
     };
+  };
+
+  /** Asks every server how busy it is, and names each computer by its bot or Space. */
+  const usage = async (signal?: AbortSignal): Promise<ComputerServerUsage[]> => {
+    const servers = await listComputerServers(deps.prisma);
+    const targets = [
+      {
+        id: null,
+        name: "",
+        url: deps.env.sandboxSupervisorUrl,
+        token: deps.env.sandboxSupervisorToken,
+      },
+      ...(await Promise.all(
+        servers
+          .filter((server) => server.ready && server.url)
+          .map(async (server) => ({
+            id: server.id,
+            name: server.name,
+            url: server.url,
+            token: await deps.secrets.load(server.ciphertext, server.secretId),
+          })),
+      )),
+    ];
+    const reports = await Promise.all(
+      targets.map((target) =>
+        target.url && target.token
+          ? readComputerServerUsage(target.url, target.token, signal)
+          : Promise.resolve(null),
+      ),
+    );
+    const keys = reports.flatMap((report) => report?.computers.map((item) => item.key) ?? []);
+    // Computers of every Space on the server, which no one Space's row rules can see.
+    const names = await runAsSystem("name the computers on the deployment's servers", async () => {
+      const computers = await deps.prisma.computer.findMany({
+        where: { homeKey: { in: keys } },
+        select: { homeKey: true, scope: true, scopeKey: true, space: { select: { name: true } } },
+      });
+      const botIds = computers.flatMap((computer) =>
+        computer.scopeKey.startsWith("bot:") ? [computer.scopeKey.slice(4)] : [],
+      );
+      const bots = await deps.prisma.bot.findMany({
+        where: { id: { in: botIds } },
+        select: { id: true, name: true },
+      });
+      const botNames = new Map(bots.map((bot) => [bot.id, bot.name]));
+      return new Map(
+        computers.map((computer) => [
+          computer.homeKey,
+          computer.scope === "team"
+            ? { name: computer.space.name, team: true }
+            : {
+                name: botNames.get(computer.scopeKey.slice(4)) ?? computer.space.name,
+                team: false,
+              },
+        ]),
+      );
+    });
+    return targets.map((target, index) => {
+      const report = reports[index];
+      return {
+        id: target.id,
+        name: target.name,
+        usage: report
+          ? {
+              cpus: report.cpus,
+              load: report.load,
+              memory: report.memory,
+              disk: report.disk,
+              computers: report.computers.map((item) => ({
+                ...(names.get(item.key) ?? { name: item.key, team: item.key.startsWith("team-") }),
+                running: item.running,
+                memory: item.memory,
+              })),
+            }
+          : null,
+      };
+    });
   };
 
   const requireManager = async (actor: Actor) => {
@@ -198,6 +281,10 @@ export function computerServerRoutes(ctx: RouterContext) {
         await requireManager(context.actor);
         if (!(await updateComputerServer(deps.prisma, input))) throw new ORPCError("NOT_FOUND");
         return status(context.signal);
+      }),
+      usage: authed.computerServers.usage.handler(async ({ context }) => {
+        await requireManager(context.actor);
+        return usage(context.signal);
       }),
       remove: authed.computerServers.remove.handler(async ({ context, input }) => {
         const { actor } = context;
