@@ -627,6 +627,10 @@ msgstr "Add a trigger to run this routine."
 msgid "Add a voice provider key and pick a voice in Voice settings."
 msgstr "Add a voice provider key and pick a voice in Voice settings."
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Add account"
+msgstr "Add account"
+
 #: src/pages/McpServersOverlay.tsx
 msgid "Add an HTTPS server URL."
 msgstr "Add an HTTPS server URL."
@@ -2935,6 +2939,11 @@ msgstr "Discard recording"
 msgid "Disconnect"
 msgstr "Disconnect"
 
+#. placeholder {0}: account.email
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Disconnect {0}"
+msgstr "Disconnect {0}"
+
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Disconnect {disconnectName}?"
 msgstr "Disconnect {disconnectName}?"
@@ -4635,10 +4644,6 @@ msgstr "Next page"
 #: src/pages/SettingsOverlay.tsx
 msgid "Next settings sections"
 msgstr "Next settings sections"
-
-#: src/pages/IntegrationsOverlay.tsx
-msgid "No account connected"
-msgstr "No account connected"
 
 #: src/pages/Artifacts.tsx
 msgid "No artifacts found."

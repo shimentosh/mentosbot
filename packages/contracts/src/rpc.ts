@@ -1330,7 +1330,7 @@ export const appContract = {
     saveClient: oc.input(GoogleWorkspaceClientInput).output(GoogleWorkspaceStateSchema),
     begin: oc.output(z.object({ authorizationUrl: z.string() })),
     complete: oc.input(GoogleWorkspaceCompleteInput).output(GoogleWorkspaceStateSchema),
-    disconnect: oc.output(GoogleWorkspaceStateSchema),
+    disconnect: oc.input(z.object({ accountId: Id })).output(GoogleWorkspaceStateSchema),
   },
   integrationSetup: {
     get: oc.output(IntegrationSetupStateSchema),

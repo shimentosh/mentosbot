@@ -1,16 +1,18 @@
 import * as z from "zod";
 
-/** The user's own OAuth client and the account connected through it, in the current space. */
+/** The user's own OAuth client and the accounts connected through it, in the current space. */
 export const GoogleWorkspaceStateSchema = z.object({
   /** Where the provider sends the user back; the OAuth client must list it exactly. */
   redirectUri: z.string(),
   clientId: z.string().nullable(),
-  account: z
-    .object({
+  /** Oldest first; bots name one by email when there are several. */
+  accounts: z.array(
+    z.object({
+      id: z.string(),
       email: z.string(),
       connectedAt: z.string(),
-    })
-    .nullable(),
+    }),
+  ),
 });
 export type GoogleWorkspaceState = z.infer<typeof GoogleWorkspaceStateSchema>;
 

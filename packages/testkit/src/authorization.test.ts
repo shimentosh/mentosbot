@@ -254,7 +254,7 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["googleWorkspace/saveClient", { clientId: "client-id", clientSecret: "client-secret" }],
       ["googleWorkspace/begin"],
       ["googleWorkspace/complete", { code: "code", state: "state" }],
-      ["googleWorkspace/disconnect"],
+      ["googleWorkspace/disconnect", { accountId: "missing-account" }],
       ["objectStorage/cleanup", { olderThanDays: 30 }],
       ["projectFolder/get", { botId: "missing-bot" }],
       ["projectFolder/browse", {}],

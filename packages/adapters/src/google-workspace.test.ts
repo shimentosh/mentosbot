@@ -88,7 +88,7 @@ describe("google workspace sign-in", () => {
     );
     expect(url.origin).toBe("https://accounts.google.com");
     expect(url.searchParams.get("access_type")).toBe("offline");
-    expect(url.searchParams.get("prompt")).toBe("consent");
+    expect(url.searchParams.get("prompt")).toBe("consent select_account");
     expect(url.searchParams.get("state")).toBe("state-1");
     expect(url.searchParams.get("scope")?.split(" ")).toEqual(GOOGLE_WORKSPACE_SCOPES);
   });
@@ -191,6 +191,61 @@ describe("GoogleWorkspaceConnector", () => {
       `Subject: =?UTF-8?B?${Buffer.from("Hello বন্ধু").toString("base64")}?=`,
     );
     expect(message).toContain(Buffer.from("Line one").toString("base64"));
+  });
+
+  it("makes the bot name the account when several are connected", async () => {
+    const { prisma, secrets } = await setup({
+      accessToken: "live",
+      expiresAt: Date.now() + 3_600_000,
+    });
+    const two = context({
+      connectedConnections: [
+        {
+          id: "conn-1",
+          connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
+          externalId: GOOGLE_WORKSPACE_CONNECTOR_ID,
+          displayName: "person@example.test",
+        },
+        {
+          id: "conn-2",
+          connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
+          externalId: GOOGLE_WORKSPACE_CONNECTOR_ID,
+          displayName: "work@example.test",
+        },
+      ],
+    });
+    const fetch = vi.fn(async () => json({ items: [] }));
+    const connector = new GoogleWorkspaceConnector({ prisma, secrets, fetch });
+    const [tool] = await connector.discoverTools(two);
+    if (!tool) throw new Error("expected Google tools");
+    expect(tool.route?.connectionId).toBeUndefined();
+    expect(tool.inputSchema.required).toContain("account");
+    expect((tool.inputSchema.properties as { account: { enum: string[] } }).account.enum).toEqual([
+      "person@example.test",
+      "work@example.test",
+    ]);
+
+    const [missing] = await collect(
+      connector.execute({ tool: "calendar_list_calendars", args: {}, executionId: "e1" }, two),
+    );
+    expect(missing).toEqual({
+      type: "error",
+      message: "Name the account to use: person@example.test, work@example.test.",
+    });
+
+    await collect(
+      connector.execute(
+        {
+          tool: "calendar_list_calendars",
+          args: { account: "Work@example.test" },
+          executionId: "e2",
+        },
+        two,
+      ),
+    );
+    expect(prisma.connection.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: "conn-2" }) }),
+    );
   });
 
   it("keeps the generic tools on Google API hosts", async () => {

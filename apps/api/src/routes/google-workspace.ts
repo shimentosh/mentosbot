@@ -23,8 +23,8 @@ export function googleWorkspaceRoutes(ctx: RouterContext) {
       complete: authed.googleWorkspace.complete.handler(({ context, input }) =>
         completeGoogleWorkspace(deps, context.actor, input),
       ),
-      disconnect: authed.googleWorkspace.disconnect.handler(({ context }) =>
-        disconnectGoogleWorkspace(deps, context.actor),
+      disconnect: authed.googleWorkspace.disconnect.handler(({ context, input }) =>
+        disconnectGoogleWorkspace(deps, context.actor, input),
       ),
     },
   };

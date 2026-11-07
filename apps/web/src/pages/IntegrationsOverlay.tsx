@@ -197,7 +197,9 @@ export function IntegrationsOverlay({
   const open = [GOOGLE, ...KEY_INTEGRATIONS].find((integration) => integration.id === openId);
   const status = (integration: Integration): ReactNode => {
     if (integration.id === GOOGLE.id) {
-      return data.google?.account ? <Connected>{data.google.account.email}</Connected> : null;
+      return data.google?.accounts.length ? (
+        <Connected>{data.google.accounts.map((account) => account.email).join(", ")}</Connected>
+      ) : null;
     }
     if (integration.id === MCP.id) {
       return data.mcpServers.length ? (
@@ -212,7 +214,7 @@ export function IntegrationsOverlay({
   };
   const added = (integration: Integration) =>
     integration.id === GOOGLE.id
-      ? Boolean(data.google?.account)
+      ? Boolean(data.google?.accounts.length)
       : integration.id === MCP.id
         ? data.mcpServers.length > 0
         : keyConnected(integration, data.saved);
@@ -358,6 +360,7 @@ function ErrorLine({ error }: { error: string | null | undefined }) {
 }
 
 function GoogleWorkspaceDetail() {
+  const { t } = useLingui();
   const userId = useQueryUserId();
   const query = googleQuery(userId);
   const { data, error: loadError } = useQuery({ ...query, enabled: Boolean(userId) }, queryClient);
@@ -382,40 +385,48 @@ function GoogleWorkspaceDetail() {
       </>
     );
   }
+  const signIn = () =>
+    void run(async () => {
+      await googleSignIn();
+      await queryClient.invalidateQueries({ queryKey: query.queryKey });
+    });
   return (
     <>
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-        <span className="min-w-0 text-[14px] text-muted-foreground">
-          {data.account ? (
-            <Connected>{data.account.email}</Connected>
-          ) : (
-            <Trans>No account connected</Trans>
-          )}
-        </span>
-        {data.account ? (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pending}
-            onClick={() => void run(async () => save(await rpc.googleWorkspace.disconnect()))}
-          >
-            <Trans>Disconnect</Trans>
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              void run(async () => {
-                await googleSignIn();
-                await queryClient.invalidateQueries({ queryKey: query.queryKey });
-              })
-            }
-          >
-            <Trans>Connect</Trans>
-          </Button>
-        )}
-      </div>
+      {data.accounts.length ? (
+        <ul
+          className="divide-y divide-border rounded-xl border border-border"
+          data-testid="google-accounts"
+        >
+          {data.accounts.map((account) => (
+            <li key={account.id} className="flex items-center justify-between gap-4 px-4 py-3">
+              <span className="min-w-0 text-[14px]">
+                <Connected>{account.email}</Connected>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pending}
+                aria-label={t`Disconnect ${account.email}`}
+                onClick={() =>
+                  void run(async () =>
+                    save(await rpc.googleWorkspace.disconnect({ accountId: account.id })),
+                  )
+                }
+              >
+                <Trans>Disconnect</Trans>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <Button
+        className={data.accounts.length ? "mt-3" : undefined}
+        variant={data.accounts.length ? "outline" : "default"}
+        disabled={pending}
+        onClick={signIn}
+      >
+        {data.accounts.length ? <Trans>Add account</Trans> : <Trans>Connect</Trans>}
+      </Button>
       <ErrorLine error={error} />
       <Button
         variant="link"

@@ -70,7 +70,7 @@ export function googleAuthorizationUrl(input: {
     scope: GOOGLE_WORKSPACE_SCOPES.join(" "),
     access_type: "offline",
     // Always ask again so Google returns a refresh token, even for an account it has seen.
-    prompt: "consent",
+    prompt: "consent select_account",
     include_granted_scopes: "true",
     state: input.state,
   }).toString();
@@ -1190,7 +1190,13 @@ export function createGoogleApi(accessToken: string, fetchImpl: Fetch, signal: A
   };
 }
 
-/** Bot tools for the Google account the run's user connected in this space. */
+function googleAccounts(context: AdapterContext) {
+  return (context.connectedConnections ?? []).filter(
+    (connection) => connection.connectorId === GOOGLE_WORKSPACE_CONNECTOR_ID,
+  );
+}
+
+/** Bot tools for the Google accounts the run's user connected in this space. */
 export class GoogleWorkspaceConnector implements ConnectorProvider {
   private readonly tokens = new Map<string, { accessToken: string; expiresAt: number }>();
 
@@ -1208,23 +1214,37 @@ export class GoogleWorkspaceConnector implements ConnectorProvider {
   }
 
   async discoverTools(context: AdapterContext): Promise<ConnectorTool[]> {
-    const connection = context.connectedConnections?.find(
-      (candidate) => candidate.connectorId === GOOGLE_WORKSPACE_CONNECTOR_ID,
-    );
-    if (!connection) return [];
+    const accounts = googleAccounts(context);
+    if (accounts.length === 0) return [];
+    // One account pins every call to it; several make the bot name one per call.
+    const only = accounts.length === 1 ? accounts[0] : undefined;
+    const emails = accounts.map((account) => account.displayName);
     return GOOGLE_WORKSPACE_TOOLS.map((tool) => ({
       name: tool.name,
-      description: `${tool.description} Account: ${connection.displayName}.`,
+      description: only ? `${tool.description} Account: ${only.displayName}.` : tool.description,
       readOnly: tool.readOnly,
       inputSchema: {
         type: "object",
-        properties: tool.properties,
-        ...(tool.required ? { required: tool.required } : {}),
+        properties: only
+          ? tool.properties
+          : {
+              account: {
+                type: "string",
+                enum: emails,
+                description: "The connected Google account to act as",
+              },
+              ...tool.properties,
+            },
+        ...(only
+          ? tool.required
+            ? { required: tool.required }
+            : {}
+          : { required: ["account", ...(tool.required ?? [])] }),
       },
       route: {
         connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
         toolName: tool.name,
-        connectionId: connection.id,
+        ...(only ? { connectionId: only.id } : {}),
       },
     }));
   }
@@ -1235,22 +1255,31 @@ export class GoogleWorkspaceConnector implements ConnectorProvider {
       yield { type: "error", message: `Unknown Google Workspace tool ${call.tool}` };
       return;
     }
-    const connection = context.connectedConnections?.find(
-      (candidate) =>
-        candidate.connectorId === GOOGLE_WORKSPACE_CONNECTOR_ID &&
-        (!call.connectionId || candidate.id === call.connectionId),
-    );
+    const accounts = googleAccounts(context);
+    const { account, ...args } = call.args ?? {};
+    const connection = call.connectionId
+      ? accounts.find((candidate) => candidate.id === call.connectionId)
+      : typeof account === "string"
+        ? accounts.find(
+            (candidate) => candidate.displayName.toLowerCase() === account.toLowerCase(),
+          )
+        : accounts.length === 1
+          ? accounts[0]
+          : undefined;
     if (!connection) {
       yield {
         type: "error",
-        message: "No Google account is connected. Connect it in Integrations.",
+        message:
+          accounts.length === 0
+            ? "No Google account is connected. Connect it in Integrations."
+            : `Name the account to use: ${accounts.map((item) => item.displayName).join(", ")}.`,
       };
       return;
     }
     try {
       const accessToken = await this.accessToken(connection.id, context);
       const api = createGoogleApi(accessToken, this.deps.fetch ?? fetch, context.signal);
-      yield { type: "result", data: await tool.run(api, call.args ?? {}) };
+      yield { type: "result", data: await tool.run(api, args) };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       yield {

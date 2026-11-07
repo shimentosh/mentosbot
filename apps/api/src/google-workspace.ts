@@ -35,41 +35,48 @@ function context(owner: Owner, operation: string): AdapterContext {
 }
 
 export async function getGoogleWorkspace(deps: Deps, owner: Owner): Promise<GoogleWorkspaceState> {
-  const [client, account] = await Promise.all([
+  const [client, accounts] = await Promise.all([
     loadGoogleClient(deps.prisma, deps.secrets, owner.userId).catch(() => null),
-    deps.prisma.connection.findFirst({
+    deps.prisma.connection.findMany({
       where: {
         userId: owner.userId,
         spaceId: owner.spaceId,
         connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
         status: "connected",
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
   ]);
   return {
     redirectUri: googleWorkspaceRedirectUri(deps),
     clientId: client?.client.clientId ?? null,
-    account: account
-      ? { email: account.displayName, connectedAt: account.updatedAt.toISOString() }
-      : null,
+    accounts: accounts.map((account) => ({
+      id: account.id,
+      email: account.displayName,
+      connectedAt: account.createdAt.toISOString(),
+    })),
   };
 }
 
-/** Drop the user's Google rows in one space (or all), revoking each token with Google. */
+/**
+ * Drop the user's Google rows, revoking each token with Google: all of them, those in one space,
+ * or only the listed rows or one email's rows within it.
+ */
 async function removeAccounts(
   deps: Deps,
-  where: { userId: string; spaceId?: string },
+  where: { userId: string; spaceId?: string; ids?: string[]; email?: string; revoke?: boolean },
 ): Promise<void> {
   const rows = await deps.prisma.connection.findMany({
     where: {
       userId: where.userId,
       ...(where.spaceId ? { spaceId: where.spaceId } : {}),
+      ...(where.ids ? { id: { in: where.ids } } : {}),
+      ...(where.email ? { providerRef: where.email } : {}),
       connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
     },
     select: { id: true, secretId: true },
   });
-  for (const row of rows) {
+  for (const row of where.revoke === false ? [] : rows) {
     if (!row.secretId) continue;
     const secret = await deps.prisma.secret.findUnique({ where: { id: row.secretId } });
     if (!secret) continue;
@@ -209,8 +216,10 @@ export async function completeGoogleWorkspace(
           : "Could not reach Google. Try again.",
     });
   }
-  // The new account replaces any earlier one in this space, and the used state goes with them.
-  await removeAccounts(deps, owner);
+  // The same account signed in again replaces its earlier row, and the used state goes too. Not
+  // revoked: Google revokes the whole grant, which would end the tokens just issued.
+  await removeAccounts(deps, { ...owner, ids: [pending.id], revoke: false });
+  await removeAccounts(deps, { ...owner, email: tokens.email, revoke: false });
   const stored = await deps.secrets.put(
     JSON.stringify(tokens),
     context(owner, "googleWorkspace.complete"),
@@ -244,7 +253,12 @@ export async function completeGoogleWorkspace(
 export async function disconnectGoogleWorkspace(
   deps: Deps,
   owner: Owner,
+  input: { accountId: string },
 ): Promise<GoogleWorkspaceState> {
-  await removeAccounts(deps, owner);
+  await removeAccounts(deps, {
+    userId: owner.userId,
+    spaceId: owner.spaceId,
+    ids: [input.accountId],
+  });
   return getGoogleWorkspace(deps, owner);
 }
