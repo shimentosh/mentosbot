@@ -131,7 +131,7 @@ export function homeFolder(environment: HostComputerEnvironment, requested: stri
 
 function unsupported(environment: HostComputerEnvironment) {
   return environment.platform === "win32"
-    ? "Project folders and kept commands need a macOS or Linux computer for now."
+    ? "Kept commands need a macOS or Linux computer for now."
     : undefined;
 }
 
@@ -153,18 +153,38 @@ for entry in */; do
   printf '%s\\t%s\\n' "$project" "$name"
 done`;
 
+// Hidden folders are left out, as `*/` does; UTF-8 output keeps non-English names intact.
+const LIST_FOLDERS_WINDOWS = `[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+if (-not (Test-Path -LiteralPath $env:RAKAZO_PATH -PathType Container)) { exit 3 }
+$markers = $env:RAKAZO_MARKERS -split ' '
+foreach ($entry in Get-ChildItem -LiteralPath $env:RAKAZO_PATH -Directory -ErrorAction SilentlyContinue) {
+  if ($entry.Name.StartsWith('.')) { continue }
+  $project = 0
+  foreach ($marker in $markers) {
+    if (Test-Path -LiteralPath (Join-Path $entry.FullName $marker)) { $project = 1; break }
+  }
+  [Console]::Out.Write("$project\`t$($entry.Name)\`n")
+}`;
+
+const FOLDER_EXISTS = 'test -d "$RAKAZO_PATH"';
+const FOLDER_EXISTS_WINDOWS =
+  "if (Test-Path -LiteralPath $env:RAKAZO_PATH -PathType Container) { exit 0 } else { exit 1 }";
+
 /** The folders inside one folder of the user's home, projects marked, hidden ones left out. */
 export async function listUserComputerFolders(
   session: UserComputerSession,
   requested = "",
 ): Promise<FolderListing> {
-  const message = unsupported(session.environment);
-  if (message) throw new Error(message);
   const folder = homeFolder(session.environment, requested);
-  const result = await runUserComputerScript(session, LIST_FOLDERS, {
-    RAKAZO_PATH: folder,
-    RAKAZO_MARKERS: PROJECT_MARKERS.join(" "),
-  });
+  const windows = session.environment.platform === "win32";
+  const result = await runUserComputerScript(
+    session,
+    windows ? LIST_FOLDERS_WINDOWS : LIST_FOLDERS,
+    {
+      RAKAZO_PATH: folder,
+      RAKAZO_MARKERS: PROJECT_MARKERS.join(" "),
+    },
+  );
   if (result.code === 3) throw new Error(`There is no folder at ${folder}.`);
   if (result.code !== 0) throw new Error("The computer could not list that folder.");
   const folders = result.stdout
@@ -189,14 +209,11 @@ export async function checkUserComputerFolder(
   session: UserComputerSession,
   requested: string,
 ): Promise<string> {
-  const message = unsupported(session.environment);
-  if (message) throw new Error(message);
   const folder = homeFolder(session.environment, requested);
   if (folder === session.environment.home)
     throw new Error("Pick a folder inside the user's home folder.");
-  const result = await runUserComputerScript(session, 'test -d "$RAKAZO_PATH"', {
-    RAKAZO_PATH: folder,
-  });
+  const script = session.environment.platform === "win32" ? FOLDER_EXISTS_WINDOWS : FOLDER_EXISTS;
+  const result = await runUserComputerScript(session, script, { RAKAZO_PATH: folder });
   if (result.code !== 0) throw new Error(`There is no folder at ${folder} on the user's computer.`);
   return folder;
 }
@@ -386,8 +403,7 @@ export async function requestLocalApp(
   input: { method?: string; url: string; body?: unknown },
 ): Promise<{ status: number; body: unknown; truncated?: true }> {
   const message = unsupported(session.environment);
-  if (message)
-    throw new Error(message.replace("Project folders and kept commands", "Calling apps"));
+  if (message) throw new Error(message.replace("Kept commands", "Calling apps"));
   const method = (input.method ?? "GET").toUpperCase();
   if (!REQUEST_METHODS.has(method)) throw new Error("method is GET, POST, PUT, PATCH or DELETE.");
   const url = localAppUrl(input.url);

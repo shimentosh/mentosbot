@@ -33,7 +33,8 @@ function localDevice(home: string, extraEnv: Record<string, string> = {}): UserD
       if (request.method !== "execute") throw new Error(`unexpected ${request.method}`);
       const [file, ...args] = request.command.argv;
       const child = spawn(file!, args, {
-        detached: true,
+        // A detached PowerShell on Windows loses its output and exit code.
+        detached: process.platform !== "win32",
         cwd: request.command.cwd,
         env: { ...process.env, HOME: home, ...extraEnv, ...request.command.env },
       });
@@ -59,6 +60,57 @@ function localDevice(home: string, extraEnv: Record<string, string> = {}): UserD
 }
 
 const posix = process.platform === "win32" ? describe.skip : describe;
+const windows = process.platform === "win32" ? describe : describe.skip;
+
+windows("project folders on a Windows computer", () => {
+  let home: string;
+  let session: UserComputerSession;
+
+  beforeEach(async () => {
+    home = await realpath(await mkdtemp(path.join(tmpdir(), "rakazo-home-")));
+    session = {
+      devices: localDevice(home),
+      owner: "user-1",
+      deviceId: "pc",
+      botId: "bot-1",
+      environment: { platform: "win32", home, shell: "powershell.exe" } as never,
+      signal: new AbortController().signal,
+    };
+  });
+
+  afterEach(async () => {
+    await rm(home, { recursive: true, force: true });
+  });
+
+  it("lists folders with spaces and non-English names, marks projects and leaves hidden ones out", async () => {
+    const code = path.join(home, "OneDrive - Team", "Desktop");
+    await mkdir(path.join(code, "brand logos"), { recursive: true });
+    await writeFile(path.join(code, "brand logos", "package.json"), "{}");
+    await mkdir(path.join(code, "নোট"));
+    await mkdir(path.join(code, ".cache"));
+    const listing = await listUserComputerFolders(session, "~/OneDrive - Team/Desktop");
+    expect(listing).toMatchObject({ home, path: code, parent: path.dirname(code) });
+    expect(listing.folders).toEqual([
+      { name: "brand logos", project: true },
+      { name: "নোট", project: false },
+    ]);
+    await expect(listUserComputerFolders(session, "~/gone")).rejects.toThrow("no folder");
+  });
+
+  it("accepts only an existing folder inside the home, never the home itself", async () => {
+    const folder = path.join(home, "OneDrive - Team", "brand logos");
+    await mkdir(folder, { recursive: true });
+    await expect(checkUserComputerFolder(session, folder)).resolves.toBe(folder);
+    await expect(checkUserComputerFolder(session, "~/gone")).rejects.toThrow("no folder");
+    await expect(checkUserComputerFolder(session, "~")).rejects.toThrow("inside");
+  });
+
+  it("still says kept commands need macOS or Linux", async () => {
+    await expect(
+      startKeptCommand(session, { name: "dev", command: "npm run dev", folder: home }),
+    ).rejects.toThrow("macOS or Linux");
+  });
+});
 
 posix("project folders and kept commands on the user's computer", () => {
   let home: string;
