@@ -81,7 +81,8 @@ export const integrationTools: ToolHandlers = {
   async web_fetch(ctx, call) {
     const { context } = ctx;
     const { args } = call;
-    return call.finish(await webFetchFromTool(ctx.providers.web, context, args));
+    const browser = ctx.tools.offered.some((tool) => tool.name === "browser_navigate");
+    return call.finish(await webFetchFromTool(ctx.providers.web, context, args, browser));
   },
   async add_mcp_server(ctx, call) {
     const { deps, run, bot } = ctx;

@@ -490,6 +490,27 @@ PAGE_STATE = r"""(() => {
     masked,
     payToken: /^acct_[A-Za-z0-9]{1,64}$/.test(account) ? account : null,
     frames: [...document.querySelectorAll("iframe")].slice(0, 50).map((frame) => frame.src),
+    // Pictures and drawings big enough to matter, which page text leaves out: their descriptions, and
+    // how many have none (charts drawn on a canvas or in SVG never do).
+    images: (() => {
+      const shown = (el) => {
+        const box = el.getBoundingClientRect();
+        if (box.width < 64 || box.height < 64) return false;
+        const style = getComputedStyle(el);
+        return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+      };
+      const said = [];
+      let unnamed = 0;
+      for (const el of [...document.querySelectorAll("img, svg, canvas, video, [role=img]")].slice(0, 500)) {
+        if (el.parentElement?.closest("svg, [role=img]") || !shown(el)) continue;
+        const name = (el.getAttribute("alt") || el.getAttribute("aria-label") || el.getAttribute("title")
+          || el.querySelector?.(":scope > title")?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80);
+        const kind = el.tagName.toLowerCase() === "video" ? "video" : "";
+        if (name && !said.some((one) => one.name === name)) said.push({ name, kind });
+        else if (!name) unnamed += 1;
+      }
+      return { said: said.slice(0, 12), unnamed };
+    })(),
   };
 })()"""
 
@@ -732,6 +753,20 @@ def unframed(text: str) -> str:
     return text.replace("[frame ", "[ frame ")
 
 
+def pictures_line(images: Any) -> str:
+    """The pictures a page shows, which its text leaves out: each description the page gives, and how many
+    have none. The descriptions are the page's own words, quoted like the rest of its text."""
+    if not isinstance(images, dict):
+        return ""
+    parts = [("video " if item.get("kind") == "video" else "")
+             + json.dumps(" ".join(str(item["name"]).split())[:80], ensure_ascii=False)
+             for item in (images.get("said") or [])[:12] if isinstance(item, dict) and item.get("name")]
+    unnamed = images.get("unnamed")
+    if isinstance(unnamed, int) and unnamed > 0:
+        parts.append(f"{unnamed} without a description")
+    return f"[images: {'; '.join(parts)}. computer_observe shows them.]" if parts else ""
+
+
 def frame_site(src: Any) -> str:
     try:
         parts = urlsplit(str(src or ""))
@@ -924,6 +959,9 @@ class PageBrowser:
         notices = (f"[controls: showing {len(shown)} of {len(controls)}. {CUT_CONTROLS}]\n"
                    if len(shown) < len(controls) else "")
         text = "\n".join([unframed(str(state.get("text") or "")), *frame_text])
+        pictures = pictures_line(state.get("images"))
+        if pictures:
+            hints.insert(0, pictures)
         room = max(MIN_TEXT, TREE_BUDGET - sent(listing) - sent(notices) - sum(sent(h) + 1 for h in hints) - 200)
         cut = len(text)
         while cut > 0 and sent(text[:cut]) > room:

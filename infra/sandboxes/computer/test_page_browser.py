@@ -228,6 +228,16 @@ class SnapshotTest(unittest.TestCase):
         self.assertNotIn("value", next(el for el in result["elements"] if el["ref"] == "e3"))
         self.assertEqual(next(el for el in result["elements"] if el["ref"] == "e7")["value"], "checked")
 
+    def test_names_the_pictures_page_text_leaves_out(self):
+        images = {"said": [{"name": "Revenue  chart\n2026", "kind": ""}, {"name": "Demo", "kind": "video"}],
+                  "unnamed": 3}
+        result, _ = self.snapshot(FakeAgentBrowser(state={"images": images}))
+        self.assertIn('[images: "Revenue chart 2026"; video "Demo"; 3 without a description. '
+                      "computer_observe shows them.]", result["tree"])
+        result, _ = self.snapshot(FakeAgentBrowser(state={"images": {"said": [], "unnamed": 0}}))
+        self.assertNotIn("[images:", result["tree"])
+        self.assertEqual(helper.pictures_line("junk"), "")
+
     def test_leaves_payment_frames_out_and_points_to_fill_card(self):
         result, _ = self.snapshot()
         self.assertNotIn("4242", json.dumps(result))
