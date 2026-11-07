@@ -419,23 +419,26 @@ function GoogleWorkspaceDetail() {
           ))}
         </ul>
       ) : null}
-      <Button
-        className={data.accounts.length ? "mt-3" : undefined}
-        variant={data.accounts.length ? "outline" : "default"}
-        disabled={pending}
-        onClick={signIn}
+      <div
+        className={`flex items-center justify-between gap-4 ${data.accounts.length ? "mt-3" : ""}`}
       >
-        {data.accounts.length ? <Trans>Add account</Trans> : <Trans>Connect</Trans>}
-      </Button>
+        <Button
+          variant={data.accounts.length ? "outline" : "default"}
+          disabled={pending}
+          onClick={signIn}
+        >
+          {data.accounts.length ? <Trans>Add account</Trans> : <Trans>Connect</Trans>}
+        </Button>
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0 text-[13px] text-muted-foreground"
+          onClick={() => setEditing(true)}
+        >
+          <Trans>Change OAuth client</Trans>
+        </Button>
+      </div>
       <ErrorLine error={error} />
-      <Button
-        variant="link"
-        size="sm"
-        className="mt-3 h-auto p-0 text-[13px] text-muted-foreground"
-        onClick={() => setEditing(true)}
-      >
-        <Trans>Change OAuth client</Trans>
-      </Button>
     </>
   );
 }
