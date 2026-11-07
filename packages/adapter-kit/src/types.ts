@@ -1236,7 +1236,16 @@ export interface BrowserPurchase {
   amount: string;
   /** Whether the amount is the one the button names or the total the page shows. */
   amountSource?: "button" | "page";
+  /**
+   * What the page showed: a card form the click submits, a button worded as the last step of an
+   * order, a page with card fields or a payment frame, or nothing readable (the check failed).
+   */
+  evidence?: BrowserPurchaseEvidence;
+  /** The page's address, shown on the card. */
+  url?: string;
 }
+
+export type BrowserPurchaseEvidence = "card_form" | "final_step" | "payment_page" | "unverified";
 
 export interface BrowserPurchaseCheckRequest {
   /** The steps of a browser_act call; only clicks are looked at. */

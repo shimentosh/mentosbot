@@ -274,8 +274,16 @@ describe("purchase detection for the page tools", () => {
     const check = vi.fn(async () => ({ purchase: null }));
     const ctx = contextWith(check as never);
     const act = (actions: unknown[]) => detectPurchase(ctx, "computer_act", { actions });
-    const unchecked = { steps: [], site: "", label: "", amount: "", amountSource: "page" };
-    const open = { kind: "focus", app: "chromium", uri: "https://shop.example.test/checkout" };
+    const unchecked = {
+      steps: [],
+      site: "",
+      label: "",
+      amount: "",
+      amountSource: "page",
+      evidence: "unverified",
+      url: "https://shop.example.test/checkout",
+    };
+    const open = { kind: "focus", app: "chromium", uri: "https://shop.example.test/checkout?k=1" };
     for (const press of [
       { kind: "click", x: 5, y: 6 },
       { kind: "key", key: "Return" },
@@ -310,9 +318,12 @@ describe("purchase detection for the page tools", () => {
     expect(purchaseApprovalOf({ ...good, site: "" })).toEqual({ ...good, site: "" });
     expect(purchaseCardSummary({ ...good, site: "" })).toEqual({
       onceOnly: true,
-      title: "Complete a payment on this page?",
-      lines: ["The page could not be checked, so this may complete a payment."],
+      title: "Page could not be verified—allow this click?",
+      lines: ["The page could not be read before this click."],
     });
+    const kept = { ...good, evidence: "final_step", url: "https://shop.example.test/pay" };
+    expect(purchaseApprovalOf(kept)).toEqual(kept);
+    expect(purchaseApprovalOf({ ...good, evidence: "guess" })).toEqual(good);
     for (const bad of [
       null,
       "x",
@@ -351,5 +362,59 @@ describe("purchase detection for the page tools", () => {
       "Amount on the button: $5",
       CHECKED,
     ]);
+  });
+
+  it("calls a click a payment only when the page showed one", () => {
+    const base = {
+      steps: [],
+      site: "shop.test",
+      label: "Continue",
+      amount: "",
+      amountSource: "page",
+      url: "https://shop.test/account",
+    } satisfies PurchaseApproval;
+    // A page that could not be read names what is known, and nothing about paying.
+    expect(purchaseCardSummary({ ...base, evidence: "unverified" })).toEqual({
+      onceOnly: true,
+      title: "Page could not be verified—allow this click?",
+      lines: [
+        "Site: shop.test",
+        "Page: https://shop.test/account",
+        'Button: "Continue"',
+        "The page could not be read before this click.",
+      ],
+    });
+    expect(purchaseCardSummary({ ...base, evidence: "payment_page" })).toMatchObject({
+      title: "Click on shop.test's payment page?",
+      lines: ["Page: https://shop.test/account", 'Button: "Continue"', CHECKED],
+    });
+    expect(purchaseCardSummary({ ...base, evidence: "final_step" }).title).toBe(
+      "Pay on shop.test?",
+    );
+    // An approval stored before evidence was kept is a payment when it names a site.
+    expect(purchaseCardSummary(base).title).toBe("Pay on shop.test?");
+  });
+
+  it("shows the page address without its query", async () => {
+    const check = vi.fn(async () => ({
+      purchase: {
+        ...found,
+        evidence: "card_form",
+        url: "https://shop.example.test/pay?token=abc#x",
+      },
+    }));
+    expect(
+      await detectPurchase(contextWith(check as never), "computer_act", {
+        actions: [{ kind: "click", x: 1, y: 2 }],
+      }),
+    ).toMatchObject({ evidence: "card_form", url: "https://shop.example.test/pay" });
+    check.mockImplementation(async () => ({
+      purchase: { ...found, evidence: "card_form", url: "javascript:alert(1)" },
+    }));
+    expect(
+      await detectPurchase(contextWith(check as never), "computer_act", {
+        actions: [{ kind: "click", x: 1, y: 2 }],
+      }),
+    ).not.toHaveProperty("url");
   });
 });

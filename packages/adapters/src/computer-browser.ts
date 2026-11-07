@@ -7,6 +7,7 @@ import type {
   BrowserProvider,
   BrowserPurchaseCheckRequest,
   BrowserPurchaseCheckResult,
+  BrowserPurchaseEvidence,
   BrowserSnapshotNode,
   BrowserSnapshotRequest,
   BrowserSnapshotResult,
@@ -31,7 +32,15 @@ const UNCHECKED_PURCHASE: NonNullable<BrowserPurchaseCheckResult["purchase"]> = 
   label: "",
   amount: "",
   amountSource: "page",
+  evidence: "unverified",
 };
+
+/** What the page browser says it found; a reason it does not name means the page was not read. */
+function evidenceOf(reason: unknown): BrowserPurchaseEvidence {
+  return reason === "card_form" || reason === "final_step" || reason === "payment_page"
+    ? reason
+    : "unverified";
+}
 
 /**
  * Whether a failed purchase check means this computer cannot check at all, rather than that the check
@@ -281,7 +290,13 @@ export class ComputerBrowserProvider implements BrowserProvider {
       return { purchase: null };
     }
     const found = live.purchase as
-      | { steps?: unknown; label?: unknown; amount?: unknown; amountFrom?: unknown }
+      | {
+          steps?: unknown;
+          label?: unknown;
+          amount?: unknown;
+          amountFrom?: unknown;
+          reason?: unknown;
+        }
       | null
       | undefined;
     if (!found) return { purchase: null };
@@ -295,6 +310,8 @@ export class ComputerBrowserProvider implements BrowserProvider {
         label: typeof found.label === "string" ? found.label : "",
         amount: typeof found.amount === "string" ? found.amount : "",
         amountSource: found.amountFrom === "button" ? "button" : "page",
+        evidence: evidenceOf(found.reason),
+        ...(typeof live.url === "string" && live.url ? { url: live.url } : {}),
       },
     };
   }

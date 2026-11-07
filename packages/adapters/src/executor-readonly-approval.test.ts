@@ -3866,7 +3866,7 @@ describe("a click that completes a purchase on a website", () => {
     expect(page.acts).toEqual([]);
     expect(isApprovalPausedResult(f.results[0])).toBe(true);
     const [{ blocks }] = f.pauseRunForInput.mock.calls[0] as unknown as [{ blocks: unknown[] }];
-    expect(blocks[0]).toMatchObject({ text: "Complete a payment on this page?" });
+    expect(blocks[0]).toMatchObject({ text: "Page could not be verified—allow this click?" });
   });
 
   it("refuses it in a webhook run, which has nobody to ask", async () => {

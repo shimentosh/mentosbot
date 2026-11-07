@@ -546,9 +546,16 @@ describe("page browser safety", () => {
         label: "Pay $5",
         amount: "$5",
         amountSource: "button",
+        evidence: "card_form",
+        url: "https://shop.example.test/pay",
       },
     });
     expect(commands).toEqual([{ command: "purchase_check", actions }]);
+    // A page the helper could not read says so, and the card does not call it a payment.
+    reply = { ...answer, purchase: { ...answer.purchase, reason: "unreadable" } };
+    expect(await provider.purchaseCheck(computer, { actions }, baseContext)).toMatchObject({
+      purchase: { evidence: "unverified" },
+    });
     reply = { ...answer, purchase: null };
     expect(await provider.purchaseCheck(computer, { actions }, baseContext)).toEqual({
       purchase: null,
@@ -585,14 +592,21 @@ describe("page browser safety", () => {
     ]) {
       reply = { ok: false, error, fallback: "computer_act" };
       expect(await provider.purchaseCheck(computer, { actions }, baseContext)).toEqual({
-        purchase: { steps: [], site: "", label: "", amount: "", amountSource: "page" },
+        purchase: {
+          steps: [],
+          site: "",
+          label: "",
+          amount: "",
+          amountSource: "page",
+          evidence: "unverified",
+        },
       });
     }
     const fake: ComputerRef = { id: "f", botId: "b", kind: "fake", providerRef: "f" };
     expect(await provider.purchaseCheck(fake, { actions }, baseContext)).toEqual({
       purchase: null,
     });
-    expect(commands).toHaveLength(12);
+    expect(commands).toHaveLength(13);
   });
 
   it("keeps the page snapshot a settled refusal sends", async () => {

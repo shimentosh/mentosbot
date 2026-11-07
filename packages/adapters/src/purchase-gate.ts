@@ -1,3 +1,4 @@
+import type { BrowserPurchaseEvidence } from "@rakazo/adapter-kit";
 import { getLogger } from "@rakazo/logging";
 import type { FleetCardSummary } from "./approval-ask.js";
 import { redactConnectorPayload } from "./connector-safety.js";
@@ -19,7 +20,18 @@ export type PurchaseApproval = {
   amount: string;
   /** Whether the amount is the one the button names or the total the page shows. */
   amountSource: "button" | "page";
+  /** What the page showed; absent on approvals stored before it was kept. */
+  evidence?: BrowserPurchaseEvidence;
+  /** The page's address without its query or fragment. */
+  url?: string;
 };
+
+const EVIDENCE: ReadonlySet<string> = new Set([
+  "card_form",
+  "final_step",
+  "payment_page",
+  "unverified",
+]);
 
 // Empty when the check failed and the page is unknown.
 const SITE = /^[\w.[\]:-]{0,253}$/;
@@ -31,7 +43,10 @@ const pageText = (text: string, max: number) =>
 /** A purchase approval as the persisted request holds it, or nothing when it is not one. */
 export function purchaseApprovalOf(value: unknown): PurchaseApproval | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const { steps, site, label, amount, amountSource } = value as Record<string, unknown>;
+  const { steps, site, label, amount, amountSource, evidence, url } = value as Record<
+    string,
+    unknown
+  >;
   if (
     !Array.isArray(steps) ||
     !steps.every((step) => Number.isInteger(step) && step >= 0 && step < 24) ||
@@ -47,23 +62,47 @@ export function purchaseApprovalOf(value: unknown): PurchaseApproval | undefined
     label,
     amount,
     amountSource: amountSource === "button" ? "button" : "page",
+    ...(typeof evidence === "string" && EVIDENCE.has(evidence)
+      ? { evidence: evidence as BrowserPurchaseEvidence }
+      : {}),
+    ...(typeof url === "string" && url ? { url: pageText(url, 300) } : {}),
   };
 }
 
-/** The card for a purchase. The button and total are read from the page, not chosen by the model. */
+/** Whether the page showed a payment. An approval stored before evidence was kept had a site only when it did. */
+export function purchaseVerified(purchase: PurchaseApproval): boolean {
+  return Boolean(purchase.site) && (purchase.evidence ?? "final_step") !== "unverified";
+}
+
+/**
+ * The card for a click the page check stopped. It says "pay" only when the page showed a payment:
+ * a card form, a button worded as the last step of an order, or card fields on the page. A page that
+ * could not be read gets its own card, since nothing says it pays. The button label, total and
+ * address are read from the page, not chosen by the model.
+ */
 export function purchaseCardSummary(purchase: PurchaseApproval): FleetCardSummary {
-  if (!purchase.site) {
+  const where = [
+    ...(purchase.url ? [`Page: ${purchase.url}`] : []),
+    ...(purchase.label ? [`Button: "${purchase.label}"`] : []),
+  ];
+  if (!purchaseVerified(purchase)) {
     return {
       onceOnly: true,
-      title: "Complete a payment on this page?",
-      lines: ["The page could not be checked, so this may complete a payment."],
+      title: "Page could not be verified—allow this click?",
+      lines: [
+        ...(purchase.site ? [`Site: ${purchase.site}`] : []),
+        ...where,
+        "The page could not be read before this click.",
+      ],
     };
   }
+  const site = cardName(purchase.site);
   return {
     onceOnly: true,
-    title: `Pay on ${cardName(purchase.site)}?`,
+    title:
+      purchase.evidence === "payment_page" ? `Click on ${site}'s payment page?` : `Pay on ${site}?`,
     lines: [
-      ...(purchase.label ? [`Button: "${purchase.label}"`] : []),
+      ...where,
       ...(purchase.amount
         ? [
             `${purchase.amountSource === "button" ? "Amount on the button" : "Total on the page"}: ${purchase.amount}`,
@@ -72,6 +111,18 @@ export function purchaseCardSummary(purchase: PurchaseApproval): FleetCardSummar
       "The button label and total are read from the page. The bot has not checked them.",
     ],
   };
+}
+
+/** The page's address as a card shows it: no query or fragment, which can carry tokens. */
+function shownUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+    return `${parsed.origin}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+  } catch {
+    return undefined;
+  }
 }
 
 // Keys that submit a form or press the focused button; the key may carry its modifiers ("ctrl+Return").
@@ -99,7 +150,7 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
   let unplaced = false;
   // A focus that opens a URL brings up a page this check cannot see beforehand: a click or key after it
   // asks whatever the page looks like now, even when no tab is showing yet.
-  let opened = false;
+  let opened: string | undefined;
   let unchecked = false;
   let pointer: { x: number; y: number } | undefined;
   for (const raw of actions) {
@@ -116,7 +167,7 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
       // A right-click opens a menu and presses nothing, but the page may change under later presses.
       disturbed = true;
     } else if (["click", "down", "up"].includes(kind)) {
-      if (opened) unchecked = true;
+      if (opened !== undefined) unchecked = true;
       // The main screen releases where the pointer is; an extra display moves to the up's own spot first.
       const spots = kind === "up" ? [pointer, ...(own ? [own] : [])] : [own];
       if (kind !== "up") pointer = own ?? pointer;
@@ -137,17 +188,17 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
         ];
         if (parts.some((part) => SUBMITTING_KEY.test(part.trim()))) {
           enter = true;
-          if (opened) unchecked = true;
+          if (opened !== undefined) unchecked = true;
         }
       } else if (kind === "type" && /[\r\n]|^\s+$/.test(String(step.text ?? ""))) {
         // A line break submits; text that is only spaces presses a focused button.
         enter = true;
-        if (opened) unchecked = true;
-      } else if (kind === "focus" && step.uri !== undefined) opened = true;
+        if (opened !== undefined) unchecked = true;
+      } else if (kind === "focus" && step.uri !== undefined) opened = String(step.uri);
     }
   }
   return points.length || enter || unplaced
-    ? { desktop: true, enter, points, unplaced, unchecked }
+    ? { desktop: true, enter, points, unplaced, unchecked, opened }
     : undefined;
 }
 
@@ -165,9 +216,26 @@ export async function detectPurchase(
   const { browser } = ctx.providers;
   if (!probe || !browser.purchaseCheck || !ctx.computer.pageBrowserAllowed) return undefined;
   if (ctx.computer.heldForTakeover) return undefined;
-  const unchecked = { steps: [], site: "", label: "", amount: "", amountSource: "page" } as const;
+  const unchecked = {
+    steps: [],
+    site: "",
+    label: "",
+    amount: "",
+    amountSource: "page",
+    evidence: "unverified",
+  } as const;
   // A press after the batch opens a URL lands on a page nobody could look at yet.
-  if ("unchecked" in probe && probe.unchecked) return { ...unchecked, steps: [] };
+  if ("unchecked" in probe && probe.unchecked) {
+    // The card names the address the batch opens, which the bot chose: it is where the press lands.
+    const opening = shownUrl(probe.opened);
+    return {
+      ...unchecked,
+      steps: [],
+      ...(opening
+        ? { url: String(redactConnectorPayload(pageText(opening, 300), ctx.secrets)) }
+        : {}),
+    };
+  }
   let found: Awaited<ReturnType<NonNullable<typeof browser.purchaseCheck>>>["purchase"];
   let computer: Awaited<ReturnType<RunContext["computer"]["get"]>>;
   try {
@@ -191,6 +259,7 @@ export async function detectPurchase(
     found = { ...unchecked, steps: [] };
   }
   if (!found) return undefined;
+  const url = shownUrl(found.url);
   // Page text is stored with the approval: a value the run must keep secret never goes with it.
   const shown = (text: string, max: number) =>
     String(redactConnectorPayload(pageText(text, max), ctx.secrets));
@@ -200,5 +269,7 @@ export async function detectPurchase(
     label: shown(found.label, 80),
     amount: shown(found.amount, 40),
     amountSource: found.amountSource === "button" ? "button" : "page",
+    ...(found.evidence ? { evidence: found.evidence } : {}),
+    ...(url ? { url: shown(url, 300) } : {}),
   };
 }
