@@ -1,6 +1,6 @@
 import type { ConnectorCall, ConnectorTool } from "@rakazo/adapter-kit";
 import { BOT_INSTRUCTIONS_MAX_LENGTH, BotSecretAuth } from "@rakazo/contracts";
-import { redactSecrets } from "@rakazo/core";
+import { approvalModeFromPreference, redactSecrets } from "@rakazo/core";
 import { prepareAgentConnectionResponse } from "./agent-connections.js";
 import type { FleetCardSummary } from "./approval-ask.js";
 import type { TerminatingToolResult } from "./approval-effect.js";
@@ -29,6 +29,7 @@ import {
   PURCHASE_CHECKED_TOOLS,
   purchaseApprovalOf,
   purchaseCardSummary,
+  purchaseVerified,
 } from "./purchase-gate.js";
 import type { RunContext } from "./run-context.js";
 import {
@@ -433,7 +434,22 @@ export async function prepareToolRequest(
             "The page changed since the user approved this purchase, so nothing was pressed. Look at the screen and try again.",
         };
     }
-    const purchase = approved ?? (await detectPurchase(ctx, name, rest));
+    let purchase = approved ?? (await detectPurchase(ctx, name, rest));
+    // A page that could not be read showed no payment, so only Ask mode stops for it. Elsewhere the
+    // click goes ahead carrying the unread check: the page browser looks again as it clicks and
+    // refuses a click it then finds paying, which asks.
+    if (
+      purchase &&
+      !approved &&
+      !request.cardUse &&
+      !purchaseVerified(purchase) &&
+      ctx.run.trigger !== "webhook" &&
+      approvalModeFromPreference(await ctx.trust.loadAutoReviewPreference()) !== "ask"
+    ) {
+      args = { ...args, purchaseApproval: purchase };
+      request.effectRequest = args;
+      purchase = undefined;
+    }
     // An approval given for something else never covers a purchase: the call is made again and asks.
     if (purchase && !approved && nextApprovedTool === name)
       return {

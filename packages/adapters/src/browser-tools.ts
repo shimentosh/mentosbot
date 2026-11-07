@@ -287,10 +287,10 @@ export async function browserActFromTool(
       }
     }
     const approved = options.approvedPurchase;
-    // A card for a page that could not be checked names no click: it covers each one, and the page
-    // browser still refuses any click it then finds buying on a known site.
+    // A pass for a page that could not be checked names no click: it covers each one, and the page
+    // browser still refuses any click it then finds buying, since that names a button or another site.
     const approvedSteps =
-      approved && !approved.site && !approved.steps.length
+      approved && !approved.steps.length && (!approved.site || approved.evidence === "unverified")
         ? actions.flatMap((step, index) => (step.kind === "click" ? [index] : []))
         : (approved?.steps ?? []);
     for (const index of approvedSteps) {

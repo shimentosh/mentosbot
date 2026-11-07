@@ -3869,6 +3869,38 @@ describe("a click that completes a purchase on a website", () => {
     expect(blocks[0]).toMatchObject({ text: "Page could not be verified—allow this click?" });
   });
 
+  it("goes on without asking outside Ask mode when the page showed no payment", async () => {
+    const unread = { ...purchase, steps: [], label: "", amount: "", evidence: "unverified" };
+    for (const options of [{ skipApprovals: true, trigger: "user" }, { autoReview: true }]) {
+      const page = pageBrowser(unread as never);
+      const f = fixture({ builtin: true, browser: page.provider, ...options } as never);
+      f.setCalls([payCall()]);
+      await f.run();
+      expect(f.pauseRunForInput).not.toHaveBeenCalled();
+      // The click carries the unread check, so the page browser looks again as it presses.
+      expect(page.acts).toEqual([
+        [
+          { kind: "fill", ref: "e1", text: "Ada" },
+          {
+            kind: "click",
+            ref: "e2",
+            approved: true,
+            site: "shop.example.test",
+            label: "",
+            amount: "",
+          },
+        ],
+      ]);
+    }
+    // A page that showed a payment still asks in Never ask.
+    const page = pageBrowser();
+    const f = fixture({ builtin: true, browser: page.provider, skipApprovals: true } as never);
+    f.setCalls([payCall()]);
+    await f.run();
+    expect(page.acts).toEqual([]);
+    expect(f.pauseRunForInput).toHaveBeenCalledOnce();
+  });
+
   it("refuses it in a webhook run, which has nobody to ask", async () => {
     const page = pageBrowser();
     const f = fixture({ builtin: true, browser: page.provider, trigger: "webhook" });
