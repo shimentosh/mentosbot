@@ -429,9 +429,10 @@ describe("ticket mutations", () => {
       ownerBotId: "bot-2",
       ownerRequest: "someone else's words",
     });
-    expect(
-      (s.tx.ticket.update.mock.lastCall?.[0] as { data: Record<string, unknown> }).data,
-    ).not.toHaveProperty("ownerRequest");
+    expect(s.tx.ticket.update).toHaveBeenLastCalledWith({
+      where: { id: "t1" },
+      data: expect.not.objectContaining({ ownerRequest: expect.anything() }),
+    });
   });
 
   it("comments without waking the owner", async () => {

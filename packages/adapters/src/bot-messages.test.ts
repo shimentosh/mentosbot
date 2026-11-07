@@ -916,9 +916,7 @@ describe("waiting on the person's approval", () => {
             expect.objectContaining({
               kind: "bot_message_received",
               intent: "status",
-              text: expect.stringContaining(
-                "Waiting for the user's answer in my chat: Post on X",
-              ),
+              text: expect.stringContaining("Waiting for the user's answer in my chat: Post on X"),
               userRequest: "publish the post",
             }),
           ],
