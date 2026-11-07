@@ -1,0 +1,504 @@
+Bot desktop: Debian 13, Google Chrome, and an Xfce panel on
+ every display
+
+Bot computers run Debian 13 with Google Chrome and an Xfce desktop: the
+xfwm4 window manager and one bottom panel (Applications, Browser, File
+Manager, Terminal, open windows, clock) on each bot's existing display.
+Packages install at image build time as root, before the runtime user and
+NSS wrapper apply. Each display gets its own D-Bus session and its own panel
+settings under ~/.config/rakazo-desktop, written once and kept afterwards.
+The session also answers to `fluxbox`, so the runtime's per-display start
+and stop commands drive it unchanged; starting it again on a display
+replaces the earlier session there, and it cleans up only its own processes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ infra/sandboxes/computer/Dockerfile           |  41 ++++-
+ .../desktop/launcher-2/browser.desktop        |   9 +
+ .../desktop/launcher-3/file-manager.desktop   |   8 +
+ .../desktop/launcher-4/terminal.desktop       |   8 +
+ .../computer/desktop/xfce4-panel.xml          |  53 ++++++
+ infra/sandboxes/computer/desktop/xfwm4.xml    |  11 ++
+ .../sandboxes/computer/rakazo-desktop-launch  |  21 +++
+ .../sandboxes/computer/rakazo-desktop-session | 155 ++++++++++++++++++
+ .../sandboxes/computer/rakazo-focus-or-launch |   9 +-
+ infra/sandboxes/computer/start.sh             |  18 +-
+ 10 files changed, 311 insertions(+), 22 deletions(-)
+ create mode 100644 infra/sandboxes/computer/desktop/launcher-2/browser.desktop
+ create mode 100644 infra/sandboxes/computer/desktop/launcher-3/file-manager.desktop
+ create mode 100644 infra/sandboxes/computer/desktop/launcher-4/terminal.desktop
+ create mode 100644 infra/sandboxes/computer/desktop/xfce4-panel.xml
+ create mode 100644 infra/sandboxes/computer/desktop/xfwm4.xml
+ create mode 100644 infra/sandboxes/computer/rakazo-desktop-launch
+ create mode 100644 infra/sandboxes/computer/rakazo-desktop-session
+
+diff --git a/infra/sandboxes/computer/Dockerfile b/infra/sandboxes/computer/Dockerfile
+index 0d2e7a0d0..5ffa84985 100644
+--- a/infra/sandboxes/computer/Dockerfile
++++ b/infra/sandboxes/computer/Dockerfile
+@@ -1,4 +1,4 @@
+-FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS capture-builder
++FROM debian:trixie-slim AS capture-builder
+ RUN apt-get update && apt-get install -y --no-install-recommends \
+     build-essential \
+     libx11-dev \
+@@ -13,16 +13,22 @@ COPY xcapture.c .
+ RUN cc -O3 -fPIC -shared -Wall -Wextra -Werror -o librakazo-xcapture.so xcapture.c \
+     -lX11 -lXext -lXdamage -lXfixes -lXtst -lpng
+ 
+-FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
++FROM debian:trixie-slim
+ # Dev tools let bots clone repos and fetch artifacts; containers run uid 1000
+ # with no privilege escalation, so nothing can be installed at runtime.
+ # Compilers stay in the builder stage; heavier toolchains are a separate call.
+-# The bot browser: chromium by default, or BROWSER=brave (installed below).
+-ARG BROWSER=chromium
++# The bot browser: Google Chrome by default, or BROWSER=chromium / BROWSER=brave.
++ARG BROWSER=chrome
+ RUN apt-get update && apt-get install -y --no-install-recommends \
+     xvfb \
+     x11vnc \
+-    fluxbox \
++    xfwm4 \
++    xfce4-panel \
++    thunar \
++    xfce4-terminal \
++    xfconf \
++    adwaita-icon-theme \
++    dbus-daemon \
+     xterm \
+     xdotool \
+     wmctrl \
+@@ -40,6 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
+     fonts-liberation \
+     fonts-dejavu-core \
+     fonts-noto-cjk \
++    fonts-noto-core \
+     fonts-noto-color-emoji \
+     locales \
+     dbus-x11 \
+@@ -47,6 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
+     xdg-desktop-portal-gtk \
+     xdg-utils \
+     curl \
++    gnupg \
+     git \
+     jq \
+     openssh-client \
+@@ -72,6 +80,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
+ RUN set -eux; \
+     case "$BROWSER" in \
+       chromium) ;; \
++      chrome) \
++        keyring=/usr/share/keyrings/google-chrome.gpg; \
++        curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o "$keyring"; \
++        echo "deb [arch=amd64 signed-by=$keyring] https://dl.google.com/linux/chrome/deb/ stable main" \
++          > /etc/apt/sources.list.d/google-chrome.list; \
++        apt-get update; \
++        apt-get install -y --no-install-recommends google-chrome-stable; \
++        rm -f /etc/apt/sources.list.d/google-chrome.list /etc/cron.daily/google-chrome; \
++        rm -rf /var/lib/apt/lists/*; \
++        mkdir -p /etc/opt/chrome/policies/managed ;; \
+       brave) \
+         keyring=/usr/share/keyrings/brave-browser-archive-keyring.gpg; \
+         curl -fsSLo "$keyring" https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg; \
+@@ -89,7 +107,7 @@ RUN set -eux; \
+           '  "BraveNewsDisabled": true,' \
+           '  "BraveTalkDisabled": true' \
+           '}' > /etc/brave/policies/managed/rakazo.json ;; \
+-      *) echo "unsupported BROWSER: $BROWSER (use chromium or brave)" >&2; exit 1 ;; \
++      *) echo "unsupported BROWSER: $BROWSER (use chrome, chromium or brave)" >&2; exit 1 ;; \
+     esac
+ RUN ln -s "$(dpkg -L libnss-wrapper | grep '/libnss_wrapper.so$')" /usr/local/lib/libnss_wrapper.so
+ ARG TARGETARCH
+@@ -154,6 +172,15 @@ COPY --chmod=644 rakazo-browser.desktop /usr/share/applications/rakazo-browser.d
+ # Pop-ups open: one a page opens after making a report would be blocked unseen.
+ COPY --chmod=644 browser-policy.json /etc/chromium/policies/managed/rakazo-browser.json
+ COPY --chmod=644 browser-policy.json /etc/brave/policies/managed/rakazo-browser.json
++COPY --chmod=644 browser-policy.json /etc/opt/chrome/policies/managed/rakazo-browser.json
++# The bot desktop: Xfce window manager and one bottom panel on each display. The session also
++# answers to `fluxbox` so the runtime's per-display start and stop commands drive it unchanged.
++COPY --chmod=755 rakazo-desktop-session /usr/local/bin/rakazo-desktop-session
++COPY --chmod=755 rakazo-desktop-launch /usr/local/bin/rakazo-desktop-launch
++COPY desktop/ /etc/rakazo/desktop/
++# Directories need search permission for the computer's user; --chmod would apply 644 to them.
++RUN chmod -R u=rwX,go=rX /etc/rakazo/desktop \
++  && ln -s /usr/local/bin/rakazo-desktop-session /usr/local/bin/fluxbox
+ COPY --chmod=644 fluxbox.init /etc/rakazo/fluxbox/init
+ COPY --chmod=644 fluxbox.apps /etc/rakazo/fluxbox/apps
+ COPY --chmod=644 fluxbox.menu /etc/rakazo/fluxbox/menu
+@@ -165,7 +192,7 @@ COPY --chmod=644 mobile-keyboard.js /usr/share/novnc/mobile-keyboard.js
+ COPY --chmod=644 rakazo-local-bin.sh /etc/profile.d/rakazo-local-bin.sh
+ # Strip CR so shebangs work even if the build context came from a CRLF checkout.
+ RUN ldconfig \
+-  && sed -i 's/\r$//' /usr/local/bin/rakazo-computer /usr/local/lib/rakazo-user-env.sh /usr/local/bin/rakazo-computer-control /usr/local/bin/rakazo-browser /usr/local/bin/rakazo-focus-or-launch /usr/local/bin/rakazo-page-browser \
++  && sed -i 's/\r$//' /usr/local/bin/rakazo-computer /usr/local/lib/rakazo-user-env.sh /usr/local/bin/rakazo-computer-control /usr/local/bin/rakazo-browser /usr/local/bin/rakazo-focus-or-launch /usr/local/bin/rakazo-page-browser /usr/local/bin/rakazo-desktop-session /usr/local/bin/rakazo-desktop-launch \
+     /usr/local/lib/rakazo/page_secrets.py \
+     /etc/rakazo/fluxbox/init /etc/rakazo/fluxbox/apps /etc/rakazo/fluxbox/menu \
+     /etc/profile.d/rakazo-local-bin.sh
+diff --git a/infra/sandboxes/computer/desktop/launcher-2/browser.desktop b/infra/sandboxes/computer/desktop/launcher-2/browser.desktop
+new file mode 100644
+index 000000000..cab18ad41
+--- /dev/null
++++ b/infra/sandboxes/computer/desktop/launcher-2/browser.desktop
+@@ -0,0 +1,9 @@
++[Desktop Entry]
++Type=Application
++Version=1.0
++Name=Browser
++Comment=The bot's browser, with its own profile
++Exec=rakazo-desktop-launch browser
++Icon=google-chrome
++Terminal=false
++StartupNotify=false
+diff --git a/infra/sandboxes/computer/desktop/launcher-3/file-manager.desktop b/infra/sandboxes/computer/desktop/launcher-3/file-manager.desktop
+new file mode 100644
+index 000000000..02a9bc9e8
+--- /dev/null
++++ b/infra/sandboxes/computer/desktop/launcher-3/file-manager.desktop
+@@ -0,0 +1,8 @@
++[Desktop Entry]
++Type=Application
++Version=1.0
++Name=File Manager
++Exec=rakazo-desktop-launch thunar
++Icon=org.xfce.thunar
++Terminal=false
++StartupNotify=false
+diff --git a/infra/sandboxes/computer/desktop/launcher-4/terminal.desktop b/infra/sandboxes/computer/desktop/launcher-4/terminal.desktop
+new file mode 100644
+index 000000000..a658d9753
+--- /dev/null
++++ b/infra/sandboxes/computer/desktop/launcher-4/terminal.desktop
+@@ -0,0 +1,8 @@
++[Desktop Entry]
++Type=Application
++Version=1.0
++Name=Terminal
++Exec=rakazo-desktop-launch xfce4-terminal
++Icon=org.xfce.terminal
++Terminal=false
++StartupNotify=false
+diff --git a/infra/sandboxes/computer/desktop/xfce4-panel.xml b/infra/sandboxes/computer/desktop/xfce4-panel.xml
+new file mode 100644
+index 000000000..915251546
+--- /dev/null
++++ b/infra/sandboxes/computer/desktop/xfce4-panel.xml
+@@ -0,0 +1,53 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!-- The bot desktop's default panel: one full-width bar along the bottom. -->
++<channel name="xfce4-panel" version="1.0">
++  <property name="configver" type="int" value="2"/>
++  <property name="panels" type="array">
++    <value type="int" value="1"/>
++    <property name="dark-mode" type="bool" value="false"/>
++    <property name="panel-1" type="empty">
++      <property name="position" type="string" value="p=10;x=0;y=0"/>
++      <property name="length" type="double" value="100"/>
++      <property name="position-locked" type="bool" value="true"/>
++      <property name="mode" type="uint" value="0"/>
++      <property name="size" type="uint" value="40"/>
++      <property name="icon-size" type="uint" value="24"/>
++      <property name="autohide-behavior" type="uint" value="0"/>
++      <property name="plugin-ids" type="array">
++        <value type="int" value="1"/>
++        <value type="int" value="2"/>
++        <value type="int" value="3"/>
++        <value type="int" value="4"/>
++        <value type="int" value="5"/>
++        <value type="int" value="6"/>
++        <value type="int" value="7"/>
++      </property>
++    </property>
++  </property>
++  <property name="plugins" type="empty">
++    <property name="plugin-1" type="string" value="applicationsmenu"/>
++    <property name="plugin-2" type="string" value="launcher">
++      <property name="items" type="array">
++        <value type="string" value="browser.desktop"/>
++      </property>
++    </property>
++    <property name="plugin-3" type="string" value="launcher">
++      <property name="items" type="array">
++        <value type="string" value="file-manager.desktop"/>
++      </property>
++    </property>
++    <property name="plugin-4" type="string" value="launcher">
++      <property name="items" type="array">
++        <value type="string" value="terminal.desktop"/>
++      </property>
++    </property>
++    <property name="plugin-5" type="string" value="tasklist">
++      <property name="grouping" type="uint" value="0"/>
++    </property>
++    <property name="plugin-6" type="string" value="separator">
++      <property name="expand" type="bool" value="true"/>
++      <property name="style" type="uint" value="0"/>
++    </property>
++    <property name="plugin-7" type="string" value="clock"/>
++  </property>
++</channel>
+diff --git a/infra/sandboxes/computer/desktop/xfwm4.xml b/infra/sandboxes/computer/desktop/xfwm4.xml
+new file mode 100644
+index 000000000..fe97c84b5
+--- /dev/null
++++ b/infra/sandboxes/computer/desktop/xfwm4.xml
+@@ -0,0 +1,11 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!-- The bot desktop's window manager: the light Default theme, no compositing on Xvfb. -->
++<channel name="xfwm4" version="1.0">
++  <property name="general" type="empty">
++    <property name="theme" type="string" value="Default"/>
++    <property name="use_compositing" type="bool" value="false"/>
++    <property name="workspace_count" type="int" value="1"/>
++    <property name="button_layout" type="string" value="O|HMC"/>
++    <property name="title_font" type="string" value="Sans Bold 9"/>
++  </property>
++</channel>
+diff --git a/infra/sandboxes/computer/rakazo-desktop-launch b/infra/sandboxes/computer/rakazo-desktop-launch
+new file mode 100644
+index 000000000..45b148a19
+--- /dev/null
++++ b/infra/sandboxes/computer/rakazo-desktop-launch
+@@ -0,0 +1,21 @@
++#!/bin/sh
++# Starts an app from the bot desktop's panel with the bot's normal environment: its shared
++# ~/.config, and no desktop-session markers, so the app outlives a panel restart.
++# File manager and terminal stay on this display's own D-Bus session, so an instance already
++# open on another bot's display never answers for this one.
++set -eu
++browser="${RAKAZO_DESKTOP_BROWSER:-/usr/local/bin/rakazo-browser}"
++unset XDG_CONFIG_HOME GTK_THEME RAKAZO_DESKTOP_DISPLAY RAKAZO_DESKTOP_SESSION RAKAZO_DESKTOP_BROWSER
++cd "$HOME"
++case "${1:-}" in
++  browser)
++    # The browser joins the computer's session bus itself (its file chooser needs that portal).
++    unset DBUS_SESSION_BUS_ADDRESS
++    exec "$browser"
++    ;;
++  "")
++    echo "usage: rakazo-desktop-launch browser|COMMAND [ARGS...]" >&2
++    exit 2
++    ;;
++  *) exec "$@" ;;
++esac
+diff --git a/infra/sandboxes/computer/rakazo-desktop-session b/infra/sandboxes/computer/rakazo-desktop-session
+new file mode 100644
+index 000000000..b48f0f71e
+--- /dev/null
++++ b/infra/sandboxes/computer/rakazo-desktop-session
+@@ -0,0 +1,155 @@
++#!/usr/bin/env bash
++# The bot desktop on one display: the Xfce window manager and a single bottom panel
++# (Applications, Browser, File Manager, Terminal, open windows, clock).
++#
++# start.sh runs it for the first display. The runtime starts every other display with
++# `fluxbox -rc /tmp/fluxbox-home-N/.fluxbox/init` and stops it with
++# `pkill -f "fluxbox -rc /tmp/fluxbox-home-N/.fluxbox/init"`; /usr/local/bin/fluxbox links
++# here, so this process carries that command line and those commands drive it unchanged.
++#
++# Runs as the computer's own user. Each display gets its own D-Bus session and its own
++# panel settings, kept per bot under ~/.config/rakazo-desktop so they survive restarts.
++# Starting again on a display replaces the earlier session there, so panels never double.
++set -uo pipefail
++
++: "${DISPLAY:?DISPLAY is required}"
++export HOME="${HOME:-/home/rakazo}"
++display_number="${DISPLAY#:}"
++display_number="${display_number%%.*}"
++case "$display_number" in
++  '' | *[!0-9]*)
++    echo "unsupported DISPLAY $DISPLAY" >&2
++    exit 2
++    ;;
++esac
++
++# Every process this session starts carries both markers: the display one finds a session
++# left over on this display, the session one finds only this session's own processes.
++session_id="$$-$(date +%s%N)"
++export RAKAZO_DESKTOP_DISPLAY="$DISPLAY"
++export RAKAZO_DESKTOP_SESSION="$session_id"
++# Panel launchers start the bot's browser through this, whatever display it runs on.
++export RAKAZO_DESKTOP_BROWSER="${BROWSER:-/usr/local/bin/rakazo-browser}"
++
++runtime="/tmp/rakazo/desktop-$display_number"
++log="/tmp/rakazo/desktop-$display_number.log"
++mkdir -p /tmp/rakazo "$runtime"
++exec >>"$log" 2>&1
++
++# Processes whose environment carries `NAME=value`, other than this script.
++marked_pids() {
++  local proc pid
++  for proc in /proc/[0-9]*; do
++    pid="${proc#/proc/}"
++    [[ "$pid" == "$$" ]] && continue
++    if tr '\0' '\n' <"$proc/environ" 2>/dev/null | grep -qxF -- "$1"; then
++      printf '%s\n' "$pid"
++    fi
++  done
++}
++
++stop_marked() {
++  local pids
++  pids="$(marked_pids "$1")"
++  [[ -n "$pids" ]] || return 0
++  # shellcheck disable=SC2086
++  kill -TERM $pids 2>/dev/null || true
++  for _ in $(seq 1 30); do
++    pids="$(marked_pids "$1")"
++    [[ -n "$pids" ]] || return 0
++    sleep 0.1
++  done
++  # shellcheck disable=SC2086
++  kill -KILL $pids 2>/dev/null || true
++}
++
++cleanup() {
++  trap - TERM INT EXIT
++  stop_marked "RAKAZO_DESKTOP_SESSION=$session_id"
++  rm -rf "$runtime"
++  exit 0
++}
++
++# A session already on this display (an earlier start, or one a restart left behind).
++stop_marked "RAKAZO_DESKTOP_DISPLAY=$DISPLAY"
++trap cleanup TERM INT EXIT
++
++ready=0
++for _ in $(seq 1 100); do
++  if xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
++    ready=1
++    break
++  fi
++  sleep 0.1
++done
++if [[ "$ready" -ne 1 ]]; then
++  echo "display $DISPLAY is not answering" >&2
++  exit 1
++fi
++
++# Settings belong to the bot that owns the display: the runtime names its browser profile.
++if [[ -n "${CHROME_USER_DATA_DIR:-}" ]]; then
++  key="$(basename "$CHROME_USER_DATA_DIR")"
++else
++  key="primary"
++fi
++config="$HOME/.config/rakazo-desktop/$key"
++defaults=/etc/rakazo/desktop
++
++# Before the first desktop set up here, keep a copy of any Xfce settings already in this home.
++if [[ -d "$HOME/.config/xfce4" && ! -e "$HOME/.config/rakazo-desktop/backup" ]]; then
++  mkdir -p "$HOME/.config/rakazo-desktop/backup"
++  cp -a "$HOME/.config/xfce4" "$HOME/.config/rakazo-desktop/backup/xfce4-$(date +%Y%m%d%H%M%S)" || true
++fi
++
++# Defaults are written once; anything the bot or a person changes afterwards is kept.
++xml="$config/xfce4/xfconf/xfce-perchannel-xml"
++mkdir -p "$xml"
++for channel in xfce4-panel xfwm4; do
++  [[ -e "$xml/$channel.xml" ]] || cp "$defaults/$channel.xml" "$xml/$channel.xml"
++done
++for launcher in "$defaults"/launcher-*; do
++  name="$(basename "$launcher")"
++  [[ -d "$config/xfce4/panel/$name" ]] && continue
++  mkdir -p "$config/xfce4/panel/$name"
++  cp "$launcher"/*.desktop "$config/xfce4/panel/$name/"
++done
++
++# The panel and window manager read this display's settings; apps they start get the
++# bot's normal environment back from rakazo-desktop-launch.
++export XDG_CONFIG_HOME="$config"
++export GTK_THEME=Adwaita
++dbus-daemon --session --nofork --address="unix:path=$runtime/bus" >/dev/null 2>&1 &
++for _ in $(seq 1 50); do
++  [[ -S "$runtime/bus" ]] && break
++  sleep 0.1
++done
++if [[ ! -S "$runtime/bus" ]]; then
++  echo "desktop D-Bus session did not start" >&2
++  exit 1
++fi
++export DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus"
++
++xsetroot -solid "#d9dde3" >/dev/null 2>&1 || true
++
++wm_pid=""
++panel_pid=""
++start_wm() {
++  xfwm4 --compositor=off &
++  wm_pid=$!
++}
++start_panel() {
++  xfce4-panel --disable-wm-check &
++  panel_pid=$!
++}
++start_wm
++start_panel
++
++# Bring back whatever exits while the display is up; stop with the display.
++while xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; do
++  sleep 2
++  kill -0 "$wm_pid" 2>/dev/null || start_wm
++  kill -0 "$panel_pid" 2>/dev/null || start_panel
++done
++echo "display $DISPLAY stopped" >&2
++cleanup
+diff --git a/infra/sandboxes/computer/rakazo-focus-or-launch b/infra/sandboxes/computer/rakazo-focus-or-launch
+index f5be791e9..5527e03f2 100755
+--- a/infra/sandboxes/computer/rakazo-focus-or-launch
++++ b/infra/sandboxes/computer/rakazo-focus-or-launch
+@@ -14,8 +14,13 @@ import subprocess
+ import sys
+ 
+ # Launchers whose process WM_CLASS differs from the launcher name. The browser
+-# is Chromium unless the image was built with BROWSER=brave.
+-BROWSER_WM_CLASS = "brave-browser" if shutil.which("brave-browser") and not shutil.which("chromium") else "chromium"
++# follows the browser the image was built with (BROWSER=chrome, chromium or brave).
++BROWSER_WM_CLASS = (
++    "chromium" if shutil.which("chromium")
++    else "google-chrome" if shutil.which("google-chrome")
++    else "brave-browser" if shutil.which("brave-browser")
++    else "chromium"
++)
+ WM_CLASS = {"rakazo-browser": BROWSER_WM_CLASS}
+ WMCTRL_TIMEOUT_SEC = 5
+ # control.py uses the same bounds: a browser may still be forwarding a URL
+diff --git a/infra/sandboxes/computer/start.sh b/infra/sandboxes/computer/start.sh
+index c9bca0fa2..04a578204 100755
+--- a/infra/sandboxes/computer/start.sh
++++ b/infra/sandboxes/computer/start.sh
+@@ -4,7 +4,7 @@ source /usr/local/lib/rakazo-user-env.sh
+ export DISPLAY="${DISPLAY:-:1}"
+ export HOME="${HOME:-/home/rakazo}"
+ AGENT_HOME="$HOME"
+-mkdir -p "$AGENT_HOME" "$AGENT_HOME/.local/bin" "$AGENT_HOME/.config" /tmp/rakazo /tmp/.X11-unix /tmp/fluxbox-home
++mkdir -p "$AGENT_HOME" "$AGENT_HOME/.local/bin" "$AGENT_HOME/.config" /tmp/rakazo /tmp/.X11-unix
+ # Login shells re-apply ~/.local/bin from /etc/profile.d/rakazo-local-bin.sh.
+ export PATH="$AGENT_HOME/.local/bin:/usr/local/bin:$PATH"
+ export NPM_CONFIG_PREFIX="$AGENT_HOME/.local"
+@@ -71,18 +71,10 @@ if [ -x /usr/libexec/xdg-desktop-portal ] && [ -x /usr/libexec/xdg-desktop-porta
+   /usr/libexec/xdg-desktop-portal-gtk >/tmp/rakazo/portal-gtk.log 2>&1 &
+ fi
+ 
+-xsetroot -solid "#111113" >/dev/null 2>&1 || true
+-mkdir -p /tmp/fluxbox-home/.fluxbox
+-cp /etc/rakazo/fluxbox/init /tmp/fluxbox-home/.fluxbox/init
+-cp /etc/rakazo/fluxbox/apps /tmp/fluxbox-home/.fluxbox/apps 2>/dev/null || true
+-cp /etc/rakazo/fluxbox/menu /tmp/fluxbox-home/.fluxbox/menu 2>/dev/null || true
+-cat > /tmp/fluxbox-home/.fluxbox/startup <<'EOF'
+-#!/bin/sh
+-xsetroot -solid "#111113"
+-exec fluxbox -rc /tmp/fluxbox-home/.fluxbox/init
+-EOF
+-chmod +x /tmp/fluxbox-home/.fluxbox/startup
+-HOME=/tmp/fluxbox-home /tmp/fluxbox-home/.fluxbox/startup >/tmp/rakazo/fluxbox.log 2>&1 &
++# The desktop (window manager and panel) on the first display; the runtime starts the same
++# session on every display it adds. Its own D-Bus session keeps it apart from other displays.
++BROWSER=/usr/local/bin/rakazo-browser DBUS_SESSION_BUS_ADDRESS= \
++  /usr/local/bin/rakazo-desktop-session -rc /tmp/fluxbox-home/.fluxbox/init </dev/null &
+ 
+ register_browser_handler() {
+   local mime="$1"
+-- 
+2.54.0 (Apple Git-157)
+
