@@ -1212,6 +1212,17 @@ class SignInGroupTest(unittest.TestCase):
         self.assertIsNone(helper.browser_profile(9333, proc))
         self.assertIsNone(helper.browser_profile(9444, proc))
 
+    def test_finds_the_profile_of_a_chrome_that_renamed_its_process(self):
+        proc = os.path.join(self.root, "proc")
+        profile = os.path.join(self.profiles, "chromium-bot-" + "c" * 32)
+        os.makedirs(os.path.join(proc, "20"))
+        # Chrome sets its process title, which joins its arguments with spaces and drops the NULs.
+        Path(proc, "20", "cmdline").write_bytes(
+            f"/opt/google/chrome/chrome --no-sandbox --remote-debugging-port=9222 --user-data-dir={profile}".encode()
+            + b"\0" * 4)
+        self.assertEqual(helper.browser_profile(9222, proc), profile)
+        self.assertIsNone(helper.browser_profile(9223, proc))
+
     def test_only_a_group_key_reaches_the_file_names(self):
         self.assertIsNone(helper.sign_ins_for(9222, "../../etc"))
         self.assertIsNone(helper.sign_ins_for(9222, None))

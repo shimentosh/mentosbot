@@ -2412,9 +2412,12 @@ def browser_profile(port: int, proc: str = "/proc") -> str | None:
             continue
         try:
             with open(os.path.join(proc, entry, "cmdline"), "rb") as file:
-                args = [arg.decode("utf-8", "replace") for arg in file.read().split(b"\0")]
+                raw = file.read()
         except OSError:
             continue
+        # Chrome rewrites its process title, which leaves its arguments as one space-joined string.
+        parts = [part for part in raw.split(b"\0") if part]
+        args = [arg.decode("utf-8", "replace") for arg in (parts[0].split() if len(parts) == 1 else parts)]
         if flag not in args or any(arg.startswith("--type=") for arg in args):
             continue
         for arg in args:
