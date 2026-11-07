@@ -35,6 +35,17 @@ export function clampBotMessage(text: string): string {
     : `${truncatePlainText(trimmed, BOT_MESSAGE_MAX_LENGTH - 1).trimEnd()}…`;
 }
 
+/**
+ * The owner's words for a delegated message, kept to the message limit from both ends: the request
+ * comes first and their latest answers last, and a cut in the middle loses the least of either.
+ */
+export function clampUserRequest(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= BOT_MESSAGE_MAX_LENGTH) return trimmed;
+  const half = Math.floor((BOT_MESSAGE_MAX_LENGTH - 3) / 2);
+  return `${trimmed.slice(0, half).trimEnd()}\n…\n${trimmed.slice(-half).trimStart()}`;
+}
+
 /** The hop a delivery gets when the sender was itself woken at `sourceHop`. */
 export function nextBotMessageHop(sourceHop: number | undefined): number {
   return Number.isInteger(sourceHop) && (sourceHop as number) > 0 ? (sourceHop as number) + 1 : 1;

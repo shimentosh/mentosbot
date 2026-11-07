@@ -1199,6 +1199,7 @@ async function commitAnswerRunInput(
           ...block,
           status: "answered" as const,
           answer: recordedAnswer,
+          ...(run.userId === input.answeredByUserId ? { answeredByOwner: true as const } : {}),
           ...(dismissed ? { dismissed: true as const } : {}),
           ...(input.remember === false ? { remembered: false as const } : {}),
           ...(cardSelection

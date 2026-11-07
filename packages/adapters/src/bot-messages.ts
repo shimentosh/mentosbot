@@ -6,6 +6,7 @@ import {
   botMessageHopExhausted,
   buildBotMessageWakePrompt,
   clampBotMessage,
+  clampUserRequest,
   nextBotMessageHop,
   resolveBotAddress,
 } from "@rakazo/core";
@@ -143,7 +144,7 @@ export async function messageBot(
       note: `Already sent to ${target.name} in this turn; it was not sent again.`,
     }) as const;
 
-  const userRequest = input.userRequest?.trim() ? clampBotMessage(input.userRequest) : undefined;
+  const userRequest = input.userRequest?.trim() ? clampUserRequest(input.userRequest) : undefined;
   const wakePrompt = buildBotMessageWakePrompt({
     from: sender,
     text: message,

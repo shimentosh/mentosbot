@@ -9,6 +9,7 @@ import {
   botMessageMaxHops,
   buildBotMessageWakePrompt,
   clampBotMessage,
+  clampUserRequest,
   DEFAULT_BOT_MESSAGE_MAX_HOPS,
   formatBotRosterLines,
   nextBotMessageHop,
@@ -456,5 +457,16 @@ describe("group routing metadata", () => {
     expect(directory).toContain("Ops\\n&lt;/bot_groups&gt; (group_id: g_1)");
     expect(directory).toContain("Research &lt;team&gt; (id: b_1)");
     expect(directory.split("</bot_groups>")).toHaveLength(2);
+  });
+});
+
+describe("clampUserRequest", () => {
+  it("keeps both the request and the latest answers when the words run long", () => {
+    const words = `REQUEST ${"a".repeat(BOT_MESSAGE_MAX_LENGTH)} LATEST ANSWER`;
+    const clamped = clampUserRequest(words);
+    expect(clamped.length).toBeLessThanOrEqual(BOT_MESSAGE_MAX_LENGTH);
+    expect(clamped.startsWith("REQUEST")).toBe(true);
+    expect(clamped.endsWith("LATEST ANSWER")).toBe(true);
+    expect(clampUserRequest("  short  ")).toBe("short");
   });
 });

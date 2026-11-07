@@ -171,6 +171,8 @@ export const MessageBlock = z.discriminatedUnion("kind", [
     otherAnswer: z.string().optional(),
     /** The draft as the person edited it before choosing. */
     editedPreview: z.string().optional(),
+    /** The run's own user gave this answer, so it counts as their words when the work is handed on. */
+    answeredByOwner: z.literal(true).optional(),
     actions: z
       .array(
         z.object({

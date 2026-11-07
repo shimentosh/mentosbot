@@ -53,6 +53,49 @@ export function connectorTrustKeys(
   });
 }
 
+function blocksOf(blocks: unknown): MessageBlock[] {
+  return Array.isArray(blocks) ? (blocks as MessageBlock[]) : [];
+}
+
+function messageText(blocks: unknown): string {
+  return blocksOf(blocks)
+    .flatMap((block) => (block.kind === "text" ? [block.text] : []))
+    .join("\n");
+}
+
+function hasBlockKind(blocks: unknown, kind: string): boolean {
+  return blocksOf(blocks).some((block) => block.kind === kind);
+}
+
+/**
+ * The run's own user's answers to its questions, each with the question and the draft it approved.
+ * A bare "Post now" handed to another bot says nothing about what was approved. Approval, secret
+ * and settings cards are left out: their answers act on their own and are not instructions.
+ */
+export function ownerAnswerLines(blocks: unknown): string[] {
+  return blocksOf(blocks).flatMap((block) => {
+    if (block.kind !== "ask" || block.status !== "answered" || !block.answeredByOwner) return [];
+    if (block.approvalEffectId || block.input === "secret" || block.dismissed) return [];
+    if (block.instructionUpdate || block.settingsUpdate) return [];
+    const label = (id: string) => block.actions?.find((action) => action.id === id)?.label ?? id;
+    const chosen = block.answers?.length
+      ? block.answers.map(label)
+      : block.answer
+        ? [label(block.answer)]
+        : [];
+    const answer = [...chosen, block.otherAnswer].filter(Boolean).join("; ");
+    if (!answer) return [];
+    const draft = block.editedPreview ?? block.preview;
+    return [
+      [
+        `Asked: ${block.text}`,
+        ...(draft ? ["Draft on the card:", draft] : []),
+        `They answered: ${answer}`,
+      ].join("\n"),
+    ];
+  });
+}
+
 /** Approval and trust lookups a run's tool calls share, each loaded at most once. */
 export function createRunTrustLoaders(
   deps: ExecutorDeps,
@@ -110,13 +153,11 @@ export function createRunTrustLoaders(
   // routine that started it, carried along when a bot delegates that work to another (see
   // messageBot). Never a bot, channel or webhook message, or a tool result.
   // These name the sites a run is given, and are all Auto Review sees of a new site's run.
-  let ownerWordsPromise: Promise<string> | undefined;
-  const loadOwnerWords = () => {
-    ownerWordsPromise ??= (async () => {
+  let baseOwnerWordsPromise: Promise<string> | undefined;
+  const loadBaseOwnerWords = () => {
+    baseOwnerWordsPromise ??= (async () => {
       if (ownerStartedRun && !messagingChannelRun && sourceMessage?.role === "user") {
-        return ((sourceMessage.blocks ?? []) as MessageBlock[])
-          .flatMap((block) => (block.kind === "text" ? [block.text] : []))
-          .join("\n");
+        return messageText(sourceMessage.blocks);
       }
       // Saved when the routine fired, so a later edit cannot change what this run judges.
       if (run.trigger === "routine") return routineTaskInstructions(taskPrompt);
@@ -136,7 +177,45 @@ export function createRunTrustLoaders(
       }
       return "";
     })();
-    return ownerWordsPromise;
+    return baseOwnerWordsPromise;
+  };
+  // What the owner said to this run after it started: their answers to its questions, with the
+  // question and draft they answered, and messages they sent while it worked. Read on each call,
+  // since both can arrive while the run is going.
+  const loadLaterOwnerWords = async () => {
+    const [asked, steered] = await Promise.all([
+      deps.prisma.message.findMany({
+        where: { runId, role: "bot" },
+        orderBy: { createdAt: "asc" },
+        select: { blocks: true },
+      }),
+      messagingChannelRun
+        ? []
+        : deps.prisma.steeringMessage.findMany({
+            where: { runId, botId, claimedAt: { not: null }, originTrigger: null },
+            orderBy: { createdAt: "asc" },
+            select: { message: { select: { role: true, authorUserId: true, blocks: true } } },
+          }),
+    ]);
+    return [
+      ...asked.flatMap((message) => ownerAnswerLines(message.blocks)),
+      ...steered.flatMap(({ message }) =>
+        message.role === "user" &&
+        message.authorUserId === run.userId &&
+        !hasBlockKind(message.blocks, "channel_message")
+          ? [messageText(message.blocks)].filter(Boolean)
+          : [],
+      ),
+    ];
+  };
+  // The owner's own words for this run: the message they sent, or the instructions of the
+  // routine that started it, carried along when a bot delegates that work to another (see
+  // messageBot), and what they told this run since. Never a bot, channel or webhook message, or
+  // a tool result. These name the sites a run is given, and are all Auto Review sees of a new
+  // site's run.
+  const loadOwnerWords = async () => {
+    const [base, later] = await Promise.all([loadBaseOwnerWords(), loadLaterOwnerWords()]);
+    return [base, ...later].filter((part) => part.trim()).join("\n\n");
   };
   let trustedSitesPromise: Promise<Set<string>> | undefined;
   const loadTrustedSites = () => {
