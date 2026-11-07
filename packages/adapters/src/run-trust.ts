@@ -16,6 +16,7 @@ import { effectiveModelRole } from "./model-roles.js";
 import { routineTaskInstructions } from "./routine-watch.js";
 import { CATALOG_APPROVAL_TOOL, PASSED_EFFECT_STATUSES } from "./run-effects.js";
 import { BUILTIN_AGENT_TOOL_NAMES } from "./run-tool-selection.js";
+import { ticketNumberFromWakePrompt } from "./ticket-wake.js";
 
 /**
  * The connection a connector call reaches, for read trust. Installed APIs are told apart by their
@@ -96,6 +97,39 @@ export function ownerAnswerLines(blocks: unknown): string[] {
   });
 }
 
+/**
+ * The owner's words behind the ticket a run was woken for: what they wrote when they created or
+ * edited it, or the owner words of their run that had a bot create or hand it on (see
+ * Ticket.ownerRequest), and their own comments on it. Someone else's ticket gives only comments.
+ */
+async function ticketOwnerWords(
+  deps: ExecutorDeps,
+  run: { userId: string; spaceId: string },
+  taskPrompt: string,
+): Promise<string> {
+  const number = ticketNumberFromWakePrompt(taskPrompt);
+  if (number === undefined) return "";
+  const ticket = await deps.prisma.ticket.findFirst({
+    where: { spaceId: run.spaceId, number, board: { spaceId: run.spaceId } },
+    select: {
+      ownerRequest: true,
+      createdByUserId: true,
+      comments: {
+        where: { authorUserId: run.userId, authorBotId: null },
+        orderBy: { createdAt: "asc" },
+        select: { body: true },
+      },
+    },
+  });
+  if (!ticket) return "";
+  return [
+    ...(ticket.createdByUserId === run.userId ? [ticket.ownerRequest ?? ""] : []),
+    ...ticket.comments.map((comment) => comment.body),
+  ]
+    .filter((part) => part.trim())
+    .join("\n\n");
+}
+
 /** Approval and trust lookups a run's tool calls share, each loaded at most once. */
 export function createRunTrustLoaders(
   deps: ExecutorDeps,
@@ -168,6 +202,7 @@ export function createRunTrustLoaders(
           : [];
         return botMessageContext(blocks)?.userRequest ?? "";
       }
+      if (run.trigger === "tickets") return ticketOwnerWords(deps, run, taskPrompt);
       if (run.trigger === "webhook") {
         const routines = await deps.prisma.routine.findMany({
           where: { botId: botId, spaceId: run.spaceId, userId: run.userId },

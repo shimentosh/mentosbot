@@ -43,6 +43,12 @@ describe("owner words", () => {
     later: {
       asked?: unknown[][];
       steered?: { role: string; authorUserId: string; blocks: unknown[] }[];
+      ticket?: {
+        ownerRequest: string | null;
+        createdByUserId: string | null;
+        comments: { body: string }[];
+      };
+      taskPrompt?: string;
     } = {},
   ) =>
     createRunTrustLoaders(
@@ -54,13 +60,14 @@ describe("owner words", () => {
           steeringMessage: {
             findMany: async () => (later.steered ?? []).map((message) => ({ message })),
           },
+          ticket: { findFirst: async () => later.ticket ?? null },
         },
       } as unknown as ExecutorDeps,
       {
         run: { userId: "user-1", spaceId: "space-1", trigger },
         runId: "run-1",
         botId: "bot-1",
-        taskPrompt: "prompt",
+        taskPrompt: later.taskPrompt ?? "prompt",
         ownerStartedRun: trigger === "user",
         messagingChannelRun: false,
         sourceMessage: { role, blocks },
@@ -166,5 +173,27 @@ describe("owner words", () => {
       },
     );
     expect(words).toBe("draft replies\n\npost all four");
+  });
+
+  it("reads the person's words behind the ticket a run was woken for", async () => {
+    const wake =
+      "Work on ticket RAK-7. Read it with ticket_get. Keep progress in ticket comments and update its status with ticket_update. Use ask or approval cards when user input is needed.";
+    const ticket = {
+      ownerRequest: "ship the four replies",
+      createdByUserId: "user-1",
+      comments: [{ body: "post them today" }],
+    };
+    await expect(ownerWords("tickets", [], "user", { taskPrompt: wake, ticket })).resolves.toBe(
+      "ship the four replies\n\npost them today",
+    );
+    await expect(
+      ownerWords("tickets", [], "user", {
+        taskPrompt: wake,
+        ticket: { ...ticket, createdByUserId: "user-2" },
+      }),
+    ).resolves.toBe("post them today");
+    await expect(
+      ownerWords("tickets", [], "user", { taskPrompt: "Work on something else", ticket }),
+    ).resolves.toBe("");
   });
 });

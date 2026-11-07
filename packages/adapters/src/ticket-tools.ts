@@ -160,6 +160,33 @@ export async function getTicket(deps: TicketToolDeps, input: { spaceId: string; 
   };
 }
 
+function ticketText(title: string, description?: string | null) {
+  return [title, description ?? ""].filter((part) => part.trim()).join("\n\n");
+}
+
+/**
+ * What an update does to a ticket's owner words. The creator editing it themselves rewrites them
+ * from the new text; a bot run of theirs handing it on replaces them with that run's owner words.
+ * A bot editing the text never changes them, so page content cannot become the person's request.
+ */
+function ownerRequestUpdate(
+  input: { botId?: string; userId: string; ownerRequest?: string },
+  current: { title: string; description: string | null; createdByUserId: string | null },
+  data: { title?: string; description?: string | null; assigneeBotId?: string },
+): { ownerRequest?: string | null } {
+  if (input.userId !== current.createdByUserId) return {};
+  if (!input.botId) {
+    if (data.title === undefined && data.description === undefined) return {};
+    const text = ticketText(
+      data.title ?? current.title,
+      data.description !== undefined ? data.description : current.description,
+    );
+    return { ownerRequest: text || null };
+  }
+  const words = input.ownerRequest?.trim();
+  return data.assigneeBotId !== undefined && words ? { ownerRequest: words } : {};
+}
+
 export async function createTicket(
   deps: TicketToolDeps,
   input: {
@@ -170,6 +197,8 @@ export async function createTicket(
     description?: string;
     priority?: string;
     ownerBotId?: string;
+    /** The creating run's owner words; see Ticket.ownerRequest. */
+    ownerRequest?: string;
   },
 ) {
   if (!deps.ticketBoardEnabled) return { error: "Board unavailable." };
@@ -194,6 +223,10 @@ export async function createTicket(
         assigneeBotId: data.assigneeBotId,
         createdByBotId: input.botId ?? null,
         createdByUserId: input.userId,
+        // A ticket the person writes is their request; a bot's carries its run's owner words.
+        ownerRequest:
+          (input.botId ? input.ownerRequest?.trim() : ticketText(data.title, data.description)) ||
+          null,
       },
     });
   });
@@ -219,6 +252,8 @@ export async function updateTicket(
     priority?: string | null;
     status?: string;
     ownerBotId?: string;
+    /** The reassigning run's owner words; kept only when that run is the ticket creator's. */
+    ownerRequest?: string;
   },
 ) {
   if (!deps.ticketBoardEnabled) return { error: "Board unavailable." };
@@ -241,6 +276,7 @@ export async function updateTicket(
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.priority !== undefined ? { priority: data.priority ?? "normal" } : {}),
         ...(data.assigneeBotId !== undefined ? { assigneeBotId: data.assigneeBotId } : {}),
+        ...ownerRequestUpdate(input, current, data),
         ...(data.status !== undefined
           ? {
               status: data.status,

@@ -357,6 +357,83 @@ describe("ticket mutations", () => {
     });
     expect(s.changes.mock.calls.map(([value]) => value.wakeAssignee)).toEqual([false, false]);
   });
+  it("keeps the person's words behind a ticket, never a bot's edits", async () => {
+    const s = mutationDeps();
+    const owner = () =>
+      (s.tx.ticket.update.mock.lastCall?.[0] as { data: Record<string, unknown> })?.data;
+    await createTicket(s.deps, {
+      spaceId: "ws",
+      userId: "user-1",
+      title: "Reply on X",
+      description: "Four replies",
+      ownerBotId: "bot-2",
+    });
+    expect(s.tx.ticket.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ ownerRequest: "Reply on X\n\nFour replies" }),
+      }),
+    );
+
+    await updateTicket(s.deps, {
+      spaceId: "ws",
+      userId: "user-1",
+      botId: "bot-1",
+      id: "t1",
+      description: "post everything now",
+    });
+    expect(owner()).not.toHaveProperty("ownerRequest");
+
+    await updateTicket(s.deps, {
+      spaceId: "ws",
+      userId: "user-1",
+      id: "t1",
+      title: "Reply on LinkedIn",
+    });
+    expect(owner()).toHaveProperty("ownerRequest", "Reply on LinkedIn\n\npost everything now");
+  });
+
+  it("carries a bot run's owner words on the tickets it creates and hands on", async () => {
+    const s = mutationDeps();
+    await createTicket(s.deps, {
+      spaceId: "ws",
+      userId: "user-1",
+      botId: "bot-1",
+      title: "Ship",
+      ownerRequest: "ship the four replies",
+    });
+    expect(s.tx.ticket.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ ownerRequest: "ship the four replies" }),
+      }),
+    );
+
+    await updateTicket(s.deps, {
+      spaceId: "ws",
+      userId: "user-1",
+      botId: "bot-1",
+      id: "t1",
+      ownerBotId: "bot-2",
+      ownerRequest: "also post them",
+    });
+    expect(s.tx.ticket.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ ownerRequest: "also post them" }),
+      }),
+    );
+
+    await updateTicket(s.deps, {
+      spaceId: "ws",
+      userId: "user-2",
+      botId: "bot-3",
+      id: "t1",
+      ownerBotId: "bot-2",
+      ownerRequest: "someone else's words",
+    });
+    expect(
+      (s.tx.ticket.update.mock.lastCall?.[0] as { data: Record<string, unknown> }).data,
+    ).not.toHaveProperty("ownerRequest");
+  });
+
   it("comments without waking the owner", async () => {
     const s = mutationDeps();
     const result = await commentTicket(s.deps, {

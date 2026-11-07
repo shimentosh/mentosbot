@@ -1,3 +1,4 @@
+import { redactSecrets } from "@rakazo/core";
 import {
   desktopGuardApplies,
   desktopProtectionGuardMessage,
@@ -139,6 +140,7 @@ export const taskTools: ToolHandlers = {
         description: args.description !== undefined ? String(args.description) : undefined,
         priority: args.priority !== undefined ? String(args.priority) : undefined,
         ownerBotId: args.ownerBotId !== undefined ? String(args.ownerBotId) : undefined,
+        ownerRequest: redactSecrets(await ctx.trust.loadOwnerWords(), ctx.secrets),
       }),
     );
   },
@@ -156,6 +158,9 @@ export const taskTools: ToolHandlers = {
         priority: args.priority !== undefined ? String(args.priority) : undefined,
         status: args.status !== undefined ? String(args.status) : undefined,
         ownerBotId: args.ownerBotId !== undefined ? String(args.ownerBotId) : undefined,
+        ...(args.ownerBotId !== undefined
+          ? { ownerRequest: redactSecrets(await ctx.trust.loadOwnerWords(), ctx.secrets) }
+          : {}),
       }),
     );
   },

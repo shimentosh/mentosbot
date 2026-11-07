@@ -2251,6 +2251,8 @@ model Ticket {
   createdByBot    Bot?      @relation("TicketCreatorBot", fields: [createdByBotId], references: [id], onDelete: SetNull)
   createdByUserId String?
   createdByUser   User?     @relation("TicketCreatorUser", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  /// The creating run's owner words, so the bot that works the ticket knows the request is theirs.
+  ownerRequest    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   completedAt       DateTime?
