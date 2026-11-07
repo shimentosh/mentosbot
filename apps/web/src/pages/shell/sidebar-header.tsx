@@ -1,21 +1,20 @@
 import { useLingui } from "@lingui/react/macro";
 import type { Bot } from "@rakazo/contracts";
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@rakazo/ui-web";
-import { History, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
+import { CheckCheck, PanelLeftClose, PanelLeftOpen, Plus, Search } from "lucide-react";
 import { IconTooltip } from "../../components/IconTooltip";
 import { desktopBridge } from "../../lib/desktop";
 import type { Panel } from "../../lib/right-panel-state";
 import { selectedSpaceId } from "../../lib/rpc";
 import { WindowChrome } from "../WindowChrome";
 import { BotCreatePicker } from "./bot-picker";
-import { NotificationBell } from "./notification-bell";
+import { NotificationBell, useInbox } from "./notification-bell";
 
 export function SidebarHeader({
   mini = false,
   createMenuOpen,
   setCreateMenuOpen,
-  activityMode,
-  toggleActivityMode,
+  openApprovals,
   searchOpen = false,
   onSearch,
   setBotsSidebarCollapsedPref,
@@ -30,8 +29,7 @@ export function SidebarHeader({
   mini?: boolean;
   createMenuOpen: boolean;
   setCreateMenuOpen: (open: boolean) => void;
-  activityMode: boolean;
-  toggleActivityMode: () => void;
+  openApprovals: () => void;
   searchOpen?: boolean;
   onSearch?: () => void;
   setBotsSidebarCollapsedPref: (collapsed: boolean) => void;
@@ -46,6 +44,8 @@ export function SidebarHeader({
   const { t } = useLingui();
   const hasWindowChrome = Boolean(desktopBridge());
   const toggleLabel = mini ? t`Show bots` : t`Minimize bots`;
+  const waiting = useInbox().data?.needsYou.length ?? 0;
+  const approvalsLabel = waiting ? t`Approvals, ${waiting} waiting` : t`Approvals`;
   return (
     <div
       className={`app-drag flex items-center ${mini ? `flex-col gap-2 px-0 pb-2 ${hasWindowChrome ? "pt-4" : "pt-2"}` : "justify-between px-[18px] pb-3 pt-4"}`}
@@ -74,21 +74,26 @@ export function SidebarHeader({
             if (spaceId === selectedSpaceId()) navigate(path);
             else openSpaceChat(spaceId, path);
           }}
-          onShowActivity={() => {
-            if (!activityMode) toggleActivityMode();
-          }}
+          onShowAll={openApprovals}
         />
-        <IconTooltip label={t`Activity`}>
+        <IconTooltip label={t`Approvals`}>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={t`Activity`}
-            aria-pressed={activityMode}
-            data-activity-mode={activityMode ? "on" : "off"}
-            onClick={toggleActivityMode}
-            className={`app-no-drag ${activityMode ? "bg-accent text-foreground" : "text-muted-foreground"}`}
+            aria-label={approvalsLabel}
+            data-testid="approvals-trigger"
+            onClick={openApprovals}
+            className={`app-no-drag relative ${waiting ? "text-foreground" : "text-muted-foreground"}`}
           >
-            <History size={15} strokeWidth={activityMode ? 2.4 : 1.8} aria-hidden="true" />
+            <CheckCheck size={15} strokeWidth={1.8} aria-hidden="true" />
+            {waiting ? (
+              <span
+                aria-hidden="true"
+                className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium leading-none text-primary-foreground"
+              >
+                {waiting > 9 ? "9+" : waiting}
+              </span>
+            ) : null}
           </Button>
         </IconTooltip>
         <IconTooltip label={toggleLabel}>

@@ -2,56 +2,28 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { captureScreenshot, completeOnboarding, createNamedBot, rpc, signup } from "./helpers";
 
-/** Activity rows sit above `[data-sidebar-group]` bots; match their aria-label. */
+function approvals(page: Page) {
+  return page.getByTestId("approvals");
+}
+
+/** Activity rows sit in the approvals window's side column; match their aria-label. */
 function activityRow(page: Page, botName: string) {
-  return page.locator("aside").getByRole("button", {
-    name: new RegExp(`^${botName}, `),
-  });
+  return approvals(page)
+    .locator("aside")
+    .getByRole("button", { name: new RegExp(`^${botName}, `) });
 }
 
-async function captureActivitySidebar(
-  page: Page,
-  testInfo: Parameters<typeof captureScreenshot>[1],
-  name: string,
-) {
-  const aside = page.locator("aside").first();
-  const toggle = page.getByRole("button", { name: "Activity", exact: true });
-  await toggle.scrollIntoViewIfNeeded();
-  // Keep the header (bell + Create) in frame with the activity sections.
-  const box = await aside.boundingBox();
-  if (box) {
-    const screenshotPath = testInfo.outputPath(`${name}.png`);
-    await page.screenshot({
-      animations: "disabled",
-      caret: "hide",
-      path: screenshotPath,
-      clip: {
-        x: Math.max(0, box.x),
-        y: Math.max(0, box.y),
-        width: Math.min(box.width + 24, 360),
-        height: Math.min(Math.max(box.height, 420), 720),
-      },
-    });
-    await testInfo.attach(name, { contentType: "image/png", path: screenshotPath });
-    return;
-  }
-  await captureScreenshot(page, testInfo, name);
+async function openApprovals(page: Page) {
+  await page.getByTestId("approvals-trigger").click();
+  await expect(approvals(page)).toBeVisible();
 }
 
-test("sidebar Working and Recent surface active and terminal runs", async ({ page }, testInfo) => {
+test("approvals show active and finished runs beside what waits on the person", async ({
+  page,
+}, testInfo) => {
   const stamp = Date.now();
   await signup(page, `activity-${stamp}@rakazo.test`, "password12", "Activity");
   await completeOnboarding(page);
-
-  const aside = page.locator("aside").first();
-  const activityToggle = page.getByRole("button", { name: "Activity", exact: true });
-  await expect(activityToggle).toHaveAttribute("aria-pressed", "false");
-  await expect(activityToggle).toHaveAttribute("data-activity-mode", "off");
-  await expect(aside.getByText("Working", { exact: true })).toHaveCount(0);
-  await expect(aside.getByText("Recent", { exact: true })).toHaveCount(0);
-  await expect(aside.getByRole("status", { name: "Loading activity…" })).toHaveCount(0);
-  await expect(aside.locator("[data-sidebar-group]").getByText("Chief").first()).toBeVisible();
-  await captureActivitySidebar(page, testInfo, "57-activity-mode-off");
 
   const composer = page.getByPlaceholder(/Message/);
   await composer.fill("keep working until I stop you");
@@ -60,133 +32,54 @@ test("sidebar Working and Recent surface active and terminal runs", async ({ pag
     timeout: 30_000,
   });
 
-  await activityToggle.click();
-  await expect(activityToggle).toHaveAttribute("aria-pressed", "true");
-  await expect(activityToggle).toHaveAttribute("data-activity-mode", "on");
-
-  // Remount ActivityList so the first poll sees the in-flight run (15s interval otherwise).
-  await page.reload();
-  await expect(activityToggle).toHaveAttribute("aria-pressed", "true");
-  await expect(activityToggle).toHaveAttribute("data-activity-mode", "on");
-  await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(page.getByRole("status", { name: "Loading activity…" })).toBeHidden({
+  await openApprovals(page);
+  const activity = approvals(page).locator("aside");
+  await expect(approvals(page).getByText("All caught up", { exact: true })).toBeVisible();
+  await expect(activity.getByRole("status", { name: "Loading activity…" })).toBeHidden({
     timeout: 20_000,
   });
-  await expect(aside.getByText("Working", { exact: true })).toBeVisible({ timeout: 20_000 });
-  // Working starts folded; opening it is remembered across reloads.
-  await expect(activityRow(page, "Chief")).toBeHidden();
-  await aside.getByRole("button", { name: /^Working/ }).click();
-  await expect(activityRow(page, "Chief")).toBeVisible();
+  await expect(activityRow(page, "Chief")).toBeVisible({ timeout: 20_000 });
   await expect(activityRow(page, "Chief")).toContainText(/keep working|Running|Queued|Starting/i);
-  await page.emulateMedia({ colorScheme: "light" });
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-  // Activity opens without the search field; Search reveals it with the Filters toggle.
-  await expect(aside.getByTestId("sidebar-search")).toHaveCount(0);
-  await aside.getByTestId("sidebar-search-trigger").click();
-  const filtersButton = aside.getByRole("button", { name: "Filters", exact: true });
-  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByTestId("activity-status-filter")).toBeHidden();
-  await expect(page.getByTestId("activity-date-from")).toBeHidden();
-  await expect(page.getByTestId("activity-date-to")).toBeHidden();
-  await captureActivitySidebar(page, testInfo, "58-activity-now");
-  const runSearch = aside.getByRole("textbox", { name: "Search runs", exact: true });
-  await expect(aside.getByRole("textbox")).toHaveCount(1);
-  const searchBox = (await page.getByTestId("sidebar-search").boundingBox())!;
-  const rowBox = (await activityRow(page, "Chief").boundingBox())!;
-  expect(Math.abs(searchBox.x - rowBox.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(searchBox.width - rowBox.width)).toBeLessThanOrEqual(1);
+  await captureScreenshot(page, testInfo, "58-approvals-activity");
+
+  const runSearch = activity.getByRole("textbox", { name: "Search runs", exact: true });
   await runSearch.fill("keep working");
   await expect(activityRow(page, "Chief")).toBeVisible();
-  await expect(aside.getByTestId("activity-filter-indicator")).toHaveCount(0);
-  await captureActivitySidebar(page, testInfo, "58a-activity-now-search");
   await runSearch.fill("no-such-run");
   await expect(activityRow(page, "Chief")).toHaveCount(0);
-  // Run searches must never invoke the space-wide search surface.
-  await expect(aside.getByText("No runs match these filters.")).toBeVisible();
-  // Escape clears the run search and closes it, as it does for the space search.
-  await runSearch.press("Escape");
-  await expect(runSearch).toHaveCount(0);
-  await expect(activityRow(page, "Chief")).toBeVisible();
-  await aside.getByTestId("sidebar-search-trigger").click();
-  await expect(runSearch).toHaveValue("");
-  await filtersButton.focus();
-  await page.keyboard.press("Enter");
-  await expect(filtersButton).toHaveAttribute("aria-expanded", "true");
-  await page.getByTestId("activity-status-filter").selectOption("running");
-  await expect(aside.getByTestId("activity-filter-indicator")).toBeVisible();
-  await captureActivitySidebar(page, testInfo, "58b-activity-now-filters");
-  await filtersButton.click();
-  await expect(page.getByTestId("activity-status-filter")).toBeHidden();
-  await expect(aside.getByTestId("activity-filter-indicator")).toBeVisible();
-  await page.getByTestId("activity-reset-filters").click();
-  await expect(aside.getByTestId("activity-filter-indicator")).toHaveCount(0);
-  await page.emulateMedia({ colorScheme: "dark" });
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await captureActivitySidebar(page, testInfo, "58c-activity-now-dark");
-  await page.emulateMedia({ colorScheme: "light" });
-  await runSearch.fill("Chief");
-  // Search stays open across the switch, now searching the space instead of runs.
-  await activityToggle.click();
-  const normalSearch = aside.getByRole("textbox", { name: "Search", exact: true });
-  await expect(normalSearch).toHaveValue("");
-  await normalSearch.fill("Chief");
-  await expect(aside.getByTestId("activity-list")).toHaveCount(0);
-  await activityToggle.click();
-  await expect(runSearch).toHaveValue("");
-  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
+  await expect(activity.getByText("No runs match these filters.")).toBeVisible();
+  await runSearch.fill("");
   await expect(activityRow(page, "Chief")).toBeVisible();
 
+  const filtersButton = activity.getByRole("button", { name: "Filters", exact: true });
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
+  await filtersButton.click();
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "true");
+  await page.getByTestId("activity-status-filter").selectOption("failed");
+  await expect(activity.getByTestId("activity-filter-indicator")).toBeVisible();
+  await expect(activityRow(page, "Chief")).toHaveCount(0);
+  await page.getByTestId("activity-reset-filters").click();
+  await expect(activity.getByTestId("activity-filter-indicator")).toHaveCount(0);
+  await expect(activityRow(page, "Chief")).toBeVisible();
+
+  // Opening a run's chat closes the window.
+  await activityRow(page, "Chief").click();
+  await expect(approvals(page)).toHaveCount(0);
   await page.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(page.getByRole("button", { name: "Send" })).toBeVisible({ timeout: 30_000 });
 
-  await page.reload();
-  await expect(activityToggle).toHaveAttribute("aria-pressed", "true");
-  await expect(activityToggle).toHaveAttribute("data-activity-mode", "on");
-  await expect(page.getByRole("status", { name: "Loading activity…" })).toBeHidden({
-    timeout: 20_000,
-  });
-  await expect(aside.getByText("Recent", { exact: true })).toBeVisible({ timeout: 20_000 });
-  await expect(activityRow(page, "Chief")).toBeVisible();
+  await openApprovals(page);
+  await expect(activity.getByText("Recent", { exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(activityRow(page, "Chief")).toContainText(/Cancelled|keep working/i);
-  await expect(aside.getByText("Working", { exact: true })).toHaveCount(0);
-  await captureActivitySidebar(page, testInfo, "59-activity-recent");
-
-  const activitySearch = aside.getByRole("textbox", { name: "Search runs", exact: true });
-  if (!(await activitySearch.isVisible()))
-    await aside.getByTestId("sidebar-search-trigger").click();
-  await expect(aside.getByRole("textbox")).toHaveCount(1);
-  await activitySearch.fill("Chief");
-  await expect(activityRow(page, "Chief")).toBeVisible();
-  await expect(aside.getByText("Recent", { exact: true })).toBeVisible();
-  await captureActivitySidebar(page, testInfo, "60-activity-search-match");
-
-  await activitySearch.fill("no-such-run");
-  await expect(aside.getByText("No runs match these filters.")).toBeVisible();
-  await expect(activityRow(page, "Chief")).toHaveCount(0);
-  await expect(aside.getByText("Recent", { exact: true })).toHaveCount(0);
-  await captureActivitySidebar(page, testInfo, "61-activity-filters-empty");
-
-  await page.getByTestId("activity-reset-filters").click();
-  await expect(activityRow(page, "Chief")).toBeVisible();
-
-  await page.getByRole("button", { name: "Filters", exact: true }).click();
-  await page.getByTestId("activity-status-filter").selectOption("failed");
-  await expect(aside.getByText("No runs match these filters.")).toBeVisible();
-  await expect(activityRow(page, "Chief")).toHaveCount(0);
-  await page.getByTestId("activity-reset-filters").click();
-  await expect(activityRow(page, "Chief")).toBeVisible();
-
+  // The window opens fresh, with its filters folded.
+  await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
+  await filtersButton.click();
   await page.getByTestId("activity-date-from").fill("2999-01-01");
-  await expect(aside.getByText("No runs match these filters.")).toBeVisible();
-  await expect(activityRow(page, "Chief")).toHaveCount(0);
+  await expect(activity.getByText("No runs match these filters.")).toBeVisible();
   await page.getByTestId("activity-reset-filters").click();
   await expect(activityRow(page, "Chief")).toBeVisible();
-
-  await page.getByTestId("activity-date-to").fill("2000-01-01");
-  await expect(aside.getByText("No runs match these filters.")).toBeVisible();
-  await expect(activityRow(page, "Chief")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(approvals(page)).toHaveCount(0);
 });
 
 test("activity filters keep retry when a refresh fails", async ({ page }, testInfo) => {
@@ -248,21 +141,18 @@ test("activity filters keep retry when a refresh fails", async ({ page }, testIn
     });
   });
 
-  const aside = page.locator("aside").first();
-  const activityToggle = page.getByRole("button", { name: "Activity", exact: true });
-  await activityToggle.click();
   // The list refreshes every 15s; drive that poll with a controlled clock.
   await page.clock.install();
   await page.clock.setFixedTime(now);
   await page.reload();
-  await expect(activityToggle).toHaveAttribute("aria-pressed", "true");
+  await openApprovals(page);
+  const aside = approvals(page).locator("aside");
   await expect(activityRow(page, "Chief")).toBeVisible({ timeout: 20_000 });
 
   await expect(activityRow(page, "Chief")).toContainText("filter me");
   await expect(activityRow(page, "Chief").getByText("just now", { exact: true })).toBeVisible();
   await expect(activityRow(page, "Helper")).toContainText("Update from Scout: filter me");
-  await captureActivitySidebar(page, testInfo, "61a-activity-first-minute");
-  await aside.getByTestId("sidebar-search-trigger").click();
+  await captureScreenshot(page, testInfo, "61a-activity-first-minute");
   const activitySearch = aside.getByRole("textbox", { name: "Search runs", exact: true });
   await activitySearch.fill("Update from Scout");
   await expect(activityRow(page, "Helper")).toBeVisible();
@@ -296,7 +186,7 @@ test("activity filters keep retry when a refresh fails", async ({ page }, testIn
   await expect(activitySearch).toHaveValue("Chief");
 });
 
-test("activity groups what needs you, what is working, and unread chats", async ({
+test("approvals hold questions as cards and group work and unread chats beside them", async ({
   page,
 }, testInfo) => {
   await signup(page, `activity-sections-${Date.now()}@rakazo.test`, "password12", "Sections");
@@ -319,27 +209,24 @@ test("activity groups what needs you, what is working, and unread chats", async 
   await page.getByPlaceholder("Message Researcher").fill("keep working until I stop you");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Stop", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Activity", exact: true }).click();
+  await openApprovals(page);
 
-  const aside = page.locator("aside").first();
-  const attention = aside.getByRole("region", { name: "Needs attention", exact: true });
+  const aside = approvals(page).locator("aside");
   const working = aside.getByRole("region", { name: "Working", exact: true });
   const unread = aside.getByRole("region", { name: "Unread", exact: true });
-  await expect(attention.getByRole("button", { name: /^Head of Marketing,/ })).toBeVisible({
-    timeout: 20_000,
-  });
-  await expect(attention).not.toContainText("Needs input");
-  await expect(working.getByRole("button", { name: /^Researcher,/ })).toBeHidden();
-  await working.getByRole("button", { name: /^Working/ }).click();
-  await expect(working.getByRole("button", { name: /^Researcher,/ })).toBeVisible();
-  await expect(unread.getByRole("button", { name: /^Unread/ })).toBeVisible();
-  await unread.getByRole("button", { name: /^Unread/ }).click();
-  await expect(unread).toContainText("Writer");
-  await captureActivitySidebar(page, testInfo, "61b-activity-sections");
-
-  await page.reload();
+  // The question waits as a card to answer here, not as an activity row.
+  const waiting = approvals(page).getByTestId("approval");
+  await expect(waiting.filter({ hasText: "Head of Marketing" })).toContainText(
+    "Which city should I use?",
+    { timeout: 20_000 },
+  );
+  await expect(aside.getByRole("button", { name: /^Head of Marketing,/ })).toHaveCount(0);
   await expect(working.getByRole("button", { name: /^Researcher,/ })).toBeVisible({
     timeout: 20_000,
   });
+  await expect(unread.getByRole("button", { name: /^Unread/ })).toBeVisible();
+  await unread.getByRole("button", { name: /^Unread/ }).click();
+  await expect(unread).toContainText("Writer");
+  await captureScreenshot(page, testInfo, "61b-approvals-sections");
   await rpc(page, "threads/stop", { botId: researcher });
 });

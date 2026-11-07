@@ -9,7 +9,7 @@ import {
   isCloudflareModelProvider,
 } from "./cloudflare-ai-gateway.js";
 import { MCP_OAUTH_CLIENT_REQUIRED } from "./connector-errors.js";
-import { BotSettingsValuesSchema, ThreadMessageSchema } from "./events.js";
+import { BotSettingsValuesSchema, MessageBlock, ThreadMessageSchema } from "./events.js";
 import { Id, MemoryScope, RunStatus, SandboxKind, ThinkingLevelSchema } from "./ids.js";
 import {
   McpHeadersSchema,
@@ -214,6 +214,20 @@ export const InboxSchema = z.object({
   unread: z.number().int().nonnegative(),
 });
 export type Inbox = z.infer<typeof InboxSchema>;
+
+/** A run waiting on the person, with the card it asked them to answer. */
+export const ApprovalSchema = z.object({
+  runId: Id,
+  spaceId: Id,
+  spaceName: z.string(),
+  bot: InboxEntrySchema.shape.bot,
+  threadId: Id,
+  groupId: Id.nullable(),
+  at: z.string().datetime({ offset: true }),
+  /** Absent while the run waits for someone to take over its screen, or its card is gone. */
+  ask: z.object({ messageId: Id, block: MessageBlock }).nullable(),
+});
+export type Approval = z.infer<typeof ApprovalSchema>;
 
 export const ReorderBotsInput = z.object({
   botIds: z

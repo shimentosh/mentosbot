@@ -1,6 +1,7 @@
 import type {
   Bot,
   BotAvatarSet,
+  Group,
   Me,
   Space,
   SpaceMemoryConfig,
@@ -29,6 +30,9 @@ const IntegrationsOverlay = lazyOverlay(() =>
 const SkillsDialog = lazyOverlay(() =>
   import("../../components/integrations/skills-dialog").then((module) => module.SkillsDialog),
 );
+const ApprovalsOverlay = lazyOverlay(() =>
+  import("../ApprovalsOverlay").then((module) => module.ApprovalsOverlay),
+);
 const McpServersOverlay = lazyOverlay(() =>
   import("../McpServersOverlay").then((module) => module.McpServersOverlay),
 );
@@ -44,18 +48,33 @@ function voiceStatusRefreshTimeout(): Promise<never> {
   });
 }
 
-/** The integrations, skills and MCP overlays the URL opens. */
+/** The integrations, skills, approvals and MCP overlays the URL opens. */
 export function AppOverlays({
   overlay,
   setOverlay,
   stdioEnabled,
+  bots,
+  groups,
+  onOpenChat,
 }: {
   overlay: ShellOverlay;
   setOverlay: (next: ShellOverlay) => void;
   stdioEnabled: boolean;
+  bots: Bot[];
+  groups: Group[];
+  /** Opens a chat (`null` is the open Space); leaving the route closes the overlay. */
+  onOpenChat: (spaceId: string | null, path: string) => void;
 }) {
   return (
     <>
+      {overlay?.kind === "approvals" ? (
+        <ApprovalsOverlay
+          bots={bots}
+          groups={groups}
+          onClose={() => setOverlay(null)}
+          onOpenChat={onOpenChat}
+        />
+      ) : null}
       {overlay?.kind === "integrations" ? (
         <IntegrationsOverlay
           onClose={() => setOverlay(null)}

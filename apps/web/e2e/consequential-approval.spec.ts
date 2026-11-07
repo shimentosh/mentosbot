@@ -41,6 +41,18 @@ test("A change asks without an approval model, and approvals settings shape what
   await expect(bellList.getByRole("button", { name: /Needs your approval/ })).toBeVisible();
   await captureScreenshot(page, testInfo, "53b-notification-bell");
   await page.keyboard.press("Escape");
+  // Approvals hold the same card, answerable without opening the chat.
+  const approvals = page.getByTestId("approvals-trigger");
+  await expect(approvals).toHaveAccessibleName("Approvals, 1 waiting");
+  await approvals.click();
+  const approvalsWindow = page.getByTestId("approvals");
+  await expect(approvalsWindow.getByTestId("approval")).toHaveCount(1);
+  await expect(
+    approvalsWindow.getByRole("button", { name: "Allow once", exact: true }),
+  ).toBeVisible();
+  await captureScreenshot(page, testInfo, "53c-approvals");
+  await page.keyboard.press("Escape");
+  await expect(approvalsWindow).toHaveCount(0);
   const viewport = page.viewportSize();
   await page.setViewportSize({ width: 400, height: 900 });
   await expect(allowOnce).toBeVisible();

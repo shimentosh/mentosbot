@@ -70,6 +70,11 @@ msgstr "{0, plural, one {# space} other {# spaces}}"
 msgid "{0, plural, one {# tool} other {# tools}}"
 msgstr "{0, plural, one {# tool} other {# tools}}"
 
+#. placeholder {0}: bulk.length
+#: src/pages/ApprovalsOverlay.tsx
+msgid "{0, plural, one {Approve # request?} other {Approve # requests?}}"
+msgstr "{0, plural, one {Approve # request?} other {Approve # requests?}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {Switch # bot to the space default?} other {Switch # bots to the space default?}}"
@@ -558,7 +563,7 @@ msgstr "Actions for space"
 msgid "Active"
 msgstr "Active"
 
-#: src/pages/shell/sidebar-header.tsx
+#: src/pages/ApprovalsOverlay.tsx
 msgid "Activity"
 msgstr "Activity"
 
@@ -742,10 +747,15 @@ msgid "All activity"
 msgstr "All activity"
 
 #: src/components/integrations/agent-access.tsx
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "All bots"
 msgstr "All bots"
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "All caught up"
+msgstr "All caught up"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -939,16 +949,26 @@ msgstr "Approval boundaries"
 msgid "Approval model"
 msgstr "Approval model"
 
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/settings-nav.ts
+#: src/pages/shell/sidebar-header.tsx
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Approvals"
 msgstr "Approvals"
+
+#: src/pages/shell/sidebar-header.tsx
+msgid "Approvals, {waiting} waiting"
+msgstr "Approvals, {waiting} waiting"
 
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Approve"
 msgstr "Approve"
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Approve all"
+msgstr "Approve all"
 
 #: src/lib/call-session.ts
 msgid "Approve or deny it on screen."
@@ -962,6 +982,7 @@ msgstr "Approve this server to let your agent use its tools."
 msgid "Approved"
 msgstr "Approved"
 
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Approving…"
 msgstr "Approving…"
@@ -1157,6 +1178,7 @@ msgid "bot"
 msgstr "bot"
 
 #: src/lib/identity-display.ts
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/IntegrationSetup.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/Shell.tsx
@@ -1295,6 +1317,7 @@ msgstr "Can't read images"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/ComputerServersSettings.tsx
 #: src/pages/IntegrationsOverlay.tsx
@@ -1577,6 +1600,10 @@ msgstr "Client secret"
 #: src/pages/WindowChrome.tsx
 msgid "Close"
 msgstr "Close"
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Close approvals"
+msgstr "Close approvals"
 
 #: src/pages/shell/message-cards.tsx
 msgid "Close chart"
@@ -2003,6 +2030,11 @@ msgstr "Could not add MCP server"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr "Could not add skills"
+
+#. placeholder {0}: results.length
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Could not approve {failed} of {0}."
+msgstr "Could not approve {failed} of {0}."
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -3329,8 +3361,8 @@ msgstr "Filter bots"
 msgid "Filter by date"
 msgstr "Filter by date"
 
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/Artifacts.tsx
-#: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
 msgstr "Filters"
 
@@ -3989,6 +4021,10 @@ msgstr "Loading {name}"
 msgid "Loading activity…"
 msgstr "Loading activity…"
 
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Loading approvals…"
+msgstr "Loading approvals…"
+
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Loading memory settings…"
 msgstr "Loading memory settings…"
@@ -4470,6 +4506,10 @@ msgstr "Needs takeover"
 msgid "Needs you"
 msgstr "Needs you"
 
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Needs you in the chat"
+msgstr "Needs you in the chat"
+
 #: src/pages/shell/notification-bell.tsx
 msgid "Needs you on the screen"
 msgstr "Needs you on the screen"
@@ -4841,6 +4881,7 @@ msgstr "Only you"
 #: src/components/ai/CollaborationMarker.tsx
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
 #: src/pages/shell/computer-panel.tsx
 #: src/pages/shell/import-setup-card.tsx
@@ -4871,6 +4912,10 @@ msgstr "Open <0>{0}</0> and enter this code:"
 #: src/pages/shell/chat-header.tsx
 msgid "Open call"
 msgstr "Open call"
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Open chat"
+msgstr "Open chat"
 
 #. placeholder {0}: call.botName
 #: src/components/call/CallCard.tsx
@@ -5991,7 +6036,7 @@ msgstr "Search integrations.sh"
 msgid "Search models"
 msgstr "Search models"
 
-#: src/pages/shell/shell-sidebar.tsx
+#: src/pages/ApprovalsOverlay.tsx
 msgid "Search runs"
 msgstr "Search runs"
 
@@ -7100,6 +7145,7 @@ msgstr "Trusted sites"
 #: src/components/pages/PageNotice.tsx
 #: src/components/pages/PagesList.tsx
 #: src/pages/ActivityList.tsx
+#: src/pages/ApprovalsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
 #: src/pages/shell/message-cards.tsx
@@ -7397,6 +7443,10 @@ msgstr "Voices, speech and sound effects"
 #: src/lib/model-connection-preflight.ts
 msgid "Wait a moment and test again."
 msgstr "Wait a moment and test again."
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Waiting for you"
+msgstr "Waiting for you"
 
 #: src/lib/roster-status.ts
 msgid "Waiting in line…"

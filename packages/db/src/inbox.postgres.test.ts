@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bootstrapUserSpace } from "./bootstrap-user.js";
 import type { PrismaClient } from "./client.js";
 import { createDb } from "./client.js";
-import { listInbox, markInboxRead, recordInboxNotification } from "./inbox.js";
+import { listApprovals, listInbox, markInboxRead, recordInboxNotification } from "./inbox.js";
 import { createOrganizationForUser } from "./organizations.js";
 import { createRepos } from "./repos.js";
 import { asSystem, runAsTenant } from "./row-security.js";
@@ -131,6 +131,61 @@ describePostgres("the bell (PostgreSQL)", () => {
     await system.run.update({ where: { id: screen.run.id }, data: { status: "completed" } });
     await system.bot.update({ where: { id: quiet.bot.id }, data: { archivedAt: new Date() } });
     await expect(listInbox(system, ada)).resolves.toMatchObject({ needsYou: [] });
+  });
+
+  it("lists each waiting run with the newest card it still needs answered, oldest run first", async () => {
+    const ada = await person();
+    const post = await botRun(ada, "Poster", "waiting_input");
+    await botRun(ada, "Screen", "waiting_takeover");
+    const message = (
+      target: { bot: { threadId: string }; run: { id: string } },
+      seq: number,
+      blocks: unknown[],
+    ) =>
+      runAsTenant(ada, () =>
+        prisma.message.create({
+          data: {
+            threadId: target.bot.threadId,
+            seq,
+            role: "bot",
+            runId: target.run.id,
+            blocks: blocks as object[],
+          },
+        }),
+      );
+    await message(post, 1, [{ kind: "ask", text: "Old", status: "answered", answer: "allow" }]);
+    const current = await message(post, 2, [
+      { kind: "text", text: "Here is the draft." },
+      {
+        kind: "ask",
+        text: "Post on LinkedIn?",
+        approvalEffectId: "effect-1",
+        status: "pending",
+        actions: [
+          { id: "allow", label: "Allow once" },
+          { id: "deny", label: "Deny" },
+        ],
+      },
+    ]);
+    await system.run.update({
+      where: { id: post.run.id },
+      data: { updatedAt: new Date(Date.now() - 60_000) },
+    });
+
+    const approvals = await listApprovals(system, ada);
+    expect(approvals.map((entry) => [entry.bot.name, entry.ask?.block.text ?? null])).toEqual([
+      ["Poster", "Post on LinkedIn?"],
+      ["Screen", null],
+    ]);
+    expect(approvals[0]).toMatchObject({
+      runId: post.run.id,
+      spaceName: "Personal",
+      groupId: null,
+      ask: { messageId: current.id },
+    });
+
+    await system.run.update({ where: { id: post.run.id }, data: { status: "running" } });
+    await expect(listApprovals(system, ada)).resolves.toHaveLength(1);
   });
 
   it("shows finished and failed work as unread until the person has seen it", async () => {

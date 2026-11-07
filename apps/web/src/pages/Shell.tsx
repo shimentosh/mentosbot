@@ -1018,9 +1018,6 @@ function SpaceShell() {
         setCreateMenuOpen={setCreateMenuOpen}
         search={search}
         bots={bots}
-        groups={groups}
-        collapsedSidebarSections={collapsedSidebarSections}
-        toggleSidebarSection={toggleSidebarSection}
         setPanel={setPanel}
         navigate={navigate}
         setNewSpaceOpen={dialogs.setNewSpaceOpen}
@@ -1076,6 +1073,10 @@ function SpaceShell() {
         openSettings={openSettings}
         openIntegrations={() => setOverlay({ kind: "integrations" })}
         openSkills={() => setOverlay({ kind: "skills" })}
+        openApprovals={() => {
+          setMobileSidebarOpen(false);
+          setOverlay({ kind: "approvals" });
+        }}
         openSpaceChat={openSpaceChat}
       />
 
@@ -1381,6 +1382,12 @@ function SpaceShell() {
           overlay={overlay}
           setOverlay={setOverlay}
           stdioEnabled={bootstrapMe?.mcpStdioEnabled === true}
+          bots={bots}
+          groups={groups}
+          onOpenChat={(spaceId, path) => {
+            if (!spaceId || spaceId === selectedSpaceId()) navigate(path);
+            else openSpaceChat(spaceId, path);
+          }}
         />
       </Suspense>
 

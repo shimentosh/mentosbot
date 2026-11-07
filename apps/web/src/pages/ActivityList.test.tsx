@@ -101,7 +101,7 @@ it("reopens with cached runs and refreshes them in the background", async () => 
   }
 });
 
-it("groups attention, work and unread chats under folding headers", async () => {
+it("groups attention, work and unread chats under folding headers, leaving questions to approvals", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   runs.list.mockImplementation(async ({ filter }: { filter: string }) => ({
     runs:
@@ -116,12 +116,21 @@ it("groups attention, work and unread chats under folding headers", async () => 
             },
             { ...run, runId: "work", botId: "research", botName: "Research", status: "running" },
           ]
-        : [],
+        : [{ ...run, runId: "broke", botId: "support", botName: "Support", status: "failed" }],
   }));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const container = document.createElement("div");
   const root = createRoot(container);
   const openBot = vi.fn();
+  const support = {
+    id: "support",
+    name: "Support",
+    status: "failed",
+    unread: true,
+    preview: "",
+    color: "blue",
+    updatedAt: new Date().toISOString(),
+  };
   const writer = {
     id: "writer",
     name: "Writer",
@@ -137,25 +146,25 @@ it("groups attention, work and unread chats under folding headers", async () => 
         <QueryClientProvider client={client}>
           <ActivityList
             {...listProps}
-            bots={[writer as never]}
+            bots={[writer as never, support as never]}
             toggledSections={new Set(["activity:unread"])}
             onOpenBot={openBot}
           />
         </QueryClientProvider>,
       ),
     );
-    await vi.waitFor(() => expect(container.textContent).toContain("Marketing"));
+    await vi.waitFor(() => expect(container.textContent).toContain("Research"));
     const section = (name: string) => container.querySelector(`section[aria-label="${name}"]`)!;
-    expect(section("Needs attention").textContent).toContain("Marketing");
+    // A run waiting on the person is answered from the approvals beside the list.
+    expect(container.textContent).not.toContain("Marketing");
+    expect(section("Needs attention").textContent).toContain("Support");
     expect(section("Working").textContent).toContain("Research");
     expect(section("Unread").textContent).toContain("Writer");
     expect(container.querySelector('section[aria-label="Recent"]')).toBeNull();
     expect(section("Needs attention").querySelector("[data-open]")!.getAttribute("data-open")).toBe(
       "true",
     );
-    expect(section("Working").querySelector("[data-open]")!.getAttribute("data-open")).toBe(
-      "false",
-    );
+    expect(section("Working").querySelector("[data-open]")!.getAttribute("data-open")).toBe("true");
     expect(section("Unread").querySelector("[data-open]")!.getAttribute("data-open")).toBe("true");
     expect(container.textContent).not.toContain("Needs input");
     await act(async () => section("Unread").querySelectorAll("button")[1]!.click());

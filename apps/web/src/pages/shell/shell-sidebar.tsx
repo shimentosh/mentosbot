@@ -1,15 +1,8 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { Bot, Group, NavLink } from "@rakazo/contracts";
+import type { Bot, NavLink } from "@rakazo/contracts";
 import { accountDisplay } from "@rakazo/core";
-import {
-  Button,
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-  Sidebar,
-} from "@rakazo/ui-web";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Button, InputGroup, InputGroupAddon, InputGroupInput, Sidebar } from "@rakazo/ui-web";
+import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { InviteDialog } from "../../components/InviteDialog";
@@ -23,7 +16,6 @@ import { switchOrganization, useOrganizations } from "../../lib/organizations";
 import { useQueryUserId } from "../../lib/query";
 import type { Panel } from "../../lib/right-panel-state";
 import { useSignOut } from "../../lib/sign-out";
-import { ActivityList } from "../ActivityList";
 import { SpaceSearchResults } from "../SpaceSearch";
 import type { SettingsSection } from "../shell-overlay";
 import { SidebarHeader } from "./sidebar-header";
@@ -54,9 +46,6 @@ export function ShellSidebar({
   setCreateMenuOpen,
   search,
   bots,
-  groups,
-  collapsedSidebarSections,
-  toggleSidebarSection,
   setPanel,
   navigate,
   setNewSpaceOpen,
@@ -70,6 +59,7 @@ export function ShellSidebar({
   openSettings,
   openIntegrations,
   openSkills,
+  openApprovals,
   openSpaceChat,
 }: {
   isMobile: boolean;
@@ -83,9 +73,6 @@ export function ShellSidebar({
   setCreateMenuOpen: (open: boolean) => void;
   search: SidebarSearch;
   bots: Bot[];
-  groups: Group[];
-  collapsedSidebarSections: ReadonlySet<string>;
-  toggleSidebarSection: (key: string) => void;
   setPanel: (panel: Panel) => void;
   navigate: (path: string) => void;
   setNewSpaceOpen: (open: boolean) => void;
@@ -98,6 +85,7 @@ export function ShellSidebar({
   navLinks: NavLink[];
   openSettings: (section: SettingsSection) => void;
   openIntegrations: () => void;
+  openApprovals: () => void;
   openSkills: () => void;
   openSpaceChat: (spaceId: string, path: string) => void;
 }) {
@@ -115,14 +103,6 @@ export function ShellSidebar({
     retrySearch,
     showSpaceSearch,
     jumpToSearchHit,
-    activityMode,
-    toggleActivityMode,
-    activityFilters,
-    setActivityFilters,
-    activityFiltersExpanded,
-    setActivityFiltersExpanded,
-    activityFiltersId,
-    activityFilterCount,
   } = search;
   return (
     <>
@@ -156,16 +136,11 @@ export function ShellSidebar({
           mini={mini}
           createMenuOpen={createMenuOpen}
           setCreateMenuOpen={setCreateMenuOpen}
-          activityMode={activityMode}
-          toggleActivityMode={() => {
-            if (mini) setCollapsedPref(false);
-            toggleActivityMode();
-          }}
+          openApprovals={openApprovals}
           searchOpen={searchOpen && !mini}
           onSearch={() => {
             if (searchOpen && !mini) {
-              if (activityMode) setActivityFilters({ ...activityFilters, query: "" });
-              else setQuery("");
+              setQuery("");
               setSearchOpen(false);
               return;
             }
@@ -182,12 +157,7 @@ export function ShellSidebar({
           setCreateBotOpen={setCreateBotOpen}
           openSpaceChat={openSpaceChat}
         />
-        {mini ||
-        !(
-          searchOpen ||
-          query ||
-          (activityMode && (activityFilterCount > 0 || activityFiltersExpanded))
-        ) ? null : (
+        {mini || !(searchOpen || query) ? null : (
           <InputGroup
             data-testid="sidebar-search"
             className="mx-2.5 mb-3 w-auto rounded-xl bg-card dark:bg-input border border-border text-muted-foreground focus-within:border-ring"
@@ -196,11 +166,8 @@ export function ShellSidebar({
               <Search size={16} strokeWidth={1.8} aria-hidden="true" />
             </InputGroupAddon>
             <InputGroupInput
-              value={activityMode ? activityFilters.query : query}
-              onChange={(e) => {
-                if (activityMode) setActivityFilters({ ...activityFilters, query: e.target.value });
-                else setQuery(e.target.value);
-              }}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(event) => {
                 if (
                   event.key !== "Escape" ||
@@ -208,36 +175,14 @@ export function ShellSidebar({
                   event.keyCode === 229
                 )
                   return;
-                if (activityMode) setActivityFilters({ ...activityFilters, query: "" });
-                else setQuery("");
+                setQuery("");
                 setSearchOpen(false);
               }}
-              placeholder={activityMode ? t`Search runs` : t`Search`}
-              aria-label={activityMode ? t`Search runs` : t`Search`}
+              placeholder={t`Search`}
+              aria-label={t`Search`}
               autoComplete="off"
               name="sidebar-search"
             />
-            {activityMode ? (
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton
-                  size="icon-sm"
-                  aria-label={t`Filters`}
-                  aria-expanded={activityFiltersExpanded}
-                  aria-controls={activityFiltersId}
-                  onClick={() => setActivityFiltersExpanded((expanded) => !expanded)}
-                  className="relative rounded-lg"
-                >
-                  <SlidersHorizontal size={16} aria-hidden="true" />
-                  {activityFilterCount > 0 ? (
-                    <span
-                      data-testid="activity-filter-indicator"
-                      aria-hidden="true"
-                      className="absolute end-1 top-1 size-1.5 rounded-full bg-primary"
-                    />
-                  ) : null}
-                </InputGroupButton>
-              </InputGroupAddon>
-            ) : null}
           </InputGroup>
         )}
         <div
@@ -254,33 +199,8 @@ export function ShellSidebar({
             />
           ) : (
             <>
-              {activityMode && !mini ? (
-                <ActivityList
-                  bots={bots}
-                  groups={groups}
-                  toggledSections={collapsedSidebarSections}
-                  onToggleSection={toggleSidebarSection}
-                  onOpenBot={(bot) => {
-                    setMobileOpen(false);
-                    navigate(`/app/${bot.id}`);
-                  }}
-                  onOpenGroup={(group) => {
-                    setMobileOpen(false);
-                    navigate(`/app/g/${group.id}`);
-                  }}
-                  filters={activityFilters}
-                  onFiltersChange={setActivityFilters}
-                  filtersExpanded={activityFiltersExpanded}
-                  filtersId={activityFiltersId}
-                  onOpenRun={(run) => {
-                    setMobileOpen(false);
-                    if (run.groupId) navigate(`/app/g/${run.groupId}`);
-                    else navigate(`/app/${run.botId}`);
-                  }}
-                />
-              ) : null}
               {roster}
-              {activityMode || mini ? null : <TeamBotsSection />}
+              {mini ? null : <TeamBotsSection />}
             </>
           )}
           <div className={mini ? "hidden" : "contents"}>{archived}</div>

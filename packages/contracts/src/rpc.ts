@@ -57,6 +57,7 @@ import {
   AppBootstrapSchema,
   AppLocaleSchema,
   ApprovalModeSchema,
+  ApprovalSchema,
   ArtifactSchema,
   ArtifactVersionSchema,
   ArtifactWithContentSchema,
@@ -1552,6 +1553,8 @@ export const appContract = {
   /** The bell, across the Spaces of the current organization. */
   inbox: {
     list: oc.output(InboxSchema),
+    /** Every card waiting on the person, oldest first, across the organization's Spaces. */
+    approvals: oc.output(z.array(ApprovalSchema)),
     markRead: oc.output(z.object({ ok: z.literal(true) })),
   },
   notifications: {

@@ -19,25 +19,31 @@ function inboxQuery(userId: string | null, spaceId: string | null) {
   });
 }
 
+/** The signed-in person's bell, shared by every control that shows what waits on them. */
+export function useInbox() {
+  const userId = useQueryUserId();
+  return useQuery(
+    { ...inboxQuery(userId, selectedSpaceId()), enabled: Boolean(userId) },
+    queryClient,
+  );
+}
+
 export function NotificationBell({
   bots,
   onOpenChat,
-  onShowActivity,
+  onShowAll,
 }: {
   /** The open Space's bots, whose live status shows a request arriving or being answered. */
   bots: ReadonlyArray<{ id: string; status: string }>;
   /** Opens a bot's or group's chat, switching Space when it is in another. */
   onOpenChat: (spaceId: string, path: string) => void;
-  onShowActivity: () => void;
+  /** Opens approvals and activity. */
+  onShowAll: () => void;
 }) {
   const { t } = useLingui();
   const userId = useQueryUserId();
-  const spaceId = selectedSpaceId();
   const [open, setOpen] = useState(false);
-  const { data: inbox, refetch } = useQuery(
-    { ...inboxQuery(userId, spaceId), enabled: Boolean(userId) },
-    queryClient,
-  );
+  const { data: inbox, refetch } = useInbox();
   // Answered here, on another device, or asked by a bot whose alerts are off: the roster sees it.
   const waiting = bots
     .filter((bot) => bot.status === "waiting_input" || bot.status === "waiting_takeover")
@@ -88,14 +94,8 @@ export function NotificationBell({
           data-testid="notification-bell"
         >
           <Bell size={15} strokeWidth={1.8} aria-hidden="true" />
-          {needs ? (
-            <span
-              aria-hidden="true"
-              className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium leading-none text-primary-foreground"
-            >
-              {needs > 9 ? "9+" : needs}
-            </span>
-          ) : unread ? (
+          {/* The count of what waits on the person sits on Approvals; the bell only marks news. */}
+          {needs || unread ? (
             <span
               aria-hidden="true"
               className="absolute top-1 right-1 size-1.5 rounded-full bg-primary"
@@ -114,7 +114,7 @@ export function NotificationBell({
             onOpen={openEntry}
             onShowActivity={() => {
               changeOpen(false);
-              onShowActivity();
+              onShowAll();
             }}
           />
         </PopoverContent>

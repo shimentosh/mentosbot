@@ -1,3 +1,5 @@
+import type { MessageBlock } from "@rakazo/contracts";
+import { MessageBlock as MessageBlockSchema } from "@rakazo/contracts";
 import { WAITING_ON_USER_RUN_STATUSES } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 
@@ -163,6 +165,80 @@ export async function listInbox(
     })),
     unread,
   };
+}
+
+export interface ApprovalEntry {
+  runId: string;
+  spaceId: string;
+  spaceName: string;
+  bot: InboxBot;
+  threadId: string;
+  groupId: string | null;
+  at: Date;
+  ask: { messageId: string; block: Extract<MessageBlock, { kind: "ask" }> } | null;
+}
+
+/**
+ * The person's runs that wait on them, oldest first, each with the card it asked them to answer:
+ * the newest unanswered ask among the run's own messages. A run waiting for a takeover has none.
+ */
+export async function listApprovals(
+  prisma: PrismaClient,
+  input: { userId: string; organizationId: string },
+): Promise<ApprovalEntry[]> {
+  const runs = await prisma.run.findMany({
+    where: {
+      userId: input.userId,
+      status: { in: [...WAITING_ON_USER_RUN_STATUSES] },
+      space: {
+        organizationId: input.organizationId,
+        deletingAt: null,
+        memberships: { some: { userId: input.userId } },
+      },
+      bot: { archivedAt: null },
+    },
+    orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+    take: NEEDS_LIMIT,
+    select: {
+      id: true,
+      status: true,
+      updatedAt: true,
+      threadId: true,
+      spaceId: true,
+      space: { select: { name: true } },
+      bot: { select: BOT_SELECT },
+      thread: { select: { groupId: true } },
+    },
+  });
+  const asking = runs.filter((run) => run.status === "waiting_input").map((run) => run.id);
+  const messages = asking.length
+    ? await prisma.message.findMany({
+        where: { runId: { in: asking }, role: "bot" },
+        orderBy: [{ seq: "desc" }],
+        select: { id: true, runId: true, blocks: true },
+      })
+    : [];
+  const asks = new Map<string, NonNullable<ApprovalEntry["ask"]>>();
+  for (const message of messages) {
+    if (!message.runId || asks.has(message.runId)) continue;
+    const parsed = MessageBlockSchema.array().safeParse(message.blocks);
+    if (!parsed.success) continue;
+    const block = parsed.data.find(
+      (candidate): candidate is Extract<MessageBlock, { kind: "ask" }> =>
+        candidate.kind === "ask" && candidate.status !== "answered",
+    );
+    if (block) asks.set(message.runId, { messageId: message.id, block });
+  }
+  return runs.map((run) => ({
+    runId: run.id,
+    spaceId: run.spaceId,
+    spaceName: run.space.name,
+    bot: run.bot,
+    threadId: run.threadId,
+    groupId: run.thread.groupId,
+    at: run.updatedAt,
+    ask: asks.get(run.id) ?? null,
+  }));
 }
 
 export async function markInboxRead(

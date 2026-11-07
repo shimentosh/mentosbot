@@ -1,7 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { Bot, Group, RunActivityRow, RunStatus } from "@rakazo/contracts";
-import { activitySections, isRetryableError } from "@rakazo/core";
+import { activitySections, isRetryableError, isRunWaitingOnUser } from "@rakazo/core";
 import {
   BotAvatar,
   Button,
@@ -110,6 +110,8 @@ export function ActivityList({
     bots,
     groups,
   });
+  // Runs waiting on the person are answered from the approvals beside this list.
+  const attention = sections.attention.filter((run) => !isRunWaitingOnUser(run.status));
   // Filters narrow runs, so unread chats step aside and their matching runs stay in Recent.
   const recentRows = filtersOn
     ? filteredRecent.filter((run) => !sections.attention.includes(run))
@@ -136,14 +138,7 @@ export function ActivityList({
   const hasVisibleRuns = filteredActive.length > 0 || filteredRecent.length > 0;
 
   return (
-    <div
-      className={
-        hasAnyRuns || unreadCount > 0 || filtersOn || filtersExpanded
-          ? "mb-2 border-b border-border pb-2"
-          : undefined
-      }
-      data-testid="activity-list"
-    >
+    <div data-testid="activity-list">
       <ActivityFilters
         filters={filters}
         onChange={onFiltersChange}
@@ -167,15 +162,13 @@ export function ActivityList({
         </p>
       ) : null}
 
-      {sections.attention.length > 0 ? (
-        <ActivitySection
-          {...section("attention", t`Needs attention`, sections.attention.length, true)}
-        >
-          {runRows(sections.attention)}
+      {attention.length > 0 ? (
+        <ActivitySection {...section("attention", t`Needs attention`, attention.length, true)}>
+          {runRows(attention)}
         </ActivitySection>
       ) : null}
       {sections.working.length > 0 ? (
-        <ActivitySection {...section("working", t`Working`, sections.working.length, false)}>
+        <ActivitySection {...section("working", t`Working`, sections.working.length, true)}>
           {runRows(sections.working)}
         </ActivitySection>
       ) : null}
