@@ -29,11 +29,6 @@ msgstr "{0, plural, one {{1} of # computer} other {{2} of # computers}}"
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
 msgstr "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
 
-#. placeholder {0}: servers.length
-#: src/pages/PluginsOverlay.tsx
-msgid "{0, plural, one {# connector} other {# connectors}}"
-msgstr "{0, plural, one {# connector} other {# connectors}}"
-
 #. placeholder {0}: skill.files.length
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "{0, plural, one {# file} other {# files}}"
@@ -173,10 +168,6 @@ msgstr "{botName}’s computer"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "{commandVariable} is reserved and cannot be used as a command variable. Choose another name."
 msgstr "{commandVariable} is reserved and cannot be used as a command variable. Choose another name."
-
-#: src/pages/PluginsOverlay.tsx
-msgid "{connectedCount, plural, one {# connected} other {# connected}}"
-msgstr "{connectedCount, plural, one {# connected} other {# connected}}"
 
 #: src/pages/shell/message-view.tsx
 msgid "{count, plural, one {# message with {peer}} other {# messages with {peer}}}"
@@ -400,10 +391,6 @@ msgstr "{seats, plural, one {# seat} other {# seats}}"
 msgid "{size} B"
 msgstr "{size} B"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "{skillCount, plural, one {# skill} other {# skills}}"
-msgstr "{skillCount, plural, one {# skill} other {# skills}}"
-
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
 msgid "{summary} Backup models failed or were unavailable for this request."
@@ -433,7 +420,6 @@ msgid "{title}, saved as {savedAs}"
 msgstr "{title}, saved as {savedAs}"
 
 #: src/components/ToolActivityDisclosure.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "{toolCount, plural, one {# tool} other {# tools}}"
 msgstr "{toolCount, plural, one {# tool} other {# tools}}"
 
@@ -503,6 +489,7 @@ msgstr "Access for {0}"
 
 #: src/components/ComputerProviderSettings.tsx
 #: src/components/StorageSettings.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Access key ID"
 msgstr "Access key ID"
 
@@ -523,14 +510,11 @@ msgstr "Account"
 msgid "Account default"
 msgstr "Account default"
 
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Account ID"
 msgstr "Account ID"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Account label"
-msgstr "Account label"
 
 #: src/components/SidebarFooter.tsx
 msgid "Account menu for {name}"
@@ -562,8 +546,8 @@ msgstr "Activity"
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
 #: src/pages/ComputerServersSettings.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
 msgid "Add"
 msgstr "Add"
@@ -618,17 +602,9 @@ msgstr "Add a voice provider key and pick a voice in Voice settings."
 msgid "Add an HTTPS server URL."
 msgstr "Add an HTTPS server URL."
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Add another"
-msgstr "Add another"
-
 #: src/components/ModelCredits.tsx
 msgid "Add credits"
 msgstr "Add credits"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Add custom"
-msgstr "Add custom"
 
 #: src/pages/ModelRoleSettings.tsx
 msgid "Add fallback"
@@ -693,13 +669,11 @@ msgid "Add workspace"
 msgstr "Add workspace"
 
 #: src/components/integrations/plugin-marketplace.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Added"
 msgstr "Added"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Adding…"
 msgstr "Adding…"
 
@@ -736,7 +710,6 @@ msgid "Agent from another app"
 msgstr "Agent from another app"
 
 #: src/components/VaultSettings.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "All"
 msgstr "All"
 
@@ -893,6 +866,7 @@ msgstr "Anyone with the link"
 #: src/components/SecretAskCard.tsx
 #: src/components/vault/kinds.tsx
 #: src/lib/localized-provider-hint.ts
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/model-settings/compatible-key-field.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -904,10 +878,6 @@ msgstr "API key"
 #: src/pages/shell/import-status.ts
 msgid "API key for {provider}"
 msgstr "API key for {provider}"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "API key header"
-msgstr "API key header"
 
 #: src/pages/shell/agent-import.tsx
 msgid "API keys"
@@ -969,7 +939,6 @@ msgid "Approving…"
 msgstr "Approving…"
 
 #: src/components/integrations/plugin-marketplace.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Apps"
 msgstr "Apps"
 
@@ -1019,10 +988,6 @@ msgstr "Attach file"
 #: src/pages/shell/chat-shared.ts
 msgid "Attachment"
 msgstr "Attachment"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Authentication"
-msgstr "Authentication"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Authentication failed."
@@ -1091,7 +1056,6 @@ msgstr "Avatar Studio"
 #: src/pages/Board.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/NavLinkPage.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/SettingsOverlay.tsx
 #: src/pages/shell/agent-import.tsx
@@ -1125,7 +1089,6 @@ msgstr "Basic auth ({username})"
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Bearer token"
 msgstr "Bearer token"
 
@@ -1228,15 +1191,12 @@ msgstr "Brain label"
 msgid "Browse"
 msgstr "Browse"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Browse MCP servers"
-msgstr "Browse MCP servers"
-
 #: src/pages/shell/bot-panel.tsx
 msgid "Browser"
 msgstr "Browser"
 
 #: src/components/StorageSettings.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Bucket"
 msgstr "Bucket"
 
@@ -1308,6 +1268,7 @@ msgstr "Can't read images"
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/ComputerServersSettings.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -1380,6 +1341,10 @@ msgstr "Change {title}"
 #: src/pages/shell/composer-error.tsx
 msgid "Change model"
 msgstr "Change model"
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Change OAuth client"
+msgstr "Change OAuth client"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Change password"
@@ -1563,6 +1528,14 @@ msgstr "Clear filter {label}"
 msgid "Clearing…"
 msgstr "Clearing…"
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Client ID"
+msgstr "Client ID"
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Client secret"
+msgstr "Client secret"
+
 #: src/components/ErrorBoundary.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -1588,7 +1561,7 @@ msgstr "Close computer"
 msgid "Close image preview"
 msgstr "Close image preview"
 
-#: src/pages/PluginsOverlay.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Close integrations"
 msgstr "Close integrations"
 
@@ -1693,10 +1666,6 @@ msgstr "Command variable"
 msgid "Comment"
 msgstr "Comment"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Communication"
-msgstr "Communication"
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Compact"
 msgstr "Compact"
@@ -1759,10 +1728,6 @@ msgstr "Computers are available. Reload or open a bot to continue."
 msgid "Computers are off. Set SANDBOX_PROVIDER=docker with SANDBOX_SUPERVISOR_TOKEN, or set SANDBOX_PROVIDER to e2b, novita, daytona, or boat with its API key. Recreate the stack after changing .env."
 msgstr "Computers are off. Set SANDBOX_PROVIDER=docker with SANDBOX_SUPERVISOR_TOKEN, or set SANDBOX_PROVIDER to e2b, novita, daytona, or boat with its API key. Recreate the stack after changing .env."
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Configure a plugin catalog on the server to connect apps."
-msgstr "Configure a plugin catalog on the server to connect apps."
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Confirm delete"
 msgstr "Confirm delete"
@@ -1787,6 +1752,7 @@ msgstr "Confirm the URL is reachable from this browser session, then test again.
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/NetworkExitDialog.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/memory-providers/HonchoSettingsForm.tsx
 #: src/pages/memory-providers/SerenitySettingsForm.tsx
 #: src/pages/memory-providers/SupermemorySettingsForm.tsx
@@ -1854,10 +1820,10 @@ msgstr "Connect your own API key in Models or choose Rakazo credits in Billing."
 #: src/components/ComputerDeviceSettings.tsx
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/StorageSettings.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/message-cards.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Connected"
@@ -1867,6 +1833,10 @@ msgstr "Connected"
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Connected {0}."
 msgstr "Connected {0}."
+
+#: src/pages/GoogleWorkspaceCallback.tsx
+msgid "Connecting Google…"
+msgstr "Connecting Google…"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -1885,11 +1855,6 @@ msgstr "Connection"
 #: src/lib/model-connection-preflight.ts
 msgid "Connection test failed."
 msgstr "Connection test failed."
-
-#. placeholder {0}: item.name
-#: src/pages/PluginsOverlay.tsx
-msgid "Connection to {0} is still pending. You can close this and check again."
-msgstr "Connection to {0} is still pending. You can close this and check again."
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Connector"
@@ -1948,6 +1913,7 @@ msgstr "Conversations"
 #: src/components/pages/PublicPageShell.tsx
 #: src/components/pages/SharePopover.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/shell/agent-import.tsx
@@ -1983,6 +1949,10 @@ msgstr "Copy link"
 #: src/pages/shell/agent-import.tsx
 msgid "Copy prompt"
 msgstr "Copy prompt"
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Copy redirect URI"
+msgstr "Copy redirect URI"
 
 #: src/components/markdown-copy.tsx
 msgid "Copy rows"
@@ -2061,7 +2031,6 @@ msgid "Could not complete the update. Try again."
 msgstr "Could not complete the update. Try again."
 
 #: src/components/integrations/IntegrationSetup.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Could not connect"
 msgstr "Could not connect"
@@ -2199,10 +2168,6 @@ msgstr "Could not enable tools"
 msgid "Could not grant access"
 msgstr "Could not grant access"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Could not install connector"
-msgstr "Could not install connector"
-
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not install plugin"
 msgstr "Could not install plugin"
@@ -2242,12 +2207,7 @@ msgstr "Could not load computer settings"
 msgid "Could not load credentials."
 msgstr "Could not load credentials."
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Could not load integrations"
-msgstr "Could not load integrations"
-
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Could not load MCP servers"
 msgstr "Could not load MCP servers"
 
@@ -2347,10 +2307,6 @@ msgstr "Could not reject plugin"
 msgid "Could not remove"
 msgstr "Could not remove"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Could not remove connector"
-msgstr "Could not remove connector"
-
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
 msgstr "Could not remove plugin"
@@ -2368,7 +2324,6 @@ msgid "Could not remove the credential"
 msgstr "Could not remove the credential"
 
 #: src/pages/model-settings/providers-section.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Could not rename connection"
 msgstr "Could not rename connection"
 
@@ -2392,10 +2347,6 @@ msgstr "Could not render chart"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "Could not reset password"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Could not revoke connection"
-msgstr "Could not revoke connection"
 
 #: src/pages/AdminAccessPage.tsx
 msgid "Could not revoke grant"
@@ -2466,10 +2417,6 @@ msgstr "Could not save the credential"
 #: src/pages/shell/message-cards.tsx
 msgid "Could not save this choice"
 msgstr "Could not save this choice"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Could not search catalog"
-msgstr "Could not search catalog"
 
 #: src/pages/Auth.tsx
 msgid "Could not send reset email"
@@ -2655,18 +2602,6 @@ msgstr "Created"
 msgid "Creating…"
 msgstr "Creating…"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Credential"
-msgstr "Credential"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Credential saved"
-msgstr "Credential saved"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Credentials are encrypted and never sent to the model."
-msgstr "Credentials are encrypted and never sent to the model."
-
 #: src/pages/shell/import-status.ts
 msgid "Credentials: {names}"
 msgstr "Credentials: {names}"
@@ -2722,7 +2657,6 @@ msgid "Dark"
 msgstr "Dark"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Data"
 msgstr "Data"
 
@@ -2874,10 +2808,6 @@ msgstr "Deployment default ({0})"
 msgid "Description"
 msgstr "Description"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Design"
-msgstr "Design"
-
 #: src/components/DesktopUpdates.tsx
 msgid "Desktop app"
 msgstr "Desktop app"
@@ -2894,10 +2824,6 @@ msgstr "Desktop update"
 #: src/pages/shell/composer-error.tsx
 msgid "Details"
 msgstr "Details"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Developer"
-msgstr "Developer"
 
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Dictate"
@@ -2923,15 +2849,12 @@ msgstr "Did you mean <0>{emailSuggestion}</0>?"
 msgid "Disable a tool"
 msgstr "Disable a tool"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Disabled"
-msgstr "Disabled"
-
 #: src/components/composer/HoldToTalk.tsx
 msgid "Discard recording"
 msgstr "Discard recording"
 
 #: src/components/NetworkExitDialog.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3077,8 +3000,10 @@ msgstr "Each name can be used once."
 
 #: src/components/AskCard.tsx
 #: src/components/ChoiceAsk.tsx
+#: src/components/NetworkExitDialog.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "Edit"
@@ -3244,10 +3169,6 @@ msgstr "Every week"
 msgid "Everyone"
 msgstr "Everyone"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Executor token"
-msgstr "Executor token"
-
 #: src/pages/shell/message-cards.tsx
 msgid "Expand"
 msgstr "Expand"
@@ -3371,10 +3292,6 @@ msgstr "Filter by date"
 msgid "Filters"
 msgstr "Filters"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Finance"
-msgstr "Finance"
-
 #: src/components/pages/PagesList.tsx
 msgid "Find a page"
 msgstr "Find a page"
@@ -3461,7 +3378,6 @@ msgid "From {0}"
 msgstr "From {0}"
 
 #: src/components/integrations/skills-dialog.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "From GitHub"
 msgstr "From GitHub"
 
@@ -3508,6 +3424,10 @@ msgstr "Give a friend {weeks} weeks free"
 msgid "Global"
 msgstr "Global"
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Gmail, Drive, Sheets, Docs and Calendar"
+msgstr "Gmail, Drive, Sheets, Docs and Calendar"
+
 #: src/pages/InvitePage.tsx
 #: src/pages/NotFound.tsx
 msgid "Go home"
@@ -3516,6 +3436,14 @@ msgstr "Go home"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Go to bot"
 msgstr "Go to bot"
+
+#: src/pages/GoogleWorkspaceCallback.tsx
+msgid "Google did not finish the sign-in."
+msgstr "Google did not finish the sign-in."
+
+#: src/pages/GoogleWorkspaceCallback.tsx
+msgid "Google sign-in failed"
+msgstr "Google sign-in failed"
 
 #: src/pages/AdminAccessPage.tsx
 msgid "Grant"
@@ -3568,7 +3496,6 @@ msgstr "Header \"{header}\""
 #: src/components/ModelHeadersEditor.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Header name"
 msgstr "Header name"
 
@@ -3790,11 +3717,7 @@ msgstr "Instructions for this room"
 msgid "Instructions updated"
 msgstr "Instructions updated"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Integration domain"
-msgstr "Integration domain"
-
-#: src/pages/PluginsOverlay.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Integrations"
 msgstr "Integrations"
 
@@ -4024,10 +3947,6 @@ msgstr "Loading {name}"
 msgid "Loading activity…"
 msgstr "Loading activity…"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Loading integrations…"
-msgstr "Loading integrations…"
-
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Loading memory settings…"
 msgstr "Loading memory settings…"
@@ -4036,10 +3955,6 @@ msgstr "Loading memory settings…"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Loading model catalog…"
 msgstr "Loading model catalog…"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Loading plugins…"
-msgstr "Loading plugins…"
 
 #: src/components/ArtifactFileCard.tsx
 msgid "Loading preview…"
@@ -4112,6 +4027,7 @@ msgid "Make member"
 msgstr "Make member"
 
 #: src/pages/BillingSettingsPanel.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/SettingsOverlay.tsx
 msgid "Manage"
 msgstr "Manage"
@@ -4132,21 +4048,13 @@ msgstr "Manage {shown}"
 msgid "Manage billing"
 msgstr "Manage billing"
 
-#: src/pages/PluginsOverlay.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Manage MCP servers"
 msgstr "Manage MCP servers"
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Manage other bots"
 msgstr "Manage other bots"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Manual"
-msgstr "Manual"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Manual setup required"
-msgstr "Manual setup required"
 
 #: src/pages/BotContextMenu.tsx
 msgid "Mark as Read"
@@ -4163,10 +4071,6 @@ msgstr "Mark as Unread"
 #: src/components/markdown-copy.tsx
 msgid "Markdown table"
 msgstr "Markdown table"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Marketing"
-msgstr "Marketing"
 
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
@@ -4197,10 +4101,7 @@ msgstr "Maximum output tokens"
 msgid "MCP endpoint"
 msgstr "MCP endpoint"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "MCP server"
-msgstr "MCP server"
-
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "MCP servers"
@@ -4423,14 +4324,9 @@ msgstr "Monthly credits"
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
 msgstr "Monthly credits expire at renewal. Top-ups do not expire."
 
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/message-hover-actions.tsx
 msgid "More"
 msgstr "More"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "More apps"
-msgstr "More apps"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "More computer actions"
@@ -4474,7 +4370,6 @@ msgstr "My computers"
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -4544,6 +4439,10 @@ msgstr "Needs your approval"
 #: src/pages/shell/import-status.ts
 msgid "Needs: {names}"
 msgstr "Needs: {names}"
+
+#: src/components/NetworkExitDialog.tsx
+msgid "Network"
+msgstr "Network"
 
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Never ask"
@@ -4646,21 +4545,9 @@ msgstr "Next page"
 msgid "Next settings sections"
 msgstr "Next settings sections"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "No apps match your search."
-msgstr "No apps match your search."
-
 #: src/pages/Artifacts.tsx
 msgid "No artifacts found."
 msgstr "No artifacts found."
-
-#: src/pages/PluginsOverlay.tsx
-msgid "No auth"
-msgstr "No auth"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "No authentication"
-msgstr "No authentication"
 
 #: src/components/integrations/agent-access.tsx
 msgid "No bots"
@@ -4679,10 +4566,6 @@ msgstr "No folders here"
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
 msgstr "No longer active"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "No managed app catalog is configured on this deployment."
-msgstr "No managed app catalog is configured on this deployment."
 
 #: src/components/VaultSettings.tsx
 msgid "No matches"
@@ -4735,7 +4618,6 @@ msgid "No reply"
 msgstr "No reply"
 
 #: src/pages/model-settings/providers-section.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/command-palette.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "No results"
@@ -4802,10 +4684,6 @@ msgstr "Not imported"
 msgid "Not in Rakazo's catalog"
 msgstr "Not in Rakazo's catalog"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Not in the plugin catalog"
-msgstr "Not in the plugin catalog"
-
 #: src/pages/InvitePage.tsx
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
@@ -4861,17 +4739,9 @@ msgstr "OAuth client ID (optional)"
 msgid "OAuth client secret (optional)"
 msgstr "OAuth client secret (optional)"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "OAuth connected"
-msgstr "OAuth connected"
-
 #: src/pages/McpOAuthCallback.tsx
 msgid "OAuth connection failed"
 msgstr "OAuth connection failed"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "OAuth expired"
-msgstr "OAuth expired"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
@@ -5227,6 +5097,10 @@ msgstr "Persona"
 msgid "Personal"
 msgstr "Personal"
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Personal access token"
+msgstr "Personal access token"
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Phone"
@@ -5284,7 +5158,6 @@ msgid "Plugin"
 msgstr "Plugin"
 
 #: src/components/integrations/skills-dialog.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Plugin GitHub URL"
 msgstr "Plugin GitHub URL"
 
@@ -5309,7 +5182,6 @@ msgid "Preferences"
 msgstr "Preferences"
 
 #: src/components/integrations/skills-dialog.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Preview"
 msgstr "Preview"
 
@@ -5345,10 +5217,6 @@ msgstr "Private"
 #: src/pages/shell/bot-picker.tsx
 msgid "Private workspace with its own bots and groups."
 msgstr "Private workspace with its own bots and groups."
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Productivity"
-msgstr "Productivity"
 
 #: src/pages/shell/import-status.ts
 msgid "Program: {name}"
@@ -5440,10 +5308,6 @@ msgstr "Received"
 msgid "Recent"
 msgstr "Recent"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Recommended"
-msgstr "Recommended"
-
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
@@ -5514,10 +5378,7 @@ msgstr "Recreate a computer that is not working."
 msgid "Recreating the computer"
 msgstr "Recreating the computer"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Recruiting & HR"
-msgstr "Recruiting & HR"
-
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Redirect URI"
 msgstr "Redirect URI"
@@ -5583,7 +5444,6 @@ msgstr "Reload"
 #: src/pages/ComputerServersSettings.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
 #: src/pages/TeamMembersSettings.tsx
 msgid "Remove"
@@ -5629,7 +5489,6 @@ msgstr "Remove folder"
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr "Remove from every space?"
 
@@ -5671,7 +5530,6 @@ msgid "Removed, but list refresh failed"
 msgstr "Removed, but list refresh failed"
 
 #: src/components/integrations/plugin-marketplace.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Removing…"
 msgstr "Removing…"
 
@@ -5819,7 +5677,6 @@ msgstr "Resume"
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/ModelRoleSettings.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
 msgid "Retry"
@@ -5839,6 +5696,7 @@ msgstr "Retry screen"
 msgid "Return to call with {0}"
 msgstr "Return to call with {0}"
 
+#: src/pages/GoogleWorkspaceCallback.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
@@ -5932,10 +5790,6 @@ msgstr "Runs"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "Runs when this bot receives a verified message from this provider."
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Sales & CRM"
-msgstr "Sales & CRM"
-
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Same as {botName}"
 msgstr "Same as {botName}"
@@ -5960,6 +5814,7 @@ msgstr "Saturday"
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -6050,7 +5905,6 @@ msgstr "Screen not connected"
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/model-settings/providers-section.tsx
 #: src/pages/model-settings/role-model-picker.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-picker.tsx
 #: src/pages/shell/chat-model-picker.tsx
 #: src/pages/shell/command-palette.tsx
@@ -6060,7 +5914,6 @@ msgid "Search"
 msgstr "Search"
 
 #: src/components/integrations/IntegrationSetup.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Search apps"
 msgstr "Search apps"
 
@@ -6075,10 +5928,6 @@ msgstr "Search bots"
 #: src/pages/shell/command-palette.tsx
 msgid "Search bots, actions, and settings"
 msgstr "Search bots, actions, and settings"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Search by domain"
-msgstr "Search by domain"
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "Search integrations.sh"
@@ -6108,22 +5957,18 @@ msgstr "Search Vault"
 msgid "Search: {0}"
 msgstr "Search: {0}"
 
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Searching…"
 msgstr "Searching…"
 
 #: src/components/StorageSettings.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Secret access key"
 msgstr "Secret access key"
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Security"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Security & Ops"
-msgstr "Security & Ops"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -6223,6 +6068,7 @@ msgstr "Servers"
 msgid "Set by the server environment."
 msgstr "Set by the server environment."
 
+#: src/components/NetworkExitDialog.tsx
 #: src/pages/ComputerServersSettings.tsx
 msgid "Set up"
 msgstr "Set up"
@@ -6351,7 +6197,6 @@ msgstr "Show list"
 
 #: src/components/pages/PagesList.tsx
 #: src/pages/KnowledgeSection.tsx
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
 msgid "Show more"
 msgstr "Show more"
@@ -6381,7 +6226,6 @@ msgstr "Sidebar density"
 #: src/pages/Auth.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Sign in"
 msgstr "Sign in"
 
@@ -6423,6 +6267,10 @@ msgstr "Sign up"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
 msgstr "Sign-in cancelled. Try again."
+
+#: src/pages/GoogleWorkspaceCallback.tsx
+msgid "Sign-in was cancelled."
+msgstr "Sign-in was cancelled."
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -6480,7 +6328,6 @@ msgid "Slide up to lock"
 msgstr "Slide up to lock"
 
 #: src/components/integrations/skills-dialog.tsx
-#: src/pages/PluginsOverlay.tsx
 msgid "Some plugins could not be loaded."
 msgstr "Some plugins could not be loaded."
 
@@ -6682,10 +6529,6 @@ msgstr "subagent"
 #: src/pages/Onboarding.tsx
 msgid "Submit"
 msgstr "Submit"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Submit a plugin"
-msgstr "Submit a plugin"
 
 #: src/components/ModelCredits.tsx
 #: src/pages/Paywall.tsx
@@ -7150,7 +6993,6 @@ msgstr "Tool arguments must be JSON"
 msgid "Tool name"
 msgstr "Tool name"
 
-#: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Tools"
 msgstr "Tools"
@@ -7178,10 +7020,6 @@ msgstr "Transcription response is too large."
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Treat like a person"
 msgstr "Treat like a person"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Treg token"
-msgstr "Treg token"
 
 #: src/pages/BillingSettingsPanel.tsx
 msgid "Trial"
@@ -7243,10 +7081,6 @@ msgstr "Unassigned"
 #: src/components/AskCard.tsx
 msgid "Undo"
 msgstr "Undo"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Uninstall"
-msgstr "Uninstall"
 
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Unlink"
@@ -7472,21 +7306,9 @@ msgstr "Variables"
 msgid "Vault"
 msgstr "Vault"
 
-#: src/pages/PluginsOverlay.tsx
-msgid "Verify and add"
-msgstr "Verify and add"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "Verifying…"
-msgstr "Verifying…"
-
 #: src/pages/Artifacts.tsx
 msgid "Version"
 msgstr "Version"
-
-#: src/pages/PluginsOverlay.tsx
-msgid "View all"
-msgstr "View all"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"

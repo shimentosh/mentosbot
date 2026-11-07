@@ -40,6 +40,7 @@ import {
 } from "../components/ComputersUnavailableHint";
 import { useIdentityConfirmation } from "../components/ConfirmIdentityDialog";
 import { DesktopUpdateSection } from "../components/DesktopUpdates";
+import { NetworkExitSettings } from "../components/NetworkExitDialog";
 import { PasskeySettings } from "../components/PasskeySettings";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
 import { TrustedLinkSitesSettings } from "../components/TrustedLinkSitesSettings";
@@ -682,6 +683,7 @@ export function ComputerSettingsPanel({
         />
       ) : null}
       {canConfigureComputers ? <ComputerServersSettings /> : null}
+      <NetworkExitSettings />
     </div>
   );
 }

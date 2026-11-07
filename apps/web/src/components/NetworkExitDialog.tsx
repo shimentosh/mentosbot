@@ -12,10 +12,48 @@ import {
   Input,
 } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { Check } from "lucide-react";
 import { useId, useState } from "react";
 import { queryClient, spaceQueries, useQueryUserId } from "../lib/query";
 import { rpc, selectedSpaceId } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
+import { SettingsGroup, SettingsRow } from "./SettingsRows";
+
+/** Where the person picks the network their computers' browsers use, under Settings → Computer. */
+export function NetworkExitSettings() {
+  const { t } = useLingui();
+  const status = useNetworkExit();
+  const [choice, setChoice] = useState<NetworkExitDescriptor | null>(null);
+  if (!status?.providers.length) return null;
+  return (
+    <div className="mt-4" data-testid="network-exit-settings">
+      <SettingsGroup title={<Trans>Network</Trans>}>
+        {status.providers.map((provider) => {
+          const connected = status.connection?.provider === provider.id;
+          return (
+            <SettingsRow
+              key={provider.id}
+              label={
+                <span className="flex items-center gap-1.5">
+                  {provider.displayName}
+                  {connected ? <Check aria-label={t`Connected`} className="size-4" /> : null}
+                </span>
+              }
+              control={
+                <Button variant="outline" size="sm" onClick={() => setChoice(provider)}>
+                  {connected ? <Trans>Edit</Trans> : <Trans>Set up</Trans>}
+                </Button>
+              }
+            />
+          );
+        })}
+      </SettingsGroup>
+      {choice ? (
+        <NetworkExitDialog provider={choice} status={status} onClose={() => setChoice(null)} />
+      ) : null}
+    </div>
+  );
+}
 
 /** The signed-in person's own network for their computers in the current Space. */
 export function networkExitQuery(userId: string | null) {

@@ -22,6 +22,7 @@ import { authClient } from "./lib/auth";
 import { getTicketBoardEnabled, subscribeTicketBoardEnabled } from "./lib/bootstrap";
 import { syncCallIdentity } from "./lib/call-session";
 import { desktopBridge } from "./lib/desktop";
+import { GOOGLE_WORKSPACE_CALLBACK_PATH } from "./lib/google-workspace-channel";
 import { syncWebLogoAvatarIdentity } from "./lib/logo-avatar-activity";
 import { identifyMonitoringUser } from "./lib/monitoring";
 import { pendingInvitePath, SignedOutInvite } from "./lib/pending-invite";
@@ -40,6 +41,7 @@ import {
 } from "./lib/session-gate";
 import { syncLogOutFailure } from "./lib/sign-out";
 import { completeSsoCallback, SSO_CALLBACK_PATH } from "./lib/sso-flow";
+import { GoogleWorkspaceCallbackPage } from "./pages/GoogleWorkspaceCallback";
 import { IntegrationCallbackPage } from "./pages/IntegrationCallback";
 import { IntegrationSetupPage } from "./pages/IntegrationSetup";
 import { McpOAuthCallbackPage } from "./pages/McpOAuthCallback";
@@ -128,6 +130,7 @@ function SessionApp() {
     next === "/admin/plugins" ||
     next === "/admin/access" ||
     next.startsWith(`${MCP_OAUTH_CALLBACK_PATH}?`) ||
+    next.startsWith(`${GOOGLE_WORKSPACE_CALLBACK_PATH}?`) ||
     next.startsWith(`${SLACK_INSTALL_CALLBACK_PATH}?`)
       ? next
       : (pendingInvitePath() ?? "/app");
@@ -243,6 +246,19 @@ function SessionApp() {
                 element={
                   user ? (
                     <McpOAuthCallbackPage />
+                  ) : (
+                    <Navigate
+                      to={`/sign-in?next=${encodeURIComponent(pathname + search)}`}
+                      replace
+                    />
+                  )
+                }
+              />
+              <Route
+                path={GOOGLE_WORKSPACE_CALLBACK_PATH}
+                element={
+                  user ? (
+                    <GoogleWorkspaceCallbackPage />
                   ) : (
                     <Navigate
                       to={`/sign-in?next=${encodeURIComponent(pathname + search)}`}

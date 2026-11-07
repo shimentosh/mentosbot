@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { McpServer } from "@rakazo/contracts";
-import { captureScreenshot, completeOnboarding, openIntegrationsAdd, rpc, signup } from "./helpers";
+import { captureScreenshot, completeOnboarding, openMcpServers, rpc, signup } from "./helpers";
 
 const server: McpServer = {
   id: "mcp-agents-server",
@@ -71,7 +71,7 @@ test("a server the user adds reaches every bot until they pick some", async ({
   });
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await openIntegrationsAdd(page, "Manage MCP servers");
+  await openMcpServers(page);
   await page.getByLabel("Server name").fill("Search Console");
   await page.getByLabel("Server URL").fill(server.endpoint!);
   await captureScreenshot(page, testInfo, "mcp-agents-add");
@@ -176,7 +176,7 @@ test("shows each server's bots and state with several bots", async ({ page }, te
   );
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await openIntegrationsAdd(page, "Manage MCP servers");
+  await openMcpServers(page);
   const rows = page.getByTestId("mcp-server");
   await expect(rows).toHaveCount(servers.length);
   await expect(rows.nth(1).getByTestId("agent-access")).toContainText("Researcher");

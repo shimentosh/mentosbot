@@ -623,7 +623,7 @@ function SpaceShell() {
     (botId: string | undefined) => memberName(transcriptMembers, botId),
     [transcriptMembers],
   );
-  const { composerMentionTargets, footerLogos, setFooterLogos } = useComposerMentions({
+  const { composerMentionTargets, footerLogos } = useComposerMentions({
     rpc,
     queries,
     bots,
@@ -1380,9 +1380,7 @@ function SpaceShell() {
         <AppOverlays
           overlay={overlay}
           setOverlay={setOverlay}
-          activeBotId={activeBotId.current}
           stdioEnabled={bootstrapMe?.mcpStdioEnabled === true}
-          onConnectedAppsChange={setFooterLogos}
         />
       </Suspense>
 

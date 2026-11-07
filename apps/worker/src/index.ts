@@ -48,6 +48,7 @@ import {
   deploymentModelUsageLookup,
   deviceExitOrigin,
   ExpoPushProvider,
+  GoogleWorkspaceConnector,
   GraphileJobPublisher,
   homeStorageSweeper,
   InMemoryJobQueue,
@@ -237,6 +238,7 @@ async function main() {
     installedConnectors,
     ...integrationSettings.providers(),
     mcp,
+    new GoogleWorkspaceConnector({ prisma, secrets }),
   ]);
   integrationSettings.warmDirectories();
   const memoryProviders = new SpaceMemoryProviderResolver(prisma, secrets);

@@ -166,6 +166,11 @@ import {
   VoiceStatusSchema,
 } from "./domain.js";
 import { ComputerCommandSchema, ProductEventSchema } from "./events.js";
+import {
+  GoogleWorkspaceClientInput,
+  GoogleWorkspaceCompleteInput,
+  GoogleWorkspaceStateSchema,
+} from "./google-workspace.js";
 import { Id, IsoDate, ThinkingLevelSchema } from "./ids.js";
 import {
   IntegrationProviderConfigSchema,
@@ -1314,6 +1319,14 @@ export const appContract = {
         }),
       )
       .output(z.object({ ok: z.literal(true) })),
+  },
+  /** The user's own Google OAuth client and the account bots use through it. */
+  googleWorkspace: {
+    get: oc.output(GoogleWorkspaceStateSchema),
+    saveClient: oc.input(GoogleWorkspaceClientInput).output(GoogleWorkspaceStateSchema),
+    begin: oc.output(z.object({ authorizationUrl: z.string() })),
+    complete: oc.input(GoogleWorkspaceCompleteInput).output(GoogleWorkspaceStateSchema),
+    disconnect: oc.output(GoogleWorkspaceStateSchema),
   },
   integrationSetup: {
     get: oc.output(IntegrationSetupStateSchema),

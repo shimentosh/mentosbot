@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import type { McpServer } from "@rakazo/contracts";
 import { MCP_OAUTH_CLIENT_REQUIRED } from "@rakazo/contracts";
 import { MCP_OAUTH_CHANNEL } from "../src/lib/mcp-oauth-channel";
-import { captureScreenshot, completeOnboarding, openIntegrationsAdd, signup } from "./helpers";
+import { captureScreenshot, completeOnboarding, openMcpServers, signup } from "./helpers";
 
 test("connects an MCP server through the OAuth popup callback", async ({ page }, testInfo) => {
   const stamp = Date.now();
@@ -89,7 +89,7 @@ test("connects an MCP server through the OAuth popup callback", async ({ page },
   });
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await openIntegrationsAdd(page, "Manage MCP servers");
+  await openMcpServers(page);
   await expect(page.getByText("Linear MCP", { exact: true })).toBeVisible();
   await captureScreenshot(page, testInfo, "mcp-oauth-ready");
 
@@ -176,7 +176,7 @@ test("adds an MCP server with a pre-registered OAuth client", async ({ page }, t
   });
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await openIntegrationsAdd(page, "Manage MCP servers");
+  await openMcpServers(page);
 
   await page.getByLabel("Server name").fill("Gmail");
   await page.getByLabel("Server URL").fill("https://gmailmcp.example.test/mcp/v1");
@@ -256,7 +256,7 @@ test("asks for a client ID when the MCP server cannot register one", async ({ pa
   });
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await openIntegrationsAdd(page, "Manage MCP servers");
+  await openMcpServers(page);
   await page.getByRole("button", { name: "Connect OAuth", exact: true }).click();
 
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Needs an OAuth client ID");

@@ -65,6 +65,7 @@ import {
   deviceExitOrigin,
   EmailEmulator,
   ExpoPushProvider,
+  GoogleWorkspaceConnector,
   GraphileJobPublisher,
   InMemoryJobQueue,
   InMemoryRealtimeFanout,
@@ -528,6 +529,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       .providers()
       .filter((provider) => !composioOverride || provider.describe().id !== "composio"),
     mcp,
+    new GoogleWorkspaceConnector({ prisma, secrets }),
     ...connectorOverrides,
   ]);
   integrationSettings.warmDirectories();

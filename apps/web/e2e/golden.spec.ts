@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { CONNECTION_LABEL_MAX_LENGTH } from "@rakazo/contracts";
 import {
   activeBotId,
   captureScreenshot,
@@ -121,209 +120,24 @@ test("takeover, routine, plugins, and export are reachable", async ({ page }, te
   await expect(page.getByText("Monday briefing")).toBeVisible();
   await captureScreenshot(page, testInfo, "10-routine-created");
 
-  let releaseCatalog!: () => void;
-  const catalogGate = new Promise<void>((resolve) => {
-    releaseCatalog = resolve;
-  });
-  await page.route("**/rpc/connections/catalog", async (route) => {
-    await catalogGate;
-    await route.continue();
-  });
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  const catalogSpinner = page.getByRole("status", { name: "Loading integrations…" });
-  const featured = page.getByTestId("featured-connectors");
-  try {
-    await expect(catalogSpinner).toBeVisible();
-    await expect(featured).toBeHidden();
-    await expect(page.getByPlaceholder("Search apps")).toBeDisabled();
-    await expect(page.getByText("Not in the plugin catalog", { exact: true })).toBeHidden();
-    await captureScreenshot(page, testInfo, "11-plugins-loading");
-  } finally {
-    releaseCatalog();
-  }
-  await expect(catalogSpinner).toBeHidden();
-  await expect(page.getByPlaceholder("Search apps")).toBeEnabled();
-  await expect(featured).toContainText(
-    /Gmail[\s\S]*Google Calendar[\s\S]*Google Drive[\s\S]*Slack[\s\S]*Notion/,
-  );
-  await expect(page.getByText("GitHub", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Add custom", exact: true })).toBeVisible();
-  await expect(page.getByRole("menuitem")).toHaveCount(0);
-  await expect(page.getByText("Tool sources", { exact: true })).toBeHidden();
-  await captureScreenshot(page, testInfo, "11-plugins-catalog");
-
-  // Nearest ancestor with an Add/Added control (featured tile or catalog row).
-  const gmailRow = featured
-    .getByText("Gmail", { exact: true })
-    .locator("xpath=ancestor::*[.//button][1]");
-  await gmailRow.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(gmailRow.getByRole("button", { name: "Added", exact: true })).toBeVisible();
-  await expect(page.getByTestId("connection-tile-gmail")).toBeVisible();
-  await captureScreenshot(page, testInfo, "11a-connected-plugins");
-
-  await gmailRow.getByRole("button", { name: "Added", exact: true }).click();
-  const detail = page.getByTestId("connection-detail");
-  await expect(detail).toBeVisible();
-  await expect(page.getByTestId("connection-accounts")).toBeVisible();
-  await expect(page.getByTestId("connection-tools")).toBeVisible();
-
-  await detail.getByRole("button", { name: "Add another", exact: true }).click();
-  await expect(detail.getByLabel("Account label")).toHaveCount(2);
-  const accountName = "Work account ".padEnd(CONNECTION_LABEL_MAX_LENGTH, "x");
-  const accountLabel = detail.getByLabel("Account label").nth(1);
-  await accountLabel.clear();
-  await accountLabel.pressSequentially(`${accountName}overflow`);
-  await expect(accountLabel).toHaveValue(accountName);
-  const windowKeys = await page.evaluateHandle(() => {
-    const keys: string[] = [];
-    window.addEventListener("keydown", (event) => keys.push(event.key));
-    return keys;
-  });
-  // These synthetic keyboard events exercise the browser event flags; they do not start an OS IME.
-  for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
-    await accountLabel.dispatchEvent("keydown", { key: "Enter", ...composition });
-    await accountLabel.dispatchEvent("keydown", { key: "Escape", ...composition });
-    expect(await windowKeys.evaluate((keys) => keys.includes("Escape"))).toBe(false);
-    await expect(accountLabel).toBeFocused();
-  }
-  const renamed = page.waitForResponse(
-    (response) => response.url().includes("connections/rename") && response.ok(),
-  );
-  await accountLabel.press("Enter");
-  await renamed;
-  await expect(detail.getByLabel("Account label").nth(1)).toHaveValue(accountName);
-  await captureScreenshot(page, testInfo, "11a2-multi-account-plugins");
-
-  await page
-    .getByTestId("connection-tools")
-    .getByText(/tools?$/)
-    .click();
-  await expect(detail.getByText("Send email", { exact: true })).toBeVisible();
-  await captureScreenshot(page, testInfo, "11a3-plugin-tools");
-
-  await page.getByRole("button", { name: "Close integrations" }).click();
-  await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await expect(page.getByPlaceholder("Search apps")).toBeVisible();
-  const gmailTileAgain = page.getByTestId("connection-tile-gmail");
-  await expect(gmailTileAgain.getByRole("button", { name: "Added", exact: true })).toBeVisible();
-  await gmailTileAgain.click();
-  const detailAgain = page.getByTestId("connection-detail");
-  await expect(detailAgain.getByLabel("Account label")).toHaveCount(2);
-  await expect(detailAgain.getByLabel("Account label").nth(1)).toHaveValue(accountName);
-
-  await detailAgain.getByRole("button", { name: "Remove", exact: true }).last().click();
-  await expect(detailAgain.getByLabel("Account label")).toHaveCount(1);
-  await detailAgain.getByRole("button", { name: "Uninstall", exact: true }).click();
-  await expect(page.getByTestId("connection-detail")).toHaveCount(0);
-  const gmailRowEmpty = page
-    .getByTestId("featured-connectors")
-    .getByText("Gmail", { exact: true })
-    .locator("xpath=ancestor::*[.//button][1]");
-  await expect(gmailRowEmpty.getByRole("button", { name: "Add", exact: true })).toBeVisible();
-  await captureScreenshot(page, testInfo, "11b-connected-plugins-empty");
-
-  const linearRow = page
-    .getByText("Linear", { exact: true })
-    .locator("xpath=ancestor::*[.//button][1]");
-  const connectPopup = page.waitForEvent("popup");
-  await linearRow.getByRole("button", { name: "Add", exact: true }).click();
-  const popup = await connectPopup;
-  await popup.close();
-  await expect(linearRow.getByRole("button", { name: "Added", exact: true })).toBeVisible();
-  await linearRow.getByRole("button", { name: "Added", exact: true }).click();
-  const linearDetail = page.getByTestId("connection-detail");
-  await expect(linearDetail).toBeVisible();
-  await linearDetail.getByRole("button", { name: "Uninstall", exact: true }).click();
-  await expect(page.getByTestId("connection-detail")).toHaveCount(0);
-  await expect(linearRow.getByRole("button", { name: "Add", exact: true })).toBeVisible();
-
-  // Custom sources live behind one menu: GitHub, then MCP → OpenAPI → GraphQL → Executor → Treg.
-  await page.getByRole("button", { name: "Add custom", exact: true }).click();
-  const addItems = page.getByRole("menuitem");
-  await expect(addItems).toHaveText([
-    "From GitHub",
-    "MCP server",
-    "OpenAPI",
-    "GraphQL",
-    "Executor",
-    "Treg",
-    "Browse MCP servers",
-    "Search by domain",
-    "Manage MCP servers",
-  ]);
-  await captureScreenshot(page, testInfo, "01-graphql-advanced-order");
-  await page.getByRole("menuitem", { name: "Search by domain", exact: true }).click();
-
-  const feed = page.getByTestId("integrations-catalog-feed");
-  await feed.getByRole("textbox", { name: "Integration domain" }).fill("github.com");
-  await feed.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(feed.getByText("GitHub", { exact: true })).toBeVisible();
-  await expect(feed.getByRole("button", { name: "MCP Add", exact: true })).toBeVisible();
-  await expect(feed.getByRole("button", { name: "OPENAPI Add", exact: true })).toBeVisible();
-  await expect(feed.getByRole("button", { name: "GRAPHQL Manual", exact: true })).toBeDisabled();
-  await expect(feed.getByRole("button", { name: "CLI Manual", exact: true })).toBeDisabled();
-  // Editing the query must drop prior results so a stale Add cannot run for the old domain.
-  await feed.getByRole("textbox", { name: "Integration domain" }).fill("gitlab.com");
-  await expect(feed.getByText("GitHub", { exact: true })).toBeHidden();
-  await feed.getByRole("textbox", { name: "Integration domain" }).fill("github.com");
-  await feed.getByRole("button", { name: "Search", exact: true }).click();
-  await expect(feed.getByText("GitHub", { exact: true })).toBeVisible();
-  await captureScreenshot(page, testInfo, "11c-catalog-feed");
-
-  await feed.getByRole("button", { name: "MCP Add", exact: true }).click();
-  const form = page.getByTestId("integrations-source-form");
-  await expect(form.getByLabel("Name", { exact: true })).toHaveValue("GitHub");
-  await expect(form.getByLabel("URL", { exact: true })).toHaveValue("https://mcp.example.test/mcp");
-  await expect(form.getByLabel("Authentication", { exact: true })).toHaveValue("bearer");
-  await form.getByRole("button", { name: "Back", exact: true }).click();
-  await expect(page.getByTestId("integrations-catalog-feed")).toBeVisible();
-  await page
-    .getByTestId("integrations-catalog-feed")
-    .getByRole("button", { name: "Back", exact: true })
-    .click();
-
-  const addSource = async (item: string) => {
-    await page.getByRole("button", { name: "Add custom", exact: true }).click();
-    await page.getByRole("menuitem", { name: item, exact: true }).click();
-  };
-  const toolSources = page.getByTestId("tool-sources");
-
-  await addSource("Treg");
-  await form.getByLabel("Treg token", { exact: true }).fill("fake-treg-browser-credential");
-  await form.getByRole("button", { name: "Verify and add", exact: true }).click();
-  await expect(toolSources.getByText(/MCP\s*https:\/\/treg\.to\/mcp\//)).toBeVisible();
-
-  await addSource("MCP server");
-  await form.getByLabel("Name", { exact: true }).fill("Browser MCP");
-  await form.getByLabel("URL", { exact: true }).fill("https://mcp.example.test/mcp");
-  await form.getByRole("button", { name: "Verify and add", exact: true }).click();
-  await expect(toolSources.getByText(/MCP\s*https:\/\/mcp\.example\.test\/mcp/)).toBeVisible();
-
-  await addSource("OpenAPI");
-  await form.getByLabel("Name", { exact: true }).fill("Browser API");
-  await form.getByLabel("URL", { exact: true }).fill("https://api.example.test/openapi.json");
-  await form.getByLabel("Authentication", { exact: true }).selectOption("bearer");
-  await form.getByLabel("Credential", { exact: true }).fill("fake-openapi-browser-credential");
-  await form.getByRole("button", { name: "Verify and add", exact: true }).click();
-  await expect(toolSources.getByText(/OpenAPI\s*https:\/\/api\.example\.test\/v1/)).toBeVisible();
-
-  await addSource("Executor");
-  await expect(form.getByLabel("Name", { exact: true })).toHaveValue("Executor");
-  await form.getByLabel("URL", { exact: true }).fill("https://executor.example.test/mcp");
-  await form.getByLabel("Executor token", { exact: true }).fill("fake-executor-browser-credential");
-  await form.getByRole("button", { name: "Verify and add", exact: true }).click();
-  await expect(toolSources.getByText(/MCP\s*https:\/\/executor\.example\.test\/mcp/)).toBeVisible();
-  await captureScreenshot(page, testInfo, "11d-provider-emulators");
-
-  await addSource("GraphQL");
-  await form.getByLabel("Name", { exact: true }).fill("Browser GraphQL");
-  await form.getByLabel("URL", { exact: true }).fill("https://graphql.example.test/graphql");
-  await form.getByRole("button", { name: "Verify and add", exact: true }).click();
-  await expect(
-    toolSources.getByText(/GraphQL\s*https:\/\/graphql\.example\.test\/graphql/),
-  ).toBeVisible();
-  await captureScreenshot(page, testInfo, "02-graphql-installed");
-
+  const google = page.getByTestId("integration-google-workspace");
+  await expect(google.getByText("Google Workspace", { exact: true })).toBeVisible();
+  await expect(page.getByPlaceholder("Search apps")).toHaveCount(0);
+  await expect(google.getByLabel("Redirect URI")).toHaveValue(/\/integrations\/google\/callback$/);
+  await captureScreenshot(page, testInfo, "11-google-workspace-setup");
+  await google.getByLabel("Client ID").fill("fake-client.apps.googleusercontent.com");
+  await google.getByLabel("Client secret").fill("fake-client-secret");
+  await google.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(google.getByRole("button", { name: "Connect", exact: true })).toBeVisible();
+  await expect(google.getByLabel("Client secret")).toHaveCount(0);
+  await captureScreenshot(page, testInfo, "11a-google-workspace-ready");
+  const eleven = page.getByTestId("integration-elevenlabs");
+  await eleven.getByRole("button", { name: "Connect", exact: true }).click();
+  await eleven.getByLabel("API key").fill("fake-elevenlabs-key");
+  await eleven.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(eleven.getByText("$ELEVENLABS_API_KEY", { exact: true })).toBeVisible();
+  await captureScreenshot(page, testInfo, "11b-integrations");
   await page.getByRole("button", { name: "Close integrations" }).click();
 
   await page.getByText("Chief").first().click();

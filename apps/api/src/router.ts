@@ -47,6 +47,7 @@ import { computerServerRoutes } from "./routes/computer-servers.js";
 import { connectionsRoutes } from "./routes/connections.js";
 import { contentRoutes } from "./routes/content.js";
 import { createRouterContext } from "./routes/context.js";
+import { googleWorkspaceRoutes } from "./routes/google-workspace.js";
 import { inboxRoutes } from "./routes/inbox.js";
 import { mcpRoutes } from "./routes/mcp.js";
 import { memoryRoutes } from "./routes/memory.js";
@@ -186,6 +187,7 @@ export function createRouter(deps: RouterDeps) {
     ...mcpRoutes(ctx),
     ...availabilityRoutes(ctx),
     ...connectionsRoutes(ctx),
+    ...googleWorkspaceRoutes(ctx),
     ...messagingRoutes(ctx),
     ...contentRoutes(ctx),
     ...pagesRoutes(ctx),

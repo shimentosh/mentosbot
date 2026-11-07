@@ -99,11 +99,10 @@ export async function signupThroughForm(
   await page.getByRole("button", { name: "Create account" }).click();
 }
 
-/** Opens Integrations' add menu and picks one of its custom sources. */
-export async function openIntegrationsAdd(page: Page, item: string) {
+/** Opens the MCP server manager from Integrations' MCP card. */
+export async function openMcpServers(page: Page) {
   const dialog = page.getByRole("dialog", { name: "Integrations", exact: true });
-  await dialog.getByRole("button", { name: "Add custom", exact: true }).click();
-  await page.getByRole("menuitem", { name: item, exact: true }).click();
+  await dialog.getByRole("button", { name: "Manage MCP servers", exact: true }).click();
 }
 
 /**

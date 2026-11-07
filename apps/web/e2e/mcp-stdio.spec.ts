@@ -1,7 +1,7 @@
 import type { Route } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import type { McpServer } from "@rakazo/contracts";
-import { captureScreenshot, completeOnboarding, openIntegrationsAdd, signup } from "./helpers";
+import { captureScreenshot, completeOnboarding, openMcpServers, signup } from "./helpers";
 
 const credentialsTemplate = `{
   "installed": {
@@ -84,7 +84,7 @@ test("adds a stdio MCP server with encrypted environment variables", async ({ pa
   });
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  await openIntegrationsAdd(page, "Manage MCP servers");
+  await openMcpServers(page);
 
   await page.getByLabel("Server name").fill("Invoices");
   await page.getByRole("tab", { name: "STDIO", exact: true }).click();
