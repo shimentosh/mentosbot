@@ -75,17 +75,17 @@ async function removeAccounts(
       .catch(() => null);
     if (tokens) await revokeGoogleToken(tokens.refreshToken);
   }
-  await deps.prisma.$transaction([
-    deps.prisma.connection.deleteMany({
+  await deps.prisma.$transaction(async (tx) => {
+    await tx.connection.deleteMany({
       where: { id: { in: rows.map((row) => row.id) } },
-    }),
-    deps.prisma.secret.deleteMany({
+    });
+    await tx.secret.deleteMany({
       where: {
         id: { in: rows.flatMap((row) => (row.secretId ? [row.secretId] : [])) },
         userId: where.userId,
       },
-    }),
-  ]);
+    });
+  });
 }
 
 /** A new client replaces the old one, and accounts signed in through the old one go with it. */
@@ -106,11 +106,11 @@ export async function saveGoogleWorkspaceClient(
       JSON.stringify(input),
       context(owner, "googleWorkspace.saveClient"),
     );
-    await deps.prisma.$transaction([
-      deps.prisma.secret.deleteMany({
+    await deps.prisma.$transaction(async (tx) => {
+      await tx.secret.deleteMany({
         where: { userId: owner.userId, kind: GOOGLE_WORKSPACE_CLIENT_KIND },
-      }),
-      deps.prisma.secret.create({
+      });
+      await tx.secret.create({
         data: {
           id: stored.id,
           userId: owner.userId,
@@ -118,8 +118,8 @@ export async function saveGoogleWorkspaceClient(
           kind: GOOGLE_WORKSPACE_CLIENT_KIND,
           ciphertext: stored.ciphertext,
         },
-      }),
-    ]);
+      });
+    });
   }
   return getGoogleWorkspace(deps, owner);
 }
@@ -131,17 +131,17 @@ export async function beginGoogleWorkspace(
   const client = await loadGoogleClient(deps.prisma, deps.secrets, owner.userId);
   if (!client) throw new ORPCError("BAD_REQUEST", { message: "Add your OAuth client first." });
   const { state, digest } = newGoogleState();
-  await deps.prisma.$transaction([
+  await deps.prisma.$transaction(async (tx) => {
     // One sign-in in flight per space; a new one replaces an abandoned one.
-    deps.prisma.connection.deleteMany({
+    await tx.connection.deleteMany({
       where: {
         userId: owner.userId,
         spaceId: owner.spaceId,
         connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
         status: "pending",
       },
-    }),
-    deps.prisma.connection.create({
+    });
+    await tx.connection.create({
       data: {
         userId: owner.userId,
         spaceId: owner.spaceId,
@@ -152,8 +152,8 @@ export async function beginGoogleWorkspace(
         providerRef: digest,
         metadata: { expiresAt: Date.now() + GOOGLE_WORKSPACE_STATE_TTL_MS },
       },
-    }),
-  ]);
+    });
+  });
   return {
     authorizationUrl: googleAuthorizationUrl({
       clientId: client.client.clientId,
@@ -211,8 +211,8 @@ export async function completeGoogleWorkspace(
     JSON.stringify(tokens),
     context(owner, "googleWorkspace.complete"),
   );
-  await deps.prisma.$transaction([
-    deps.prisma.secret.create({
+  await deps.prisma.$transaction(async (tx) => {
+    await tx.secret.create({
       data: {
         id: stored.id,
         userId: owner.userId,
@@ -220,8 +220,8 @@ export async function completeGoogleWorkspace(
         kind: GOOGLE_WORKSPACE_TOKEN_KIND,
         ciphertext: stored.ciphertext,
       },
-    }),
-    deps.prisma.connection.create({
+    });
+    await tx.connection.create({
       data: {
         userId: owner.userId,
         spaceId: owner.spaceId,
@@ -232,8 +232,8 @@ export async function completeGoogleWorkspace(
         secretId: stored.id,
         providerRef: tokens.email,
       },
-    }),
-  ]);
+    });
+  });
   return getGoogleWorkspace(deps, owner);
 }
 
