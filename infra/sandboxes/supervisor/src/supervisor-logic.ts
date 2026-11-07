@@ -340,6 +340,42 @@ export function oldestIdleScreen(
     )[0]?.[0];
 }
 
+/** How long a finished bot's browser keeps running before its memory goes back to the computer. */
+export const IDLE_SCREEN_REAP_MS = 20 * 60 * 1000;
+
+/** Screens whose browser has sat idle past `maxIdleMs`, oldest first; held screens are kept. */
+export function staleIdleScreens(
+  assigned: Map<string, ScreenAssignment>,
+  now: number,
+  maxIdleMs = IDLE_SCREEN_REAP_MS,
+): string[] {
+  return [...assigned.entries()]
+    .filter(
+      ([, slot]) =>
+        !slot.releasing &&
+        !slot.controlled &&
+        slot.idleAt !== undefined &&
+        now - slot.idleAt >= maxIdleMs,
+    )
+    .sort(([, a], [, b]) => (a.idleAt ?? 0) - (b.idleAt ?? 0))
+    .map(([screenId]) => screenId);
+}
+
+/**
+ * Memory a new screen's browser needs before it starts. A page that grows past what is left makes
+ * the kernel kill a process inside the computer, usually another bot's tab.
+ */
+export const SCREEN_MEMORY_RESERVE_BYTES = 512 * 1024 ** 2;
+
+/**
+ * Whether a computer with a memory ceiling can start one more browser. A computer without one
+ * (RAKAZO_COMPUTER_MEMORY=0) and unknown usage never block: the check is a guard, not accounting.
+ */
+export function hasScreenMemory(input: { used: number | null; limit: number; reserve?: number }) {
+  const reserve = input.reserve ?? SCREEN_MEMORY_RESERVE_BYTES;
+  return input.limit <= 0 || input.used === null || input.limit - input.used >= reserve;
+}
+
 export async function teardownReleasedScreen(
   assigned: Map<string, ScreenAssignment>,
   screenId: string,

@@ -77,7 +77,7 @@ import {
   networkExitContainerOptions,
   networkExitFingerprint,
 } from "./network-exit.js";
-import { readServerUsage } from "./server-usage.js";
+import { containerMemory, readServerUsage } from "./server-usage.js";
 import type { ScreenAssignment } from "./supervisor-logic.js";
 import {
   assertRequestIdentity,
@@ -96,6 +96,7 @@ import {
   currentComputerScreens,
   demuxDockerStream,
   ensureScreenCommand,
+  hasScreenMemory,
   hasValidBearerToken,
   interactiveScreenCommand,
   isComputerControlUnavailable,
@@ -116,6 +117,7 @@ import {
   screenRecentlyEnsured,
   screenReleaseStopCommand,
   shouldReplayComputerActions,
+  staleIdleScreens,
   stopExtraScreenCommand,
   teardownReleasedScreen,
   terminalCommand,
@@ -1370,6 +1372,7 @@ function startSupervisor() {
   void reclaimIdleComputerNetworks().catch((error) => {
     logger.error("computer network reclaim failed", error);
   });
+  setInterval(() => void reapIdleScreens(), 60_000).unref();
   const port = Number(process.env.SUPERVISOR_PORT ?? 7091);
   const hostname = process.env.SUPERVISOR_HOST ?? "127.0.0.1";
   const server = serve({ fetch: app.fetch, hostname, port }, () => {
@@ -1636,20 +1639,9 @@ async function ensureManagedScreenAttempt(
     );
     if (!hasFreeIndex) {
       const evictedScreenId = oldestIdleScreen(assigned, teamScreenLimit);
-      const evicted = evictedScreenId ? assigned.get(evictedScreenId) : undefined;
-      if (evictedScreenId && evicted) {
-        const evictedIndex = releaseAssignedScreen(assigned, evictedScreenId, evicted.leaseId);
-        if (evictedIndex !== undefined) {
-          await teardownReleasedScreen(assigned, evictedScreenId, evictedIndex, () =>
-            runContainerCommand(container, [
-              "bash",
-              "-c",
-              stopExtraScreenCommand(evictedIndex, evictedScreenId),
-            ]),
-          );
-        }
-      }
+      if (evictedScreenId) await stopIdleScreen(container, assigned, evictedScreenId);
     }
+    await makeScreenMemory(container, info, assigned);
   }
   const index = nextScreenIndex(assigned, screenKey, screenLeaseId, teamScreenLimit);
   const layout = screenPorts(index);
@@ -1688,6 +1680,82 @@ async function ensureManagedScreenAttempt(
     browserProfile: browserProfilePathForScreen(screenKey),
     viewToken,
   };
+}
+
+/** Stops an idle bot's browser and frees its display; its profile stays for the next run. */
+async function stopIdleScreen(
+  container: Docker.Container,
+  assigned: Map<string, ScreenAssignment>,
+  screenId: string,
+) {
+  const index = releaseAssignedScreen(assigned, screenId, assigned.get(screenId)?.leaseId);
+  if (index === undefined) return;
+  await teardownReleasedScreen(assigned, screenId, index, () =>
+    runContainerCommand(container, ["bash", "-c", stopExtraScreenCommand(index, screenId)]),
+  );
+}
+
+/**
+ * Makes room for one more browser by stopping idle ones, oldest first. With none left to stop the
+ * new screen is refused rather than started into memory the computer does not have, where the
+ * kernel would kill a busy bot's page instead. Callers hold the screen lock.
+ */
+async function makeScreenMemory(
+  container: Docker.Container,
+  info: Docker.ContainerInspectInfo,
+  assigned: Map<string, ScreenAssignment>,
+) {
+  const limit = info.HostConfig?.Memory ?? 0;
+  if (limit <= 0) return;
+  for (;;) {
+    const stats = await container.stats({ stream: false, "one-shot": true }).catch(() => undefined);
+    const fits = hasScreenMemory({ used: containerMemory(stats), limit });
+    if (fits) return;
+    const idle = oldestIdleScreen(assigned, teamScreenLimit);
+    if (!idle) {
+      throw new Error(
+        "This Team Computer cannot allocate another screen: its memory is in use by other bots.",
+      );
+    }
+    await stopIdleScreen(container, assigned, idle);
+  }
+}
+
+let reapingIdleScreens = false;
+
+/** Gives the memory of browsers idle past IDLE_SCREEN_REAP_MS back to their computer. */
+async function reapIdleScreens() {
+  if (reapingIdleScreens) return;
+  reapingIdleScreens = true;
+  try {
+    for (const id of [...computerScreens.keys()]) {
+      try {
+        await withComputerScreenLock(id, async () => {
+          const container = docker.getContainer(id);
+          const info = await container.inspect();
+          if (!info.State?.Running) return;
+          const assigned = currentComputerScreens(
+            computerScreens,
+            computerScreenBoots,
+            id,
+            info.State.StartedAt,
+          );
+          if (!assigned) return;
+          for (const screenId of staleIdleScreens(assigned, Date.now())) {
+            await stopIdleScreen(container, assigned, screenId);
+          }
+        });
+      } catch (error) {
+        if ((error as { statusCode?: number }).statusCode === 404) {
+          clearComputerScreenRegistry(computerScreens, computerScreenBoots, id);
+        } else {
+          getLogger().error("idle screen reap failed", error);
+        }
+      }
+    }
+  } finally {
+    reapingIdleScreens = false;
+  }
 }
 
 function isRakazoContainer(info: Docker.ContainerInspectInfo, botId: string, spaceId: string) {

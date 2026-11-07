@@ -2022,6 +2022,73 @@ describe("screen registry across run boundaries", () => {
     const peerStillOpen = await view("researcher", "team-run:1");
     expect(((await peerStillOpen.json()) as { screenUrl: string }).screenUrl).toBe(researcherUrl);
   });
+  it("stops the oldest idle browser before a new one when the computer's memory is full", async () => {
+    const { supervisorApp } = await import("./index.js");
+    const gib = 1024 ** 3;
+    const commands: string[] = [];
+    let used = 1 * gib;
+    const container = {
+      inspect: vi.fn().mockResolvedValue({
+        Config: {
+          Labels: { "rakazo.managed": "true", "rakazo.botId": "bot", "rakazo.spaceId": "space" },
+        },
+        HostConfig: { NetworkMode: computerNetworkNameFor("bot"), Memory: 4 * gib },
+        State: { Running: true },
+        NetworkSettings: {
+          Ports: Object.fromEntries(
+            [0, 1, 2].map((index) => [
+              `${screenPorts(index).viewPort}/tcp`,
+              [{ HostIp: "127.0.0.1", HostPort: screenPort }],
+            ]),
+          ),
+        },
+      }),
+      stats: vi.fn(async () => ({ memory_stats: { usage: used, stats: {} } })),
+      exec: vi.fn(async ({ Cmd }: { Cmd: string[] }) => {
+        const command = Cmd.join(" ");
+        commands.push(command);
+        if (command.includes("Browser.close")) used -= gib;
+        return { start: async () => Readable.from([]), inspect: async () => ({ ExitCode: 0 }) };
+      }),
+    };
+    mocks.docker.getContainer.mockReturnValue(container);
+    const headersFor = (screenId: string, leaseId: string) => ({
+      authorization: `Bearer ${resolveSupervisorToken(process.env)}`,
+      "content-type": "application/json",
+      "x-rakazo-bot-id": "bot",
+      "x-rakazo-space-id": "space",
+      "x-rakazo-screen-id": screenId,
+      "x-rakazo-screen-lease-id": leaseId,
+    });
+    const view = (screenId: string, leaseId: string) =>
+      supervisorApp.request("/computers/memory/screen-mode", {
+        method: "POST",
+        headers: headersFor(screenId, leaseId),
+        body: JSON.stringify({ interactive: false, revokeControl: false }),
+      });
+    const stopped = () => commands.filter((command) => command.includes("Browser.close"));
+
+    expect((await view("writer", "run-1:1")).status).toBe(200);
+    expect((await view("researcher", "team-run:1")).status).toBe(200);
+    const release = await supervisorApp.request("/computers/memory/screen", {
+      method: "DELETE",
+      headers: { ...headersFor("writer", "run-1:1"), "x-rakazo-preserve-screen": "1" },
+    });
+    expect(release.status).toBe(200);
+
+    const before = stopped().length;
+    used = 3.8 * gib;
+    expect((await view("newcomer", "team-run:2")).status).toBe(200);
+    expect(stopped()).toHaveLength(before + 1);
+    expect(stopped().at(-1)).toContain("view-1");
+    expect(stopped().at(-1)).not.toContain("view-2");
+
+    used = 3.8 * gib;
+    const refused = await view("latecomer", "team-run:3");
+    expect(refused.status).not.toBe(200);
+    expect(await refused.text()).toMatch(/cannot allocate another screen/);
+    expect(stopped()).toHaveLength(before + 1);
+  });
 });
 
 describe("computer network reclaim", () => {

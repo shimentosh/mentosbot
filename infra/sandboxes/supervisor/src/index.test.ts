@@ -38,6 +38,7 @@ import {
   demuxDockerStream,
   ensureScreenCommand,
   hasComputerIdentity,
+  hasScreenMemory,
   hasValidBearerToken,
   interactiveScreenCommand,
   isComputerControlUnavailable,
@@ -57,6 +58,7 @@ import {
   screenRecentlyEnsured,
   screenReleaseStopCommand,
   shouldReplayComputerActions,
+  staleIdleScreens,
   stopExtraScreenCommand,
   teardownReleasedScreen,
   terminalCommand,
@@ -973,6 +975,27 @@ describe("sandbox supervisor input containment", () => {
     expect(oldestIdleScreen(assigned, 3)).toBe("researcher");
     expect(releaseAssignedScreen(assigned, "writer", "run-1:1")).toBeUndefined();
     expect(assigned.get("writer")?.releasing).toBeUndefined();
+  });
+
+  it("lists only screens idle past the reap age, oldest first", () => {
+    const assigned = new Map<string, ScreenAssignment>([
+      ["fresh", { index: 0, idleAt: 950 }],
+      ["old", { index: 1, idleAt: 100 }],
+      ["older", { index: 2, idleAt: 50 }],
+      ["busy", { index: 3 }],
+      ["held", { index: 4, idleAt: 10, controlled: true }],
+      ["leaving", { index: 5, idleAt: 10, releasing: true }],
+    ]);
+    expect(staleIdleScreens(assigned, 1000, 500)).toEqual(["older", "old"]);
+  });
+
+  it("starts another browser only when the memory for it is free", () => {
+    const gib = 1024 ** 3;
+    const reserve = gib / 2;
+    expect(hasScreenMemory({ used: 3 * gib, limit: 4 * gib, reserve })).toBe(true);
+    expect(hasScreenMemory({ used: 3.8 * gib, limit: 4 * gib, reserve })).toBe(false);
+    expect(hasScreenMemory({ used: null, limit: 4 * gib, reserve })).toBe(true);
+    expect(hasScreenMemory({ used: 99 * gib, limit: 0, reserve })).toBe(true);
   });
 
   it("keeps a warm slot evictable when a viewer repeats the completed run lease", () => {
