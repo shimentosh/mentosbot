@@ -121,23 +121,31 @@ test("takeover, routine, plugins, and export are reachable", async ({ page }, te
   await captureScreenshot(page, testInfo, "10-routine-created");
 
   await page.getByRole("button", { name: "Connect apps", exact: true }).click();
-  const google = page.getByTestId("integration-google-workspace");
-  await expect(google.getByText("Google Workspace", { exact: true })).toBeVisible();
+  const integrations = page.getByRole("dialog", { name: "Integrations", exact: true });
+  await expect(integrations.getByText("Google Workspace", { exact: true })).toBeVisible();
+  await expect(integrations.getByText("Cloudflare R2", { exact: true })).toBeVisible();
   await expect(page.getByPlaceholder("Search apps")).toHaveCount(0);
+  await captureScreenshot(page, testInfo, "11-integrations");
+
+  const google = page.getByTestId("integration-google-workspace");
+  await google.getByRole("button", { name: "Add", exact: true }).click();
   await expect(google.getByLabel("Redirect URI")).toHaveValue(/\/integrations\/google\/callback$/);
-  await captureScreenshot(page, testInfo, "11-google-workspace-setup");
+  await captureScreenshot(page, testInfo, "11a-google-workspace-setup");
   await google.getByLabel("Client ID").fill("fake-client.apps.googleusercontent.com");
   await google.getByLabel("Client secret").fill("fake-client-secret");
   await google.getByRole("button", { name: "Save", exact: true }).click();
   await expect(google.getByRole("button", { name: "Connect", exact: true })).toBeVisible();
   await expect(google.getByLabel("Client secret")).toHaveCount(0);
-  await captureScreenshot(page, testInfo, "11a-google-workspace-ready");
+  await integrations.getByRole("button", { name: "Back", exact: true }).click();
+
   const eleven = page.getByTestId("integration-elevenlabs");
-  await eleven.getByRole("button", { name: "Connect", exact: true }).click();
+  await eleven.getByRole("button", { name: "Add", exact: true }).click();
   await eleven.getByLabel("API key").fill("fake-elevenlabs-key");
   await eleven.getByRole("button", { name: "Save", exact: true }).click();
   await expect(eleven.getByText("$ELEVENLABS_API_KEY", { exact: true })).toBeVisible();
-  await captureScreenshot(page, testInfo, "11b-integrations");
+  await integrations.getByRole("button", { name: "Back", exact: true }).click();
+  await expect(eleven.getByRole("button", { name: "Added", exact: true })).toBeVisible();
+  await captureScreenshot(page, testInfo, "11b-integrations-connected");
   await page.getByRole("button", { name: "Close integrations" }).click();
 
   await page.getByText("Chief").first().click();

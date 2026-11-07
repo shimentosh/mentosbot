@@ -688,6 +688,7 @@ msgid "Add workspace"
 msgstr "Add workspace"
 
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/pages/IntegrationsOverlay.tsx
 msgid "Added"
 msgstr "Added"
 
@@ -876,6 +877,10 @@ msgstr "Anthropic API"
 #: src/pages/model-settings/compatible-model-fields.tsx
 msgid "Anthropic Messages"
 msgstr "Anthropic Messages"
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Any custom MCP server"
+msgstr "Any custom MCP server"
 
 #: src/pages/Paywall.tsx
 msgid "Any model, with your own key"
@@ -1077,6 +1082,7 @@ msgstr "Avatar Studio"
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/NavLinkPage.tsx
 #: src/pages/RoutineEditor.tsx
@@ -1845,6 +1851,7 @@ msgstr "Connect your own API key in Models or choose Rakazo credits in Billing."
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/NetworkExitDialog.tsx
 #: src/components/StorageSettings.tsx
+#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/message-cards.tsx
@@ -3298,6 +3305,10 @@ msgstr "Fields to compare, e.g. id, modifiedTime (optional)"
 msgid "File"
 msgstr "File"
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "File storage for bots"
+msgstr "File storage for bots"
+
 #: src/components/StorageSettings.tsx
 msgid "Files older than"
 msgstr "Files older than"
@@ -4132,7 +4143,6 @@ msgstr "Maximum output tokens"
 msgid "MCP endpoint"
 msgstr "MCP endpoint"
 
-#: src/pages/IntegrationsOverlay.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "MCP servers"
@@ -4576,6 +4586,10 @@ msgstr "Next page"
 #: src/pages/SettingsOverlay.tsx
 msgid "Next settings sections"
 msgstr "Next settings sections"
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "No account connected"
+msgstr "No account connected"
 
 #: src/pages/Artifacts.tsx
 msgid "No artifacts found."
@@ -5619,6 +5633,10 @@ msgstr "Reply cancelled"
 #: src/pages/shell/composer.tsx
 msgid "Replying to {0}"
 msgstr "Replying to {0}"
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Repositories, issues and pull requests"
+msgstr "Repositories, issues and pull requests"
 
 #: src/lib/user-error.ts
 msgid "Request a new code"
@@ -7364,9 +7382,17 @@ msgstr "View source"
 msgid "Voice"
 msgstr "Voice"
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Voice cloning and speech"
+msgstr "Voice cloning and speech"
+
 #: src/lib/tts.ts
 msgid "Voice request timed out."
 msgstr "Voice request timed out."
+
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Voices, speech and sound effects"
+msgstr "Voices, speech and sound effects"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Wait a moment and test again."
