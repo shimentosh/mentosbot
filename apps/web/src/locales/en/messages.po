@@ -171,6 +171,11 @@ msgstr "{0} rollup hours"
 msgid "{0} TB"
 msgstr "{0} TB"
 
+#. placeholder {0}: selected.name
+#: src/pages/ApprovalsOverlay.tsx
+msgid "{0} tracker"
+msgstr "{0} tracker"
+
 #. placeholder {0}: Math.min(100, Math.round(shares[2]! * 100))
 #. placeholder {1}: usage.cpus
 #: src/pages/ServerUsage.tsx
@@ -3154,6 +3159,10 @@ msgstr "Enter a whole number from 1 to 1000 for the image limit."
 #: src/lib/model-connection-preflight.ts
 msgid "Enter an API key before testing."
 msgstr "Enter an API key before testing."
+
+#: src/pages/shell/bot-panel.tsx
+msgid "Enter an https link"
+msgstr "Enter an https link"
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Environment ID"
@@ -7102,6 +7111,14 @@ msgstr "Tool name"
 msgid "Tools"
 msgstr "Tools"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Tracker"
+msgstr "Tracker"
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "Trackers"
+msgstr "Trackers"
+
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
 msgstr "Transcribing…"
@@ -7416,6 +7433,10 @@ msgstr "Vault"
 #: src/pages/Artifacts.tsx
 msgid "Version"
 msgstr "Version"
+
+#: src/pages/ApprovalsOverlay.tsx
+msgid "View"
+msgstr "View"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"

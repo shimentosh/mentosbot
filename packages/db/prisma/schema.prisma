@@ -794,6 +794,8 @@ model Bot {
   computerSwitching Boolean           @default(false)
   /// Shares its browser's sign-ins (cookies) with the owner's other bots that share theirs.
   shareSignIns      Boolean           @default(true)
+  /// An https page the bot keeps its work log in, shown beside approvals.
+  trackerUrl        String?
   voiceId           String?
   autoSpeak         Boolean           @default(false)
   modelProvider     String?

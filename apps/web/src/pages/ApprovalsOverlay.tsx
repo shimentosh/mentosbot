@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
   BotAvatar,
   Button,
+  buttonVariants,
   Dialog,
   DialogClose,
   DialogContent,
@@ -21,9 +22,12 @@ import {
   NativeSelectOption,
   SectionHeading,
   Spinner,
+  Tabs,
+  TabsList,
+  TabsTrigger,
 } from "@rakazo/ui-web";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, CheckCheck, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpRight, CheckCheck, ExternalLink, SlidersHorizontal, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { AskCard } from "../components/AskCard";
 import type { ActivityListFilters } from "../lib/activity-list-filters";
@@ -102,6 +106,8 @@ export function ApprovalsOverlay({
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [toggledSections, setToggledSections] = useState<ReadonlySet<string>>(new Set());
   const filtersId = useId();
+  const trackedBots = bots.filter((bot) => bot.trackerUrl);
+  const [view, setView] = useState<"approvals" | "trackers">("approvals");
 
   const approvals = approvalsQuery.data ?? [];
   const askers = useMemo(() => {
@@ -147,10 +153,33 @@ export function ApprovalsOverlay({
         className="flex h-[820px] max-h-[calc(100%-2rem)] w-[1120px] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden rounded-2xl bg-card p-0 sm:max-w-[1120px]"
       >
         <DialogHeader className="flex-row items-center gap-3 border-b border-border px-6 py-4">
-          <DialogTitle className="flex-1 text-heading2 text-foreground">
-            <Trans>Approvals</Trans>
-          </DialogTitle>
-          {askers.length > 1 ? (
+          {trackedBots.length ? (
+            <>
+              <DialogTitle className="sr-only">
+                <Trans>Approvals</Trans>
+              </DialogTitle>
+              <div className="flex-1">
+                <Tabs
+                  value={view}
+                  onValueChange={(next) => setView(next as "approvals" | "trackers")}
+                >
+                  <TabsList aria-label={t`View`}>
+                    <TabsTrigger value="approvals" className="px-3">
+                      <Trans>Approvals</Trans>
+                    </TabsTrigger>
+                    <TabsTrigger value="trackers" className="px-3">
+                      <Trans>Trackers</Trans>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </>
+          ) : (
+            <DialogTitle className="flex-1 text-heading2 text-foreground">
+              <Trans>Approvals</Trans>
+            </DialogTitle>
+          )}
+          {view === "approvals" && askers.length > 1 ? (
             <div className="w-44">
               <NativeSelect
                 size="sm"
@@ -167,7 +196,7 @@ export function ApprovalsOverlay({
               </NativeSelect>
             </div>
           ) : null}
-          {bulk.length > 1 ? (
+          {view === "approvals" && bulk.length > 1 ? (
             <Button size="sm" onClick={() => setConfirmAll(true)}>
               <CheckCheck aria-hidden="true" />
               <Trans>Approve all</Trans>
@@ -180,124 +209,128 @@ export function ApprovalsOverlay({
           </DialogClose>
         </DialogHeader>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto md:grid-cols-[minmax(0,1fr)_340px] md:overflow-hidden">
-          <section
-            aria-labelledby={`${filtersId}-waiting`}
-            className="min-w-0 px-6 py-5 md:overflow-y-auto"
-          >
-            <SectionHeading
-              as="h2"
-              id={`${filtersId}-waiting`}
-              className="mb-4 flex items-center gap-2"
+        {view === "trackers" ? (
+          <Trackers bots={trackedBots} />
+        ) : (
+          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto md:grid-cols-[minmax(0,1fr)_340px] md:overflow-hidden">
+            <section
+              aria-labelledby={`${filtersId}-waiting`}
+              className="min-w-0 px-6 py-5 md:overflow-y-auto"
             >
-              <Trans>Waiting for you</Trans>
-              {shown.length ? (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[12px] tabular-nums text-muted-foreground">
-                  {shown.length}
-                </span>
+              <SectionHeading
+                as="h2"
+                id={`${filtersId}-waiting`}
+                className="mb-4 flex items-center gap-2"
+              >
+                <Trans>Waiting for you</Trans>
+                {shown.length ? (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[12px] tabular-nums text-muted-foreground">
+                    {shown.length}
+                  </span>
+                ) : null}
+              </SectionHeading>
+              {allError ? (
+                <p role="alert" className="mb-4 text-[13px] text-destructive">
+                  {allError}
+                </p>
               ) : null}
-            </SectionHeading>
-            {allError ? (
-              <p role="alert" className="mb-4 text-[13px] text-destructive">
-                {allError}
-              </p>
-            ) : null}
-            {approvalsQuery.isPending ? (
-              <Spinner aria-label={t`Loading approvals…`} />
-            ) : approvalsQuery.error && !approvalsQuery.data ? (
-              <div role="alert" className="text-[13px] text-destructive">
-                {errorText(approvalsQuery.error)}
+              {approvalsQuery.isPending ? (
+                <Spinner aria-label={t`Loading approvals…`} />
+              ) : approvalsQuery.error && !approvalsQuery.data ? (
+                <div role="alert" className="text-[13px] text-destructive">
+                  {errorText(approvalsQuery.error)}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="ms-3"
+                    onClick={() => void approvalsQuery.refetch()}
+                  >
+                    <Trans>Try again</Trans>
+                  </Button>
+                </div>
+              ) : shown.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-20 text-center">
+                  <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <CheckCheck size={22} aria-hidden="true" />
+                  </span>
+                  <p className="text-[15px] font-medium text-foreground">
+                    <Trans>All caught up</Trans>
+                  </p>
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-6">
+                  {shown.map((approval) => (
+                    <ApprovalItem
+                      key={approval.runId}
+                      approval={approval}
+                      showSpace={approval.spaceId !== spaceId}
+                      onAnswered={refreshSoon}
+                      onOpen={() => openChat(approval)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <aside
+              aria-labelledby={`${filtersId}-activity`}
+              className="min-w-0 border-t border-border bg-sidebar px-3 py-5 md:overflow-y-auto md:border-s md:border-t-0"
+            >
+              <div className="mb-3 flex items-center gap-2 px-2.5">
+                <SectionHeading as="h2" id={`${filtersId}-activity`} className="flex-1">
+                  <Trans>Activity</Trans>
+                </SectionHeading>
                 <Button
-                  variant="secondary"
-                  size="sm"
-                  className="ms-3"
-                  onClick={() => void approvalsQuery.refetch()}
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t`Filters`}
+                  aria-expanded={filtersExpanded}
+                  aria-controls={filtersId}
+                  onClick={() => setFiltersExpanded((expanded) => !expanded)}
+                  className="relative text-muted-foreground"
                 >
-                  <Trans>Try again</Trans>
+                  <SlidersHorizontal size={15} aria-hidden="true" />
+                  {filterCount > 0 ? (
+                    <span
+                      data-testid="activity-filter-indicator"
+                      aria-hidden="true"
+                      className="absolute end-1 top-1 size-1.5 rounded-full bg-primary"
+                    />
+                  ) : null}
                 </Button>
               </div>
-            ) : shown.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-20 text-center">
-                <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <CheckCheck size={22} aria-hidden="true" />
-                </span>
-                <p className="text-[15px] font-medium text-foreground">
-                  <Trans>All caught up</Trans>
-                </p>
+              <div className="mb-2 px-2.5">
+                <ListSearchInput
+                  query={filters.query}
+                  setQuery={(query) => setFilters({ ...filters, query })}
+                  label={t`Search runs`}
+                  placeholder={t`Search runs`}
+                />
               </div>
-            ) : (
-              <ul className="flex flex-col gap-6">
-                {shown.map((approval) => (
-                  <ApprovalItem
-                    key={approval.runId}
-                    approval={approval}
-                    showSpace={approval.spaceId !== spaceId}
-                    onAnswered={refreshSoon}
-                    onOpen={() => openChat(approval)}
-                  />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <aside
-            aria-labelledby={`${filtersId}-activity`}
-            className="min-w-0 border-t border-border bg-sidebar px-3 py-5 md:overflow-y-auto md:border-s md:border-t-0"
-          >
-            <div className="mb-3 flex items-center gap-2 px-2.5">
-              <SectionHeading as="h2" id={`${filtersId}-activity`} className="flex-1">
-                <Trans>Activity</Trans>
-              </SectionHeading>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t`Filters`}
-                aria-expanded={filtersExpanded}
-                aria-controls={filtersId}
-                onClick={() => setFiltersExpanded((expanded) => !expanded)}
-                className="relative text-muted-foreground"
-              >
-                <SlidersHorizontal size={15} aria-hidden="true" />
-                {filterCount > 0 ? (
-                  <span
-                    data-testid="activity-filter-indicator"
-                    aria-hidden="true"
-                    className="absolute end-1 top-1 size-1.5 rounded-full bg-primary"
-                  />
-                ) : null}
-              </Button>
-            </div>
-            <div className="mb-2 px-2.5">
-              <ListSearchInput
-                query={filters.query}
-                setQuery={(query) => setFilters({ ...filters, query })}
-                label={t`Search runs`}
-                placeholder={t`Search runs`}
+              <ActivityList
+                bots={bots}
+                groups={groups}
+                toggledSections={toggledSections}
+                onToggleSection={(key) =>
+                  setToggledSections((current) => {
+                    const next = new Set(current);
+                    if (!next.delete(key)) next.add(key);
+                    return next;
+                  })
+                }
+                onOpenRun={(run) =>
+                  onOpenChat(null, run.groupId ? `/app/g/${run.groupId}` : `/app/${run.botId}`)
+                }
+                onOpenBot={(bot) => onOpenChat(null, `/app/${bot.id}`)}
+                onOpenGroup={(group) => onOpenChat(null, `/app/g/${group.id}`)}
+                filters={filters}
+                onFiltersChange={setFilters}
+                filtersExpanded={filtersExpanded}
+                filtersId={filtersId}
               />
-            </div>
-            <ActivityList
-              bots={bots}
-              groups={groups}
-              toggledSections={toggledSections}
-              onToggleSection={(key) =>
-                setToggledSections((current) => {
-                  const next = new Set(current);
-                  if (!next.delete(key)) next.add(key);
-                  return next;
-                })
-              }
-              onOpenRun={(run) =>
-                onOpenChat(null, run.groupId ? `/app/g/${run.groupId}` : `/app/${run.botId}`)
-              }
-              onOpenBot={(bot) => onOpenChat(null, `/app/${bot.id}`)}
-              onOpenGroup={(group) => onOpenChat(null, `/app/g/${group.id}`)}
-              filters={filters}
-              onFiltersChange={setFilters}
-              filtersExpanded={filtersExpanded}
-              filtersId={filtersId}
-            />
-          </aside>
-        </div>
+            </aside>
+          </div>
+        )}
 
         {confirmAll ? (
           <AlertDialog
@@ -421,5 +454,58 @@ function ApprovalItem({
         )}
       </div>
     </li>
+  );
+}
+
+/** Each bot's tracker page, one at a time, in a sandboxed frame. */
+function Trackers({ bots }: { bots: Bot[] }) {
+  const { t } = useLingui();
+  const [selectedId, setSelectedId] = useState(bots[0]?.id);
+  const selected = bots.find((bot) => bot.id === selectedId) ?? bots[0];
+  if (!selected?.trackerUrl) return null;
+  return (
+    <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
+      <nav
+        aria-label={t`Trackers`}
+        className="flex gap-1 overflow-x-auto border-b border-border bg-sidebar p-3 md:flex-col md:overflow-y-auto md:border-e md:border-b-0"
+      >
+        {bots.map((bot) => (
+          <button
+            key={bot.id}
+            type="button"
+            aria-current={bot.id === selected.id ? "page" : undefined}
+            onClick={() => setSelectedId(bot.id)}
+            className="flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-start text-sm hover:bg-accent aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+          >
+            <BotAvatar identity={bot.id} color={bot.color} avatarSet={bot.avatarSet} size={24} />
+            <span className="truncate">{bot.name}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="flex min-h-0 min-w-0 flex-col">
+        <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+            {selected.trackerUrl}
+          </span>
+          <a
+            href={selected.trackerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
+          >
+            <Trans>Open</Trans>
+            <ExternalLink aria-hidden="true" />
+          </a>
+        </div>
+        <iframe
+          key={selected.id}
+          src={selected.trackerUrl}
+          title={t`${selected.name} tracker`}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+          referrerPolicy="no-referrer"
+          className="min-h-[420px] w-full flex-1 border-0 bg-background"
+        />
+      </div>
+    </div>
   );
 }

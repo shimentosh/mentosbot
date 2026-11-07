@@ -109,6 +109,7 @@ function mapBot(
     dailyCheckIns?: boolean;
     fleetManagement?: boolean;
     shareSignIns?: boolean;
+    trackerUrl?: string | null;
     disabledBuiltinTools?: string[];
     webhookSecretId?: string | null;
     spawnKey?: string | null;
@@ -157,6 +158,7 @@ function mapBot(
     dailyCheckIns: bot.dailyCheckIns ?? true,
     fleetManagement: bot.fleetManagement ?? true,
     shareSignIns: bot.shareSignIns ?? true,
+    trackerUrl: bot.trackerUrl ?? null,
     // Stored lists may name a tool that no longer exists; settings resend what they read.
     disabledBuiltinTools: [...disabledBuiltinToolSet(bot.disabledBuiltinTools)],
     webhookConfigured: Boolean(bot.webhookSecretId),

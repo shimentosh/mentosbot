@@ -491,7 +491,18 @@ export function runIdentityInstruction(
     name: string;
     description?: string | null;
     instructions?: string | null;
+    trackerUrl?: string | null;
   },
+  trigger: string,
+): string {
+  const tracker = bot.trackerUrl
+    ? `\nYour tracker is ${bot.trackerUrl}. Keep it up to date: add what you start, finish or wait on there as you work.`
+    : "";
+  return runIdentity(bot, trigger) + tracker;
+}
+
+function runIdentity(
+  bot: { name: string; description?: string | null; instructions?: string | null },
   trigger: string,
 ): string {
   const description = bot.description?.trim() ?? "";

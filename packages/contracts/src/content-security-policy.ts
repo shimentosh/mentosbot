@@ -37,8 +37,9 @@ const APP_DIRECTIVES: Record<string, string[]> = {
   // Voice replies and video attachments play from object URLs.
   "media-src": ["'self'", "blob:"],
   "connect-src": ["'self'"],
-  // The /novnc screen proxy, the HTML viewer shell and PDF object URLs.
-  "frame-src": ["'self'", "blob:"],
+  // The /novnc screen proxy, the HTML viewer shell, PDF object URLs, and bots' tracker pages,
+  // which load in a sandboxed frame.
+  "frame-src": ["'self'", "blob:", "https:"],
   "object-src": ["'none'"],
   "base-uri": ["'self'"],
   "form-action": ["'self'"],

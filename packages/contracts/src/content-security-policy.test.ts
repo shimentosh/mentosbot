@@ -39,7 +39,7 @@ describe("app content security policy", () => {
 
   it("talks only to its own origin, which hosts the API, RPC, monitoring tunnel and screen proxy", () => {
     expect(policy.get("connect-src")).toEqual(["'self'"]);
-    expect(policy.get("frame-src")).toEqual(["'self'", "blob:"]);
+    expect(policy.get("frame-src")).toEqual(["'self'", "blob:", "https:"]);
   });
 
   it("reports violations to the same-origin API endpoint with both mechanisms", () => {

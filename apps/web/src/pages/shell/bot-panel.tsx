@@ -148,6 +148,7 @@ export function BotSettings({
     autoSpeak?: boolean;
     fleetManagement?: boolean;
     shareSignIns?: boolean;
+    trackerUrl?: string | null;
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     voiceId?: string | null;
@@ -252,6 +253,9 @@ export function BotSettings({
     description.trim() !== savedDescriptionRef.current;
   const [error, setError] = useState<string | null>(null);
   const [shareSignInsError, setShareSignInsError] = useState<string | null>(null);
+  const [tracker, setTracker] = useState(bot.trackerUrl ?? "");
+  const savedTrackerRef = useRef(bot.trackerUrl ?? "");
+  const [trackerError, setTrackerError] = useState<string | null>(null);
   const saveQueueRef = useRef(Promise.resolve());
   const executeSaveRef = useRef<
     (
@@ -353,6 +357,7 @@ export function BotSettings({
       notifyOnFinish?: boolean;
       fleetManagement?: boolean;
       shareSignIns?: boolean;
+      trackerUrl?: string | null;
       crossSpaceCommunication?: boolean;
       dailyCheckIns?: boolean;
       disabledBuiltinTools?: string[];
@@ -377,6 +382,11 @@ export function BotSettings({
       }
       if (patchOverrides?.shareSignIns !== undefined) {
         await onSave({ shareSignIns: patchOverrides.shareSignIns });
+        return;
+      }
+      if (patchOverrides?.trackerUrl !== undefined) {
+        await onSave({ trackerUrl: patchOverrides.trackerUrl });
+        savedTrackerRef.current = patchOverrides.trackerUrl ?? "";
         return;
       }
       const selected = selectedModel;
@@ -521,6 +531,7 @@ export function BotSettings({
     notifyOnFinish?: boolean;
     fleetManagement?: boolean;
     shareSignIns?: boolean;
+    trackerUrl?: string | null;
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     disabledBuiltinTools?: string[];
@@ -862,6 +873,41 @@ export function BotSettings({
                 className="min-h-16 max-h-96 resize-none field-sizing-content"
               />
             </SettingsGroup>
+            <SettingsGroup label={t`Tracker`} plain>
+              <Input
+                id={`${ids}-tracker`}
+                type="url"
+                inputMode="url"
+                aria-label={t`Tracker`}
+                aria-invalid={trackerError ? true : undefined}
+                aria-describedby={trackerError ? `${ids}-tracker-error` : undefined}
+                value={tracker}
+                maxLength={2048}
+                placeholder="https://"
+                onChange={(event) => {
+                  setTracker(event.target.value);
+                  setTrackerError(null);
+                }}
+                onBlur={() => {
+                  const next = tracker.trim();
+                  if (next === savedTrackerRef.current) return;
+                  if (next && !isHttpsUrl(next)) {
+                    setTrackerError(t`Enter an https link`);
+                    return;
+                  }
+                  void enqueueSave({ trackerUrl: next || null });
+                }}
+              />
+              {trackerError ? (
+                <p
+                  id={`${ids}-tracker-error`}
+                  role="alert"
+                  className="mt-1.5 text-[13px] text-destructive"
+                >
+                  {trackerError}
+                </p>
+              ) : null}
+            </SettingsGroup>
             <SettingsGroup label={t`Tools`} plain>
               <section data-testid="bot-settings-tools">
                 <div className="space-y-2 [&>*]:mt-0">
@@ -1055,4 +1101,12 @@ function SettingsGroup({
 function humanizeTool(name: string) {
   const words = name.replaceAll("_", " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }

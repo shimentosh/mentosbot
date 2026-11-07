@@ -471,6 +471,7 @@ export function botsRoutes(ctx: RouterContext) {
               ? { fleetManagement: input.fleetManagement }
               : {}),
             ...(input.shareSignIns !== undefined ? { shareSignIns: input.shareSignIns } : {}),
+            ...(input.trackerUrl !== undefined ? { trackerUrl: input.trackerUrl || null } : {}),
             ...(input.disabledBuiltinTools !== undefined
               ? { disabledBuiltinTools: input.disabledBuiltinTools }
               : {}),

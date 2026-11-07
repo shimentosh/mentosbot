@@ -556,6 +556,19 @@ describe("runReplyGuidance", () => {
     expect(prompt.endsWith("Never send mail without asking.")).toBe(true);
   });
 
+  it("tells a bot with a tracker where to keep its work log", () => {
+    const bot = {
+      name: "Ada",
+      description: "",
+      instructions: "",
+      trackerUrl: "https://example.test/log",
+    };
+    expect(runIdentityInstruction(bot, "user")).toBe(
+      "Ada\nYour tracker is https://example.test/log. Keep it up to date: add what you start, finish or wait on there as you work.",
+    );
+    expect(runIdentityInstruction({ ...bot, trackerUrl: null }, "user")).toBe("Ada");
+  });
+
   it("does not repeat text that older bots saved as both fields", () => {
     const bot = {
       name: "Ada",

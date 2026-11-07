@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({ approvals: vi.fn(), answer: vi.fn() }));
+const tabs = vi.hoisted(() => ({ change: (_value: string): void => undefined }));
 vi.mock("../lib/rpc", () => ({
   rpc: { inbox: { approvals: api.approvals } },
   rpcForSpace: () => ({ threads: { answer: api.answer } }),
@@ -52,6 +53,23 @@ vi.mock("@rakazo/ui-web", () => {
     NativeSelectOption: Container,
     SectionHeading: Container,
     Spinner: () => null,
+    Tabs: ({
+      children,
+      onValueChange,
+    }: {
+      children?: ReactNode;
+      onValueChange: (value: string) => void;
+    }) => {
+      tabs.change = onValueChange;
+      return <div>{children}</div>;
+    },
+    TabsList: Container,
+    TabsTrigger: ({ value, children }: { value: string; children?: ReactNode }) => (
+      <button type="button" onClick={() => tabs.change(value)}>
+        {children}
+      </button>
+    ),
+    buttonVariants: () => "",
   };
 });
 vi.mock("../components/AskCard", () => ({
@@ -133,6 +151,38 @@ it("approves every permission card at once and leaves questions to the person", 
     expect(api.answer).toHaveBeenCalledWith(
       expect.objectContaining({ runId: "send", answer: "allow" }),
     );
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("shows each bot's tracker page when a bot has one", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  api.approvals.mockResolvedValue([]);
+  const bot = (id: string, trackerUrl: string | null) =>
+    ({ id, name: id, color: "blue", avatarSet: "organic", trackerUrl }) as never;
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        <ApprovalsOverlay
+          bots={[bot("Social", "https://example.test/social"), bot("Quiet", null)]}
+          groups={[]}
+          onClose={vi.fn()}
+          onOpenChat={vi.fn()}
+        />,
+      ),
+    );
+    expect(container.querySelector("iframe")).toBeNull();
+    const trackers = [...container.querySelectorAll("button")].find(
+      (node) => node.textContent === "Trackers",
+    )!;
+    await act(async () => trackers.click());
+    const frame = container.querySelector("iframe")!;
+    expect(frame.getAttribute("src")).toBe("https://example.test/social");
+    expect(frame.getAttribute("sandbox")).not.toContain("allow-top-navigation");
+    expect(container.textContent).not.toContain("Quiet");
   } finally {
     await act(async () => root.unmount());
   }

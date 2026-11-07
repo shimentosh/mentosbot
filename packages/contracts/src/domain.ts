@@ -24,6 +24,19 @@ import { RoutineWatchSchema, RoutineWatchStateSchema } from "./routine-watch.js"
 import { RunTriggerSchema } from "./runs.js";
 import { SettingsScopeSchema } from "./settings-scope.js";
 
+/** A page a bot keeps its work log in; only https, so it can be shown inside the app. */
+export const TrackerUrlSchema = z
+  .string()
+  .trim()
+  .max(2048)
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Enter an https link");
+
 export const ComputerModeSchema = z.enum(["team", "dedicated"]);
 export type ComputerMode = z.infer<typeof ComputerModeSchema>;
 
@@ -142,6 +155,8 @@ export const BotSchema = z.object({
   fleetManagement: z.boolean().default(true),
   /** On the owner's global browser (shared sign-ins); false means its own, independent one. */
   shareSignIns: z.boolean().optional(),
+  /** The https page the bot keeps its work log in. */
+  trackerUrl: z.string().nullable().optional(),
   disabledBuiltinTools: z.array(z.string()).default([]),
   webhookConfigured: z.boolean(),
   /** Present when created with an idempotency key (e.g. onboarding:first). */
@@ -511,6 +526,7 @@ export const UpdateBotInput = z
     dailyCheckIns: z.boolean().optional(),
     fleetManagement: z.boolean().optional(),
     shareSignIns: z.boolean().optional(),
+    trackerUrl: TrackerUrlSchema.nullable().optional(),
     disabledBuiltinTools: DisabledBuiltinToolsSchema.optional(),
     /** Write only while these settings still hold, as an undo does. */
     expectedSettings: BotSettingsValuesSchema.optional(),
