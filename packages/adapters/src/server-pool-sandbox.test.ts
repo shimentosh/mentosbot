@@ -2,7 +2,8 @@ import type { ComputerRef, SandboxProvider } from "@rakazo/adapter-kit";
 import type { ComputerServerChoice, ComputerServerRecord } from "@rakazo/db";
 import { pickComputerServer } from "@rakazo/db";
 import { describe, expect, it, vi } from "vitest";
-import { ServerPoolSandbox } from "./server-pool-sandbox.js";
+import type { SupervisorUsage } from "./server-pool-sandbox.js";
+import { pickByFreeMemory, ServerPoolSandbox } from "./server-pool-sandbox.js";
 
 const ctx = {
   operationId: "1",
@@ -63,7 +64,11 @@ function fakeProvider(id: string) {
   return provider as typeof provider & SandboxProvider;
 }
 
-function pool(choice: ComputerServerChoice, servers = choice.servers) {
+function pool(
+  choice: ComputerServerChoice,
+  servers = choice.servers,
+  usage: (url: string) => SupervisorUsage | null = () => null,
+) {
   const inner = fakeProvider("docker");
   const clients = new Map<string, ReturnType<typeof fakeProvider>>();
   const tokens: string[] = [];
@@ -81,6 +86,7 @@ function pool(choice: ComputerServerChoice, servers = choice.servers) {
         clients.set(url, client);
         return client;
       },
+      usage: async (url) => usage(url),
     },
   );
   return { sandbox, inner, clients, tokens };
@@ -113,6 +119,47 @@ describe("server pool sandbox", () => {
       expect.objectContaining({ homePath: "", providerKind: "docker", providerRef: undefined }),
       ctx,
     );
+  });
+
+  it("places a new computer by free memory rather than by computer count", async () => {
+    const gib = 1024 ** 3;
+    const crowded = server("crowded", { computers: 0, maxComputers: 10 });
+    const roomy = server("roomy", { computers: 1, maxComputers: 10 });
+    const silent = server("silent", { computers: 0, maxComputers: 10 });
+    const free = new Map([
+      [crowded.url, 0.5 * gib],
+      [roomy.url, 9 * gib],
+    ]);
+    const { sandbox, clients } = pool({ servers: [crowded, roomy, silent] }, undefined, (url) => {
+      const available = free.get(url);
+      return available === undefined
+        ? null
+        : {
+            cpus: 4,
+            load: 0,
+            memory: { total: 16 * gib, available },
+            disk: null,
+            computers: [],
+          };
+    });
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const ref = await sandbox.provision({ botId: "home", homePath: "/data/homes/home" }, ctx);
+    vi.restoreAllMocks();
+    expect(ref.providerRef).toBe("roomy:docker-container");
+    expect(clients.get(silent.url)).toBeUndefined();
+  });
+
+  it("draws servers in proportion to their free memory", () => {
+    const reports = [
+      { server: "a", available: 1 },
+      { server: "b", available: 3 },
+      { server: "down", available: null },
+    ];
+    expect(pickByFreeMemory(reports, () => 0)).toBe("a");
+    expect(pickByFreeMemory(reports, () => 0.24)).toBe("a");
+    expect(pickByFreeMemory(reports, () => 0.26)).toBe("b");
+    expect(pickByFreeMemory(reports, () => 0.999)).toBe("b");
+    expect(pickByFreeMemory([{ server: "down", available: null }], () => 0)).toBeUndefined();
   });
 
   it("skips full, paused and not yet set up servers", async () => {

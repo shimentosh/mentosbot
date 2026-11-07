@@ -1,8 +1,10 @@
 # More servers for computers
 
 When one Docker host can't run every bot's computer, add more servers. Rakazo places each new
-computer on the least-used server, spreads equally used ones at random, and keeps a computer on
-the server it started on. Every organization on the deployment uses the same servers.
+computer on a server below its computer count, drawn in proportion to the memory each one reports
+free, so busier servers get fewer new computers. A server that does not answer gets none while
+others do; with no answers at all the least-used server is taken. A computer stays on the server
+it started on. Every organization on the deployment uses the same servers.
 
 Only deployment admins (`RAKAZO_ADMIN_EMAILS`) on a deployment running Docker computers
 (`SANDBOX_PROVIDER=docker`) see **Settings → Computer → Servers**.

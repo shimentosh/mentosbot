@@ -22,6 +22,7 @@ import {
   placeOnComputerServer,
   SERVER_COMPUTER_KIND,
   serverComputerRef,
+  takesNewComputers,
 } from "@rakazo/db";
 import { cancelComputerRunWork } from "./computer-idle.js";
 import { manageComputerWorkspaceDirectories } from "./computer-workspace.js";
@@ -62,6 +63,8 @@ export class ServerPoolSandbox implements SandboxProvider {
       networkExitFor?: (homeKey: string) => Promise<NetworkExit | undefined>;
       /** Builds the client for one server; tests replace it. */
       connect?: (server: { url: string; token: string }) => ServerProvider;
+      /** Reads one server's load; tests replace it. */
+      usage?: (url: string, token: string) => Promise<SupervisorUsage | null>;
     } = {},
   ) {
     this.pageBrowser = async (computer, request: PageBrowserCommand, context) => {
@@ -148,10 +151,7 @@ export class ServerPoolSandbox implements SandboxProvider {
     context: AdapterContext,
   ): Promise<ComputerRef> {
     const innerKind = (await this.inner.provisionKind?.(request.botId)) ?? this.inner.describe().id;
-    const placed =
-      innerKind === "desktop"
-        ? undefined
-        : placeOnComputerServer(await this.directory.forHome(request.botId));
+    const placed = innerKind === "desktop" ? undefined : await this.place(request.botId);
     if (!placed) {
       return this.inner.provision(
         {
@@ -174,6 +174,31 @@ export class ServerPoolSandbox implements SandboxProvider {
       id: serverComputerRef(placed.server.id, ref.providerRef),
       providerRef: serverComputerRef(placed.server.id, ref.providerRef),
     };
+  }
+
+  /**
+   * Where a computer starts: back on its own server, else on an open server picked by free memory,
+   * since a server's computer count says nothing about how much its bots' browsers use. Servers
+   * that do not report their load are left out; with no report at all the least-used one is taken.
+   */
+  private async place(homeKey: string) {
+    const choice = await this.directory.forHome(homeKey);
+    const placed = placeOnComputerServer(choice);
+    if (!placed || placed.ref) return placed;
+    const open = choice.servers.filter(takesNewComputers);
+    if (open.length < 2) return placed;
+    const read = this.options.usage ?? readComputerServerUsage;
+    const reports = await Promise.all(
+      open.map(async (server) => {
+        const usage = await this.secrets
+          .load(server.ciphertext, server.secretId)
+          .then((token) => read(server.url, token))
+          .catch(() => null);
+        return { server, available: usage?.memory.available ?? null };
+      }),
+    );
+    const server = pickByFreeMemory(reports);
+    return server ? { server } : placed;
   }
 
   async isRunning(computer: ComputerRef, context: AdapterContext) {
@@ -456,4 +481,26 @@ export async function verifyComputerServer(
   } catch {
     return "unreachable";
   }
+}
+
+/**
+ * A server drawn in proportion to its free memory, so computers starting at the same moment on
+ * several instances spread out instead of all landing on the roomiest one. Unreported servers are
+ * skipped; undefined when none reported any.
+ */
+export function pickByFreeMemory<T>(
+  reports: readonly { server: T; available: number | null }[],
+  random: () => number = Math.random,
+): T | undefined {
+  const known = reports.filter(
+    (report): report is { server: T; available: number } =>
+      report.available !== null && report.available > 0,
+  );
+  const total = known.reduce((sum, report) => sum + report.available, 0);
+  let point = random() * total;
+  for (const report of known) {
+    point -= report.available;
+    if (point < 0) return report.server;
+  }
+  return known.at(-1)?.server;
 }
