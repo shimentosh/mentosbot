@@ -376,6 +376,48 @@ export function createUserDeviceAccess(deps: {
     if (current === origin) start(origin, device.token);
   }
 
+  /**
+   * Forgets a saved pairing the signed-in account does not list, such as one revoked while this
+   * computer could not hear it or paired for another account, so turning access on pairs afresh.
+   * Any doubt, such as being signed out or offline, keeps it.
+   */
+  async function forgetUnlisted(origin: string) {
+    const device = paired.get(origin);
+    if (!device?.deviceId) return;
+    try {
+      const response = await deps.fetch(new URL(USER_DEVICE_PATH, origin).href, {
+        method: "GET",
+        credentials: "include",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        return;
+      }
+      const body = (await response.json()) as { devices?: unknown };
+      if (!Array.isArray(body?.devices)) return;
+      const listed = body.devices.some(
+        (entry) => (entry as { deviceId?: unknown } | null)?.deviceId === device.deviceId,
+      );
+      if (listed) return;
+    } catch {
+      return;
+    }
+    if (paired.get(origin) !== device) return;
+    const token = tokens.get(origin);
+    if (client?.origin === origin) disconnect();
+    paired.delete(origin);
+    tokens.delete(origin);
+    untied.delete(origin);
+    removals.set(
+      origin,
+      deletePairedDevice(deps.userDataDir, origin).catch(() => undefined),
+    );
+    // A token another account still holds must not stay valid once this computer moves on.
+    if (token) await revokeToken(origin, token);
+  }
+
   async function revokeToken(origin: string, token: string) {
     try {
       const response = await deps.fetch(new URL(`${USER_DEVICE_PATH}/self`, origin).href, {
@@ -438,6 +480,7 @@ export function createUserDeviceAccess(deps: {
       if (!isAllowed(origin) && !(await ask(origin))) return;
       if (changes.get(origin) !== seen && consent.get(origin)?.consent !== "allowed") return;
       unavailable.delete(origin);
+      await forgetUnlisted(origin);
       await pairOnce(origin);
       if (!paired.has(origin)) throw new Error("Could not pair this computer");
       if (changes.get(origin) !== seen) return;
@@ -451,6 +494,7 @@ export function createUserDeviceAccess(deps: {
       if (origin !== current) return;
       if (routeTraffic) {
         unavailable.delete(origin);
+        await forgetUnlisted(origin);
         await pairOnce(origin);
       }
       const token = tokens.get(origin);
