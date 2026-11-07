@@ -524,6 +524,62 @@ describe("remote computer access", () => {
     expect(access.state(origin)).toEqual({ deviceId: "device-1", allowed: true });
     expect(clients.at(-1)).toMatchObject({ token: "device-token", closed: false });
   });
+  it("pairs afresh when turned on and the account no longer lists the saved computer", async () => {
+    await savePairedDevice(
+      userData,
+      origin,
+      { token: "saved-token", deviceId: "d1", userId: "alice" },
+      cipher,
+    );
+    await saveDeviceConsent(userData, origin, { consent: "allowed", userId: "alice" });
+    const { access, clients, requests } = setup({
+      fetch: async (url, init) => {
+        requests.push({ url, init });
+        if (url === `${origin}/api/devices`) return Response.json({ devices: [] });
+        if (url.endsWith("/api/devices/pair"))
+          return Response.json({ deviceId: "device-2", token: "new-token", userId: "alice" });
+        return new Response(null, { status: 204 });
+      },
+    });
+    await access.select(origin);
+    expect(access.state(origin)).toEqual({ deviceId: "d1", allowed: true });
+
+    await access.setAllowed(origin, false);
+    await access.setAllowed(origin, true);
+    expect(clients[0]).toMatchObject({ token: "saved-token", closed: true });
+    expect(clients.at(-1)).toMatchObject({ token: "new-token", closed: false });
+    expect(access.state(origin)).toEqual({ deviceId: "device-2", allowed: true });
+    expect(await readPairedDevice(userData, origin, cipher)).toMatchObject({ token: "new-token" });
+    expect(requests.find(({ init }) => init.method === "DELETE")).toMatchObject({
+      url: `${origin}/api/devices/self`,
+      init: { headers: { authorization: "Bearer saved-token" } },
+    });
+  });
+
+  it("keeps the saved computer when the account lists it or the list cannot be read", async () => {
+    await savePairedDevice(
+      userData,
+      origin,
+      { token: "saved-token", deviceId: "d1", userId: "alice" },
+      cipher,
+    );
+    let list: Response = Response.json({ devices: [{ deviceId: "d1" }] });
+    const { access, clients, requests } = setup({
+      fetch: async (url, init) => {
+        requests.push({ url, init });
+        if (url === `${origin}/api/devices`) return list;
+        return new Response(null, { status: 204 });
+      },
+    });
+    await access.select(origin);
+    await access.setRouteTraffic(origin, true);
+    list = new Response(null, { status: 401 });
+    await access.setAllowed(origin, true);
+    expect(clients).toMatchObject([{ token: "saved-token", closed: false }]);
+    expect(access.state(origin)).toEqual({ deviceId: "d1", allowed: true });
+    expect(requests.some(({ url }) => url.endsWith("/pair"))).toBe(false);
+  });
+
   /** A server that pairs whoever the window is signed in as. */
   function accountServer() {
     const server = { account: null as string | null, paired: 0 };
