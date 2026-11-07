@@ -117,13 +117,18 @@ export function computerServersForHome(
   });
 }
 
+/** A ready, unpaused server below its computer count. */
+export function takesNewComputers(
+  server: Pick<ComputerServerRecord, "paused" | "ready" | "computers" | "maxComputers">,
+) {
+  return server.ready && !server.paused && server.computers < server.maxComputers;
+}
+
 /** The least-used ready server that still takes new computers; ties go to a random one. */
 export function pickComputerServer<
   T extends Pick<ComputerServerRecord, "paused" | "ready" | "computers" | "maxComputers">,
 >(servers: readonly T[], random: () => number = Math.random): T | undefined {
-  const open = servers.filter(
-    (server) => server.ready && !server.paused && server.computers < server.maxComputers,
-  );
+  const open = servers.filter(takesNewComputers);
   if (open.length === 0) return undefined;
   const load = (server: T) => server.computers / server.maxComputers;
   const least = Math.min(...open.map(load));
