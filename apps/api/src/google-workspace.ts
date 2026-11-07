@@ -62,7 +62,11 @@ async function removeAccounts(
   where: { userId: string; spaceId?: string },
 ): Promise<void> {
   const rows = await deps.prisma.connection.findMany({
-    where: { ...where, connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID },
+    where: {
+      userId: where.userId,
+      ...(where.spaceId ? { spaceId: where.spaceId } : {}),
+      connectorId: GOOGLE_WORKSPACE_CONNECTOR_ID,
+    },
     select: { id: true, secretId: true },
   });
   for (const row of rows) {
