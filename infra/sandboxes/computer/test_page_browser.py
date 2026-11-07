@@ -1197,6 +1197,48 @@ class SignInGroupTest(unittest.TestCase):
         self.assertEqual(os.stat(first.shared).st_mode & 0o077, 0)
         self.assertEqual(os.stat(first.base).st_mode & 0o077, 0)
 
+    def remote(self, name, copy):
+        profile = os.path.join(self.profiles, f"chromium-bot-{name * 32}")
+        os.makedirs(profile, exist_ok=True)
+        return helper.SignIns(9222, self.group, profile, helper.cookie_map(copy["cookies"]),
+                              copy.get("fresh") is True)
+
+    def test_a_server_copy_carries_a_sign_in_between_computers(self):
+        first = self.remote("1", {"cookies": [], "fresh": True})
+        first.merge(FakeCookieBrowser([cookie("session", "ada")]))
+        copy = first.shared_copy()
+        self.assertEqual([c["name"] for c in copy["cookies"]], ["session"])
+        # Another computer: no file of the first one's, only the copy the server passes on.
+        other = tempfile.mkdtemp()
+        profile = os.path.join(other, ".browser-profiles", "chromium-bot-" + "2" * 32)
+        os.makedirs(profile)
+        second = helper.SignIns(9222, self.group, profile, helper.cookie_map(copy["cookies"]))
+        two = FakeCookieBrowser()
+        second.merge(two)
+        self.assertEqual(two.names(), ["session=ada"])
+        self.assertIsNone(second.shared_copy())
+        self.assertFalse(os.path.exists(first.shared))
+
+    def test_a_group_the_server_has_no_copy_of_yet_never_signs_a_browser_out(self):
+        one = FakeCookieBrowser([cookie("session", "ada")])
+        self.remote("1", {"cookies": [], "fresh": True}).merge(one)
+        # A browser that shared before, under a group the server then starts afresh.
+        self.remote("1", {"cookies": [], "fresh": True}).merge(one)
+        self.assertEqual(one.names(), ["session=ada"])
+
+    def test_signing_out_on_one_computer_signs_the_other_out(self):
+        one, two = FakeCookieBrowser([cookie("session", "ada")]), FakeCookieBrowser()
+        first = self.remote("1", {"cookies": [], "fresh": True})
+        first.merge(one)
+        second = self.remote("2", first.shared_copy())
+        second.merge(two)
+        one.jar.clear()
+        later = self.remote("1", first.shared_copy())
+        later.merge(one)
+        self.assertEqual(later.shared_copy(), {"cookies": []})
+        self.remote("2", later.shared_copy()).merge(two)
+        self.assertEqual(two.names(), [])
+
     def test_finds_only_the_computers_own_profiles(self):
         proc = os.path.join(self.root, "proc")
 

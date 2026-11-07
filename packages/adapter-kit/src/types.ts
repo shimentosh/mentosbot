@@ -1258,11 +1258,29 @@ export interface BrowserPurchaseCheckResult {
   purchase: (BrowserPurchase & { steps: number[] }) | null;
 }
 
+/**
+ * A sign-in group's cookies as the server keeps them. `fresh` marks a group with no copy yet, which a
+ * browser joins without reading the empty copy as everyone signing out.
+ */
+export interface SignInCopy {
+  cookies: Record<string, unknown>[];
+  fresh?: boolean;
+}
+
+/**
+ * The sign-in group a page call's browser shares cookies with. With `signInsCopy` the server relays
+ * the group between computers, and a call that changed it answers with the new copy as `signIns`.
+ */
+export interface PageBrowserSignIns {
+  signIns?: string;
+  signInsCopy?: SignInCopy;
+}
+
 /** A sandbox must route these commands through its owned screen, never generic host execution. */
 export type PageBrowserCommand =
-  | { command: "navigate"; url: string; downloads?: string; signIns?: string }
-  | { command: "snapshot"; query?: string; downloads?: string; signIns?: string }
-  | { command: "act"; actions: BrowserActStep[]; downloads?: string; signIns?: string }
+  | ({ command: "navigate"; url: string; downloads?: string } & PageBrowserSignIns)
+  | ({ command: "snapshot"; query?: string; downloads?: string } & PageBrowserSignIns)
+  | ({ command: "act"; actions: BrowserActStep[]; downloads?: string } & PageBrowserSignIns)
   | {
       command: "purchase_check";
       actions?: BrowserPurchaseCheckRequest["actions"];

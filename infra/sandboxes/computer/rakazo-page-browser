@@ -2399,6 +2399,8 @@ PROFILE_NAME = re.compile(r"chromium(-bot-[0-9a-f]{32}|-screen-[0-9]+)?")
 COOKIE_FIELDS = ("name", "value", "domain", "path", "expires", "httpOnly", "secure", "sameSite", "priority",
                  "sourceScheme", "sourcePort", "partitionKey")
 MAX_SIGN_IN_BYTES = 8 * 1024 * 1024
+# The group's copy rides back in the call's answer, which the supervisor caps (see its browser route).
+MAX_SIGN_IN_REPLY_BYTES = 768 * 1024
 SIGN_IN_LOCK_SECONDS = 3.0
 # The supervisor stops a call at 25 seconds.
 SIGN_IN_SHARE_BY = 18.0
@@ -2503,12 +2505,26 @@ def write_cookie_file(path: str, cookies: dict[str, dict[str, Any]]) -> None:
 
 
 class SignIns:
-    """This browser's share of its sign-in group, synced at the start and end of each call."""
+    """This browser's share of its sign-in group, synced at the start and end of each call.
 
-    def __init__(self, port: int, group: str, profile: str) -> None:
+    The group's copy is a file next to the computer's profiles, or, when the server relays the group
+    between computers, the copy it sent with this call, returned with the call's answer if it changed."""
+
+    def __init__(self, port: int, group: str, profile: str,
+                 remote: dict[str, dict[str, Any]] | None = None, fresh: bool = False) -> None:
         self.port = port
         self.shared = os.path.join(os.path.dirname(profile), f"sign-ins-{group}.json")
         self.base = os.path.join(profile, f"rakazo-sign-ins-{group}.json")
+        self.remote = remote
+        # The server holds no copy yet: like a missing file, this browser joins afresh.
+        self.fresh = fresh
+        self.remote_changed = False
+
+    def shared_copy(self) -> dict[str, Any] | None:
+        """The server's copy of the group after this call, when the call changed it."""
+        if self.remote is None or not self.remote_changed:
+            return None
+        return {"cookies": sorted(self.remote.values(), key=cookie_key)}
 
     def sync(self) -> None:
         with open(f"{self.shared}.lock", "a") as lock:
@@ -2530,7 +2546,7 @@ class SignIns:
 
     def merge(self, client: Any) -> None:
         local = cookie_map(client.call("Storage.getCookies").get("cookies"))
-        shared = read_cookie_file(self.shared)
+        shared = (None if self.fresh else self.remote) if self.remote is not None else read_cookie_file(self.shared)
         group = shared or {}
         # Without the group's file (none yet, or unreadable), this browser joins afresh: what it last
         # shared would otherwise read as everyone else signing out.
@@ -2549,16 +2565,21 @@ class SignIns:
                         client.call("Storage.setCookies", {"cookies": [change]})
             # What the browser now holds: a cookie it refused is not taken for one this browser removed.
             local = cookie_map(client.call("Storage.getCookies").get("cookies"))
-        if merged != group:
+        if self.remote is not None:
+            if merged != self.remote or self.fresh:
+                self.remote, self.remote_changed, self.fresh = merged, True, False
+        elif merged != group:
             write_cookie_file(self.shared, merged)
         write_cookie_file(self.base, local)
 
 
-def sign_ins_for(port: int, group: Any) -> SignIns | None:
+def sign_ins_for(port: int, group: Any, copy: Any = None) -> SignIns | None:
     if not isinstance(group, str) or not SIGN_IN_GROUP.fullmatch(group):
         return None
     profile = browser_profile(port)
-    return SignIns(port, group, profile) if profile else None
+    remote = cookie_map(copy.get("cookies")) if isinstance(copy, dict) else None
+    fresh = isinstance(copy, dict) and copy.get("fresh") is True
+    return SignIns(port, group, profile, remote, fresh) if profile else None
 
 
 def exit_when_stdin_closes() -> None:
@@ -2615,6 +2636,7 @@ def run(argv: list[str]) -> int:
     opened = False
     page: PageBrowser | None = None
     sign_ins: SignIns | None = None
+    output: dict[str, Any] | None = None
     try:
         if command == "purchase_check":
             # No browser running, no tab open, or one of Chromium's own pages: nothing on it can be bought.
@@ -2637,7 +2659,7 @@ def run(argv: list[str]) -> int:
         connected = True
         if command != "purchase_check":
             with contextlib.suppress(Exception):
-                sign_ins = sign_ins_for(port, args.get("signIns"))
+                sign_ins = sign_ins_for(port, args.get("signIns"), args.get("signInsCopy"))
             if sign_ins:
                 with contextlib.suppress(Exception):
                     sign_ins.sync()
@@ -2730,7 +2752,7 @@ def run(argv: list[str]) -> int:
             downloads = None
         if note:
             result["note"] = " ".join(filter(None, [result.get("note"), note]))
-        print(json.dumps({**result, **({"downloads": saved} if saved else {})}))
+        output = {**result, **({"downloads": saved} if saved else {})}
         return 0  # Structured failures preserve partial action progress.
     except Exception as exc:  # noqa: BLE001
         if downloads:
@@ -2742,7 +2764,7 @@ def run(argv: list[str]) -> int:
         dialog = page.dialog() if page else None
         failure = page.dialog_result(dialog, {}) if page and dialog else {
             "ok": False, "error": str(exc), "fallback": "computer_act", "uncertain": command == "act" and connected}
-        print(json.dumps({**failure, **({"downloads": saved} if saved else {})}))
+        output = {**failure, **({"downloads": saved} if saved else {})}
         return 0
     finally:
         if page:
@@ -2754,6 +2776,12 @@ def run(argv: list[str]) -> int:
         if sign_ins and time.monotonic() - STARTED < SIGN_IN_SHARE_BY:
             with contextlib.suppress(Exception):
                 sign_ins.sync()
+        # Printed after the last sync, so the answer carries what the call left in the group's copy.
+        if output is not None:
+            copy = sign_ins.shared_copy() if sign_ins else None
+            if copy and len(json.dumps(copy)) > MAX_SIGN_IN_REPLY_BYTES:
+                copy = None
+            print(json.dumps({**output, **({"signIns": copy} if copy else {})}))
 
 
 if __name__ == "__main__":

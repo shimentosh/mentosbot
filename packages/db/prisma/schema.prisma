@@ -79,6 +79,7 @@ model User {
   computerRuns                ComputerRun[]
   devices                     UserDevice[]
   botFolders                  BotFolder[]
+  browserSignIns              BrowserSignIns?
 
   @@unique([email])
   @@map("user")
@@ -2539,4 +2540,17 @@ model CapabilityInstallSpace {
   @@id([installId, spaceId])
   @@index([spaceId, userId])
   @@map("capability_install_spaces")
+}
+
+/// The sign-ins a person's Global browsers share, sealed by the secret store. Every computer their
+/// bots browse on gets this copy with each page call and hands back what the call changed.
+model BrowserSignIns {
+  userId     String   @id
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ciphertext String
+  /// Raised on every save, so two computers saving at once merge instead of one losing the other's.
+  version    Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@map("browser_sign_ins")
 }

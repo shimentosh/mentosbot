@@ -62,11 +62,11 @@ import {
   loadRunLoginRedactions,
 } from "./bot-secrets.js";
 import { createBrowserProvider } from "./browser-provider-factory.js";
+import { browserSignInShares } from "./browser-sign-ins.js";
 import { partitionTools } from "./builtin-tool-bridge.js";
 import { agentConnectionTools, builtinAgentTools } from "./builtin-tools.js";
 import { cloudAgentsEnabled } from "./cloud-agent-factory.js";
 import { mergeConnectedPlugins, needsLivePluginSync } from "./composio-connector.js";
-import { signInGroupKey } from "./computer-browser.js";
 import { diskNoteInstruction, recordComputerDisk } from "./computer-disk.js";
 import { scheduleComputerSleep } from "./computer-idle.js";
 import type { ComputerExecutionLease } from "./computer-lifecycle.js";
@@ -271,13 +271,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
     executorDeps.browser ??
     createBrowserProvider(undefined, {
       sandbox: executorDeps.sandbox,
-      signInsFor: async (botId) => {
-        const bot = await executorDeps.prisma.bot.findUnique({
-          where: { id: botId },
-          select: { shareSignIns: true, spaceId: true, userId: true },
-        });
-        return bot?.shareSignIns ? signInGroupKey(bot.spaceId, bot.userId) : undefined;
-      },
+      signIns: browserSignInShares(executorDeps),
     });
   const cloudAgent = executorDeps.cloudAgent;
   const resolveConnectedModel = resolveConnectedRunModel.bind(undefined, executorDeps);

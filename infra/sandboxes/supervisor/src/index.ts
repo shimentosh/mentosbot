@@ -591,6 +591,16 @@ const signIns = z
   .string()
   .regex(/^[0-9a-f]{32}$/)
   .optional();
+// The group's cookies as the server keeps them, when it relays the group between computers.
+// `fresh` marks a group the server has no copy of yet.
+const signInsCopy = z
+  .object({
+    cookies: z.array(z.record(z.string(), z.unknown())).max(4_000),
+    fresh: z.boolean().optional(),
+  })
+  .optional();
+/** A page answer, plus the group's cookies it may carry back (see MAX_SIGN_IN_REPLY_BYTES). */
+const PAGE_BROWSER_OUTPUT_BYTES = 512 * 1024 + 768 * 1024;
 
 app.post("/computers/:id/browser", async (c) => {
   // Read eagerly so the Node HTTP adapter observes disconnects during screen setup too.
@@ -611,12 +621,14 @@ app.post("/computers/:id/browser", async (c) => {
           }),
         downloads: downloadFolder,
         signIns,
+        signInsCopy,
       }),
       z.object({
         command: z.literal("snapshot"),
         query: z.string().max(200).optional(),
         downloads: downloadFolder,
         signIns,
+        signInsCopy,
       }),
       z.object({
         command: z.literal("purchase_check"),
@@ -637,6 +649,7 @@ app.post("/computers/:id/browser", async (c) => {
         command: z.literal("act"),
         downloads: downloadFolder,
         signIns,
+        signInsCopy,
         actions: z
           .array(
             z.discriminatedUnion("kind", [
@@ -708,8 +721,10 @@ app.post("/computers/:id/browser", async (c) => {
     );
   }
   const body = parsed.data;
+  // Cookies stay off argv too: any process in the computer can read it.
   const carriesSavedLogin =
-    body.command === "act" && body.actions.some((step) => "origin" in step && step.origin);
+    (body.command === "act" && body.actions.some((step) => "origin" in step && step.origin)) ||
+    ("signInsCopy" in body && Boolean(body.signInsCopy));
   const screen = (reuseRecent: boolean) =>
     managedScreen(
       c.req.param("id"),
@@ -764,7 +779,7 @@ app.post("/computers/:id/browser", async (c) => {
       if (refused) return c.json(refused);
     }
     // A nonzero exit or malformed output cannot establish which mutations ran.
-    if (result.code !== 0 || Buffer.byteLength(result.stdout) > 512 * 1024) {
+    if (result.code !== 0 || Buffer.byteLength(result.stdout) > PAGE_BROWSER_OUTPUT_BYTES) {
       throw new Error(
         /command timed out/.test(result.stderr)
           ? `Page browser timed out; the page may be busy or blocked by a dialog. ${

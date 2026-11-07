@@ -70,7 +70,8 @@ export interface LinuxDesktopHost {
 
 /** The supervisor's limit on one page-browser call, which the helper's own waits fit inside. */
 const PAGE_BROWSER_TIMEOUT_MS = 25_000;
-const PAGE_BROWSER_MAX_OUTPUT = 512 * 1024;
+/** A page answer, plus the sign-in group's cookies it may carry back (see rakazo-page-browser). */
+const PAGE_BROWSER_MAX_OUTPUT = 512 * 1024 + 768 * 1024;
 
 /** Point a bot's commands at its own screen, as Docker computers do, unless the caller chose a display. */
 export function onBotScreen(

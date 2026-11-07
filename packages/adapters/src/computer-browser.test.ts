@@ -1,7 +1,7 @@
 import type { AdapterContext, ComputerRef, PageBrowserCommand } from "@rakazo/adapter-kit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBrowserProvider, resolveBrowserProviderKind } from "./browser-provider-factory.js";
-import { ComputerBrowserProvider, signInGroupKey } from "./computer-browser.js";
+import { ComputerBrowserProvider } from "./computer-browser.js";
 import { FakeBrowserProvider } from "./fake-browser.js";
 import { pageBrowserSessionKey } from "./page-browser-session.js";
 
@@ -123,10 +123,10 @@ describe("computer browser provider", () => {
         ? { ok: true, url: "", title: "", site: "", purchase: null }
         : { ok: true, url: "https://example.test/live", title: "Live" },
     );
-    const signInsFor = vi.fn(async (botId: string) =>
-      botId === "bot-a" ? "f".repeat(32) : undefined,
+    const signIns = vi.fn(async (botId: string) =>
+      botId === "bot-a" ? { group: "f".repeat(32) } : undefined,
     );
-    const provider = new ComputerBrowserProvider({ pages, liveDriver, signInsFor });
+    const provider = new ComputerBrowserProvider({ pages, liveDriver, signIns });
     const computer: ComputerRef = { id: "c", botId: "b", kind: "docker", providerRef: "c" };
     await provider.navigate(
       computer,
@@ -146,11 +146,34 @@ describe("computer browser provider", () => {
     ).toEqual(["f".repeat(32), undefined, undefined]);
   });
 
-  it("gives each owner one sign-in group per Space", () => {
-    expect(signInGroupKey("space-1", "ada")).toMatch(/^[0-9a-f]{32}$/);
-    expect(signInGroupKey("space-1", "ada")).toBe(signInGroupKey("space-1", "ada"));
-    expect(signInGroupKey("space-1", "grace")).not.toBe(signInGroupKey("space-1", "ada"));
-    expect(signInGroupKey("space-2", "ada")).not.toBe(signInGroupKey("space-1", "ada"));
+  it("relays the group's copy to the computer and keeps what the call changed", async () => {
+    const copy = { cookies: [{ name: "session", value: "ada", domain: ".mail.test" }] };
+    const changed = { cookies: [] };
+    const liveDriver = vi.fn(async (_c: ComputerRef, _request: PageBrowserCommand) => ({
+      ok: true,
+      url: "https://example.test/live",
+      title: "Live",
+      signIns: changed,
+    }));
+    const save = vi.fn(async () => undefined);
+    const provider = new ComputerBrowserProvider({
+      pages,
+      liveDriver,
+      signIns: async () => ({ group: "f".repeat(32), copy, save }),
+    });
+    const computer: ComputerRef = { id: "c", botId: "b", kind: "docker", providerRef: "c" };
+    const nav = await provider.navigate(
+      computer,
+      { url: "https://example.test/live" },
+      { ...baseContext, botId: "bot-a" },
+    );
+    expect(liveDriver.mock.calls[0]?.[1]).toMatchObject({
+      signIns: "f".repeat(32),
+      signInsCopy: copy,
+    });
+    expect(save).toHaveBeenCalledWith(changed);
+    // Cookies never reach the page tools' answer.
+    expect(JSON.stringify(nav)).not.toContain("signIns");
   });
 
   it("browses with the browser's own sign-ins when its group cannot be read", async () => {
@@ -162,7 +185,7 @@ describe("computer browser provider", () => {
     const provider = new ComputerBrowserProvider({
       pages,
       liveDriver,
-      signInsFor: async () => {
+      signIns: async () => {
         throw new Error("database unavailable");
       },
     });

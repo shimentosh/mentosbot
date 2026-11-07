@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type {
   AdapterContext,
   BrowserActRequest,
@@ -15,9 +14,11 @@ import type {
   PageBrowserCommand,
   PageBrowserResult,
   SandboxProvider,
+  SignInCopy,
 } from "@rakazo/adapter-kit";
 import { SandboxRequestRejectedError } from "@rakazo/adapter-kit";
 import { getLogger } from "@rakazo/logging";
+import type { SignInShare, SignInShareLookup } from "./browser-sign-ins.js";
 import type { FakeBrowserProviderOptions } from "./fake-browser.js";
 import { FakeBrowserProvider } from "./fake-browser.js";
 
@@ -49,12 +50,12 @@ function cannotCheck(error: unknown): boolean {
 
 type LivePayload = Partial<PageBrowserResult>;
 
-/** The sign-in group a bot's browser shares cookies with, if any. */
-export type SignInsLookup = (botId: string) => Promise<string | undefined>;
+function isSignInCopy(value: unknown): value is SignInCopy {
+  return Array.isArray((value as SignInCopy | undefined)?.cookies);
+}
 
-/** One group per owner and Space: the bots that share sign-ins all share the same ones. */
-export function signInGroupKey(spaceId: string, userId: string): string {
-  return createHash("sha256").update(`sign-ins\0${spaceId}\0${userId}`).digest("hex").slice(0, 32);
+function errorName(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
 }
 
 export type LivePageBrowserDriver = (
@@ -75,20 +76,20 @@ export class ComputerBrowserProvider implements BrowserProvider {
   private readonly fake: FakeBrowserProvider;
   private readonly sandbox?: SandboxProvider;
   private readonly liveDriver?: LivePageBrowserDriver;
-  private readonly signInsFor?: SignInsLookup;
+  private readonly signIns?: SignInShareLookup;
 
   constructor(
     options: FakeBrowserProviderOptions & {
       sandbox?: SandboxProvider;
       /** Test seam for the live CDP helper. */
       liveDriver?: LivePageBrowserDriver;
-      signInsFor?: SignInsLookup;
+      signIns?: SignInShareLookup;
     } = {},
   ) {
-    const { sandbox, liveDriver, signInsFor, ...fakeOptions } = options;
+    const { sandbox, liveDriver, signIns, ...fakeOptions } = options;
     this.sandbox = sandbox;
     this.liveDriver = liveDriver;
-    this.signInsFor = signInsFor;
+    this.signIns = signIns;
     this.fake = new FakeBrowserProvider(fakeOptions);
   }
 
@@ -311,10 +312,19 @@ export class ComputerBrowserProvider implements BrowserProvider {
   ): Promise<LivePayload> {
     context.signal.throwIfAborted();
     try {
-      if (request.command !== "purchase_check" && context.botId && this.signInsFor) {
+      let share: SignInShare | undefined;
+      if (request.command !== "purchase_check" && context.botId && this.signIns) {
         // Best effort: without its group, the browser keeps its own sign-ins for this call.
-        const signIns = await this.signInsFor(context.botId).catch(() => undefined);
-        if (signIns) request = { ...request, signIns };
+        share = await this.signIns(context.botId, context).catch((error) => {
+          getLogger().warn("browser_sign_ins.load_failed", { "error.name": errorName(error) });
+          return undefined;
+        });
+        if (share)
+          request = {
+            ...request,
+            signIns: share.group,
+            ...(share.copy ? { signInsCopy: share.copy } : {}),
+          };
       }
       const result = this.liveDriver
         ? await this.liveDriver(computer, request, context)
@@ -326,6 +336,14 @@ export class ComputerBrowserProvider implements BrowserProvider {
               fallback: "computer_act" as const,
               uncertain: false,
             };
+      // The group's copy is the server's to keep and never reaches the page tools' answer.
+      const returned = (result as { signIns?: unknown } | undefined)?.signIns;
+      if (result && "signIns" in result) delete (result as { signIns?: unknown }).signIns;
+      if (share?.save && isSignInCopy(returned)) {
+        await share.save(returned).catch((error) => {
+          getLogger().warn("browser_sign_ins.save_failed", { "error.name": errorName(error) });
+        });
+      }
       if (result?.ok === true) {
         if (typeof result.url !== "string" || typeof result.title !== "string") {
           throw new Error("Incomplete page browser response");
