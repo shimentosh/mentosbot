@@ -47,6 +47,7 @@ import {
   subscribeComposerDraftAccepted,
   writeComposerDraft,
 } from "../../lib/composer-draft";
+import { dictationAvailable } from "../../lib/dictation";
 import { hasOpenDialog } from "../../lib/has-open-dialog";
 import { usePageSession } from "../../lib/pages";
 import { isFileDrag, isFilePaste } from "../../lib/pending-attachments";
@@ -87,7 +88,6 @@ const ComposerBody = memo(function Composer({
   onRemoveAttachment,
   onSend,
   onStop,
-  phoneCallsEnabled,
   dictationTranscribe,
   replyTarget,
   replyQuote,
@@ -126,8 +126,7 @@ const ComposerBody = memo(function Composer({
     imageHandling?: "file",
   ) => Promise<boolean>;
   onStop: () => Promise<void>;
-  phoneCallsEnabled?: boolean;
-  /** Hold-to-talk falls back to the voice provider's transcription; undefined while unknown. */
+  /** Dictation falls back to the voice provider's transcription; undefined while unknown. */
   dictationTranscribe?: boolean;
   artifactTarget: ArtifactTarget;
   replyTarget?: ThreadMessage | null;
@@ -169,11 +168,13 @@ const ComposerBody = memo(function Composer({
     editSelections.current = [];
     if (persist) writeComposerDraft(draftKey, next.text, undefined, next.bindings);
   }
-  function appendDictation(text: string) {
+  function appendDictation(text: string, focus = false) {
     if (!mountedRef.current || draftKeyRef.current !== draftKey) return;
     const current = compositionRef.current.text;
     editSelections.current = [{ start: current.length, end: current.length }];
-    updateDraft(current ? `${current} ${text}` : text);
+    const next = !current || /\s$/.test(current) ? current + text : `${current} ${text}`;
+    updateDraft(next);
+    if (focus) pendingCaret.current = { start: next.length, end: next.length };
   }
   const [mentionQuery, setMentionQuery] = useState<string | null>(
     () =>
@@ -186,10 +187,16 @@ const ComposerBody = memo(function Composer({
     return slashMatch ? (slashMatch[1] ?? "") : null;
   });
   const onCall = useCallSession() !== null;
+  const canDictate = dictationAvailable(dictationTranscribe);
   const talk = useHoldToTalk({
     transcribe: dictationTranscribe,
-    disabled: disabled || onCall || !phoneCallsEnabled,
-    onText: (text) => {
+    disabled: disabled || onCall || !canDictate,
+    hasDraft: draft.trim().length > 0,
+    onText: (text, target) => {
+      if (target === "field") {
+        appendDictation(text, true);
+        return;
+      }
       // A refused send keeps the words: they land in the field to edit or retry.
       void onSend(text, [], newClientId())
         .then((accepted) => {
@@ -232,12 +239,10 @@ const ComposerBody = memo(function Composer({
     expanded,
   } = useComposerLayout(draft, selectedSkill !== null);
   // Cmd/Ctrl+D in the message field dictates hands-free, like a keyboard press on the mic button,
-  // and sends once pressed again. The field hides while recording, so the key is heard window-wide.
+  // and adds the words to the field once pressed again. The field hides while recording, so the
+  // key is heard window-wide.
   const dictateKey = useRef({ talk, available: false });
-  dictateKey.current = {
-    talk,
-    available: Boolean(phoneCallsEnabled) && !disabled && !onCall && draft.trim().length === 0,
-  };
+  dictateKey.current = { talk, available: canDictate && !disabled && !onCall };
   useEffect(() => {
     const apple = isApplePlatform();
     function onKey(event: KeyboardEvent) {
@@ -989,9 +994,7 @@ const ComposerBody = memo(function Composer({
             <HoldToTalkControls talk={talk} />
           ) : running ? (
             <>
-              {phoneCallsEnabled && draft.trim().length === 0 ? (
-                <HoldToTalkControls talk={talk} disabled={disabled || onCall} />
-              ) : null}
+              {canDictate ? <HoldToTalkControls talk={talk} disabled={disabled || onCall} /> : null}
               <Button
                 size="icon"
                 aria-label={t`Send`}
@@ -1014,9 +1017,7 @@ const ComposerBody = memo(function Composer({
             </>
           ) : (
             <>
-              {phoneCallsEnabled && draft.trim().length === 0 ? (
-                <HoldToTalkControls talk={talk} disabled={disabled || onCall} />
-              ) : null}
+              {canDictate ? <HoldToTalkControls talk={talk} disabled={disabled || onCall} /> : null}
               <Button
                 size="icon"
                 aria-label={t`Send`}

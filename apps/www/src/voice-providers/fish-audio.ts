@@ -195,7 +195,7 @@ export const fishAudio: VoiceProvider = {
         "In Rakazo, open **Settings → Voice**, set **Provider** to **Fish Audio** and paste the key.",
         "Pick a **Voice**, then choose **Hear a sample** to check it.",
         "Optionally enter a **Speech model** to use a Fish Audio model other than the default `s2.1-pro`.",
-        "If you host Rakazo yourself, set `PHONE_CALLS_ENABLED=true` on the API and worker to turn on hold-to-talk and calls. Server admins can change the defaults with `FISH_TTS_MODEL` and `FISH_ASR_MODEL`.",
+        "If you host Rakazo yourself, set `PHONE_CALLS_ENABLED=true` on the API and worker to turn on calls. Server admins can change the defaults with `FISH_TTS_MODEL` and `FISH_ASR_MODEL`.",
       ],
     },
   ],

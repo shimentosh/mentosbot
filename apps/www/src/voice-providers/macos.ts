@@ -95,7 +95,7 @@ export const macos: VoiceProvider = {
       ],
       steps: [
         "On the Mac, clone Rakazo, copy `.env.example` to `.env`, then run `pnpm install`, `pnpm sandbox:build` and `pnpm dev`. This runs the Rakazo API directly on macOS.",
-        "To use hold-to-talk and calls, set `PHONE_CALLS_ENABLED=true` in `.env` and restart.",
+        "To use calls, set `PHONE_CALLS_ENABLED=true` in `.env` and restart.",
         "Optionally download Enhanced or Premium voices under **System Settings → Accessibility → Read & Speak**, with the Info button next to **System voice**.",
         "In Rakazo, open **Settings → Voice** and set **Provider** to **Server (Mac)**. There's no key to enter.",
         "Pick a **Voice** and choose **Hear a sample**.",

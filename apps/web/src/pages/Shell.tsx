@@ -58,6 +58,7 @@ import {
 } from "../lib/composer-enter-to-send-pref";
 import { computersAreUnavailable } from "../lib/computer-sandbox";
 import { desktopBridge } from "../lib/desktop";
+import { dictationAvailable } from "../lib/dictation";
 import { hasOpenDialog } from "../lib/has-open-dialog";
 import { PagesProvider, usePagesForChat } from "../lib/pages";
 import { markAfterPaint, markOnce } from "../lib/performance";
@@ -1241,7 +1242,6 @@ function SpaceShell() {
               onRemoveAttachment={composer.removeAttachment}
               onSend={composer.sendMessage}
               onStop={stopRun}
-              phoneCallsEnabled={bootstrapMe?.phoneCallsEnabled === true}
               dictationTranscribe={voiceStatus ? Boolean(voiceStatus.transcribe) : undefined}
               artifactTarget={transcriptArtifactTarget}
               replyTarget={composer.replyTarget}
@@ -1433,7 +1433,7 @@ function SpaceShell() {
         open={shortcutsOpen}
         onOpenChange={setShortcutsOpen}
         host={{ desktop: Boolean(desktopBridge()), apple: isApplePlatform() }}
-        dictation={Boolean(bootstrapMe?.phoneCallsEnabled)}
+        dictation={dictationAvailable(voiceStatus ? Boolean(voiceStatus.transcribe) : undefined)}
       />
 
       {computerOpen && computerBot ? (

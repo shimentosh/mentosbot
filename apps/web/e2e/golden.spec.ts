@@ -213,16 +213,19 @@ test("sign-in, spawn, and stop work in the shell", async ({ page }, testInfo) =>
   });
   await expect(composer).toHaveAttribute("placeholder", "Message Chief");
   await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
-  const holdToTalk = page
+  const dictate = page
     .getByTestId("composer-bar")
-    .getByRole("button", { name: "Hold to talk", exact: true });
-  await expect(holdToTalk).toBeVisible();
+    .getByRole("button", { name: "Dictate", exact: true });
+  await expect(dictate).toBeVisible();
   await composer.fill("Use the newer report and keep the answer short.");
-  await expect(holdToTalk).toHaveCount(0);
+  // Dictation can add to a typed draft, so the microphone stays.
+  await expect(dictate).toBeVisible();
   // Stop can arrive over the live stream before the first send returns; Send stays disabled
   // until then, and Tab would skip it.
   await expect(page.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
   await composer.press("Tab");
+  await expect(dictate).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Send", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(

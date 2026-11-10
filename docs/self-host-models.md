@@ -215,8 +215,7 @@ the API and worker.
 
 ### Calls
 
-Bots can call a user in the app, and users can hold to talk, when `PHONE_CALLS_ENABLED=true` is set on
-the API and worker. `PHONE_CALL_COOLDOWN_MINUTES` (default `2`) is the minimum time between a bot's
+Bots can call a user in the app when `PHONE_CALLS_ENABLED=true` is set on the API and worker. `PHONE_CALL_COOLDOWN_MINUTES` (default `2`) is the minimum time between a bot's
 calls to the same person, and `PHONE_CALL_RING_SECONDS` (default `45`) how long an unanswered call
 rings.
 

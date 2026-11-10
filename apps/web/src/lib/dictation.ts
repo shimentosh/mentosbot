@@ -42,6 +42,11 @@ const IDLE: DictationSnapshot = { status: "idle", transcript: "" };
 const ENDPOINT_SILENCE_MS = 1200;
 const ENDPOINT_TICK_MS = 80;
 const SILENCE_RMS = 0.035;
+/** How often the waveform reads the microphone's loudness. */
+const LEVEL_TICK_MS = 70;
+/** Room noise sits under the floor; loud speech reaches the ceiling. */
+const LEVEL_FLOOR_RMS = 0.01;
+const LEVEL_CEILING_RMS = 0.2;
 export const TRANSCRIPTION_RESPONSE_TIMEOUT_MS = 70_000;
 export const MAX_TRANSCRIPTION_RESPONSE_BYTES = 64 * 1024;
 /** Web Speech codes that mean the cloud recognizer cannot be used. */
@@ -49,6 +54,14 @@ const WEB_SPEECH_SERVICE_ERRORS = new Set(["network", "service-not-allowed"]);
 
 export function webSpeechAvailable(): boolean {
   return Boolean(speechRecognitionCtor());
+}
+
+/**
+ * Dictation can run: the browser or desktop app recognizes speech, or the connected voice
+ * provider transcribes. `transcribe` is undefined while the voice status loads.
+ */
+export function dictationAvailable(transcribe: boolean | undefined): boolean {
+  return transcribe === true || webSpeechAvailable();
 }
 
 /**
@@ -113,6 +126,22 @@ export function transcriptionLanguage(): string | undefined {
   return tag ? tag.split("-")[0]?.toLowerCase() : undefined;
 }
 
+/** Loudness for the waveform, 0 to 1, spread so quiet speech still shows. */
+export function levelFromRms(rms: number): number {
+  const loudness = (rms - LEVEL_FLOOR_RMS) / (LEVEL_CEILING_RMS - LEVEL_FLOOR_RMS);
+  return Math.sqrt(Math.min(1, Math.max(0, loudness)));
+}
+
+/** Opening the microphone again for the waveform must never trigger its own prompt. */
+async function microphoneGranted(): Promise<boolean> {
+  try {
+    const status = await navigator.permissions?.query({ name: "microphone" as PermissionName });
+    return status?.state === "granted";
+  } catch {
+    return false;
+  }
+}
+
 function normalizedTranscript(text: string): string {
   return text.trim().replace(/\s+/g, " ");
 }
@@ -169,6 +198,13 @@ function audioContextCtor(): (new () => AudioContext) | undefined {
 export class Dictation {
   private snapshot: DictationSnapshot = IDLE;
   private watchers = new Set<(s: DictationSnapshot) => void>();
+  private levelWatchers = new Set<(level: number) => void>();
+  /** Reads loudness for the waveform; `stream` is set when the meter opened its own. */
+  private meter: {
+    ctx: AudioContext;
+    timer: ReturnType<typeof setInterval>;
+    stream: MediaStream | null;
+  } | null = null;
   private recognition: SpeechRecognitionLike | null = null;
   private media: MediaRecorder | null = null;
   private chunks: Blob[] = [];
@@ -190,11 +226,21 @@ export class Dictation {
     };
   }
 
+  /** Microphone loudness, 0 to 1, while a hold recording runs; 0 once it stops. */
+  subscribeLevel(fn: (level: number) => void): () => void {
+    this.levelWatchers.add(fn);
+    return () => {
+      this.levelWatchers.delete(fn);
+    };
+  }
+
   get state(): DictationSnapshot {
     return this.snapshot;
   }
 
   private set(next: DictationSnapshot) {
+    // Some failures go idle without stop(), and the waveform must not keep the microphone.
+    if (next.status === "idle") this.stopMeter();
     this.snapshot = next;
     for (const watcher of [...this.watchers]) watcher(next);
   }
@@ -204,6 +250,7 @@ export class Dictation {
     this.transcribeAbort?.abort();
     this.transcribeAbort = null;
     this.stopVad();
+    this.stopMeter();
     clearTimeout(this.silenceTimer);
     this.silenceTimer = undefined;
     clearTimeout(this.restartTimer);
@@ -394,6 +441,7 @@ export class Dictation {
     try {
       sessionStartedAt = Date.now();
       rec.start();
+      if (mode === "hold") void this.meterOwnMicrophone(mine);
     } catch {
       if (!live || this.token !== mine) return;
       if (transcribe) {
@@ -476,9 +524,11 @@ export class Dictation {
         for (const track of stream.getTracks()) track.stop();
         if (this.token !== mine) return;
         this.stopVad();
+        this.stopMeter();
         void this.transcribeChunks(mine, spaceId);
       };
       media.start(mode === "endpoint" ? 250 : undefined);
+      if (mode === "hold") this.startMeter(stream, mine, false);
     } catch (error) {
       if (media) {
         media.ondataavailable = null;
@@ -541,6 +591,79 @@ export class Dictation {
       this.stopVad();
       return false;
     }
+  }
+
+  /**
+   * Web Speech keeps its microphone to itself, so the waveform opens its own, but only on a
+   * computer and once access was granted: a phone may mute the first capture for a second one.
+   */
+  private async meterOwnMicrophone(mine: number) {
+    if (prefersServerDictation()) return;
+    // The waveform mounts with the recording, so look for it only after this wait.
+    if (!(await microphoneGranted()) || this.token !== mine || !this.levelWatchers.size) return;
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      return;
+    }
+    if (
+      this.token !== mine ||
+      this.meter ||
+      !this.recognition ||
+      this.snapshot.status !== "listening"
+    ) {
+      for (const track of stream.getTracks()) track.stop();
+      return;
+    }
+    this.startMeter(stream, mine, true);
+  }
+
+  private startMeter(stream: MediaStream, mine: number, owned: boolean) {
+    // A fallback to the recorder replaces the meter's own microphone with the recording's.
+    this.stopMeter();
+    const release = () => {
+      if (owned) for (const track of stream.getTracks()) track.stop();
+    };
+    const Ctor = audioContextCtor();
+    if (this.token !== mine || !this.levelWatchers.size || !Ctor) {
+      release();
+      return;
+    }
+    try {
+      const ctx = new Ctor();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      if (ctx.state === "suspended") void ctx.resume();
+      const data = new Uint8Array(analyser.fftSize);
+      const timer = setInterval(() => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (const sample of data) {
+          const n = (sample - 128) / 128;
+          sum += n * n;
+        }
+        this.emitLevel(levelFromRms(Math.sqrt(sum / data.length)));
+      }, LEVEL_TICK_MS);
+      this.meter = { ctx, timer, stream: owned ? stream : null };
+    } catch {
+      release();
+    }
+  }
+
+  private stopMeter() {
+    const meter = this.meter;
+    if (!meter) return;
+    this.meter = null;
+    clearInterval(meter.timer);
+    void meter.ctx.close().catch(() => undefined);
+    for (const track of meter.stream?.getTracks() ?? []) track.stop();
+    this.emitLevel(0);
+  }
+
+  private emitLevel(level: number) {
+    for (const watcher of [...this.levelWatchers]) watcher(level);
   }
 
   private stopVad() {

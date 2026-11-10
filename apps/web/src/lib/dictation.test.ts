@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   combineTranscript,
   Dictation,
+  levelFromRms,
   MAX_TRANSCRIPTION_RESPONSE_BYTES,
   TRANSCRIPTION_RESPONSE_TIMEOUT_MS,
   transcriptionLanguage,
@@ -1910,5 +1911,77 @@ describe("transcriptionLanguage", () => {
   it("hints the provider with the app's language", () => {
     vi.stubGlobal("navigator", { language: "es-ES" });
     expect(transcriptionLanguage()).toBe("en");
+  });
+});
+
+describe("Dictation waveform level", () => {
+  it("keeps room noise flat and loud speech full", () => {
+    expect(levelFromRms(0.005)).toBe(0);
+    expect(levelFromRms(0.3)).toBe(1);
+    expect(levelFromRms(0.05)).toBeGreaterThan(levelFromRms(0.03));
+  });
+
+  it("reports loudness while a held recording runs, then silence once it ends", async () => {
+    stubRecorderFallback(vi.fn(async () => Response.json({ text: "hi" })));
+    const close = vi.fn(async () => undefined);
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        state = "running";
+        close = close;
+        createMediaStreamSource() {
+          return { connect() {} };
+        }
+        createAnalyser() {
+          return {
+            fftSize: 0,
+            getByteTimeDomainData(data: Uint8Array) {
+              data.fill(128 + 64);
+            },
+          };
+        }
+      },
+    );
+    const levels: number[] = [];
+    const dictation = new Dictation();
+    dictation.subscribeLevel((level) => levels.push(level));
+
+    await dictation.listen({ mode: "hold", transcribe: true, onFinal: vi.fn() });
+    await vi.waitFor(() => expect(levels.at(-1)).toBe(1));
+
+    dictation.stop("cancel");
+    expect(levels.at(-1)).toBe(0);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("leaves calls unmeasured", async () => {
+    stubRecorderFallback(vi.fn(async () => Response.json({ text: "hi" })));
+    const created = vi.fn();
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        constructor() {
+          created();
+        }
+        state = "running";
+        close = async () => undefined;
+        createMediaStreamSource() {
+          return { connect() {} };
+        }
+        createAnalyser() {
+          return { fftSize: 0, getByteTimeDomainData() {} };
+        }
+      },
+    );
+    const dictation = new Dictation();
+    const level = vi.fn();
+    dictation.subscribeLevel(level);
+
+    await dictation.listen({ mode: "endpoint", transcribe: true, onFinal: vi.fn() });
+
+    // Only the silence detector opens audio for a call turn.
+    expect(created).toHaveBeenCalledOnce();
+    expect(level).not.toHaveBeenCalled();
+    dictation.stop("cancel");
   });
 });
