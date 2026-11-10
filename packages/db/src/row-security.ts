@@ -138,6 +138,8 @@ export const ROW_SECURITY_MODELS: ReadonlySet<string> = new Set([
   "ModelOAuthSession",
   "BotMcpServer",
   "Computer",
+  "ComputerServer",
+  "ComputerNetworkExit",
   "ComputerRun",
   "HomeDeletionNotice",
   "Board",
@@ -162,6 +164,7 @@ export const ROW_SECURITY_MODELS: ReadonlySet<string> = new Set([
   "UserActionAutoReviewPreference",
   "SecurityEvent",
   "AuditEvent",
+  "InboxNotification",
   "Page",
   "PageVersion",
 ]);

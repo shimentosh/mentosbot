@@ -34,13 +34,14 @@ function peerTurn(turn: Turn): ModelEmulatorStep[] {
             arguments: { recordId: "customer-1", status: "active", priority: "high" },
           },
   };
-  // A write from a run another bot started waits for the owner, so the turn ends there.
-  if (!("reply" in turn)) return [subject];
+  // A write from a run another bot started waits for the owner, so the turn ends there and the
+  // peer hears only that it waits on the user.
+  const heard = "reply" in turn ? turn.reply : "Waiting for the user's answer in my chat";
   return [
     subject,
     {
       expect(request) {
-        expect(JSON.stringify(request.messages)).toContain(turn.reply);
+        expect(JSON.stringify(request.messages)).toContain(heard);
       },
       response: { type: "text", text: "Assistant replied." },
     },
@@ -74,10 +75,8 @@ describe.skipIf(!databaseAvailable)("bot deliberation eval through the product",
     async ({ id, turns, pass }) => {
       const judge = vi.fn(async () => ({ pass: true, reason: "Offline fixture verdict" }));
       const scenario = DELIBERATION_EVAL_CASES.find((c) => c.id === id)!;
-      const model = await startModelEmulator({
-        apiKey: fixtureKey,
-        steps: turns.flatMap(peerTurn),
-      });
+      const steps = turns.flatMap(peerTurn);
+      const model = await startModelEmulator({ apiKey: fixtureKey, steps });
       const dataDir = await mkdtemp(path.join(tmpdir(), "rakazo-deliberation-eval-"));
       let evidence: Evidence | undefined;
       try {
@@ -121,6 +120,10 @@ describe.skipIf(!databaseAvailable)("bot deliberation eval through the product",
               }),
           },
         );
+        // The peer wakes on what came back after the subject's run stops, so wait for its turn.
+        await vi.waitFor(() => expect(model.requests).toHaveLength(steps.length), {
+          timeout: 10_000,
+        });
         model.assertComplete();
         expect(result.cleanupFailed).toBe(false);
         if (!pass) {

@@ -97,14 +97,14 @@ describePostgres("user devices (PostgreSQL)", () => {
     await expect(gateway.connected(userId)).resolves.toMatchObject({ deviceId: device.id });
     await expect(gateway.pairedSince(userId)).resolves.toEqual(device.createdAt);
     await expect(gateway.list(userId)).resolves.toEqual([
-      { deviceId: device.id, name: "Laptop", connected: true },
+      { deviceId: device.id, name: "Laptop", connected: true, routeTraffic: false },
     ]);
     await prisma.userDeviceConnection.update({
       where: { deviceId: device.id },
       data: { heartbeatAt: new Date(Date.now() - 10 * 60_000) },
     });
     await expect(gateway.list(userId)).resolves.toEqual([
-      { deviceId: device.id, name: "Laptop", connected: false },
+      { deviceId: device.id, name: "Laptop", connected: false, routeTraffic: false },
     ]);
     await prisma.userDeviceConnection.update({
       where: { deviceId: device.id },
