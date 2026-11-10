@@ -49,7 +49,7 @@ function creditPlanHours(cents: number) {
 }
 
 /** Display names for every sandbox a self-hosted deployment can use; typed so a new kind must be named. */
-const SANDBOX_NAMES: Record<Exclude<SandboxKind, "none" | "desktop" | "fake">, string> = {
+const SANDBOX_NAMES: Record<Exclude<SandboxKind, "none" | "server" | "desktop" | "fake">, string> = {
   docker: "Docker",
   kubernetes: "Kubernetes",
   incus: "Incus",
