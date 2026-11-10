@@ -9,6 +9,7 @@ import { InviteDialog } from "../../components/InviteDialog";
 import { PasskeyOffer } from "../../components/PasskeyOffer";
 import { SidebarFooter } from "../../components/SidebarFooter";
 import { useBilling } from "../../components/SubscriptionGate";
+import { addAccountPath } from "../../lib/add-account";
 import { formatBillingDate } from "../../lib/billing";
 import type { BotsSidebarDensity } from "../../lib/bots-sidebar-density-pref";
 import { useDragEdgeScroll } from "../../lib/drag-edge-scroll";
@@ -16,6 +17,7 @@ import { switchOrganization, useOrganizations } from "../../lib/organizations";
 import { useQueryUserId } from "../../lib/query";
 import type { Panel } from "../../lib/right-panel-state";
 import { useSignOut } from "../../lib/sign-out";
+import { switchAccount, useSignedInAccounts } from "../../lib/signed-in-accounts";
 import { SpaceSearchResults } from "../SpaceSearch";
 import type { SettingsSection } from "../shell-overlay";
 import { SidebarHeader } from "./sidebar-header";
@@ -254,6 +256,7 @@ function ShellSidebarFooter({
   const { t, i18n } = useLingui();
   const userId = useQueryUserId();
   const { organizations, activeOrganizationId } = useOrganizations();
+  const signedIn = useSignedInAccounts();
   const { status: billing, showPlans } = useBilling();
   const freeUntil =
     billing?.funding === "byok" &&
@@ -351,6 +354,20 @@ function ShellSidebarFooter({
           if (organization.id !== activeOrganizationId)
             void switchOrganization(userId, organization, openSpaceChat);
         }}
+        accounts={signedIn.others}
+        onSwitchAccount={(account) => {
+          setMenuOpen(false);
+          void switchAccount(account.userId);
+        }}
+        onAddAccount={
+          signedIn.canAdd && userId
+            ? () => {
+                setMenuOpen(false);
+                closeMobileSidebar();
+                navigate(addAccountPath(userId));
+              }
+            : undefined
+        }
       />
       {referral ? (
         <InviteDialog referral={referral} open={inviteOpen} onOpenChange={setInviteOpen} />

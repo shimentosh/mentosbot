@@ -18,6 +18,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MarkdownLinkPrompt } from "./components/markdown-link-prompt";
 import { PageLoading } from "./components/PageLoading";
 import { SubscriptionGate } from "./components/SubscriptionGate";
+import { ADD_ACCOUNT_PARAM } from "./lib/add-account";
 import { authClient } from "./lib/auth";
 import { getTicketBoardEnabled, subscribeTicketBoardEnabled } from "./lib/bootstrap";
 import { syncCallIdentity } from "./lib/call-session";
@@ -194,6 +195,10 @@ function SessionApp() {
   }
 
   const user = session.data?.user;
+  // Only the account that asked to add another sees sign-in; once the new one is in, it moves on.
+  const addingAccount = Boolean(
+    user && new URLSearchParams(search).get(ADD_ACCOUNT_PARAM) === user.id,
+  );
   return (
     <QueryUserProvider value={user?.id ?? null}>
       <MarkdownLinkPrompt>
@@ -212,27 +217,31 @@ function SessionApp() {
               <Route
                 path="/sign-in"
                 element={
-                  user ? (
+                  user && !addingAccount ? (
                     <Navigate to={signInDestination} replace />
                   ) : (
-                    <AuthPage key="in" mode="in" />
+                    <AuthPage key="in" mode="in" adding={addingAccount} />
                   )
                 }
               />
               <Route
                 path="/sign-up"
                 element={
-                  user ? (
+                  user && !addingAccount ? (
                     <Navigate to={pendingInvitePath() ?? "/onboarding"} replace />
                   ) : (
-                    <AuthPage key="up" mode="up" />
+                    <AuthPage key="up" mode="up" adding={addingAccount} />
                   )
                 }
               />
               <Route
                 path="/forgot-password"
                 element={
-                  user ? <Navigate to="/app" replace /> : <AuthPage key="forgot" mode="forgot" />
+                  user && !addingAccount ? (
+                    <Navigate to="/app" replace />
+                  ) : (
+                    <AuthPage key="forgot" mode="forgot" adding={addingAccount} />
+                  )
                 }
               />
               <Route path="/reset-password" element={<PasswordResetPage />} />

@@ -13,9 +13,11 @@ import {
   SquareKanban,
   UserPlus,
   UserRound,
+  UserRoundPlus,
 } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { Organization } from "../lib/organizations";
+import type { SignedInAccount } from "../lib/signed-in-accounts";
 import { useSidebarUpdate } from "./DesktopUpdates";
 import { IconTooltip } from "./IconTooltip";
 
@@ -42,6 +44,10 @@ type Props = {
   organizations?: Organization[];
   activeOrganizationId?: string | null;
   onSwitchOrganization?: (organization: Organization) => void;
+  /** The other accounts this browser is signed in to. */
+  accounts?: SignedInAccount[];
+  onSwitchAccount?: (account: SignedInAccount) => void;
+  onAddAccount?: () => void;
 };
 
 // Marks are 24px wide, overlap by 2px, and need 2px for the outer ring.
@@ -72,6 +78,9 @@ export function SidebarFooter({
   organizations = [],
   activeOrganizationId,
   onSwitchOrganization,
+  accounts = [],
+  onSwitchAccount,
+  onAddAccount,
 }: Props) {
   const { t } = useLingui();
   const update = useSidebarUpdate();
@@ -139,6 +148,35 @@ export function SidebarFooter({
                 <p className="truncate text-xs text-muted-foreground">{email}</p>
               ) : null}
             </div>
+            {accounts.map((account) => (
+              <Button
+                key={account.userId}
+                variant="ghost"
+                data-testid="switch-account"
+                className="h-auto w-full flex-col items-start gap-0 py-1.5 font-normal"
+                onClick={() => onSwitchAccount?.(account)}
+              >
+                <span className="w-full truncate text-left">{account.name || account.email}</span>
+                {account.name && account.name !== account.email ? (
+                  <span className="w-full truncate text-left text-xs text-muted-foreground">
+                    {account.email}
+                  </span>
+                ) : null}
+              </Button>
+            ))}
+            {onAddAccount ? (
+              <Button
+                variant="ghost"
+                className="h-9 w-full justify-start gap-2.5 font-normal"
+                onClick={onAddAccount}
+              >
+                <UserRoundPlus className="text-muted-foreground" strokeWidth={1.75} />
+                <Trans>Add account</Trans>
+              </Button>
+            ) : null}
+            {accounts.length || onAddAccount ? (
+              <div className="my-1 border-t border-border" />
+            ) : null}
             {organizations.length > 1 ? (
               <>
                 {organizations.map((organization) => {

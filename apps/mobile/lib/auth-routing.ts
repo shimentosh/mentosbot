@@ -19,3 +19,9 @@ export function replaceWithSignIn(
   router.dismissTo("/");
   router.replace(route);
 }
+
+/** Leaves every screen for the inbox of the account that is open now, loaded fresh. */
+export function replaceWithHome() {
+  router.dismissTo("/");
+  router.replace("/");
+}

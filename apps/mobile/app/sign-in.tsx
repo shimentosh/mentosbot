@@ -42,6 +42,8 @@ import { useI18n } from "../lib/i18n";
 import { hasIncomingShare } from "../lib/incoming-share";
 import { useMobileTokens } from "../lib/native";
 import { passkeysAvailable, signInWithPasskey } from "../lib/passkey";
+import type { WaitingAccount } from "../lib/signed-in-accounts";
+import { openWaitingAccount, refreshWaitingAccounts } from "../lib/signed-in-accounts";
 import { continueWithSso } from "../lib/sso";
 import { credentialIssueText, errorText } from "../lib/user-error";
 
@@ -72,6 +74,7 @@ export default function SignIn() {
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [passkeys, setPasskeys] = useState(false);
+  const [waiting, setWaiting] = useState<WaitingAccount[]>([]);
 
   useEffect(() => {
     setPasswordVisible(false);
@@ -82,6 +85,20 @@ export default function SignIn() {
       setApiBase(currentApiBase());
     }, []),
   );
+
+  // Accounts this phone is still signed in to on this server open without signing in again.
+  useEffect(() => {
+    let active = true;
+    setWaiting([]);
+    void refreshWaitingAccounts()
+      .then((accounts) => {
+        if (active) setWaiting(accounts);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [apiBase]);
 
   useEffect(() => {
     void loadSessionToken().then((token) => {
@@ -273,6 +290,25 @@ export default function SignIn() {
                       ? t("Sign up for Rakazo")
                       : t("Reset your password")}
               </Text>
+              {waiting.length && !resetSent && !codeStep ? (
+                <View style={{ gap: 10, marginTop: 28 }}>
+                  {waiting.map((account) => (
+                    <NativeActionButton
+                      key={account.userId}
+                      disabled={pending}
+                      fill
+                      label={t("Continue as {email}", { email: account.email })}
+                      prominence="secondary"
+                      onPress={() =>
+                        void externalSignIn(async () => {
+                          await openWaitingAccount(account.userId);
+                          return true;
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+              ) : null}
               {resetSent ? (
                 <View style={{ alignItems: "center", marginTop: 28 }}>
                   <Pressable

@@ -19,8 +19,28 @@ export const authCapabilitiesSchema = z.object({
   nativePasskeys: z.object({ ios: z.boolean(), android: z.boolean() }).optional(),
   /** Crisp chat on the paywall; null or omitted when the deployment offers none. */
   crispWebsiteId: z.string().min(1).nullable().optional(),
+  /** Whether one device may stay signed in to several accounts. Older servers omit it: no. */
+  multipleAccounts: z.boolean().optional(),
 });
 export type AuthCapabilities = z.infer<typeof authCapabilitiesSchema>;
+
+/** Accounts one device keeps signed in at once. Each is a cookie, so this bounds request headers. */
+export const MAX_SIGNED_IN_ACCOUNTS = 5;
+
+/** The accounts this browser is signed in to; never their session tokens. */
+export const signedInAccountsSchema = z.object({
+  accounts: z.array(
+    z.object({
+      userId: z.string().min(1),
+      name: z.string(),
+      email: z.string(),
+      image: z.string().nullable(),
+      active: z.boolean(),
+    }),
+  ),
+});
+export type SignedInAccounts = z.infer<typeof signedInAccountsSchema>;
+export type SignedInAccount = SignedInAccounts["accounts"][number];
 
 export const accountSecuritySchema = z.object({
   hasPassword: z.boolean(),

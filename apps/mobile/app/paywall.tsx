@@ -31,8 +31,8 @@ import { NativeSegmentedControl } from "../components/native-segmented-control";
 import { NativeSymbol } from "../components/native-symbol";
 import { useOrganizationMenuAction } from "../components/organization-menu";
 import { FORM_COLUMN_WIDTH } from "../lib/adaptive-layout";
-import { rpc, signOut } from "../lib/api";
-import { replaceWithSignIn } from "../lib/auth-routing";
+import { rpc } from "../lib/api";
+import { replaceWithHome, replaceWithSignIn } from "../lib/auth-routing";
 import type { Plan } from "../lib/billing";
 import {
   currentPlan,
@@ -47,6 +47,7 @@ import { translucentColor } from "../lib/color";
 import { dateLocaleForUi, useI18n } from "../lib/i18n";
 import { useMobileTokens } from "../lib/native";
 import { organizationSwitchActions, useOrganizations } from "../lib/organizations";
+import { signOutAndContinue } from "../lib/signed-in-accounts";
 import { errorText } from "../lib/user-error";
 
 type Amount = (typeof MODEL_CREDIT_AMOUNTS)[number];
@@ -159,8 +160,8 @@ export default function Paywall() {
 
   async function leave() {
     try {
-      await signOut();
-      replaceWithSignIn();
+      if (await signOutAndContinue()) replaceWithHome();
+      else replaceWithSignIn();
     } catch (err) {
       Alert.alert(errorText(err, t("Could not sign out")));
     }
