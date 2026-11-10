@@ -691,6 +691,10 @@ msgstr "Add server URL"
 msgid "Add skills"
 msgstr "Add skills"
 
+#: src/components/composer/HoldToTalk.tsx
+msgid "Add to message"
+msgstr "Add to message"
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "Add to routine"
@@ -2903,6 +2907,7 @@ msgstr "Desktop update"
 msgid "Details"
 msgstr "Details"
 
+#: src/components/composer/HoldToTalk.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Dictate"
 msgstr "Dictate"
@@ -3637,14 +3642,6 @@ msgstr "High"
 #: src/lib/model-catalog.ts
 msgid "High"
 msgstr "High"
-
-#: src/components/composer/HoldToTalk.tsx
-msgid "Hold to talk"
-msgstr "Hold to talk"
-
-#: src/components/composer/HoldToTalk.tsx
-msgid "Hold to talk, release to send"
-msgstr "Hold to talk, release to send"
 
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Home"
@@ -6438,8 +6435,8 @@ msgid "Slack not enabled"
 msgstr "Slack not enabled"
 
 #: src/components/composer/HoldToTalk.tsx
-msgid "Slide up to lock"
-msgstr "Slide up to lock"
+msgid "Slide to cancel"
+msgstr "Slide to cancel"
 
 #: src/components/integrations/skills-dialog.tsx
 msgid "Some plugins could not be loaded."
@@ -6720,6 +6717,10 @@ msgstr "Table"
 #: src/pages/shell/computer-overlay.tsx
 msgid "Take control"
 msgstr "Take control"
+
+#: src/components/composer/HoldToTalk.tsx
+msgid "Tap to dictate, hold to send"
+msgstr "Tap to dictate, hold to send"
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Target"

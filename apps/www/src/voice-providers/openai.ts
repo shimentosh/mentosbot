@@ -191,7 +191,7 @@ export const openai: VoiceProvider = {
         "Each sentence is generated as a finished clip and played in order, rather than streamed, so there is a short pause before the bot starts talking.",
         "OpenAI keeps speech requests for up to 30 days for abuse monitoring and doesn't train on API data by default. Transcription requests aren't retained. Zero data retention needs OpenAI's approval.",
         "OpenAI's usage policies ask you to tell listeners the voice is AI-generated. Keep that in mind if a bot's voice reaches people outside your team.",
-        "Calls and hold-to-talk are a server setting. On a self-hosted server they stay off until the admin turns them on.",
+        "Calls are a server setting. On a self-hosted server they stay off until the admin turns them on.",
       ],
     },
     {
@@ -204,7 +204,7 @@ export const openai: VoiceProvider = {
         "In Rakazo, open **Settings → Voice**, choose **OpenAI** as the **Provider**, paste the **API key** and choose **Connect**.",
         "Pick a **Voice**, such as Marin or Cedar, and use **Hear a sample** to check it.",
         "Optionally, open a bot's settings, expand **Advanced**, turn on **Read replies aloud** and give it its own **Voice**.",
-        "If you run your own server and want calls and hold-to-talk, set `PHONE_CALLS_ENABLED=true` on the API and worker.",
+        "If you run your own server and want calls, set `PHONE_CALLS_ENABLED=true` on the API and worker.",
       ],
     },
   ],

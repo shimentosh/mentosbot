@@ -255,7 +255,7 @@ export const VOICE_PROVIDERS_HUB = {
     {
       question: "Can I talk to my AI agent by voice?",
       answer:
-        "Yes. Connect a provider in **Settings → Voice**, then hold the mic to speak, have replies read aloud, or call a bot. On a [self-hosted Rakazo](/self-hosted-ai-agent/), the admin turns on calls and hold-to-talk with `PHONE_CALLS_ENABLED=true`.",
+        "Yes. Connect a provider in **Settings → Voice**, then hold the mic to speak, have replies read aloud, or call a bot. On a [self-hosted Rakazo](/self-hosted-ai-agent/), the admin turns on calls with `PHONE_CALLS_ENABLED=true`.",
     },
     {
       question: "Which voice providers can transcribe?",

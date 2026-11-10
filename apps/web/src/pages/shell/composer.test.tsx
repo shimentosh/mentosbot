@@ -1048,10 +1048,10 @@ it.each([false, true])(
       onFinal = options.onFinal;
     });
     try {
-      const textarea = renderComposer(onSend, { phoneCallsEnabled: true });
-      const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Hold to talk"]');
+      const textarea = renderComposer(onSend, { dictationTranscribe: true });
+      const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Dictate"]');
       expect(mic).not.toBeNull();
-      act(() => mic?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+      act(() => mic?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
       act(() => onFinal("dictated words"));
       type(textarea, "typed draft");
       await act(async () => {
@@ -1087,9 +1087,9 @@ it.each([
       onFinal = options.onFinal;
     });
     try {
-      const original = renderComposer(onSend, { phoneCallsEnabled: true });
-      const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Hold to talk"]');
-      act(() => mic?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+      const original = renderComposer(onSend, { dictationTranscribe: true });
+      const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Dictate"]');
+      act(() => mic?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
       act(() => onFinal("late dictation"));
       type(original, "original draft");
       act(() => root?.unmount());
@@ -1134,11 +1134,11 @@ it("ignores dictation after switching draft keys on the same instance", async ()
           finish = resolve;
         }),
       {
-        phoneCallsEnabled: true,
+        dictationTranscribe: true,
       },
     );
-    const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Hold to talk"]');
-    act(() => mic?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Dictate"]');
+    act(() => mic?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
     act(() => onFinal("late dictation"));
     rerenderComposer({ draftKey: "bot:other-bot" });
     type(textarea, "newer draft");
@@ -1176,10 +1176,10 @@ it.each([false, true])(
       onFinal = options.onFinal;
     });
     try {
-      const textarea = renderComposer(onSend, { phoneCallsEnabled: true });
-      const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Hold to talk"]');
+      const textarea = renderComposer(onSend, { dictationTranscribe: true });
+      const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Dictate"]');
       expect(mic).not.toBeNull();
-      act(() => mic?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+      act(() => mic?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
       act(() => {
         onFinal("@Bob");
         onSnapshot({ status: "listening", transcript: "" });
@@ -1209,9 +1209,29 @@ it.each([false, true])(
   },
 );
 
-it("hides call dictation until the server enables it", () => {
-  renderComposer(vi.fn().mockResolvedValue(true));
-  expect(container?.querySelector('button[aria-label="Hold to talk"]')).toBeNull();
+it("hides dictation when neither the browser nor the voice provider can transcribe", () => {
+  renderComposer(vi.fn().mockResolvedValue(true), { dictationTranscribe: false });
+  expect(container?.querySelector('button[aria-label="Dictate"]')).toBeNull();
+});
+
+it("adds dictation to the field without sending, beside what was typed", () => {
+  const onSend = vi.fn().mockResolvedValue(true);
+  let onFinal!: (text: string) => void;
+  const listen = vi.spyOn(dictation, "listen").mockImplementation(async (options) => {
+    onFinal = options.onFinal;
+  });
+  try {
+    const textarea = renderComposer(onSend, { dictationTranscribe: true });
+    type(textarea, "Remind me");
+    const mic = container?.querySelector<HTMLButtonElement>('button[aria-label="Dictate"]');
+    expect(mic).not.toBeNull();
+    act(() => mic?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    act(() => onFinal("to call the bank"));
+    expect(textarea.value).toBe("Remind me to call the bank");
+    expect(onSend).not.toHaveBeenCalled();
+  } finally {
+    listen.mockRestore();
+  }
 });
 
 it("shows file confirmation only for a recognized server response", () => {

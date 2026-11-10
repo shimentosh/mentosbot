@@ -208,7 +208,7 @@ export const selfHosted: VoiceProvider = {
       ],
       steps: [
         "Start a speech server, for example the Kokoro-FastAPI Docker image, Speaches, or `mlx_audio.server` on a Mac.",
-        "On the Rakazo API and worker, set `MCP_ALLOW_PRIVATE_ENDPOINT=true` for a server on your network, and `PHONE_CALLS_ENABLED=true` to turn on hold-to-talk and calls. Restart them.",
+        "On the Rakazo API and worker, set `MCP_ALLOW_PRIVATE_ENDPOINT=true` for a server on your network, and `PHONE_CALLS_ENABLED=true` to turn on calls. Restart them.",
         "Open **Settings → Voice**, set **Provider** to **Self-hosted** and enter the **Server URL**, such as `http://192.168.1.10:8880/v1`. Rakazo adds `/v1` if you leave it off. If Rakazo runs in Docker and the speech server is on the same machine, use `host.docker.internal` instead of `localhost`.",
         "Add an **API key** only if your server needs one. Change **Speech model** and **Transcription model** if your server uses other names; Kokoro-FastAPI expects `kokoro`.",
         "Choose **Connect**, pick a **Voice** and choose **Hear a sample**.",

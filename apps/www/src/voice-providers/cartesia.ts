@@ -191,7 +191,7 @@ export const cartesia: VoiceProvider = {
         "Rakazo doesn't clone voices itself. Create the clone in Cartesia first. The picker loads up to 2,000 voices, and voices beyond that can't be chosen.",
         "Speech requests at once are capped per plan, from 2 on Free to 15 on Scale. Several people sharing one key on calls can hit that.",
         "Zero data retention, HIPAA agreements and regional endpoints in the EU, UK, India and Australia are Enterprise features. Cartesia is SOC 2 Type II certified.",
-        "Calls and hold-to-talk are a server setting. On a self-hosted server they stay off until the admin turns them on.",
+        "Calls are a server setting. On a self-hosted server they stay off until the admin turns them on.",
       ],
     },
     {
@@ -204,7 +204,7 @@ export const cartesia: VoiceProvider = {
         "In Rakazo, open **Settings → Voice**, choose **Cartesia** as the **Provider**, paste the **API key** and choose **Connect**.",
         "Pick a **Voice** and use **Hear a sample** to check it.",
         "Optionally, open a bot's settings, expand **Advanced**, turn on **Read replies aloud** and give it its own **Voice**.",
-        "If you run your own server and want calls and hold-to-talk, set `PHONE_CALLS_ENABLED=true` on the API and worker.",
+        "If you run your own server and want calls, set `PHONE_CALLS_ENABLED=true` on the API and worker.",
       ],
     },
   ],
