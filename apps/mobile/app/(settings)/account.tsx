@@ -41,7 +41,6 @@ import {
   passwordResetCapabilities,
   rpc,
   selectedSpaceId,
-  signOut,
   updateAccountName,
 } from "../../lib/api";
 import { formatUpdateLabel, getAppVersionInfo } from "../../lib/app-version";
@@ -52,7 +51,7 @@ import {
 } from "../../lib/appearance";
 import { useApprovalSettings } from "../../lib/approval-settings";
 import { archivedChatCounts, loadArchivedChats } from "../../lib/archived-chats";
-import { replaceWithSignIn } from "../../lib/auth-routing";
+import { replaceWithHome, replaceWithSignIn } from "../../lib/auth-routing";
 import { dateLocaleForUi, useI18n } from "../../lib/i18n";
 import type { LiveNotificationSettings } from "../../lib/live-notifications";
 import {
@@ -90,6 +89,14 @@ import { promptSectionName } from "../../lib/section-name-prompt";
 import { isSettingsLink, openFromSettingsSheet } from "../../lib/settings-sheet";
 import { ACCOUNT_SETTINGS } from "../../lib/settings-target";
 import { useSideInsets } from "../../lib/side-insets";
+import type { WaitingAccount } from "../../lib/signed-in-accounts";
+import {
+  canAddAccount,
+  holdOpenAccount,
+  openWaitingAccount,
+  refreshWaitingAccounts,
+  signOutAndContinue,
+} from "../../lib/signed-in-accounts";
 import { continueWithSso } from "../../lib/sso";
 import {
   loadTrustedLinkSites,
@@ -198,6 +205,21 @@ export default function Account() {
   const deletion = useAccountDeletion({ onSecurity: setSecurity });
   const { run: securityAction } = deletion;
   const [signingOut, setSigningOut] = useState(false);
+  const [waiting, setWaiting] = useState<WaitingAccount[]>([]);
+  const [multipleAccounts, setMultipleAccounts] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void refreshWaitingAccounts()
+        .then((accounts) => {
+          if (active) setWaiting(accounts);
+        })
+        .catch(() => undefined);
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
   const pending = deletion.pending || signingOut;
   const [notifications, setNotifications] = useState<LiveNotificationSettings>(
     DEFAULT_LIVE_NOTIFICATION_SETTINGS,
@@ -387,10 +409,23 @@ export default function Account() {
     setSigningOut(true);
     setSignOutError(null);
     try {
-      await signOut();
-      replaceWithSignIn();
+      if (await signOutAndContinue()) replaceWithHome();
+      else replaceWithSignIn();
     } catch (err) {
       setSignOutError(errorText(err, t("Could not sign out")));
+      setSigningOut(false);
+    }
+  }
+
+  /** Leaves this account for another, keeping it signed in on this phone. */
+  async function leaveAccount(change: (open: WaitingAccount) => Promise<void>, done: () => void) {
+    if (!me) return;
+    setSigningOut(true);
+    try {
+      await change({ userId: me.userId, email: me.email, name: me.name });
+      done();
+    } catch (err) {
+      Alert.alert(errorText(err, t("Could not switch accounts")));
       setSigningOut(false);
     }
   }
@@ -430,6 +465,7 @@ export default function Account() {
       .catch(() => undefined);
     void passwordResetCapabilities()
       .then(async (capabilities) => {
+        setMultipleAccounts(Boolean(capabilities.multipleAccounts));
         if (await passkeysAvailable(capabilities)) await loadPasskeys();
       })
       .catch(() => undefined);
@@ -522,6 +558,34 @@ export default function Account() {
           ) : null}
           {focus !== "usage" ? usageBlock : null}
         </SettingsGroup>
+
+        {waiting.length || (multipleAccounts && me && canAddAccount(waiting)) ? (
+          <SettingsGroup>
+            {waiting.map((other) => (
+              <SettingsRow
+                key={other.userId}
+                accessibilityRole="button"
+                disabled={pending}
+                detail={other.name && other.name !== other.email ? other.email : undefined}
+                title={other.name || other.email}
+                onPress={() =>
+                  void leaveAccount(
+                    (open) => openWaitingAccount(other.userId, open),
+                    replaceWithHome,
+                  )
+                }
+              />
+            ))}
+            {multipleAccounts && me && canAddAccount(waiting) ? (
+              <SettingsRow
+                accessibilityRole="button"
+                disabled={pending}
+                title={t("Add account")}
+                onPress={() => void leaveAccount(holdOpenAccount, () => replaceWithSignIn())}
+              />
+            ) : null}
+          </SettingsGroup>
+        ) : null}
 
         {organizations ? (
           <SettingsGroup>

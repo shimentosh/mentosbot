@@ -7,10 +7,16 @@ import type { Root } from "react-dom/client";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import Account from "../app/(settings)/account";
-import { deleteAccount, fetchAccountSecurity, requestAccountDeletionCode } from "./api";
-import { replaceWithSignIn } from "./auth-routing";
+import {
+  deleteAccount,
+  fetchAccountSecurity,
+  passwordResetCapabilities,
+  requestAccountDeletionCode,
+} from "./api";
+import { replaceWithHome, replaceWithSignIn } from "./auth-routing";
 import { promptAccountDeletion } from "./delete-account-prompt";
 import { registerSettingsSheet } from "./settings-sheet";
+import { holdOpenAccount, openWaitingAccount, refreshWaitingAccounts } from "./signed-in-accounts";
 
 type Pressed = {
   children?: ReactNode;
@@ -202,7 +208,14 @@ vi.mock("./archived-chats", () => ({
   archivedChatCounts: () => ({ bots: 0, groups: 0 }),
   loadArchivedChats: vi.fn(async () => ({ bots: [], groups: [] })),
 }));
-vi.mock("./auth-routing", () => ({ replaceWithSignIn: vi.fn() }));
+vi.mock("./auth-routing", () => ({ replaceWithHome: vi.fn(), replaceWithSignIn: vi.fn() }));
+vi.mock("./signed-in-accounts", () => ({
+  canAddAccount: () => true,
+  holdOpenAccount: vi.fn(),
+  openWaitingAccount: vi.fn(),
+  refreshWaitingAccounts: vi.fn(async () => []),
+  signOutAndContinue: vi.fn(async () => false),
+}));
 vi.mock("./delete-account-prompt", () => ({ promptAccountDeletion: vi.fn() }));
 vi.mock("./i18n", () => {
   // Stable across renders, as the real hook's is.
@@ -547,4 +560,33 @@ it("hides Messaging when no chat app is connected to the server", async () => {
   const titles = Array.from(view.screen.querySelectorAll("[data-row]"), (row) => row.textContent);
   expect(titles).toContain("Skills");
   expect(titles).not.toContain("Messaging");
+});
+
+it("opens another account this phone is signed in to, keeping this one", async () => {
+  vi.mocked(refreshWaitingAccounts).mockResolvedValueOnce([
+    { userId: "user-2", email: "work@example.test", name: "Work" },
+  ]);
+  const view = await renderAccount();
+  expect(view.button("Add account")).toBeUndefined();
+
+  await view.press("Work");
+  expect(openWaitingAccount).toHaveBeenCalledWith("user-2", {
+    userId: "user-1",
+    email: "tester@example.test",
+    name: "Tester",
+  });
+  expect(replaceWithHome).toHaveBeenCalledOnce();
+});
+
+it("adds an account when the server keeps several, leaving this one signed in", async () => {
+  vi.mocked(passwordResetCapabilities).mockResolvedValueOnce({ multipleAccounts: true } as never);
+  const view = await renderAccount();
+
+  await view.press("Add account");
+  expect(holdOpenAccount).toHaveBeenCalledWith({
+    userId: "user-1",
+    email: "tester@example.test",
+    name: "Tester",
+  });
+  expect(replaceWithSignIn).toHaveBeenCalledOnce();
 });

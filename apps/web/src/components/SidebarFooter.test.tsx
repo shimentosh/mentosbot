@@ -298,3 +298,62 @@ it("lists two organizations with the active one checked", async () => {
   await act(async () => rows[1]!.click());
   expect(onSwitch).toHaveBeenCalledWith(work);
 });
+
+async function renderAccounts(
+  accounts: Array<{ userId: string; name: string; email: string }>,
+  onSwitchAccount = vi.fn(),
+  onAddAccount?: () => void,
+) {
+  await act(async () =>
+    root.render(
+      <DesktopUpdatesProvider>
+        <SidebarFooter
+          name="Demo User"
+          initials="DU"
+          email="account@rakazo.test"
+          open
+          onOpenChange={() => {}}
+          onIntegrations={() => {}}
+          onSkills={() => {}}
+          onArtifacts={() => {}}
+          onSettings={() => {}}
+          onLogOut={() => {}}
+          signingOut={false}
+          logOutError={null}
+          accounts={accounts.map((account) => ({ ...account, image: null, active: false }))}
+          onSwitchAccount={onSwitchAccount}
+          onAddAccount={onAddAccount}
+        />
+      </DesktopUpdatesProvider>,
+    ),
+  );
+  return [...document.querySelector('[data-slot="popover-content"]')!.querySelectorAll("button")];
+}
+
+it("shows no account rows when the browser holds one account and cannot add one", async () => {
+  const rows = await renderAccounts([]);
+  expect(rows[0]!.textContent).toBe("Settings");
+});
+
+it("switches to another signed-in account and offers to add one", async () => {
+  const onSwitch = vi.fn();
+  const onAdd = vi.fn();
+  const rows = await renderAccounts(
+    [
+      { userId: "user-work", name: "Work Me", email: "work@rakazo.test" },
+      { userId: "user-bare", name: "", email: "bare@rakazo.test" },
+    ],
+    onSwitch,
+    onAdd,
+  );
+  expect(rows.map((row) => row.textContent).slice(0, 4)).toEqual([
+    "Work Mework@rakazo.test",
+    "bare@rakazo.test",
+    "Add account",
+    "Settings",
+  ]);
+  await act(async () => rows[0]!.click());
+  expect(onSwitch).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-work" }));
+  await act(async () => rows[2]!.click());
+  expect(onAdd).toHaveBeenCalledOnce();
+});

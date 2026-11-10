@@ -17,14 +17,17 @@ import {
 } from "@rakazo/ui-web";
 import { CircleUserRound } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { addAccountPath } from "../lib/add-account";
 import { authClient } from "../lib/auth";
 import { switchOrganization, useOrganizations } from "../lib/organizations";
 import { useQueryUserId } from "../lib/query";
+import { switchAccount, useSignedInAccounts } from "../lib/signed-in-accounts";
 import { DeleteAccountForm, hasDeleteRedirectError } from "./AccountAccess";
 
 /**
- * The way out before the app opens (plan choice, onboarding): log out or delete the account,
- * without reaching settings.
+ * The way out before the app opens (plan choice, onboarding): switch or add an account, log out
+ * or delete the account, without reaching settings.
  */
 export function AccountMenu({
   disabled,
@@ -39,6 +42,8 @@ export function AccountMenu({
   const email = authClient.useSession().data?.user.email;
   const userId = useQueryUserId();
   const { organizations, activeOrganizationId } = useOrganizations();
+  const signedIn = useSignedInAccounts();
+  const navigate = useNavigate();
   // An SSO sign-in to confirm deletion returns here; reopen so its error is seen.
   const [deleting, setDeleting] = useState(hasDeleteRedirectError);
   return (
@@ -63,6 +68,19 @@ export function AccountMenu({
             <>
               <DropdownMenuGroup>
                 <DropdownMenuLabel>{email}</DropdownMenuLabel>
+                {signedIn.others.map((account) => (
+                  <DropdownMenuItem
+                    key={account.userId}
+                    onClick={() => void switchAccount(account.userId)}
+                  >
+                    <span className="min-w-0 truncate">{account.email}</span>
+                  </DropdownMenuItem>
+                ))}
+                {signedIn.canAdd && userId ? (
+                  <DropdownMenuItem onClick={() => navigate(addAccountPath(userId))}>
+                    <Trans>Add account</Trans>
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
             </>

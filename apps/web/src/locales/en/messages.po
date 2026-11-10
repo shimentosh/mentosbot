@@ -627,6 +627,8 @@ msgstr "Add a trigger to run this routine."
 msgid "Add a voice provider key and pick a voice in Voice settings."
 msgstr "Add a voice provider key and pick a voice in Voice settings."
 
+#: src/components/AccountMenu.tsx
+#: src/components/SidebarFooter.tsx
 #: src/pages/IntegrationsOverlay.tsx
 msgid "Add account"
 msgstr "Add account"
@@ -1328,6 +1330,7 @@ msgstr "Can't read images"
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/ApprovalsOverlay.tsx
 #: src/pages/Artifacts.tsx
+#: src/pages/Auth.tsx
 #: src/pages/ComputerServersSettings.tsx
 #: src/pages/IntegrationsOverlay.tsx
 #: src/pages/KnowledgeSection.tsx

@@ -17,6 +17,7 @@ import {
 } from "./api";
 import type { NativeActionButtonProps } from "./native-controls";
 import { passkeysAvailable, signInWithPasskey } from "./passkey";
+import { openWaitingAccount, refreshWaitingAccounts } from "./signed-in-accounts";
 import { continueWithSso } from "./sso";
 
 const route = vi.hoisted(() => ({ mode: "in", waiting: false, redirect: vi.fn() }));
@@ -137,6 +138,10 @@ vi.mock("./api", () => ({
 vi.mock("./incoming-share", () => ({ hasIncomingShare: () => route.waiting }));
 vi.mock("./sso", () => ({ continueWithSso: vi.fn() }));
 vi.mock("./passkey", () => ({ passkeysAvailable: vi.fn(), signInWithPasskey: vi.fn() }));
+vi.mock("./signed-in-accounts", () => ({
+  openWaitingAccount: vi.fn(),
+  refreshWaitingAccounts: vi.fn(async () => []),
+}));
 vi.mock("./user-error", () => ({ credentialIssueText: vi.fn(), errorText: vi.fn() }));
 
 const capabilities = {
@@ -517,4 +522,17 @@ it("returns an existing session to the pending share", async () => {
   vi.mocked(loadSessionToken).mockResolvedValue("fake-session");
   await render();
   expect(route.redirect).toHaveBeenCalledWith("/share");
+});
+
+it("opens an account this phone is still signed in to without signing in again", async () => {
+  vi.mocked(refreshWaitingAccounts).mockResolvedValueOnce([
+    { userId: "user-2", email: "work@example.test", name: "Work" },
+  ]);
+  vi.mocked(loadSessionToken).mockResolvedValue(null as never);
+  vi.mocked(rpc).mockResolvedValue({ needsSignupSurvey: false } as never);
+  await render();
+
+  await press("Continue as work@example.test");
+  expect(openWaitingAccount).toHaveBeenCalledWith("user-2");
+  expect(router.replace).toHaveBeenCalledWith("/");
 });

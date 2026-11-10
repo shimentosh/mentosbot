@@ -319,3 +319,33 @@ it("leaves the password form unchanged without email codes", async () => {
   expect(host.querySelector<HTMLInputElement>('input[type="password"]')!.required).toBe(true);
   expect(host.querySelector('button[type="submit"]')!.textContent).toBe("Sign in");
 });
+
+it("adds an account: keeps adding across auth pages, offers a way back and opens the app", async () => {
+  const location = { assign: vi.fn() };
+  vi.stubGlobal("location", location);
+  vi.mocked(fetchAuthCapabilities).mockResolvedValue({
+    ...capabilities,
+    sso: null,
+    passwordAuth: true,
+  });
+  vi.mocked(authClient.signIn.email).mockResolvedValue({ data: {}, error: null } as never);
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={["/sign-in?add=user-1"]}>
+        <AuthPage mode="in" adding />
+      </MemoryRouter>,
+    ),
+  );
+  const links = [...host.querySelectorAll("a")].map((link) => [
+    link.textContent,
+    link.getAttribute("href"),
+  ]);
+  expect(links).toContainEqual(["Sign up", "/sign-up?add=user-1"]);
+  expect(links).toContainEqual(["Cancel", "/app"]);
+
+  await enter(host.querySelector('input[name="email"]'), "second@example.com");
+  await enter(host.querySelector('input[type="password"]'), "example-password");
+  await submit();
+  expect(location.assign).toHaveBeenCalledWith("/app");
+  vi.unstubAllGlobals();
+});

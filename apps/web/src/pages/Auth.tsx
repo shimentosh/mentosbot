@@ -10,6 +10,7 @@ import { Button, Input, InputOTP, InputOTPGroup, InputOTPSlot, Label } from "@ra
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PasskeySignIn } from "../components/PasskeySignIn";
+import { ADD_ACCOUNT_PARAM } from "../lib/add-account";
 import { authClient } from "../lib/auth";
 import type { AuthCapabilities } from "../lib/auth-capabilities";
 import { fetchAuthCapabilities } from "../lib/auth-capabilities";
@@ -24,9 +25,14 @@ const fieldClass = "mt-2 h-12 rounded-xl px-4 text-base md:text-base";
 const CODE_LENGTH = 6;
 export const submitClass = "mt-3 h-12 w-full rounded-xl text-base";
 
-export function AuthPage({ mode }: { mode: AuthMode }) {
+/** `adding`: another account is signed in and stays signed in next to this one. */
+export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: boolean }) {
   const { t } = useLingui();
   const [searchParams, setSearchParams] = useSearchParams();
+  const addingFor = adding ? searchParams.get(ADD_ACCOUNT_PARAM) : null;
+  /** Moving between sign-in, sign-up and reset keeps adding an account. */
+  const authPath = (pathname: string) =>
+    addingFor ? `${pathname}?${new URLSearchParams({ [ADD_ACCOUNT_PARAM]: addingFor })}` : pathname;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -151,7 +157,9 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
         return;
       }
       if (mode === "up" && signupRequiresEmailVerification(result.data)) {
-        setSearchParams({ verify: "email" });
+        setSearchParams(
+          addingFor ? { verify: "email", [ADD_ACCOUNT_PARAM]: addingFor } : { verify: "email" },
+        );
         return;
       }
       enterApp();
@@ -193,6 +201,8 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     // first beats it, so the guards bounce through sign-in and the shell.
     entering.current = true;
     setPending(true);
+    // Signing in to the account already open changes no user, so the routes would not move on.
+    if (adding) window.location.assign(mode === "up" ? "/onboarding" : "/app");
   }
 
   function leaveCodeStep() {
@@ -231,7 +241,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     <AuthFrame onSubmit={submit} title={title}>
       {sent ? (
         <div className="w-full text-center">
-          <Link to="/sign-in" className="font-medium text-foreground">
+          <Link to={authPath("/sign-in")} className="font-medium text-foreground">
             <Trans>Back to sign in</Trans>
           </Link>
         </div>
@@ -365,7 +375,10 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                   />
                   {mode === "in" && reset?.passwordReset ? (
                     <div className="mt-2 text-right text-sm">
-                      <Link to="/forgot-password" className="font-medium text-foreground">
+                      <Link
+                        to={authPath("/forgot-password")}
+                        className="font-medium text-foreground"
+                      >
                         <Trans>Forgot password?</Trans>
                       </Link>
                     </div>
@@ -432,24 +445,29 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                   {mode === "in" ? (
                     <>
                       <Trans>Don’t have an account?</Trans>{" "}
-                      <Link to="/sign-up" className="font-medium text-foreground">
+                      <Link to={authPath("/sign-up")} className="font-medium text-foreground">
                         <Trans>Sign up</Trans>
                       </Link>
                     </>
                   ) : mode === "up" ? (
                     <>
                       <Trans>Already have an account?</Trans>{" "}
-                      <Link to="/sign-in" className="font-medium text-foreground">
+                      <Link to={authPath("/sign-in")} className="font-medium text-foreground">
                         <Trans>Sign in</Trans>
                       </Link>
                     </>
                   ) : (
-                    <Link to="/sign-in" className="font-medium text-foreground">
+                    <Link to={authPath("/sign-in")} className="font-medium text-foreground">
                       <Trans>Back to sign in</Trans>
                     </Link>
                   )}
                 </p>
               )}
+              {adding && !codeStep ? (
+                <Link to="/app" className="mt-3 text-muted-foreground">
+                  <Trans>Cancel</Trans>
+                </Link>
+              ) : null}
             </>
           ) : null}
         </>
