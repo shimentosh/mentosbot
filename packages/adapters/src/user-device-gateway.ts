@@ -552,8 +552,8 @@ export class UserDevices implements UserDeviceGateway {
     this.fetch = deps.fetch ?? fetch;
   }
 
-  async connected(userId: string): Promise<UserDevice | null> {
-    const route = await this.route(userId);
+  async connected(userId: string, deviceId?: string): Promise<UserDevice | null> {
+    const route = await this.route(userId, deviceId);
     return route && { deviceId: route.deviceId, name: route.name, platform: route.platform };
   }
 

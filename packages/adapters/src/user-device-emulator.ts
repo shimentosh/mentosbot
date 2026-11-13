@@ -13,7 +13,8 @@ export const USER_DEVICE_EMULATOR_OUTPUT = "fixture-mac\n";
 export class UserDeviceEmulator implements UserDeviceGateway {
   readonly requests: Array<{ userId: string; request: HostComputerRequest }> = [];
 
-  async connected(_userId: string): Promise<UserDevice> {
+  async connected(_userId: string, deviceId?: string): Promise<UserDevice | null> {
+    if (deviceId && deviceId !== "emulated-device") return null;
     return { deviceId: "emulated-device", name: "Fixture Mac", platform: "darwin" };
   }
 

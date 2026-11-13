@@ -1566,6 +1566,16 @@ app.whenReady().then(async () => {
     await userDevices?.setAllowed(origin, allowed);
     return deviceState(remoteDeviceOrigin(event));
   });
+  // The system's own folder picker, so a project folder is chosen on the computer in use.
+  ipcMain.handle("desktop.device.chooseFolder", async (event) => {
+    const win = windowFrom(event);
+    if (remoteDeviceOrigin(event) === null || !win) return null;
+    const result = await dialog.showOpenDialog(win, {
+      defaultPath: app.getPath("home"),
+      properties: ["openDirectory", "createDirectory"],
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
   ipcMain.handle("desktop.device.setRouteTraffic", async (event, routeTraffic: unknown) => {
     const origin = remoteDeviceOrigin(event);
     if (origin === null || typeof routeTraffic !== "boolean") return null;

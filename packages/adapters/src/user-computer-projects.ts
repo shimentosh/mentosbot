@@ -48,15 +48,19 @@ async function lastValue<T>(values: AsyncIterable<T>): Promise<T> {
   return result.value;
 }
 
-/** Reaches the owner's connected computer for this bot, or undefined when none is connected. */
+/**
+ * Reaches the owner's connected computer for this bot, or undefined when none is connected.
+ * With `deviceId`, only that computer.
+ */
 export async function openUserComputer(input: {
   devices: UserDeviceGateway;
   owner: string;
+  deviceId?: string;
   botId: string;
   runId?: string;
   signal: AbortSignal;
 }): Promise<UserComputerSession | undefined> {
-  const device = await input.devices.connected(input.owner).catch(() => null);
+  const device = await input.devices.connected(input.owner, input.deviceId).catch(() => null);
   if (!device) return undefined;
   const request = { botId: input.botId, ...(input.runId ? { runId: input.runId } : {}) };
   // The device only executes for a provisioned bot; provisioning is idempotent.

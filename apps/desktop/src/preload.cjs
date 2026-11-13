@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld("rakazoDesktop", {
     setAllowed: (allowed) => ipcRenderer.invoke("desktop.device.setAllowed", allowed),
     setRouteTraffic: (routeTraffic) =>
       ipcRenderer.invoke("desktop.device.setRouteTraffic", routeTraffic),
+    chooseFolder: () => ipcRenderer.invoke("desktop.device.chooseFolder"),
   },
   menu: {
     onCommand: (listener) => {

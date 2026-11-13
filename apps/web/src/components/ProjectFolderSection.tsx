@@ -4,15 +4,22 @@ import { Button, SectionHeading } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { ExternalLink, FolderCode, X } from "lucide-react";
 import { useState } from "react";
+import { thisComputer } from "../lib/desktop";
 import { queryClient, spaceQueries, useQueryUserId } from "../lib/query";
 import { rpc, selectedSpaceId } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
 import { FolderPickerDialog } from "./FolderPickerDialog";
 
+/** Names the computer the desktop app runs on, so folder work stays on it. */
+async function onThisComputer() {
+  const computer = await thisComputer();
+  return computer ? { deviceId: computer.deviceId } : {};
+}
+
 export function projectFolderQuery(userId: string | null, botId: string) {
   return queryOptions({
     queryKey: [...spaceQueries(userId, selectedSpaceId()).key(), "project-folder", botId],
-    queryFn: () => rpc.projectFolder.get({ botId }),
+    queryFn: async () => rpc.projectFolder.get({ botId, ...(await onThisComputer()) }),
   });
 }
 
@@ -44,6 +51,14 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
     }
   }
 
+  async function choose() {
+    const computer = await thisComputer();
+    if (!computer?.chooseFolder) return setPicking(true);
+    const path = await computer.chooseFolder();
+    if (path)
+      await update(() => rpc.projectFolder.set({ botId, path, deviceId: computer.deviceId }));
+  }
+
   if (!status?.available || (!status.connected && !status.folder)) return null;
   const { folder, processes } = status;
   return (
@@ -62,7 +77,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
               </div>
             </div>
             {status.connected ? (
-              <Button variant="ghost" size="sm" disabled={busy} onClick={() => setPicking(true)}>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => void choose()}>
                 <Trans>Change</Trans>
               </Button>
             ) : null}
@@ -71,7 +86,11 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
               size="icon-sm"
               aria-label={t`Stop using this folder`}
               disabled={busy}
-              onClick={() => void update(() => rpc.projectFolder.set({ botId, path: null }))}
+              onClick={() =>
+                void update(async () =>
+                  rpc.projectFolder.set({ botId, path: null, ...(await onThisComputer()) }),
+                )
+              }
             >
               <X aria-hidden size={15} />
             </Button>
@@ -81,7 +100,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
             variant="secondary"
             className="w-full"
             disabled={busy}
-            onClick={() => setPicking(true)}
+            onClick={() => void choose()}
           >
             <FolderCode aria-hidden size={16} />
             <Trans>Choose folder</Trans>
@@ -124,7 +143,13 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
                 size="sm"
                 disabled={busy}
                 onClick={() =>
-                  void update(() => rpc.projectFolder.stop({ botId, name: process.name }))
+                  void update(async () =>
+                    rpc.projectFolder.stop({
+                      botId,
+                      name: process.name,
+                      ...(await onThisComputer()),
+                    }),
+                  )
                 }
               >
                 <Trans>Stop</Trans>
