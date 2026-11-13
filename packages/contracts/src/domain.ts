@@ -339,6 +339,14 @@ export const BotSectionSchema = z.object({
 });
 export type BotSection = z.infer<typeof BotSectionSchema>;
 
+export const ReorderBotSectionsInput = z.object({
+  sectionIds: z
+    .array(Id)
+    .min(1)
+    .refine((ids) => new Set(ids).size === ids.length, { error: "sectionIds must be distinct" }),
+});
+export type ReorderBotSectionsInput = z.infer<typeof ReorderBotSectionsInput>;
+
 /**
  * A space is a real privacy boundary, not just sidebar organization.
  * Bots are included so clients can keep every space visible without granting

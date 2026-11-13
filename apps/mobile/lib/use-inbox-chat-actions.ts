@@ -283,6 +283,26 @@ export function useInboxChatActions({
     },
     [loadBots, t],
   );
+  /** Swaps a section with its neighbour above (-1) or below (1) and saves the order. */
+  const moveSection = useCallback(
+    (sectionId: string, offset: -1 | 1) => {
+      const sectionIds = botSections.map((section) => section.id);
+      const index = sectionIds.indexOf(sectionId);
+      const neighbour = sectionIds[index + offset];
+      if (index < 0 || !neighbour) return;
+      sectionIds[index + offset] = sectionId;
+      sectionIds[index] = neighbour;
+      void (async () => {
+        try {
+          await rpc("botSections/reorder", { sectionIds });
+          await loadBots();
+        } catch (err) {
+          Alert.alert(t("Could not move section"), errorText(err, t("Try again.")));
+        }
+      })();
+    },
+    [botSections, loadBots, t],
+  );
   return {
     unreadOverrides,
     archiving,
@@ -295,5 +315,6 @@ export function useInboxChatActions({
     organizeFromMenu,
     editSectionFromMenu,
     deleteSection,
+    moveSection,
   };
 }

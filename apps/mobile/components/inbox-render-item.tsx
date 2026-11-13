@@ -2,7 +2,7 @@ import { MenuView } from "@expo/ui/community/menu";
 import type { SpaceBot, SpaceGroup } from "@rakazo/contracts";
 import { useRouter } from "expo-router";
 import { useCallback } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Alert, Platform, Pressable, Text, View } from "react-native";
 import type { MobileBot, MobileBotSection, MobileGroup } from "../lib/api";
 import type { ResolvedAppearance } from "../lib/appearance";
 import { AvatarRow } from "../lib/avatar-life";
@@ -20,6 +20,31 @@ import { NativeSymbol } from "./native-symbol";
 export const SWIPE_ROWS = Platform.OS === "ios";
 
 type ChatActions = ReturnType<typeof useInboxChatActions>;
+
+/** Move up and Move down for a section of the selected space, where it has a neighbour. */
+function sectionMoves(
+  sections: MobileBotSection[],
+  sectionId: string,
+  t: (text: string) => string,
+) {
+  const index = sections.findIndex((section) => section.id === sectionId);
+  return [
+    ...(index > 0 ? [{ id: "up", title: t("Move up"), image: "arrow.up" as const }] : []),
+    ...(index >= 0 && index < sections.length - 1
+      ? [{ id: "down", title: t("Move down"), image: "arrow.down" as const }]
+      : []),
+  ];
+}
+
+function runSectionAction(
+  section: { id: string; name: string },
+  action: string,
+  actions: Pick<ChatActions, "moveSection" | "deleteSection">,
+) {
+  if (action === "up") actions.moveSection(section.id, -1);
+  else if (action === "down") actions.moveSection(section.id, 1);
+  else actions.deleteSection(section);
+}
 
 /** The end of the inbox list: the create hint while it is needed, then the archived chats. */
 export function InboxListFooter({
@@ -51,6 +76,7 @@ export function useInboxRenderItem({
   deleteSection,
   editSectionFromMenu,
   groupAction,
+  moveSection,
   spaceId,
   openBot,
   openGroup,
@@ -63,7 +89,12 @@ export function useInboxRenderItem({
   toggleCollapsed,
 }: Pick<
   ChatActions,
-  "botAction" | "groupAction" | "organizeFromMenu" | "editSectionFromMenu" | "deleteSection"
+  | "botAction"
+  | "groupAction"
+  | "organizeFromMenu"
+  | "editSectionFromMenu"
+  | "deleteSection"
+  | "moveSection"
 > & {
   appearance: ResolvedAppearance;
   botSections: MobileBotSection[];
@@ -169,10 +200,28 @@ export function useInboxRenderItem({
               // A plain button, like the create control: the Android menu trigger can collapse to
               // zero width on an older binary, which would hide the only way to delete an empty section.
               <Pressable
-                accessibilityLabel={t("Delete section")}
+                accessibilityLabel={t("Section actions for {name}", { name: item.title })}
                 accessibilityRole="button"
                 onPress={() => {
-                  if (item.sectionId) deleteSection({ id: item.sectionId, name: item.title });
+                  if (!item.sectionId) return;
+                  const section = { id: item.sectionId, name: item.title };
+                  const moves = sectionMoves(botSections, section.id, t);
+                  if (moves.length === 0) {
+                    deleteSection(section);
+                    return;
+                  }
+                  // Android alerts hold three buttons; tapping outside cancels.
+                  Alert.alert(
+                    item.title,
+                    undefined,
+                    [...moves, { id: "delete", title: t("Delete section") }].map((entry) => ({
+                      text: entry.title,
+                      style: entry.id === "delete" ? ("destructive" as const) : undefined,
+                      onPress: () =>
+                        runSectionAction(section, entry.id, { moveSection, deleteSection }),
+                    })),
+                    { cancelable: true },
+                  );
                 }}
                 style={styles.spaceActions}
               >
@@ -181,6 +230,7 @@ export function useInboxRenderItem({
             ) : (
               <MenuView
                 actions={[
+                  ...sectionMoves(botSections, item.sectionId, t),
                   {
                     id: "delete",
                     title: t("Delete section"),
@@ -189,8 +239,13 @@ export function useInboxRenderItem({
                   },
                 ]}
                 colorScheme={appearance}
-                onPressAction={() => {
-                  if (item.sectionId) deleteSection({ id: item.sectionId, name: item.title });
+                onPressAction={({ nativeEvent }) => {
+                  if (item.sectionId) {
+                    runSectionAction({ id: item.sectionId, name: item.title }, nativeEvent.event, {
+                      moveSection,
+                      deleteSection,
+                    });
+                  }
                 }}
               >
                 <View
@@ -237,6 +292,7 @@ export function useInboxRenderItem({
       day,
       editSectionFromMenu,
       groupAction,
+      moveSection,
       spaceId,
       openBot,
       openGroup,

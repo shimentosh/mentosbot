@@ -14,7 +14,16 @@ import {
   ContextMenuTrigger,
   GroupAvatar,
 } from "@rakazo/ui-web";
-import { ChevronDown, CircleAlert, Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  CircleAlert,
+  Lock,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
 import { Suspense } from "react";
 import { IconTooltip } from "../../components/IconTooltip";
@@ -52,6 +61,9 @@ export function SidebarRoster({
   displayedRunError,
   draggedBotId,
   setDraggedBotId,
+  draggedSectionId,
+  setDraggedSectionId,
+  moveBotSection,
   botMenu,
   setBotMenu,
   reorderRosterBot,
@@ -84,6 +96,9 @@ export function SidebarRoster({
   displayedRunError: string | null;
   draggedBotId: string | null;
   setDraggedBotId: (id: string | null) => void;
+  draggedSectionId: string | null;
+  setDraggedSectionId: (id: string | null) => void;
+  moveBotSection: (sourceId: string, targetId: string) => void;
   botMenu: { kind: "bot" | "group"; id: string } | null;
   setBotMenu: Dispatch<SetStateAction<{ kind: "bot" | "group"; id: string } | null>>;
   reorderRosterBot: (sourceId: string, targetId: string, groupBotIds: string[]) => void;
@@ -114,6 +129,21 @@ export function SidebarRoster({
               : (spaces.find((space) => space.id === group.spaceId)?.botSections ?? [])
             ).find((item) => item.id === group.sectionId)
           : undefined;
+        // Only the open space's own sections can be reordered from here.
+        const sectionIndex =
+          !mini && section && group.spaceId === bootstrapMe?.spaceId
+            ? botSections.findIndex((item) => item.id === section.id)
+            : -1;
+        const movableSection = sectionIndex >= 0 ? section : undefined;
+        const previousSection = movableSection ? botSections[sectionIndex - 1] : undefined;
+        const nextSection = movableSection ? botSections[sectionIndex + 1] : undefined;
+        const sectionDropKey = `section:${group.key}`;
+        const sectionDropEdge =
+          rosterDropKey === sectionDropKey && draggedSectionId
+            ? botSections.findIndex((item) => item.id === draggedSectionId) < sectionIndex
+              ? "after"
+              : "before"
+            : null;
         return (
           <Collapsible
             key={group.key}
@@ -122,8 +152,39 @@ export function SidebarRoster({
               if (!mini) toggleSidebarSection(group.key);
             }}
             data-sidebar-group={group.key}
-            className={`flex flex-col gap-0.5 ${mini && groupIndex > 0 ? "mt-2 border-t border-sidebar-border pt-2" : ""}`}
+            data-section-drop={sectionDropEdge ?? undefined}
+            className={`relative flex flex-col gap-0.5 ${mini && groupIndex > 0 ? "mt-2 border-t border-sidebar-border pt-2" : ""}`}
+            style={{ opacity: movableSection && draggedSectionId === movableSection.id ? 0.55 : 1 }}
+            onDragOver={(event) => {
+              if (!draggedSectionId || !movableSection || draggedSectionId === movableSection.id)
+                return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              if (rosterDropKey !== sectionDropKey) setRosterDropKey(sectionDropKey);
+            }}
+            onDragLeave={(event) => {
+              if (
+                rosterDropKey === sectionDropKey &&
+                !event.currentTarget.contains(event.relatedTarget as Node | null)
+              )
+                setRosterDropKey(null);
+            }}
+            onDrop={(event) => {
+              if (!draggedSectionId || !movableSection) return;
+              event.preventDefault();
+              moveBotSection(draggedSectionId, movableSection.id);
+              setDraggedSectionId(null);
+              setRosterDropKey(null);
+            }}
           >
+            {sectionDropEdge ? (
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none absolute inset-x-2 h-0.5 rounded-full bg-primary ${
+                  sectionDropEdge === "before" ? "-top-px" : "-bottom-px"
+                }`}
+              />
+            ) : null}
             {!mini && (group.title || hasSpaceActions) ? (
               // biome-ignore lint/a11y/useSemanticElements: groups sidebar controls, not form fields; Move to remains the keyboard alternative.
               <div
@@ -157,6 +218,30 @@ export function SidebarRoster({
                       render={
                         group.emptySpaceId ? <button type="button" /> : <CollapsibleTrigger />
                       }
+                      draggable={Boolean(movableSection)}
+                      aria-keyshortcuts={movableSection ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
+                      onDragStart={(event) => {
+                        if (!movableSection) return;
+                        setDraggedSectionId(movableSection.id);
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/plain", movableSection.id);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedSectionId(null);
+                        setRosterDropKey(null);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!movableSection || !event.altKey) return;
+                        const target =
+                          event.key === "ArrowUp"
+                            ? previousSection
+                            : event.key === "ArrowDown"
+                              ? nextSection
+                              : undefined;
+                        if (!target) return;
+                        event.preventDefault();
+                        moveBotSection(movableSection.id, target.id);
+                      }}
                       className={`flex min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${hasSpaceActions ? "col-start-1 row-start-1 w-full" : "flex-1"}`}
                       onClick={() => {
                         if (group.emptySpaceId) {
@@ -222,6 +307,22 @@ export function SidebarRoster({
                           <Pencil />
                           {t`Rename section`}
                         </ContextMenuItem>
+                        {movableSection && previousSection ? (
+                          <ContextMenuItem
+                            onClick={() => moveBotSection(movableSection.id, previousSection.id)}
+                          >
+                            <ArrowUp />
+                            {t`Move up`}
+                          </ContextMenuItem>
+                        ) : null}
+                        {movableSection && nextSection ? (
+                          <ContextMenuItem
+                            onClick={() => moveBotSection(movableSection.id, nextSection.id)}
+                          >
+                            <ArrowDown />
+                            {t`Move down`}
+                          </ContextMenuItem>
+                        ) : null}
                         <ContextMenuItem
                           variant="destructive"
                           onClick={() =>

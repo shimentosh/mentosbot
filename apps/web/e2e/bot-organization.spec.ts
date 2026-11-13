@@ -215,6 +215,78 @@ test("bots can be reordered by drag or keyboard and keep that order", async ({ p
   await expect.poll(order).toEqual([beta.id, alpha.id, chiefId]);
 });
 
+test("sections reorder by drag, menu or keyboard, and bots drop where they land", async ({
+  page,
+}, testInfo) => {
+  await signup(page, `section-order-${Date.now()}@rakazo.test`, "password12", "Section Order");
+  await completeOnboarding(page);
+  const chiefId = activeBotId(page);
+  const bot = (name: string) =>
+    rpc<{ id: string }>(page, "bots/create", { name, computerMode: "team" });
+  const alpha = await bot("Alpha");
+  const beta = await bot("Beta");
+  const first = await rpc<{ id: string }>(page, "botSections/create", {
+    botId: alpha.id,
+    name: "First",
+  });
+  const second = await rpc<{ id: string }>(page, "botSections/create", {
+    botId: beta.id,
+    name: "Second",
+  });
+  await page.reload();
+
+  const sidebar = page.locator("aside").first();
+  const sectionOrder = () =>
+    sidebar
+      .locator('[data-sidebar-group^="section:"]')
+      .evaluateAll((items) => items.map((item) => item.getAttribute("data-sidebar-group")));
+  const firstKey = `section:${first.id}`;
+  const secondKey = `section:${second.id}`;
+  await expect.poll(sectionOrder).toEqual([firstKey, secondKey]);
+
+  const saved = () =>
+    page.waitForResponse(
+      (response) => response.url().includes("/rpc/botSections/reorder") && response.ok(),
+    );
+  const header = (name: string) =>
+    sidebar.getByRole("button", { name: `Collapse ${name}`, exact: true });
+
+  let reordered = saved();
+  await header("Second").dragTo(header("First"));
+  await reordered;
+  await expect.poll(sectionOrder).toEqual([secondKey, firstKey]);
+  await captureScreenshot(page, testInfo, "sections-reordered");
+  await page.reload();
+  await expect.poll(sectionOrder).toEqual([secondKey, firstKey]);
+
+  reordered = saved();
+  await header("First").click({ button: "right" });
+  await page
+    .getByRole("menu", { name: "Actions for First" })
+    .getByRole("menuitem", { name: "Move up", exact: true })
+    .click();
+  await reordered;
+  await expect.poll(sectionOrder).toEqual([firstKey, secondKey]);
+
+  reordered = saved();
+  await header("First").focus();
+  await page.keyboard.press("Alt+ArrowDown");
+  await reordered;
+  await expect.poll(sectionOrder).toEqual([secondKey, firstKey]);
+
+  // Chief starts unassigned; dropped on Beta it joins Second at Beta's place.
+  const secondRows = () =>
+    sidebar
+      .locator(`[data-sidebar-group="${secondKey}"] [data-roster-bot-id]`)
+      .evaluateAll((items) => items.map((item) => item.getAttribute("data-roster-bot-id")));
+  await sidebar
+    .locator(`[data-roster-bot-id="${chiefId}"]`)
+    .dragTo(sidebar.locator(`[data-roster-bot-id="${beta.id}"]`));
+  await expect.poll(secondRows).toEqual([chiefId, beta.id]);
+  await page.reload();
+  await expect.poll(secondRows).toEqual([chiefId, beta.id]);
+});
+
 test("chat composer controls are vertically centered", async ({ page }, testInfo) => {
   const stamp = Date.now();
   await signup(page, `composer-layout-${stamp}@rakazo.test`, "password12", "Composer Layout");

@@ -354,6 +354,25 @@ export function createRepos(
       }
     },
 
+    /** Save the actor's section order; the list must name every one of their sections here. */
+    async reorderBotSections(actor: Actor, sectionIds: string[]): Promise<void> {
+      await prisma.$transaction(async (tx) => {
+        const sections = await tx.botSection.findMany({
+          where: { spaceId: actor.spaceId, userId: actor.userId },
+          select: { id: true },
+        });
+        const existing = new Set(sections.map((section) => section.id));
+        if (existing.size !== sectionIds.length || sectionIds.some((id) => !existing.has(id))) {
+          throw new IsolationError();
+        }
+        await Promise.all(
+          sectionIds.map((id, position) =>
+            tx.botSection.update({ where: { id }, data: { position } }),
+          ),
+        );
+      });
+    },
+
     /** Delete one of the actor's sections; its bots and groups stay, unsectioned (FK SetNull). */
     async deleteBotSection(actor: Actor, input: { sectionId: string }) {
       return prisma.$transaction(async (tx) => {

@@ -375,6 +375,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     organizeFromMenu,
     editSectionFromMenu,
     deleteSection,
+    moveSection,
   } = useInboxChatActions({ loadBots, setBots, setGroups, setSpaces, botSections });
 
   const loadActivity = useCallback(async () => {
@@ -794,6 +795,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     deleteSection,
     editSectionFromMenu,
     groupAction,
+    moveSection,
     spaceId: me?.spaceId,
     openBot,
     openGroup,

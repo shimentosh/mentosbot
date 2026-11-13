@@ -9,13 +9,13 @@ export type RosterDropTarget =
 
 export type RosterDropAction =
   | { action: "reorder"; targetBotId: string }
-  | { action: "move"; sectionId: string | null }
+  | { action: "move"; sectionId: string | null; targetBotId?: string }
   | { action: "join"; groupId: string; botIds: string[] };
 
 /**
  * Decide what dropping a dragged bot on a sidebar target does. Dropping on a
- * sibling row reorders; dropping on another section (its header or one of its
- * rows) moves the bot there; dropping on a group chat adds the bot as a member.
+ * sibling row reorders; dropping on another section moves the bot there, at the
+ * dropped row or, on the header, at the top; dropping on a group chat adds the bot as a member.
  * Pinned bots live in the Pinned list, so they only reorder. Returns null when
  * the drop should be refused.
  */
@@ -33,7 +33,7 @@ export function resolveRosterDrop(input: {
       if (dragged.pinned || target.chat.sectionId === dragged.sectionId) {
         return input.sameList ? { action: "reorder", targetBotId: target.chat.id } : null;
       }
-      return { action: "move", sectionId: target.chat.sectionId };
+      return { action: "move", sectionId: target.chat.sectionId, targetBotId: target.chat.id };
     }
     case "section": {
       if (dragged.pinned || target.sectionId === dragged.sectionId) return null;

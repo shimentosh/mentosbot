@@ -747,6 +747,7 @@ function SpaceShell() {
     rpc,
     bots,
     reorderRosterBot: roster.reorderRosterBot,
+    moveRosterBot: roster.moveRosterBot,
     refreshBots,
     refreshGroupThread: (id) => refreshGroupThreadRef.current(id),
     activeGroupId,
@@ -1051,6 +1052,9 @@ function SpaceShell() {
             displayedRunError={composer.displayedRunError}
             draggedBotId={rosterDrop.draggedBotId}
             setDraggedBotId={rosterDrop.setDraggedBotId}
+            draggedSectionId={rosterDrop.draggedSectionId}
+            setDraggedSectionId={rosterDrop.setDraggedSectionId}
+            moveBotSection={roster.moveBotSection}
             botMenu={botMenu}
             setBotMenu={setBotMenu}
             reorderRosterBot={roster.reorderRosterBot}

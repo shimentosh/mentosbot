@@ -462,10 +462,21 @@ describeJourneys("required product journeys", () => {
     expect(await rpc<Array<{ id: string; name: string }>>(app, ada, "botSections/list")).toEqual([
       expect.objectContaining({ id: section.id, name: "Delivery" }),
     ]);
-    await rpc<{ id: string; name: string }>(app, ada, "botSections/create", {
+    const archiveSection = await rpc<{ id: string; name: string }>(app, ada, "botSections/create", {
       botId: coder.id,
       name: "Archive",
     });
+    await rpc(app, ada, "botSections/reorder", { sectionIds: [archiveSection.id, section.id] });
+    expect(
+      (await rpc<Array<{ id: string }>>(app, ada, "botSections/list")).map((item) => item.id),
+    ).toEqual([archiveSection.id, section.id]);
+    expect(
+      (await raw(app, ada, "botSections/reorder", { sectionIds: [section.id] })).status,
+    ).toBeGreaterThanOrEqual(400);
+    expect(
+      (await raw(app, bob, "botSections/reorder", { sectionIds: [archiveSection.id, section.id] }))
+        .status,
+    ).toBeGreaterThanOrEqual(400);
     const renameClash = await raw(app, ada, "botSections/update", {
       sectionId: section.id,
       name: "Archive",

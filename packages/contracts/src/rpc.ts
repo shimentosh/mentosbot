@@ -134,6 +134,7 @@ import {
   PluginSubmissionSchema,
   PluginSubmissionStatusSchema,
   REPLY_QUOTE_MAX_LENGTH,
+  ReorderBotSectionsInput,
   ReorderBotsInput,
   ROUTINE_MENTION_BATCH_MAX,
   RoutineSchema,
@@ -760,6 +761,7 @@ export const appContract = {
     list: oc.output(z.array(BotSectionSchema)),
     create: oc.input(threadTarget.safeExtend({ name: BotSectionName })).output(BotSectionSchema),
     update: oc.input(z.object({ sectionId: Id, name: BotSectionName })).output(BotSectionSchema),
+    reorder: oc.input(ReorderBotSectionsInput).output(z.object({ ok: z.literal(true) })),
     remove: oc.input(z.object({ sectionId: Id })).output(
       z.object({
         id: Id,

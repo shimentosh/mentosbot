@@ -775,6 +775,10 @@ export function botsRoutes(ctx: RouterContext) {
           throw error;
         }
       }),
+      reorder: authed.botSections.reorder.handler(async ({ context, input }) => {
+        await repos.reorderBotSections(context.actor, input.sectionIds);
+        return { ok: true as const };
+      }),
       remove: authed.botSections.remove.handler(async ({ context, input }) =>
         repos.deleteBotSection(context.actor, input),
       ),

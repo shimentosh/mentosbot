@@ -34,21 +34,21 @@ describe("resolveRosterDrop", () => {
     ).toBeNull();
   });
 
-  it("moves to the target bot's section when the sections differ", () => {
+  it("moves to the target bot's section, at that row, when the sections differ", () => {
     expect(
       resolveRosterDrop({
         dragged: bot("a", "s1"),
         target: { kind: "bot", chat: bot("b", "s2") },
         sameList: false,
       }),
-    ).toEqual({ action: "move", sectionId: "s2" });
+    ).toEqual({ action: "move", sectionId: "s2", targetBotId: "b" });
     expect(
       resolveRosterDrop({
         dragged: bot("a", "s1"),
         target: { kind: "bot", chat: bot("b", null) },
         sameList: false,
       }),
-    ).toEqual({ action: "move", sectionId: null });
+    ).toEqual({ action: "move", sectionId: null, targetBotId: "b" });
   });
 
   it("moves to a section header, including Unassigned", () => {

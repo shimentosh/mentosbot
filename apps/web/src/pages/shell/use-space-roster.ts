@@ -53,6 +53,12 @@ export function useSpaceRoster({
   const pendingBotOrderRef = useRef<string[] | null>(null);
   const savingBotOrderRef = useRef(false);
   const [botSections, setBotSections] = useState<BotSection[]>(seed?.botSections ?? []);
+  const botSectionsRef = useRef(botSections);
+  botSectionsRef.current = botSections;
+  const sectionOrderEpochRef = useRef(0);
+  const savingSectionOrderRef = useRef(0);
+  const sectionOrderSaveRef = useRef<Promise<unknown>>(Promise.resolve());
+  const movingBotsRef = useRef(0);
   const [spaces, setSpaces] = useState<Space[]>(seed?.spaces ?? []);
   const [archivedBots, setArchivedBots] = useState<Bot[]>(seed?.archivedBots ?? []);
   const [archivedGroups, setArchivedGroups] = useState<Group[]>(seed?.archivedGroups ?? []);
@@ -78,7 +84,11 @@ export function useSpaceRoster({
       markOnce("rk:renderer:bots-request-start");
       const request = ++botsRefreshEpoch.current;
       const botOrderEpoch = botOrderEpochRef.current;
-      const preserveBotOrder = savingBotOrderRef.current || pendingBotOrderRef.current !== null;
+      const sectionOrderEpoch = sectionOrderEpochRef.current;
+      const preserveBotOrder =
+        savingBotOrderRef.current ||
+        pendingBotOrderRef.current !== null ||
+        movingBotsRef.current > 0;
       const archivedRequest = includeArchived ? ++archivedBotsRefreshEpoch.current : null;
       botsRefreshInFlight.current += 1;
       try {
@@ -104,11 +114,18 @@ export function useSpaceRoster({
         if (!botsFresh) return;
         if (
           botOrderEpoch === botOrderEpochRef.current &&
-          (replaceBotOrder || (!preserveBotOrder && !savingBotOrderRef.current))
+          (replaceBotOrder ||
+            (!preserveBotOrder && !savingBotOrderRef.current && movingBotsRef.current === 0))
         ) {
           setBots((previous) => replaceEqualDeep(previous, list));
         }
-        setBotSections((previous) => replaceEqualDeep(previous, sections));
+        // A section order saved after this request started wins over the older list.
+        if (
+          sectionOrderEpoch === sectionOrderEpochRef.current &&
+          savingSectionOrderRef.current === 0
+        ) {
+          setBotSections((previous) => replaceEqualDeep(previous, sections));
+        }
         setGroups((previous) => replaceEqualDeep(previous, groupList));
         setSpaces((previous) => replaceEqualDeep(previous, navigation.spaces));
         setInitialBotsLoaded(true);
@@ -186,6 +203,61 @@ export function useSpaceRoster({
     [flushBotOrder],
   );
 
+  /** Moves a bot into a section, placed at the dropped row or at the top of the section. */
+  const moveRosterBot = useCallback(
+    async (botId: string, sectionId: string | null, targetBotId?: string) => {
+      const source = botsRef.current.find((bot) => bot.id === botId);
+      if (!source) return;
+      const rest = botsRef.current.filter((bot) => bot.id !== botId);
+      const target =
+        targetBotId ?? rest.find((bot) => !bot.pinned && bot.sectionId === sectionId)?.id;
+      const at = target ? rest.findIndex((bot) => bot.id === target) : -1;
+      const moved = { ...source, sectionId };
+      // Lands in the dropped row's place, above that row.
+      const next = at < 0 ? [...rest, moved] : [...rest.slice(0, at), moved, ...rest.slice(at)];
+      botOrderEpochRef.current += 1;
+      botsRef.current = next;
+      setBots(next);
+      movingBotsRef.current += 1;
+      try {
+        await rpc.bots.update({ botId, sectionId });
+        pendingBotOrderRef.current = botsRef.current.map((bot) => bot.id);
+      } finally {
+        movingBotsRef.current -= 1;
+      }
+      void flushBotOrder();
+    },
+    [flushBotOrder],
+  );
+
+  /** Moves a section to where another one sits and saves the new order. */
+  const moveBotSection = useCallback(
+    (sourceId: string, targetId: string) => {
+      const current = botSectionsRef.current;
+      const next = reorderBotTo(current, sourceId, targetId);
+      if (next === current) return;
+      const ordered = next.map((section, position) => ({ ...section, position }));
+      sectionOrderEpochRef.current += 1;
+      botSectionsRef.current = ordered;
+      setBotSections(ordered);
+      const sectionIds = ordered.map((section) => section.id);
+      savingSectionOrderRef.current += 1;
+      // Saves run in order so a quick second move cannot land before the first.
+      sectionOrderSaveRef.current = sectionOrderSaveRef.current
+        .then(() => rpc.botSections.reorder({ sectionIds }))
+        .then(
+          () => {
+            savingSectionOrderRef.current -= 1;
+          },
+          async () => {
+            savingSectionOrderRef.current -= 1;
+            await refreshBots().catch(() => undefined);
+          },
+        );
+    },
+    [refreshBots],
+  );
+
   /** Shows a bot created here at once: a roster requested before creation may omit it. */
   function addCreatedBot(bot: Bot) {
     botsRefreshEpoch.current += 1;
@@ -221,6 +293,8 @@ export function useSpaceRoster({
     routeGroupId,
     refreshBots,
     reorderRosterBot,
+    moveRosterBot,
+    moveBotSection,
     addCreatedBot,
   };
 }
@@ -456,11 +530,15 @@ export function useSpaceBootstrap({
   }, []);
 }
 
-/** Dragging a bot in the roster: reorder it, move it to a section, or add it to a group. */
+/**
+ * Dragging in the roster: reorder a bot, move it to a section, or add it to a group; or
+ * drag a section header to reorder sections.
+ */
 export function useRosterDrop({
   rpc,
   bots,
   reorderRosterBot,
+  moveRosterBot,
   refreshBots,
   refreshGroupThread,
   activeGroupId,
@@ -469,6 +547,7 @@ export function useRosterDrop({
   rpc: ReturnType<typeof createSpaceRpc>;
   bots: Bot[];
   reorderRosterBot: SpaceRoster["reorderRosterBot"];
+  moveRosterBot: SpaceRoster["moveRosterBot"];
   refreshBots: () => Promise<void>;
   refreshGroupThread: (groupId: string) => Promise<ThreadSnapshot>;
   activeGroupId: RefObject<string | undefined>;
@@ -476,6 +555,7 @@ export function useRosterDrop({
 }) {
   const { t } = useLingui();
   const [draggedBotId, setDraggedBotId] = useState<string | null>(null);
+  const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
   const [rosterDropKey, setRosterDropKey] = useState<string | null>(null);
   // Drags only act on bots of the active space; other spaces are read-only here.
   const draggedBot = draggedBotId ? bots.find((bot) => bot.id === draggedBotId) : undefined;
@@ -497,29 +577,31 @@ export function useRosterDrop({
       }
       const request =
         action.action === "move"
-          ? rpc.bots.update({ botId: draggedBot.id, sectionId: action.sectionId })
-          : rpc.groups.update({
-              groupId: action.groupId,
-              botIds: action.botIds,
-              expectedBotIds: action.botIds.filter((id) => id !== draggedBot.id),
-            });
-      void request
-        .then(async () => {
-          await refreshBots();
-          if (action.action === "join" && activeGroupId.current === action.groupId) {
-            await refreshGroupThread(action.groupId);
-          }
-        })
-        .catch((error) => {
-          setSendError(errorText(error, t`Could not save`));
-          void refreshBots().catch(() => undefined);
-        });
+          ? moveRosterBot(draggedBot.id, action.sectionId, action.targetBotId)
+          : rpc.groups
+              .update({
+                groupId: action.groupId,
+                botIds: action.botIds,
+                expectedBotIds: action.botIds.filter((id) => id !== draggedBot.id),
+              })
+              .then(async () => {
+                await refreshBots();
+                if (activeGroupId.current === action.groupId) {
+                  await refreshGroupThread(action.groupId);
+                }
+              });
+      void request.catch((error) => {
+        setSendError(errorText(error, t`Could not save`));
+        void refreshBots().catch(() => undefined);
+      });
     },
-    [draggedBot, refreshBots, reorderRosterBot, rosterDropAction, t],
+    [draggedBot, moveRosterBot, refreshBots, reorderRosterBot, rosterDropAction, t],
   );
   return {
     draggedBotId,
     setDraggedBotId,
+    draggedSectionId,
+    setDraggedSectionId,
     rosterDropKey,
     setRosterDropKey,
     rosterDropAction,

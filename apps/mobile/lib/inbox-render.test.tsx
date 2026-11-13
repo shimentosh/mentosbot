@@ -188,6 +188,7 @@ const callbacks = {
   deleteSection: action,
   editSectionFromMenu: action,
   groupAction: action,
+  moveSection: action,
   openBot: action,
   openGroup: action,
   organizeBot: action,
@@ -607,6 +608,31 @@ it("offers every space heading's Settings, and Delete only where the member may 
   });
   act(() => ui.menus[1]!.onPressAction({ nativeEvent: { event: "delete" } }));
   expect(confirmDeleteSpace).toHaveBeenCalledWith(expect.objectContaining({ id: "space-work" }));
+});
+
+it("offers Move up and Move down on a section heading only where it has a neighbour", () => {
+  const moveSection = vi.fn();
+  const deleteSection = vi.fn();
+  const sections = ["s1", "s2", "s3"].map((id) => ({ id, name: id }));
+  const heading = (id: string) =>
+    ({ type: "heading", key: `space-1:section:${id}`, title: id, sectionId: id }) as InboxItem;
+  render(
+    <List
+      items={sections.map((section) => heading(section.id))}
+      options={{ botSections: sections as never, moveSection, deleteSection }}
+    />,
+  );
+  expect(ui.menus.map((menu) => menu.actions.map((entry) => entry.id))).toEqual([
+    ["down", "delete"],
+    ["up", "down", "delete"],
+    ["up", "delete"],
+  ]);
+  act(() => ui.menus[1]!.onPressAction({ nativeEvent: { event: "up" } }));
+  expect(moveSection).toHaveBeenLastCalledWith("s2", -1);
+  act(() => ui.menus[1]!.onPressAction({ nativeEvent: { event: "down" } }));
+  expect(moveSection).toHaveBeenLastCalledWith("s2", 1);
+  act(() => ui.menus[2]!.onPressAction({ nativeEvent: { event: "delete" } }));
+  expect(deleteSection).toHaveBeenCalledWith({ id: "s3", name: "s3" });
 });
 
 it("adds a bot made from the inbox's Create menu to the inbox roster before opening its chat", async () => {
