@@ -96,7 +96,7 @@ import { cycleBotId, isApplePlatform, useShellShortcuts } from "./shell/shell-sh
 import { focusSidebarSearch, ShellSidebar } from "./shell/shell-sidebar";
 import { ShellSidePanel } from "./shell/side-panel";
 import { BotsSidebarLayout } from "./shell/sidebar-layout";
-import { SidebarRoster } from "./shell/sidebar-roster";
+import { headerName, SidebarRoster } from "./shell/sidebar-roster";
 import { commitSpaceRename, countUnreadChats, sidebarGroupsForSpaces } from "./shell/space-sidebar";
 import { Transcript } from "./shell/transcript";
 import { useBrowserNotifications } from "./shell/use-browser-notifications";
@@ -554,6 +554,13 @@ function SpaceShell() {
         unassigned: t`Unassigned`,
       }),
     [sidebarSpaces, search.query, miniSidebar, t],
+  );
+  const jumpSections = useMemo(
+    () =>
+      sidebarGroups.flatMap((group) =>
+        group.title ? [{ key: group.key, title: headerName(group) }] : [],
+      ),
+    [sidebarGroups],
   );
   // The Dock badge ignores the roster search box: a filter must not hide unread chats.
   const unreadChatCount = useMemo(
@@ -1062,6 +1069,7 @@ function SpaceShell() {
             botMenuContent={botMenuContent}
           />
         }
+        sections={jumpSections}
         archived={
           <ArchivedChats
             archivedBots={archivedBots}

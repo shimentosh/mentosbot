@@ -218,6 +218,7 @@ export function SidebarRoster({
                       render={
                         group.emptySpaceId ? <button type="button" /> : <CollapsibleTrigger />
                       }
+                      data-sidebar-header=""
                       draggable={Boolean(movableSection)}
                       aria-keyshortcuts={movableSection ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
                       onDragStart={(event) => {
@@ -671,7 +672,7 @@ export function SidebarRoster({
 }
 
 /** A space section header's name as one phrase, for accessible labels. */
-function headerName(group: { title?: string | null; subtitle?: string }): string {
+export function headerName(group: { title?: string | null; subtitle?: string }): string {
   return group.subtitle ? `${group.title}, ${group.subtitle}` : (group.title ?? "");
 }
 

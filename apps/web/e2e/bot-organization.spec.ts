@@ -287,6 +287,46 @@ test("sections reorder by drag, menu or keyboard, and bots drop where they land"
   await expect.poll(secondRows).toEqual([chiefId, beta.id]);
 });
 
+test("a scrolled sidebar pins the current section and jumps to another", async ({
+  page,
+}, testInfo) => {
+  await signup(page, `section-jump-${Date.now()}@rakazo.test`, "password12", "Section Jump");
+  await completeOnboarding(page);
+  const names = ["One", "Two", "Three", "Four", "Five"];
+  const sections: { id: string }[] = [];
+  for (const name of names) {
+    const bot = await rpc<{ id: string }>(page, "bots/create", {
+      name: `${name} bot`,
+      computerMode: "team",
+    });
+    sections.push(await rpc<{ id: string }>(page, "botSections/create", { botId: bot.id, name }));
+  }
+  await page.setViewportSize({ width: 1280, height: 480 });
+  await page.reload();
+
+  const sidebar = page.locator("aside").first();
+  const jumpBar = sidebar.getByTestId("sidebar-section-jump");
+  const group = (index: number) =>
+    sidebar.locator(`[data-sidebar-group="section:${sections[index]?.id}"]`);
+  await expect(group(4)).toBeAttached();
+  await expect(jumpBar).toHaveAttribute("aria-hidden", "true");
+
+  // Scroll partway into the second section: its name stays pinned above the list.
+  await group(1).evaluate((element) => {
+    const list = element.parentElement as HTMLElement;
+    list.scrollTop = element.offsetTop - list.offsetTop + 24;
+  });
+  const trigger = jumpBar.getByRole("button", { name: "Jump to section, Two" });
+  await expect(trigger).toBeVisible();
+  await captureScreenshot(page, testInfo, "section-jump-pinned");
+
+  await trigger.click();
+  await page.getByRole("menuitemradio", { name: "Five", exact: true }).click();
+  const target = group(4).getByRole("button", { name: "Collapse Five", exact: true });
+  await expect(target).toBeInViewport();
+  await expect(target).toBeFocused();
+});
+
 test("chat composer controls are vertically centered", async ({ page }, testInfo) => {
   const stamp = Date.now();
   await signup(page, `composer-layout-${stamp}@rakazo.test`, "password12", "Composer Layout");
