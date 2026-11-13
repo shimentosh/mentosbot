@@ -23,7 +23,7 @@ import {
 import { FolderCode, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { FolderPickerDialog } from "../../components/FolderPickerDialog";
-import { desktopBridge } from "../../lib/desktop";
+import { desktopBridge, thisComputer } from "../../lib/desktop";
 import { errorText } from "../../lib/user-error";
 import { BotLookPicker } from "./avatar-studio-popover";
 
@@ -41,8 +41,8 @@ export interface CreateBotDialogInput {
   id?: string;
   /** The organic family the preview drew; omitted when a studio shape is picked. */
   avatarFamily?: number;
-  /** A folder on this computer the new bot works in. */
-  projectFolder?: string;
+  /** A folder on the person's computer the new bot works in; `deviceId` names this computer. */
+  projectFolder?: { path: string; deviceId?: string };
 }
 
 /** Mounted only while open; the parent unmounts it from `onCancel` or after `onCreate`. */
@@ -72,9 +72,21 @@ export function CreateBotDialog({
   }));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [projectFolder, setProjectFolder] = useState<string | null>(null);
+  const [projectFolder, setProjectFolder] = useState<CreateBotDialogInput["projectFolder"]>();
   const [pickingFolder, setPickingFolder] = useState(false);
   const trimmed = name.trim();
+
+  function takeFolder(folder: NonNullable<CreateBotDialogInput["projectFolder"]>) {
+    setProjectFolder(folder);
+    if (!trimmed) setName(folderName(folder.path).slice(0, BOT_NAME_MAX_LENGTH));
+  }
+
+  async function chooseFolder() {
+    const computer = await thisComputer();
+    if (!computer?.chooseFolder) return setPickingFolder(true);
+    const path = await computer.chooseFolder();
+    if (path) takeFolder({ path, deviceId: computer.deviceId });
+  }
 
   async function create() {
     if (!trimmed || submitting) return;
@@ -141,13 +153,13 @@ export function CreateBotDialog({
           {projectFolder ? (
             <div className="flex min-h-9 items-center gap-2 rounded-lg bg-muted/50 ps-3 pe-1 text-sm">
               <FolderCode aria-hidden size={15} className="shrink-0" />
-              <span className="min-w-0 flex-1 truncate">{folderName(projectFolder)}</span>
+              <span className="min-w-0 flex-1 truncate">{folderName(projectFolder.path)}</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-xs"
                 aria-label={t`Remove folder`}
-                onClick={() => setProjectFolder(null)}
+                onClick={() => setProjectFolder(undefined)}
               >
                 <X aria-hidden size={14} />
               </Button>
@@ -158,7 +170,7 @@ export function CreateBotDialog({
               variant="ghost"
               size="sm"
               className="self-center text-muted-foreground"
-              onClick={() => setPickingFolder(true)}
+              onClick={() => void chooseFolder()}
             >
               <FolderCode aria-hidden size={15} />
               <Trans>Start from a project folder</Trans>
@@ -191,8 +203,7 @@ export function CreateBotDialog({
           <FolderPickerDialog
             onCancel={() => setPickingFolder(false)}
             onPick={(path) => {
-              setProjectFolder(path);
-              if (!trimmed) setName(folderName(path).slice(0, BOT_NAME_MAX_LENGTH));
+              takeFolder({ path });
               setPickingFolder(false);
             }}
           />

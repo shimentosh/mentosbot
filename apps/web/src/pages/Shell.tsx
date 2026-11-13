@@ -970,7 +970,7 @@ function SpaceShell() {
     const bot = await rpc.bots.create({ ...input, notifyOnFinish: true });
     // The bot exists either way; a folder that could not be set stays choosable on its Computer tab.
     if (projectFolder)
-      await rpc.projectFolder.set({ botId: bot.id, path: projectFolder }).catch(() => undefined);
+      await rpc.projectFolder.set({ botId: bot.id, ...projectFolder }).catch(() => undefined);
     openCreatedBot(bot);
     dialogs.setCreateBotOpen(false);
     await composer.startFocusPrompt(bot.id, isFirstBot);

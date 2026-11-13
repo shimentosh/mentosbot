@@ -46,7 +46,8 @@ export interface UserDevice {
 
 /** How runs reach the requesting user's connected device, from any API or worker process. */
 export interface UserDeviceGateway {
-  connected(userId: string): Promise<UserDevice | null>;
+  /** The user's most recently connected device, or that one device when `deviceId` is given. */
+  connected(userId: string, deviceId?: string): Promise<UserDevice | null>;
   /** When the oldest device still paired was paired, connected or not; null when none is. */
   pairedSince(userId: string): Promise<Date | null>;
   /**

@@ -76,6 +76,7 @@ describe("desktop preload bridge", () => {
     expect(invoke).toHaveBeenCalledWith("desktop.device.setAllowed", true);
     await bridge.device?.setRouteTraffic?.(true);
     expect(invoke).toHaveBeenCalledWith("desktop.device.setRouteTraffic", true);
+    await bridge.device?.chooseFolder?.();
     await bridge.oauth.open?.("https://provider.example.com/authorize");
     await bridge.oauth.cancel?.("https://provider.example.com/authorize");
     await bridge.monitoring?.enabled();
@@ -93,6 +94,7 @@ describe("desktop preload bridge", () => {
       "desktop.device.state",
       "desktop.device.setAllowed",
       "desktop.device.setRouteTraffic",
+      "desktop.device.chooseFolder",
       "desktop.oauth.open",
       "desktop.oauth.cancel",
       "desktop.monitoring.enabled",

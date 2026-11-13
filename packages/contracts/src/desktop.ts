@@ -99,6 +99,11 @@ export interface RakazoDesktop {
      * is connected. Absent on older desktop releases.
      */
     setRouteTraffic?: (routeTraffic: boolean) => Promise<RakazoDesktopDevice | null>;
+    /**
+     * Picks a folder on this computer with the system's own picker; null when cancelled or not
+     * on the server's page. Absent on older desktop releases.
+     */
+    chooseFolder?: () => Promise<string | null>;
   };
   /** Absent on older desktop releases, whose menus carry no app commands. */
   menu?: {

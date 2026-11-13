@@ -132,3 +132,31 @@ it("shows what the bot keeps running, opens its port and stops it", async () => 
   expect(projectFolder.stop).toHaveBeenCalledWith({ botId: "bot-1", name: "dev-server" });
   expect(container.querySelector('[data-testid="kept-command"]')).toBeNull();
 });
+
+it("in the desktop app, picks with the system's folder picker on the computer in use", async () => {
+  const picked = String.raw`C:\Users\ada\contentos-ui`;
+  const chooseFolder = vi.fn(async () => picked);
+  vi.stubGlobal("rakazoDesktop", {
+    device: {
+      state: async () => ({ deviceId: "this-pc", name: "Desk", allowed: true }),
+      chooseFolder,
+    },
+  });
+  try {
+    projectFolder.get.mockResolvedValue(empty);
+    projectFolder.set.mockResolvedValue(withFolder);
+    await render();
+    expect(projectFolder.get).toHaveBeenCalledWith({ botId: "bot-1", deviceId: "this-pc" });
+    await act(async () => button("Choose folder")?.click());
+    expect(chooseFolder).toHaveBeenCalledTimes(1);
+    expect(projectFolder.browse).not.toHaveBeenCalled();
+    expect(projectFolder.set).toHaveBeenCalledWith({
+      botId: "bot-1",
+      path: picked,
+      deviceId: "this-pc",
+    });
+    expect(container.textContent).toContain("pnpm dev");
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

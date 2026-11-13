@@ -54,3 +54,18 @@ export function windowChromeKind(desktop?: RakazoDesktop): "spacer" | "darwin" |
   if (desktop.nativeWindowFrame) return "spacer";
   return "controls";
 }
+
+/**
+ * This computer, when the page runs in a desktop app paired with the server and allowed to run
+ * bots: its device id keeps project folder work on it, and `chooseFolder` opens the system's own
+ * folder picker on releases that have one.
+ */
+export async function thisComputer(): Promise<{
+  deviceId: string;
+  chooseFolder?: () => Promise<string | null>;
+} | null> {
+  const device = desktopBridge()?.device;
+  const state = await device?.state().catch(() => null);
+  if (!device || !state?.deviceId || !state.allowed) return null;
+  return { deviceId: state.deviceId, chooseFolder: device.chooseFolder };
+}

@@ -21,7 +21,7 @@ export const ProjectFolderStatusSchema = z.object({
     .object({
       path: z.string(),
       name: z.string(),
-      /** Set when the folder is on another of the owner's computers than the connected one. */
+      /** Set when the folder is on another of the owner's computers than the one in use. */
       otherComputer: z.string().optional(),
     })
     .nullable(),
@@ -37,7 +37,13 @@ export const FolderListingSchema = z.object({
 });
 export type FolderListing = z.infer<typeof FolderListingSchema>;
 
-export const ProjectFolderInput = z.object({ botId: Id });
+/**
+ * The computer the page runs on, sent by its desktop app so a person with several computers
+ * signed in works with this one. Without it, the folder's computer or the latest connected one.
+ */
+const DeviceId = z.string().min(1).max(64).optional();
+
+export const ProjectFolderInput = z.object({ botId: Id, deviceId: DeviceId });
 export const ProjectFolderBrowseInput = z.object({
   /** Absent while a bot is being created from a folder. */
   botId: Id.optional(),
@@ -47,8 +53,10 @@ export const ProjectFolderSetInput = z.object({
   botId: Id,
   /** Null stops using a folder. */
   path: z.string().trim().min(1).max(4096).nullable(),
+  deviceId: DeviceId,
 });
 export const ProjectFolderStopInput = z.object({
   botId: Id,
   name: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/),
+  deviceId: DeviceId,
 });

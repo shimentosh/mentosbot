@@ -40,6 +40,8 @@ function setup(
   execute: (signal: AbortSignal) => AsyncIterable<unknown>,
   secrets: string[] = [],
   folder?: Folder,
+  /** Connected computers, the latest first. */
+  connectedDevices = ["device-1"],
 ) {
   const controller = new AbortController();
   const botFolder = {
@@ -51,7 +53,10 @@ function setup(
   const signals: AbortSignal[] = [];
   const deviceIds: (string | undefined)[] = [];
   const gateway: UserDeviceGateway = {
-    connected: async () => ({ deviceId: "device-1", name: "Laptop", platform: "darwin" }),
+    connected: async (_userId, deviceId) => {
+      const found = deviceId ? connectedDevices.find((id) => id === deviceId) : connectedDevices[0];
+      return found ? { deviceId: found, name: "Laptop", platform: "darwin" } : null;
+    },
     pairedSince: async () => new Date(0),
     async *request<T>(
       _userId: string,
@@ -309,6 +314,18 @@ describe("userComputerShell with a project folder", () => {
     });
     await userComputerShell(ctx, call({ command: "ls" }));
     expect(requests.at(-1)).toMatchObject({ command: { cwd: "/Users/fake" } });
+  });
+
+  it("runs on the computer holding the folder when another connected later", async () => {
+    const { ctx, call, requests, deviceIds } = setup(
+      exit,
+      [],
+      { deviceId: "device-2", path: "/Users/fake/Projects/site" },
+      ["device-1", "device-2"],
+    );
+    await userComputerShell(ctx, call({ command: "ls" }));
+    expect(new Set(deviceIds)).toEqual(new Set(["device-2"]));
+    expect(requests.at(-1)).toMatchObject({ command: { cwd: "/Users/fake/Projects/site" } });
   });
 });
 

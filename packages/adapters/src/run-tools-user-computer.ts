@@ -251,12 +251,22 @@ async function lastValue<T>(values: AsyncIterable<T>): Promise<T> {
   return result.value;
 }
 
-/** Checked again at execution: the desktop can disconnect or be revoked after the offer. */
+/**
+ * Checked again at execution: the desktop can disconnect or be revoked after the offer. With
+ * several computers connected, the one holding this bot's project folder wins.
+ */
 async function connectedUserComputer(ctx: RunContext) {
   const owner = ctx.source.userComputerOwner;
   const devices = ctx.deps.userDevices;
-  const device = owner && devices ? await devices.connected(owner).catch(() => null) : null;
-  return owner && devices && device ? { owner, devices, deviceId: device.deviceId } : undefined;
+  if (!owner || !devices) return undefined;
+  const folder = await ctx.deps.prisma.botFolder.findUnique({
+    where: { botId_userId: { botId: ctx.bot.id, userId: owner } },
+    select: { deviceId: true },
+  });
+  const device =
+    (folder && (await devices.connected(owner, folder.deviceId).catch(() => null))) ||
+    (await devices.connected(owner).catch(() => null));
+  return device ? { owner, devices, deviceId: device.deviceId } : undefined;
 }
 
 /** This bot's project folder for the user, when it is on the computer that is connected. */
@@ -373,6 +383,7 @@ async function userComputerSession(
   return openUserComputer({
     devices: connected.devices,
     owner: connected.owner,
+    deviceId: connected.deviceId,
     botId: ctx.bot.id,
     runId: ctx.runId,
     signal: ctx.context.signal,
