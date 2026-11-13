@@ -20,6 +20,8 @@ import { useSignOut } from "../../lib/sign-out";
 import { switchAccount, useSignedInAccounts } from "../../lib/signed-in-accounts";
 import { SpaceSearchResults } from "../SpaceSearch";
 import type { SettingsSection } from "../shell-overlay";
+import type { JumpSection } from "./section-jump";
+import { SectionJump } from "./section-jump";
 import { SidebarHeader } from "./sidebar-header";
 import { TeamBotsSection } from "./team-bots";
 import type { SidebarSearch } from "./use-sidebar-search";
@@ -53,6 +55,7 @@ export function ShellSidebar({
   setNewSpaceOpen,
   setCreateBotOpen,
   roster,
+  sections,
   archived,
   footerLogos,
   user,
@@ -80,6 +83,8 @@ export function ShellSidebar({
   setNewSpaceOpen: (open: boolean) => void;
   setCreateBotOpen: (open: boolean) => void;
   roster: ReactNode;
+  /** The roster's titled sections, in order, for jumping between them. */
+  sections: readonly JumpSection[];
   archived: ReactNode;
   footerLogos: Array<{ name: string; logo?: string | null }>;
   user: User | undefined;
@@ -187,25 +192,28 @@ export function ShellSidebar({
             />
           </InputGroup>
         )}
-        <div
-          ref={listRef}
-          className="rk-scroll scroll-fade-y scroll-fade-12 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5 pb-2.5"
-        >
-          {showSpaceSearch && !mini ? (
-            <SpaceSearchResults
-              hits={searchHits}
-              loading={searchLoading}
-              error={searchError}
-              onRetry={retrySearch}
-              onSelect={(hit) => jumpToSearchHit(hit)}
-            />
-          ) : (
-            <>
-              {roster}
-              {mini ? null : <TeamBotsSection />}
-            </>
-          )}
-          <div className={mini ? "hidden" : "contents"}>{archived}</div>
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {mini || showSpaceSearch ? null : <SectionJump listRef={listRef} sections={sections} />}
+          <div
+            ref={listRef}
+            className="rk-scroll scroll-fade-y scroll-fade-12 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2.5 pb-2.5"
+          >
+            {showSpaceSearch && !mini ? (
+              <SpaceSearchResults
+                hits={searchHits}
+                loading={searchLoading}
+                error={searchError}
+                onRetry={retrySearch}
+                onSelect={(hit) => jumpToSearchHit(hit)}
+              />
+            ) : (
+              <>
+                {roster}
+                {mini ? null : <TeamBotsSection />}
+              </>
+            )}
+            <div className={mini ? "hidden" : "contents"}>{archived}</div>
+          </div>
         </div>
         <div className={mini ? "hidden" : "contents"}>
           <PasskeyOffer />
