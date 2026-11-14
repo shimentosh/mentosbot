@@ -140,8 +140,9 @@ describe("claudeCodeCli", () => {
       "--verbose",
       "--permission-mode",
       "auto",
-      "--permission-prompts",
-      "none",
     ]);
+    expect(claudeCodeCli.args(false)).not.toContain("--permission-prompts");
+    expect(claudeCodeCli.args(false)).not.toContain("--dangerously-skip-permissions");
+    expect(claudeCodeCli.args(false)).not.toContain("bypassPermissions");
   });
 });

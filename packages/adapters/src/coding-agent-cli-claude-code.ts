@@ -3,7 +3,10 @@ import { AGENT_SESSION, AGENT_TASK, codingAgentStep } from "./coding-agent-cli.j
 
 /**
  * Claude Code in print mode. Its own auto permission mode decides each tool call, and anything
- * that would need a person is refused rather than left waiting, since nobody watches that terminal.
+ * that would need a person is refused rather than left waiting, since nobody watches that terminal:
+ * print mode without a permission prompt tool denies such a call and lists it in the result's
+ * `permission_denials`. There is no `--permission-prompts` flag (Claude Code 2.1.241 exits with
+ * "unknown option"), so never add one; never `bypassPermissions` or `--dangerously-skip-permissions`.
  */
 export const claudeCodeCli: CodingAgentCli = {
   command: "claude",
@@ -16,8 +19,6 @@ export const claudeCodeCli: CodingAgentCli = {
     "--verbose",
     "--permission-mode",
     "auto",
-    "--permission-prompts",
-    "none",
   ],
   read(line, outcome) {
     let event: Record<string, unknown>;
