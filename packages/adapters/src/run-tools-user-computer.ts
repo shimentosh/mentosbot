@@ -36,6 +36,7 @@ import {
 } from "./shell-command-stream.js";
 import { attachWorkspaceFileToThread } from "./thread-artifacts.js";
 import {
+  allowedUserComputerPath,
   checkUserComputerFolder,
   keptCommandOutput,
   listKeptCommands,
@@ -238,9 +239,10 @@ export function userComputerCwd(
     ? paths.join(environment.home, requested.slice(2))
     : requested;
   const resolved = paths.resolve(environment.home, base ?? "", expanded);
-  const relative = paths.relative(environment.home, resolved);
-  if (relative === ".." || relative.startsWith(`..${paths.sep}`) || paths.isAbsolute(relative))
-    throw new Error("cwd must be inside the user's home folder; cd elsewhere within the command");
+  if (!allowedUserComputerPath(environment, resolved))
+    throw new Error(
+      "cwd must be inside the user's home folder or one they picked; cd elsewhere within the command",
+    );
   return resolved;
 }
 
@@ -613,7 +615,9 @@ export async function userComputerAttach(ctx: RunContext, call: ToolCall) {
     try {
       file = userComputerCwd(environment, requested, await projectFolder(ctx, owner, deviceId));
     } catch {
-      return call.finish({ error: "The file must be inside the user's home folder." });
+      return call.finish({
+        error: "The file must be inside the user's home folder or one they picked.",
+      });
     }
     // Base64 adds a third, plus line breaks on some systems.
     const encodedLimit = Math.ceil(limit / 3) * 4 + Math.ceil(limit / 48) + 16;

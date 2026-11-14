@@ -65,6 +65,7 @@ import {
 } from "./monitoring.js";
 import { oauthCallbackFrom } from "./oauth-callback.js";
 import { associatedPasskeyRpIds } from "./passkeys.js";
+import { loadPickedFolders } from "./picked-folders.js";
 import {
   bundledRendererCandidates,
   bundledRendererHeaders,
@@ -1336,6 +1337,7 @@ app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) return;
   installSessionPermissions(session.defaultSession, permissionTarget);
   const userDataDir = app.getPath("userData");
+  const pickedFolders = await loadPickedFolders(userDataDir, app.getPath("home"));
   desktopUpdater = new DesktopUpdateController(
     updaterEnvironment,
     // Loaded only when a packaged build actually checks for updates.
@@ -1406,6 +1408,7 @@ app.whenReady().then(async () => {
         token,
         root: path.join(userDataDir, "computers"),
         screen: hostScreen,
+        pickedFolders: pickedFolders.list,
         ...events,
       }),
   });
@@ -1566,7 +1569,8 @@ app.whenReady().then(async () => {
     await userDevices?.setAllowed(origin, allowed);
     return deviceState(remoteDeviceOrigin(event));
   });
-  // The system's own folder picker, so a project folder is chosen on the computer in use.
+  // The system's own folder picker, so a project folder is chosen on the computer in use. A
+  // folder picked outside the home is remembered, so bots may work there too.
   ipcMain.handle("desktop.device.chooseFolder", async (event) => {
     const win = windowFrom(event);
     if (remoteDeviceOrigin(event) === null || !win) return null;
@@ -1574,7 +1578,10 @@ app.whenReady().then(async () => {
       defaultPath: app.getPath("home"),
       properties: ["openDirectory", "createDirectory"],
     });
-    return result.canceled ? null : (result.filePaths[0] ?? null);
+    const folder = result.canceled ? undefined : result.filePaths[0];
+    if (!folder) return null;
+    await pickedFolders.add(folder);
+    return folder;
   });
   ipcMain.handle("desktop.device.setRouteTraffic", async (event, routeTraffic: unknown) => {
     const origin = remoteDeviceOrigin(event);
