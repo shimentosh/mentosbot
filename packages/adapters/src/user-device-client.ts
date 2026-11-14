@@ -26,6 +26,8 @@ export interface UserDeviceClientOptions {
   root: string;
   /** Drives this computer's apps. Owned by the caller, which closes it. */
   screen?: HostScreen;
+  /** Folders outside the home the person picked on this computer, where bots may work too. */
+  pickedFolders?: () => readonly string[];
   /** The server revoked the device or rejected its token. The client has already stopped. */
   onRevoked: (reason?: UserDeviceRevokeReason) => void;
   /** Whether this computer lets the server's bots run anything. Asked before every request. */
@@ -42,7 +44,11 @@ export function startUserDeviceClient(options: UserDeviceClientOptions) {
   if (secureHttpOrigin(options.serverUrl) === null)
     throw new Error("Local computer access requires HTTPS or loopback");
   const retry = options.retryMs ?? { min: 1_000, max: 60_000 };
-  const runner = createHostComputerRunner({ root: options.root, screen: options.screen });
+  const runner = createHostComputerRunner({
+    root: options.root,
+    screen: options.screen,
+    pickedFolders: options.pickedFolders,
+  });
   runner.setEnabled(true);
   // The server asks for these only after this device turned on routing its owner's traffic.
   const tunnels = createDeviceTunnels({ serverUrl: options.serverUrl, token: options.token });

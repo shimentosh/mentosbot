@@ -121,15 +121,33 @@ function paths(environment: HostComputerEnvironment) {
   return environment.platform === "win32" ? path.win32 : path.posix;
 }
 
-/** A folder inside the user's home, from an absolute, `~/` or home-relative path. */
-export function homeFolder(environment: HostComputerEnvironment, requested: string): string {
+/** Whether a resolved path is inside the user's home or a folder they picked on that computer. */
+export function allowedUserComputerPath(
+  environment: HostComputerEnvironment,
+  resolved: string,
+): boolean {
+  const join = paths(environment);
+  return [environment.home, ...(environment.roots ?? [])].some((root) => {
+    const relative = join.relative(root, resolved);
+    return !(
+      relative === ".." ||
+      relative.startsWith(`..${join.sep}`) ||
+      join.isAbsolute(relative)
+    );
+  });
+}
+
+/**
+ * A folder inside the user's home or one they picked, from an absolute, `~/` or home-relative
+ * path.
+ */
+export function userFolder(environment: HostComputerEnvironment, requested: string): string {
   const join = paths(environment);
   const trimmed = requested.trim();
   const expanded = trimmed === "~" ? "" : /^~[\\/]/.test(trimmed) ? trimmed.slice(2) : trimmed;
   const resolved = join.resolve(environment.home, expanded);
-  const relative = join.relative(environment.home, resolved);
-  if (relative === ".." || relative.startsWith(`..${join.sep}`) || join.isAbsolute(relative))
-    throw new Error("The folder must be inside the user's home folder.");
+  if (!allowedUserComputerPath(environment, resolved))
+    throw new Error("The folder must be inside the user's home folder or one they picked.");
   return resolved;
 }
 
@@ -179,7 +197,7 @@ export async function listUserComputerFolders(
   session: UserComputerSession,
   requested = "",
 ): Promise<FolderListing> {
-  const folder = homeFolder(session.environment, requested);
+  const folder = userFolder(session.environment, requested);
   const windows = session.environment.platform === "win32";
   const result = await runUserComputerScript(
     session,
@@ -199,21 +217,22 @@ export async function listUserComputerFolders(
       return name ? [{ name, project: line.slice(0, tab) === "1" }] : [];
     })
     .slice(0, MAX_FOLDERS);
-  const home = session.environment.home;
+  const { home, roots = [] } = session.environment;
   return {
     home,
     path: folder,
-    parent: folder === home ? null : paths(session.environment).dirname(folder),
+    parent:
+      folder === home || roots.includes(folder) ? null : paths(session.environment).dirname(folder),
     folders,
   };
 }
 
-/** The folder, once it exists inside the user's home and is not the home itself. */
+/** The folder, once it exists inside the user's home or one they picked, and is not the home. */
 export async function checkUserComputerFolder(
   session: UserComputerSession,
   requested: string,
 ): Promise<string> {
-  const folder = homeFolder(session.environment, requested);
+  const folder = userFolder(session.environment, requested);
   if (folder === session.environment.home)
     throw new Error("Pick a folder inside the user's home folder.");
   const script = session.environment.platform === "win32" ? FOLDER_EXISTS_WINDOWS : FOLDER_EXISTS;

@@ -10,7 +10,6 @@ import type { HostComputerRequest } from "./host-computer-protocol.js";
 import type { UserComputerSession } from "./user-computer-projects.js";
 import {
   checkUserComputerFolder,
-  homeFolder,
   keptCommandOutput,
   listKeptCommands,
   listUserComputerFolders,
@@ -18,6 +17,7 @@ import {
   requestLocalApp,
   startKeptCommand,
   stopKeptCommand,
+  userFolder,
 } from "./user-computer-projects.js";
 import type { UserDeviceGateway } from "./user-device-protocol.js";
 
@@ -105,6 +105,21 @@ windows("project folders on a Windows computer", () => {
     await expect(checkUserComputerFolder(session, "~")).rejects.toThrow("inside");
   });
 
+  it("accepts a folder the person picked outside the home, and lists it as a top", async () => {
+    const picked = await realpath(await mkdtemp(path.join(tmpdir(), "rakazo-picked-")));
+    try {
+      await mkdir(path.join(picked, "site"));
+      const withRoot = { ...session, environment: { ...session.environment, roots: [picked] } };
+      await expect(checkUserComputerFolder(withRoot, picked)).resolves.toBe(picked);
+      const listing = await listUserComputerFolders(withRoot, picked);
+      expect(listing.parent).toBeNull();
+      expect(listing.folders).toEqual([{ name: "site", project: false }]);
+      await expect(checkUserComputerFolder(session, picked)).rejects.toThrow("one they picked");
+    } finally {
+      await rm(picked, { recursive: true, force: true });
+    }
+  });
+
   it("still says kept commands need macOS or Linux", async () => {
     await expect(
       startKeptCommand(session, { name: "dev", command: "npm run dev", folder: home }),
@@ -156,7 +171,7 @@ posix("project folders and kept commands on the user's computer", () => {
     await expect(checkUserComputerFolder(session, "~/app")).resolves.toBe(path.join(home, "app"));
     await expect(checkUserComputerFolder(session, "~/gone")).rejects.toThrow("no folder");
     await expect(checkUserComputerFolder(session, "~")).rejects.toThrow("inside");
-    expect(() => homeFolder(session.environment, "../elsewhere")).toThrow("home folder");
+    expect(() => userFolder(session.environment, "../elsewhere")).toThrow("home folder");
   });
 
   it("keeps a server running after the call, finds its port, reads its output and stops it", async () => {

@@ -66,6 +66,11 @@ export interface HostComputerEnvironment {
   platform: string;
   home: string;
   shell: string;
+  /**
+   * Folders outside the home the person picked themselves on this computer, where bots may work
+   * too. Absent on older desktop releases.
+   */
+  roots?: string[];
 }
 export type HostComputerFrame<T> =
   | { value: T }

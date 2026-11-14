@@ -34,7 +34,13 @@ export interface HostComputerCall {
  * Runs host computer requests from any transport: the local HTTP listener and the outbound
  * device socket share validation, limits, cancellation, and error sanitizing.
  */
-export function createHostComputerRunner(options: { root: string; screen?: HostScreen }) {
+export function createHostComputerRunner(options: {
+  root: string;
+  screen?: HostScreen;
+  /** Folders outside the home the person picked on this computer; read for every request. */
+  pickedFolders?: () => readonly string[];
+}) {
+  const pickedFolders = () => options.pickedFolders?.() ?? [];
   let enabled = false;
   const active = new Map<
     AbortController,
@@ -42,7 +48,7 @@ export function createHostComputerRunner(options: { root: string; screen?: HostS
   >();
   const provider = new DesktopSandboxProvider({
     root: options.root,
-    hostRoots: [homedir()],
+    hostRoots: () => [homedir(), ...pickedFolders()],
     maxFileBytes: HOST_COMPUTER_MAX_FILE_BYTES,
   });
 
@@ -77,7 +83,7 @@ export function createHostComputerRunner(options: { root: string; screen?: HostS
         yield await screen().act(scope, input.app, input.actions);
         break;
       case "environment":
-        yield await provider.environment();
+        yield { ...(await provider.environment()), roots: [...pickedFolders()] };
         break;
       case "provision": {
         const result = await provider.provision({ botId: computer.botId, homePath: "" }, context);

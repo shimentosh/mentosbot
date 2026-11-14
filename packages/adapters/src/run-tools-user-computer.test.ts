@@ -211,6 +211,21 @@ describe("userComputerCwd", () => {
       "inside the user's home folder",
     );
   });
+
+  it("works in a folder the person picked outside the home, and nowhere else there", () => {
+    const windows = {
+      platform: "win32",
+      home: "C:\\Users\\fake",
+      shell: "pwsh",
+      roots: ["J:\\projects"],
+    };
+    const folder = "J:\\projects\\site";
+    expect(userComputerCwd(windows, undefined, folder)).toBe(folder);
+    expect(userComputerCwd(windows, "src", folder)).toBe("J:\\projects\\site\\src");
+    expect(userComputerCwd(windows, "j:\\Projects\\other")).toBe("j:\\Projects\\other");
+    expect(() => userComputerCwd(windows, "J:\\elsewhere")).toThrow("one they picked");
+    expect(() => userComputerCwd(windows, "..\\..", folder)).toThrow("one they picked");
+  });
 });
 
 describe("userComputerShell", () => {

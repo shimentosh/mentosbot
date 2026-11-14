@@ -160,7 +160,12 @@ export class DesktopSandboxProvider implements SandboxProvider {
   }
 
   constructor(
-    private readonly opts: { root?: string; hostRoots?: string[]; maxFileBytes?: number } = {},
+    private readonly opts: {
+      root?: string;
+      /** Host folders commands may start in; a function is read again for every command. */
+      hostRoots?: string[] | (() => readonly string[]);
+      maxFileBytes?: number;
+    } = {},
   ) {}
 
   describe() {
@@ -491,7 +496,8 @@ export class DesktopSandboxProvider implements SandboxProvider {
   }
 
   private allowedRoots(home: string) {
-    return [home, ...(this.opts.hostRoots ?? [])];
+    const roots = this.opts.hostRoots;
+    return [home, ...(typeof roots === "function" ? roots() : (roots ?? []))];
   }
 }
 
