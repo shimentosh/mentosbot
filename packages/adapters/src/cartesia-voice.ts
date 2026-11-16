@@ -6,12 +6,15 @@ import type {
   VoiceInfo,
   VoiceProvider,
   VoiceSynthesizeRequest,
+  VoiceTranscribeRequest,
   VoiceVerifyResult,
 } from "@rakazo/adapter-kit";
 import {
+  asrLanguageHint,
   readVoiceAudio,
   readVoiceJson,
   requireOk,
+  speechUploadName,
   verifyVoiceHttpGet,
   voiceDeadline,
   voiceRequestError,
@@ -21,6 +24,7 @@ const API = "https://api.cartesia.ai";
 // From 2026-03-01 errors are JSON with a `message`; `/voices` pages with `limit`.
 const VERSION = "2026-08-14";
 const MODEL = "sonic-3";
+const TRANSCRIBE_MODEL = "ink-whisper";
 const VOICE_PAGE_LIMIT = 100;
 const VERIFY_PAGE_LIMIT = 1;
 /** Bounds the catalog walk so a very large library cannot spin forever. */
@@ -32,7 +36,7 @@ export class CartesiaVoiceProvider implements VoiceProvider {
       id: "cartesia",
       contractVersion: "1",
       adapterVersion: "0.1.0",
-      capabilities: { catalog: true, synthesize: true, transcribe: false },
+      capabilities: { catalog: true, synthesize: true, transcribe: true },
     };
   }
 
@@ -94,6 +98,32 @@ export class CartesiaVoiceProvider implements VoiceProvider {
     });
     await requireOk(res, "Cartesia", "speaking");
     return { bytes: await readVoiceAudio(res, signal), mimeType: "audio/mpeg" };
+  }
+
+  async transcribe(
+    request: VoiceTranscribeRequest,
+    context: AdapterContext,
+  ): Promise<{ text: string }> {
+    const form = new FormData();
+    form.set("model", TRANSCRIBE_MODEL);
+    form.set(
+      "file",
+      new Blob([new Uint8Array(request.audio)], { type: request.mimeType || "audio/webm" }),
+      speechUploadName(request.mimeType),
+    );
+    // Without a language Cartesia assumes English.
+    const language = asrLanguageHint(request.language);
+    if (language) form.set("language", language);
+    const res = await fetch(`${API}/stt`, {
+      method: "POST",
+      headers: cartesiaHeaders(request.apiKey),
+      body: form,
+      signal: voiceDeadline(request.signal ?? context.signal, 60_000),
+    });
+    const body = await readVoiceJson(res, { requireValid: res.ok });
+    if (!res.ok) throw voiceRequestError(res.status, "Cartesia", "transcribing", body);
+    const text = String((body as { text?: unknown } | null)?.text ?? "").trim();
+    return { text };
   }
 }
 

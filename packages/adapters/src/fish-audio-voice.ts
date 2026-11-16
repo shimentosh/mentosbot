@@ -12,6 +12,7 @@ import type {
 import { VoiceAccountError } from "@rakazo/adapter-kit";
 import { getLogger } from "@rakazo/logging";
 import {
+  asrLanguageHint,
   readVoiceAudio,
   readVoiceJson,
   speechUploadName,
@@ -39,7 +40,6 @@ let invalidTtsModelWarned = false;
  */
 const DEFAULT_ASR_MODEL = "transcribe-1-pro";
 /** BCP-47 tag or ISO 639-1 code; Fish wants the lowercase primary subtag. */
-const ASR_LANGUAGE_PATTERN = /^([A-Za-z]{2,3})(?:-[A-Za-z0-9]{2,8})*$/;
 let invalidAsrModelWarned = false;
 
 export class FishAudioVoiceProvider implements VoiceProvider {
@@ -238,15 +238,6 @@ function resolveFishTranscriptionModel(): string {
     });
   }
   return DEFAULT_ASR_MODEL;
-}
-
-/**
- * The lowercase ISO 639-1 code Fish expects in `language`, or undefined when the value is
- * not a tag we can honor ("es-ES" and "es" both ask for Spanish).
- */
-export function asrLanguageHint(language: string | undefined): string | undefined {
-  const match = ASR_LANGUAGE_PATTERN.exec(language?.trim() ?? "");
-  return match?.[1] ? match[1].toLowerCase() : undefined;
 }
 
 /**

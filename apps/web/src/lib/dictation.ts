@@ -49,8 +49,6 @@ const LEVEL_FLOOR_RMS = 0.01;
 const LEVEL_CEILING_RMS = 0.2;
 export const TRANSCRIPTION_RESPONSE_TIMEOUT_MS = 70_000;
 export const MAX_TRANSCRIPTION_RESPONSE_BYTES = 64 * 1024;
-/** Web Speech codes that mean the cloud recognizer cannot be used. */
-const WEB_SPEECH_SERVICE_ERRORS = new Set(["network", "service-not-allowed"]);
 
 export function webSpeechAvailable(): boolean {
   return Boolean(speechRecognitionCtor());
@@ -82,7 +80,7 @@ function electronSpeechHost(): boolean {
  * Phones cannot hold a speech session open: `start()` replays the system tone on every
  * restart and the session ends at each pause, so Web Speech there means one beep per
  * phrase and a transcript that keeps getting cut. Server transcription records silently,
- * so prefer it on mobile browsers wherever a provider can transcribe.
+ * so mobile browsers try it even before the voice status has loaded.
  */
 export function prefersServerDictation(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -91,14 +89,6 @@ export function prefersServerDictation(): boolean {
   // iPadOS 13+ reports a desktop Safari user agent, so fall back to touch support.
   const touchPoints = typeof navigator.maxTouchPoints === "number" ? navigator.maxTouchPoints : 0;
   return touchPoints > 1 && /macintosh/i.test(agent);
-}
-
-/** Connected server transcription should take over after Web Speech cannot run. */
-export function webSpeechNeedsServerFallback(
-  error: string | undefined,
-  transcribe: boolean,
-): boolean {
-  return transcribe && typeof error === "string" && WEB_SPEECH_SERVICE_ERRORS.has(error);
 }
 
 /**
@@ -295,29 +285,17 @@ export class Dictation {
     this.onFinal = opts.onFinal;
     this.mode = opts.mode;
     this.set({ status: "listening", transcript: "" });
-    const transcribe = Boolean(opts.transcribe);
-    // Desktop system speech is a fallback for an unconfigured transcription provider.
-    // An unknown capability is not a refusal: a device whose browser cannot hold the
-    // microphone open goes to the server even before the voice status has loaded.
-    if (
-      (prefersServerDictation() && opts.transcribe !== false) ||
-      (desktopBridge()?.speech && transcribe)
-    ) {
-      await this.listenRecorder(mine, opts.mode, opts.endpointMs ?? ENDPOINT_SILENCE_MS, spaceId);
+    const endpointMs = opts.endpointMs ?? ENDPOINT_SILENCE_MS;
+    // The connected voice provider listens whenever it can transcribe; the browser's or
+    // desktop's own recognizer covers a provider that only speaks. An unknown capability is
+    // not a refusal: a device whose browser cannot hold the microphone open goes to the
+    // server even before the voice status has loaded.
+    if (opts.transcribe === true || (prefersServerDictation() && opts.transcribe !== false)) {
+      await this.listenRecorder(mine, opts.mode, endpointMs, spaceId);
       return;
     }
     if (webSpeechAvailable()) {
-      this.listenWebSpeech(
-        opts.mode,
-        opts.endpointMs ?? ENDPOINT_SILENCE_MS,
-        mine,
-        transcribe,
-        spaceId,
-      );
-      return;
-    }
-    if (transcribe) {
-      await this.listenRecorder(mine, opts.mode, opts.endpointMs ?? ENDPOINT_SILENCE_MS, spaceId);
+      this.listenWebSpeech(opts.mode, endpointMs, mine);
       return;
     }
     this.set({
@@ -326,13 +304,7 @@ export class Dictation {
     });
   }
 
-  private listenWebSpeech(
-    mode: DictationMode,
-    endpointMs: number,
-    mine: number,
-    transcribe: boolean,
-    spaceId: string | null,
-  ) {
+  private listenWebSpeech(mode: DictationMode, endpointMs: number, mine: number) {
     const Ctor = speechRecognitionCtor();
     if (!Ctor) return;
     const rec = new Ctor();
@@ -373,11 +345,6 @@ export class Dictation {
     rec.onerror = (event) => {
       if (!live || this.token !== mine) return;
       if (event.error === "aborted" || event.error === "no-speech") return;
-      if (webSpeechNeedsServerFallback(event.error, transcribe)) {
-        live = false;
-        this.fallbackToServer(rec, mine, mode, endpointMs, spaceId);
-        return;
-      }
       live = false;
       const code = event.error;
       this.set({
@@ -409,10 +376,6 @@ export class Dictation {
           : 0;
       if (shortSessions >= RESTART_GIVE_UP_AFTER) {
         live = false;
-        if (transcribe) {
-          this.fallbackToServer(rec, mine, mode, endpointMs, spaceId);
-          return;
-        }
         this.releaseRecognition(rec);
         this.failListening(
           mine,
@@ -444,31 +407,10 @@ export class Dictation {
       if (mode === "hold") void this.meterOwnMicrophone(mine);
     } catch {
       if (!live || this.token !== mine) return;
-      if (transcribe) {
-        live = false;
-        this.fallbackToServer(rec, mine, mode, endpointMs, spaceId);
-        return;
-      }
       live = false;
       this.releaseRecognition(rec);
       this.set({ ...IDLE, error: t`Dictation failed.` });
     }
-  }
-
-  private fallbackToServer(
-    rec: SpeechRecognitionLike,
-    mine: number,
-    mode: DictationMode,
-    endpointMs: number,
-    spaceId: string | null,
-  ) {
-    const recognized = normalizedTranscript(this.snapshot.transcript);
-    this.releaseRecognition(rec);
-    clearTimeout(this.silenceTimer);
-    this.silenceTimer = undefined;
-    if (this.token !== mine) return;
-    this.set({ status: "listening", transcript: recognized });
-    void this.listenRecorder(mine, mode, endpointMs, spaceId);
   }
 
   private releaseRecognition(rec: SpeechRecognitionLike) {
@@ -502,8 +444,7 @@ export class Dictation {
       for (const track of stream.getTracks()) track.stop();
       return;
     }
-    const keptSpeech = this.snapshot.transcript.trim().length > 0;
-    if (mode === "endpoint" && !this.armSilence(stream, mine, endpointMs, keptSpeech)) {
+    if (mode === "endpoint" && !this.armSilence(stream, mine, endpointMs)) {
       for (const track of stream.getTracks()) track.stop();
       this.failListening(
         mine,
@@ -542,12 +483,7 @@ export class Dictation {
     }
   }
 
-  private armSilence(
-    stream: MediaStream,
-    mine: number,
-    endpointMs: number,
-    alreadyHeard = false,
-  ): boolean {
+  private armSilence(stream: MediaStream, mine: number, endpointMs: number): boolean {
     const Ctor = audioContextCtor();
     if (!Ctor) return false;
     try {
@@ -559,7 +495,7 @@ export class Dictation {
       this.audioContext = ctx;
       if (ctx.state === "suspended") void ctx.resume();
       const data = new Uint8Array(analyser.fftSize);
-      let heardSpeech = alreadyHeard;
+      let heardSpeech = false;
       let silentFor = 0;
       this.vadTimer = setInterval(() => {
         const media = this.media;
@@ -718,13 +654,7 @@ export class Dictation {
         this.failListening(mine, voiceAccountErrorText(body) ?? body.error ?? couldNotTranscribe);
         return;
       }
-      // The recorder captures fresh audio, so matching words are intentional repetitions.
-      const prefix = normalizedTranscript(this.snapshot.transcript);
-      const text = body.text ?? "";
-      this.finish(
-        prefix ? [prefix, normalizedTranscript(text)].filter(Boolean).join(" ") : text,
-        mine,
-      );
+      this.finish(body.text ?? "", mine);
     } catch (error) {
       // User cancel bumps token in stop() before aborting, so a matching token
       // means the deadline timer fired. Browsers may reject fetch as AbortError

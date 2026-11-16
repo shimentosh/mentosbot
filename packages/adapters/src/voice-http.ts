@@ -38,6 +38,17 @@ async function readVoiceBytes(
   }
 }
 
+const ASR_LANGUAGE_PATTERN = /^([A-Za-z]{2,3})(?:-[A-Za-z0-9]{2,8})*$/;
+
+/**
+ * The lowercase ISO 639-1 code transcription APIs expect, or undefined when the value is
+ * not a tag we can honor ("es-ES" and "es" both ask for Spanish).
+ */
+export function asrLanguageHint(language: string | undefined): string | undefined {
+  const match = ASR_LANGUAGE_PATTERN.exec(language?.trim() ?? "");
+  return match?.[1] ? match[1].toLowerCase() : undefined;
+}
+
 export function speechUploadName(mimeType?: string): string {
   const mime = (mimeType ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
   if (mime.includes("webm")) return "speech.webm";
