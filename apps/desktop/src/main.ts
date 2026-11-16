@@ -334,12 +334,13 @@ function createWindow(url: string, partition: string | null) {
     if (external !== null) void shell.openExternal(external);
     return { action: "deny" };
   });
-  // Signing in lands on a new page; pair then instead of waiting for the next launch.
-  const pairAfterNavigation = () => {
-    if (mainWindow === win) void userDevices?.pair();
+  // Signing in lands on a new page; pair then instead of waiting for the next launch. A full
+  // load may follow a sign-in to another account, so it also checks whose computer this is.
+  const pairAfterNavigation = (recheck: boolean) => () => {
+    if (mainWindow === win) void userDevices?.pair(recheck);
   };
-  win.webContents.on("did-navigate", pairAfterNavigation);
-  win.webContents.on("did-navigate-in-page", pairAfterNavigation);
+  win.webContents.on("did-navigate", pairAfterNavigation(true));
+  win.webContents.on("did-navigate-in-page", pairAfterNavigation(false));
   // Server redirects skip will-navigate, so a same-origin link could otherwise land elsewhere.
   const keepOnAppOrigin = (event: Electron.Event<{ url: string; isMainFrame: boolean }>) => {
     if (!event.isMainFrame) return;

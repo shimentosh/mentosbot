@@ -37,11 +37,16 @@ export interface PairedDevice {
 /** Only the native prompt sets "allowed". */
 export type DeviceConsent = "allowed" | "declined";
 
-/** "allowed" holds only for the account it was given for. */
-export interface SavedConsent {
-  consent: DeviceConsent;
+/** One account's choices on this computer; "allowed" holds only for that account. */
+export interface SavedChoice {
   userId: string | null;
+  consent?: DeviceConsent;
+  /** Routing the person set; unset routes while the computer is allowed. */
+  routeTraffic?: boolean;
 }
+
+/** The people who sign in here are few; the oldest choices drop off past this. */
+const MAX_SAVED_ACCOUNTS = 8;
 
 const optionalString = (value: unknown) => (typeof value === "string" ? value : null);
 
@@ -92,36 +97,54 @@ export async function deletePairedDevice(userDataDir: string, origin: string): P
   await rm(deviceFile(userDataDir, origin), { force: true });
 }
 
-export async function readDeviceConsent(
+/** Every account's choices for a server, the most recently changed first. */
+export async function readDeviceChoices(
   userDataDir: string,
   origin: string,
-): Promise<SavedConsent | null> {
+): Promise<SavedChoice[]> {
   const raw = await readPrivateFile(
     deviceFile(userDataDir, origin, ".consent"),
     MAX_DEVICE_FILE_BYTES,
   );
   try {
     const saved = raw === null ? null : JSON.parse(raw);
-    if (saved?.origin !== origin) return null;
-    // Versions before accounts were saved also wrote "declined" when the server ended a pairing,
-    // so that answer may not be the person's: ask again.
-    if (saved.consent === "declined" && !("userId" in saved)) return null;
-    return saved.consent === "allowed" || saved.consent === "declined"
-      ? { consent: saved.consent, userId: optionalString(saved.userId) }
-      : null;
+    if (saved?.origin !== origin) return [];
+    if (!Array.isArray(saved.accounts)) {
+      // Versions before accounts were saved also wrote "declined" when the server ended a
+      // pairing, so that answer may not be the person's: ask again.
+      if (saved.consent === "declined" && !("userId" in saved)) return [];
+      const choice = savedChoice(saved);
+      return choice?.consent ? [choice] : [];
+    }
+    return saved.accounts
+      .map(savedChoice)
+      .filter((choice: SavedChoice | null): choice is SavedChoice => choice !== null)
+      .slice(0, MAX_SAVED_ACCOUNTS);
   } catch {
-    return null;
+    return [];
   }
 }
 
-export async function saveDeviceConsent(
+function savedChoice(value: unknown): SavedChoice | null {
+  if (!value || typeof value !== "object") return null;
+  const entry = value as Record<string, unknown>;
+  const choice: SavedChoice = { userId: optionalString(entry.userId) };
+  if (entry.consent === "allowed" || entry.consent === "declined") choice.consent = entry.consent;
+  if (typeof entry.routeTraffic === "boolean") choice.routeTraffic = entry.routeTraffic;
+  return choice.consent || choice.routeTraffic !== undefined ? choice : null;
+}
+
+export async function saveDeviceChoices(
   userDataDir: string,
   origin: string,
-  { consent, userId }: SavedConsent,
+  accounts: SavedChoice[],
 ): Promise<void> {
   const file = deviceFile(userDataDir, origin, ".consent");
   await mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
-  await writePrivateFile(file, JSON.stringify({ origin, consent, userId }));
+  await writePrivateFile(
+    file,
+    JSON.stringify({ origin, accounts: accounts.slice(0, MAX_SAVED_ACCOUNTS) }),
+  );
 }
 
 export async function deviceName(platform = process.platform): Promise<string> {
@@ -162,7 +185,8 @@ export function createUserDeviceAccess(deps: {
   const paired = new Map<string, Omit<PairedDevice, "token">>();
   /** The token of the connection started for each origin, which only this process holds. */
   const tokens = new Map<string, string>();
-  const consent = new Map<string, SavedConsent | null>();
+  /** Each account's choices per origin, the most recently changed first. */
+  const choices = new Map<string, SavedChoice[]>();
   /** Bumped on every consent change, so a prompt answered after one is ignored. */
   const changes = new Map<string, number>();
   const consentSaves = new Map<string, Promise<void>>();
@@ -191,6 +215,7 @@ export function createUserDeviceAccess(deps: {
     const connection = deps.connect(origin, token, {
       onRevoked: (reason) => {
         if (client === active) client = undefined;
+        const userId = paired.get(origin)?.userId ?? null;
         paired.delete(origin);
         tokens.delete(origin);
         untied.delete(origin);
@@ -202,7 +227,7 @@ export function createUserDeviceAccess(deps: {
         // a prompt still open belongs to the ended sign-in. Removed or rejected otherwise:
         // stay unpaired until turned back on.
         if (reason !== "session-ended") {
-          void decide(origin, "declined").catch(() => undefined);
+          void decide(origin, "declined", userId).catch(() => undefined);
           return;
         }
         changes.set(origin, (changes.get(origin) ?? 0) + 1);
@@ -214,20 +239,30 @@ export function createUserDeviceAccess(deps: {
     client = active;
   }
 
-  function isAllowed(origin: string) {
-    const choice = consent.get(origin);
+  /** The paired account's choices; none while unpaired. */
+  function choiceFor(origin: string) {
     const device = paired.get(origin);
-    return choice?.consent === "allowed" && device !== undefined && choice.userId === device.userId;
+    if (!device) return undefined;
+    return choices.get(origin)?.find((choice) => choice.userId === device.userId);
   }
 
-  async function decide(origin: string, choice: DeviceConsent) {
-    const saved = { consent: choice, userId: paired.get(origin)?.userId ?? null };
-    consent.set(origin, saved);
-    changes.set(origin, (changes.get(origin) ?? 0) + 1);
+  function isAllowed(origin: string) {
+    return choiceFor(origin)?.consent === "allowed";
+  }
+
+  /** Records one account's change first in line and saves every account's choices. */
+  function remember(origin: string, userId: string | null, change: Omit<SavedChoice, "userId">) {
+    const list = choices.get(origin) ?? [];
+    const previous = list.find((choice) => choice.userId === userId);
+    const next = [
+      { ...previous, ...change, userId },
+      ...list.filter((choice) => choice !== previous),
+    ].slice(0, MAX_SAVED_ACCOUNTS);
+    choices.set(origin, next);
     const save = (consentSaves.get(origin) ?? Promise.resolve()).then(() =>
-      saveDeviceConsent(deps.userDataDir, origin, saved).catch(async (error) => {
+      saveDeviceChoices(deps.userDataDir, origin, next).catch(async (error) => {
         // An earlier "allowed" left on disk would be honoured on the next launch.
-        if (choice === "declined")
+        if (change.consent === "declined")
           await rm(deviceFile(deps.userDataDir, origin, ".consent"), { force: true }).catch(
             () => undefined,
           );
@@ -238,7 +273,42 @@ export function createUserDeviceAccess(deps: {
       origin,
       save.catch(() => undefined),
     );
-    await save;
+    return save;
+  }
+
+  async function decide(
+    origin: string,
+    choice: DeviceConsent,
+    userId = paired.get(origin)?.userId ?? null,
+  ) {
+    changes.set(origin, (changes.get(origin) ?? 0) + 1);
+    await remember(origin, userId, { consent: choice });
+  }
+
+  async function putRouteTraffic(origin: string, routeTraffic: boolean) {
+    const token = tokens.get(origin);
+    if (!token) return false;
+    const response = await deps.fetch(new URL(USER_DEVICE_ROUTE_TRAFFIC_PATH, origin).href, {
+      method: "PUT",
+      credentials: "omit",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ routeTraffic }),
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
+    });
+    await response.body?.cancel();
+    if (response.status !== 204) throw new Error("Could not change routing");
+    return true;
+  }
+
+  /**
+   * A new pairing starts with routing off on the server, so put back what this account chose.
+   * Unset, an allowed computer routes: allowing it once turns both on.
+   */
+  async function restoreRouting(origin: string) {
+    const choice = choiceFor(origin);
+    if (!(choice?.routeTraffic ?? choice?.consent === "allowed")) return;
+    await putRouteTraffic(origin, true).catch(() => undefined);
   }
 
   function ask(origin: string) {
@@ -254,21 +324,25 @@ export function createUserDeviceAccess(deps: {
   }
 
   async function authorize(origin: string) {
-    if (consent.get(origin)?.consent === "declined") return false;
+    if (choiceFor(origin)?.consent === "declined") return false;
     if (isAllowed(origin)) return true;
     const seen = changes.get(origin);
     const answer = await ask(origin);
     // Turned off, revoked, or already answered while the prompt was open.
     if (changes.get(origin) !== seen) return isAllowed(origin);
     await decide(origin, answer ? "allowed" : "declined").catch(() => undefined);
+    if (answer) void restoreRouting(origin);
     return answer;
   }
 
-  function pair() {
+  /** `recheck` after a full page load: whoever signed in may be another account. */
+  function pair(recheck = false) {
     const origin = current;
     if (origin === null) return Promise.resolve();
+    const token = tokens.get(origin);
+    if (recheck && token && !untied.has(origin)) untied.set(origin, token);
     void tieToSignIn(origin);
-    if (consent.get(origin)?.consent === "declined") return Promise.resolve();
+    if (choices.get(origin)?.[0]?.consent === "declined") return Promise.resolve();
     return pairOnce(origin);
   }
 
@@ -289,8 +363,14 @@ export function createUserDeviceAccess(deps: {
         const token = untied.get(origin);
         if (!token) return;
         state.again = false;
-        if (await requestTie(origin, token)) {
+        const tie = await requestTie(origin, token);
+        if (tie !== "retry") {
           if (untied.get(origin) === token) untied.delete(origin);
+          // Paired for another account than the one signed in: this computer moves to it.
+          if (tie === "other-account" && tokens.get(origin) === token) {
+            await dropPairing(origin);
+            if (current === origin) await pair();
+          }
           return;
         }
         if (!state.again) return;
@@ -300,7 +380,10 @@ export function createUserDeviceAccess(deps: {
     }
   }
 
-  async function requestTie(origin: string, token: string) {
+  async function requestTie(
+    origin: string,
+    token: string,
+  ): Promise<"tied" | "other-account" | "retry"> {
     try {
       const response = await deps.fetch(new URL(USER_DEVICE_SESSION_PATH, origin).href, {
         method: "POST",
@@ -310,9 +393,10 @@ export function createUserDeviceAccess(deps: {
         signal: AbortSignal.timeout(10_000),
       });
       await response.body?.cancel();
-      return response.status === 204;
+      if (response.status === 204) return "tied";
+      return response.status === 403 ? "other-account" : "retry";
     } catch {
-      return false;
+      return "retry";
     }
   }
 
@@ -373,7 +457,10 @@ export function createUserDeviceAccess(deps: {
       return;
     }
     paired.set(origin, { deviceId: device.deviceId, userId: device.userId });
-    if (current === origin) start(origin, device.token);
+    if (current === origin) {
+      start(origin, device.token);
+      await restoreRouting(origin);
+    }
   }
 
   /**
@@ -405,6 +492,10 @@ export function createUserDeviceAccess(deps: {
       return;
     }
     if (paired.get(origin) !== device) return;
+    await dropPairing(origin);
+  }
+
+  async function dropPairing(origin: string) {
     const token = tokens.get(origin);
     if (client?.origin === origin) disconnect();
     paired.delete(origin);
@@ -442,17 +533,19 @@ export function createUserDeviceAccess(deps: {
       disconnect();
       current = origin;
       if (origin === null) return;
-      const [device, choice] = await Promise.all([
+      const [device, saved] = await Promise.all([
         readPairedDevice(deps.userDataDir, origin, deps.cipher),
-        readDeviceConsent(deps.userDataDir, origin),
+        readDeviceChoices(deps.userDataDir, origin),
       ]);
       if (selection !== generation) return;
-      if (consent.get(origin)?.consent !== "declined") consent.set(origin, choice);
+      // A decline made this launch stands even if saving it failed.
+      if (choices.get(origin)?.[0]?.consent !== "declined") choices.set(origin, saved);
       if (device) {
         paired.set(origin, { deviceId: device.deviceId, userId: device.userId });
         untied.set(origin, device.token);
         start(origin, device.token);
         void tieToSignIn(origin);
+        void restoreRouting(origin);
       } else {
         paired.delete(origin);
         void pair();
@@ -478,13 +571,14 @@ export function createUserDeviceAccess(deps: {
       }
       const seen = changes.get(origin);
       if (!isAllowed(origin) && !(await ask(origin))) return;
-      if (changes.get(origin) !== seen && consent.get(origin)?.consent !== "allowed") return;
+      if (changes.get(origin) !== seen && choiceFor(origin)?.consent !== "allowed") return;
       unavailable.delete(origin);
       await forgetUnlisted(origin);
       await pairOnce(origin);
       if (!paired.has(origin)) throw new Error("Could not pair this computer");
       if (changes.get(origin) !== seen) return;
       await decide(origin, "allowed");
+      await restoreRouting(origin);
     },
     /**
      * Sends the owner's computers' browser traffic out through this computer's network. Only
@@ -497,21 +591,13 @@ export function createUserDeviceAccess(deps: {
         await forgetUnlisted(origin);
         await pairOnce(origin);
       }
-      const token = tokens.get(origin);
-      if (!token) {
+      if (!(await putRouteTraffic(origin, routeTraffic))) {
         if (routeTraffic) throw new Error("Could not pair this computer");
         return;
       }
-      const response = await deps.fetch(new URL(USER_DEVICE_ROUTE_TRAFFIC_PATH, origin).href, {
-        method: "PUT",
-        credentials: "omit",
-        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ routeTraffic }),
-        redirect: "error",
-        signal: AbortSignal.timeout(10_000),
-      });
-      await response.body?.cancel();
-      if (response.status !== 204) throw new Error("Could not change routing");
+      const device = paired.get(origin);
+      // Kept for this account, so the next pairing puts it back.
+      if (device) await remember(origin, device.userId, { routeTraffic }).catch(() => undefined);
     },
     close() {
       ++generation;
