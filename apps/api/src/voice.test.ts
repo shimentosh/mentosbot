@@ -39,7 +39,7 @@ describe("toVoiceStatus", () => {
 
   it("is ready once a voice is chosen", () => {
     expect(toVoiceStatus({ provider: "cartesia", voiceId: "katie" }).ready).toBe(true);
-    expect(toVoiceStatus({ provider: "cartesia", voiceId: "katie" }).transcribe).toBe(false);
+    expect(toVoiceStatus({ provider: "cartesia", voiceId: "katie" }).transcribe).toBe(true);
   });
 
   it("is off when nothing is connected", () => {

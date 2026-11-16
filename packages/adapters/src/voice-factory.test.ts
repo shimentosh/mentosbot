@@ -64,7 +64,7 @@ describe("createVoiceProvider", () => {
     ]);
     expect(createVoiceProvider("elevenlabs").describe().id).toBe("elevenlabs");
     expect(createVoiceProvider("openai").describe().capabilities.transcribe).toBe(true);
-    expect(createVoiceProvider("cartesia").describe().capabilities.transcribe).toBe(false);
+    expect(createVoiceProvider("cartesia").describe().capabilities.transcribe).toBe(true);
     expect(createVoiceProvider("fish-audio").describe().capabilities.transcribe).toBe(true);
     expect(createVoiceProvider("openai-compatible").describe().capabilities.transcribe).toBe(true);
     expect(isVoiceProviderId("elevenlabs")).toBe(true);
@@ -368,6 +368,66 @@ describe("CartesiaVoiceProvider", () => {
       bit_rate: 128000,
     });
     expect(body.model_id).toBe("sonic-3");
+  });
+
+  it("transcribes with Ink on the current API version", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ type: "transcript", text: " Hello " })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await new CartesiaVoiceProvider().transcribe(
+      {
+        audio: new Uint8Array([1, 2]),
+        mimeType: "audio/webm;codecs=opus",
+        apiKey: "sk-test",
+        language: "bn-BD",
+      },
+      ctx,
+    );
+
+    expect(result).toEqual({ text: "Hello" });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("https://api.cartesia.ai/stt");
+    const init = fetchMock.mock.calls[0]?.[1] as {
+      headers: Record<string, string>;
+      body: FormData;
+    };
+    expect(init.headers.Authorization).toBe("Bearer sk-test");
+    expect(init.headers["Cartesia-Version"]).toBe("2026-08-14");
+    expect(init.body.get("model")).toBe("ink-whisper");
+    expect(init.body.get("language")).toBe("bn");
+    expect((init.body.get("file") as File).name).toBe("speech.webm");
+  });
+
+  it("leaves the language to Cartesia when no usable hint is given", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ text: "Hi" })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new CartesiaVoiceProvider().transcribe(
+      { audio: new Uint8Array([1]), mimeType: "audio/ogg", apiKey: "sk-test" },
+      ctx,
+    );
+
+    const form = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(form.has("language")).toBe(false);
+  });
+
+  it("reports a failed transcription as a Cartesia error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ message: "Invalid API key" }), { status: 401 }),
+        ),
+    );
+
+    await expect(
+      new CartesiaVoiceProvider().transcribe(
+        { audio: new Uint8Array([1]), mimeType: "audio/webm", apiKey: "sk-bad" },
+        ctx,
+      ),
+    ).rejects.toThrow(/Cartesia/);
   });
 });
 

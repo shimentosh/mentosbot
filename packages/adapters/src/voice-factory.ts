@@ -34,7 +34,7 @@ export const VOICE_CATALOG = [
     id: "cartesia",
     name: "Cartesia",
     description: "Lowest-latency Sonic voices for interruptible calls.",
-    transcribe: false,
+    transcribe: true,
   },
   {
     id: "fish-audio",
