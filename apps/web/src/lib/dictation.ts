@@ -8,6 +8,7 @@ import {
 } from "@rakazo/core";
 import { desktopBridge } from "./desktop.js";
 import { DesktopSpeechRecognition } from "./desktop-speech.js";
+import { playableRecording } from "./recording-wav.js";
 import { selectedSpaceId, withSpaceHeaders } from "./rpc.js";
 import { errorText, voiceAccountErrorText } from "./user-error.js";
 
@@ -628,7 +629,9 @@ export class Dictation {
       TRANSCRIPTION_RESPONSE_TIMEOUT_MS,
     );
     try {
-      const audioBase64 = await blobToBase64(blob);
+      const upload = await playableRecording(blob);
+      if (this.token !== mine) return;
+      const audioBase64 = await blobToBase64(upload);
       if (this.token !== mine) return;
       const res = await withAbort(
         fetch("/api/voice/transcribe", {
@@ -637,7 +640,7 @@ export class Dictation {
           credentials: "include",
           body: JSON.stringify({
             audioBase64,
-            mimeType: blob.type,
+            mimeType: upload.type,
             language: transcriptionLanguage(),
           }),
           signal: abort.signal,
