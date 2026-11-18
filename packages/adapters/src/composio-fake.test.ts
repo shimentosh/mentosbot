@@ -341,7 +341,14 @@ describe("Composio connected-account lifecycle", () => {
           { tools: [{ tool_slug: "GMAIL_SEND_EMAIL", arguments: {} }] },
           ctx,
         ),
-      ).resolves.toEqual([{ type: "error", message: expect.stringContaining("reconnect GMAIL") }]);
+      ).resolves.toEqual([
+        {
+          type: "error",
+          message: expect.stringContaining("reconnect GMAIL"),
+          // Names the app, so the chat can show its connect card.
+          reconnectApp: "GMAIL",
+        },
+      ]);
       expect(fake.executions).toEqual([]);
     },
   );
