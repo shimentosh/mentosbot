@@ -2610,6 +2610,10 @@ msgstr "Couldn't load this page. Try again."
 msgid "Couldn't load your wallet"
 msgstr "Couldn't load your wallet"
 
+#: src/pages/shell/use-composer-actions.ts
+msgid "Couldn't try again"
+msgstr "Couldn't try again"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update bot style"
 msgstr "Couldn't update bot style"
@@ -3916,6 +3920,10 @@ msgstr "Jump to latest"
 msgid "Jump to replied message: {excerpt}"
 msgstr "Jump to replied message: {excerpt}"
 
+#: src/pages/shell/section-jump.tsx
+msgid "Jump to section, {title}"
+msgstr "Jump to section, {title}"
+
 #: src/lib/relative-time.ts
 msgid "just now"
 msgstr "just now"
@@ -4429,6 +4437,7 @@ msgid "More computer actions"
 msgstr "More computer actions"
 
 #: src/pages/ModelRoleSettings.tsx
+#: src/pages/shell/sidebar-roster.tsx
 msgid "Move down"
 msgstr "Move down"
 
@@ -4441,6 +4450,7 @@ msgid "Move to"
 msgstr "Move to"
 
 #: src/pages/ModelRoleSettings.tsx
+#: src/pages/shell/sidebar-roster.tsx
 msgid "Move up"
 msgstr "Move up"
 
@@ -7175,6 +7185,7 @@ msgstr "Trusted sites"
 #: src/pages/ApprovalsOverlay.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/SharedPage.tsx
+#: src/pages/shell/composer-error.tsx
 #: src/pages/shell/message-cards.tsx
 #: src/pages/SpaceSearch.tsx
 msgid "Try again"
