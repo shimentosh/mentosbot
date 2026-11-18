@@ -14,6 +14,11 @@ Open **Settings → Approvals** and pick a **Mode**:
 
 **Auto** needs an **Approval model**, set in **Settings → Models**. See [Models](./models.md).
 
+In **Auto**, the same model also checks the reply that ends your turn against what the bot's tools
+actually did. If the reply says something was saved, sent or scheduled and no tool call did it, the
+bot is sent back once to do the work or correct itself. This adds one short model call per reply,
+so a fast approval model keeps replies quick. If the check cannot run, the reply stands unchecked.
+
 > [!TIP]
 > Start with **Ask** or **Auto**. As you approve the same action again and again, choose
 > **Always allow** on the card and the bot stops asking for that one.

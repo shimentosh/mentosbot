@@ -532,6 +532,9 @@ export interface AgentRunModel {
 export type AgentContextStrategy = "current" | "retrieval" | "snapshots" | "cache-aware";
 export const DEFAULT_CONTEXT_STRATEGY: AgentContextStrategy = "retrieval";
 
+/** One tool call of a turn, as the final-reply check sees it. */
+export type FinalReplyToolRecord = { name: string; failed: boolean; result: string };
+
 export interface AgentRunRequest {
   /** Awaited producer-side accounting, independent of event-consumer cancellation. */
   onUsage?: (event: Extract<AgentRuntimeEvent, { type: "usage" }>) => void | Promise<void>;
@@ -603,6 +606,14 @@ export interface AgentRunRequest {
   allowSilentEmpty?: boolean;
   /** Contextual fallback when a non-silent run produces no written response. */
   emptyResponseText?: string;
+  /**
+   * Checks the reply that would end the turn against the tools this turn ran. A returned
+   * prompt goes back to the model once, so it can do the work or correct itself.
+   */
+  reviewFinalReply?: (input: {
+    reply: string;
+    tools: FinalReplyToolRecord[];
+  }) => Promise<string | undefined>;
   executeTool?: (
     name: string,
     args: Record<string, unknown>,

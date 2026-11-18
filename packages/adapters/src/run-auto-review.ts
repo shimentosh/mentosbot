@@ -1,6 +1,6 @@
 import type { AgentRuntimeEvent, AutoReviewProvider } from "@rakazo/adapter-kit";
 import { recordUsage } from "@rakazo/db";
-import type { AutoReviewChecker } from "./auto-review.js";
+import type { AutoReviewChecker, LlmAutoReviewOptions } from "./auto-review.js";
 import { autoReviewTimeoutMs, resolveAutoReviewProviderKind } from "./auto-review.js";
 import { createAutoReviewProvider } from "./auto-review-factory.js";
 import { DecisionAutoReviewProvider } from "./decision-auto-review.js";
@@ -12,7 +12,7 @@ import { resolveModelKey } from "./run-model.js";
 /** The Auto Review provider that judges a run's action with one checker choice. */
 export async function autoReviewCheckerProvider(
   deps: ExecutorDeps,
-  scope: { runId: string; spaceId: string; userId: string; botId: string; threadId: string },
+  scope: CheckerScope,
   options: {
     injectedReview?: AutoReviewProvider;
     memberChecker: boolean;
@@ -21,8 +21,7 @@ export async function autoReviewCheckerProvider(
   },
   checker: AutoReviewChecker,
 ): Promise<AutoReviewProvider> {
-  const { runId, spaceId, userId, botId, threadId } = scope;
-  const { injectedReview, memberChecker, backups, registerSecrets } = options;
+  const { injectedReview, memberChecker } = options;
   if (injectedReview) return injectedReview;
   const kind =
     memberChecker || (checker.provider !== "jev" && checker.provider !== "scripted")
@@ -31,6 +30,44 @@ export async function autoReviewCheckerProvider(
   if (kind === "jev" || kind === "scripted") {
     return createAutoReviewProvider(kind);
   }
+  const { judgeKey, onUsage } = await checkerModelAccess(deps, scope, options, checker);
+  return decisionModel(checker.provider, checker.model)
+    ? new DecisionAutoReviewProvider({
+        provider: new HttpDecisionProvider("openrouter", {
+          apiKey: judgeKey.apiKey ?? "",
+          callObserver: judgeKey.callObserver,
+          onUsage,
+        }),
+        providerId: checker.provider,
+        model: checker.model,
+      })
+    : createAutoReviewProvider("llm", {
+        llm: checkerLlmOptions(deps, scope, checker, { judgeKey, onUsage }),
+      });
+}
+
+type CheckerScope = {
+  runId: string;
+  spaceId: string;
+  userId: string;
+  botId: string;
+  threadId: string;
+};
+type CheckerAccess = Awaited<ReturnType<typeof checkerModelAccess>>;
+
+/** The key and usage record a checker choice runs with. */
+export async function checkerModelAccess(
+  deps: ExecutorDeps,
+  scope: CheckerScope,
+  options: {
+    memberChecker: boolean;
+    backups?: readonly { provider: string; modelId: string }[];
+    registerSecrets: (values: string[]) => void;
+  },
+  checker: AutoReviewChecker,
+) {
+  const { runId, spaceId, userId, botId } = scope;
+  const { memberChecker, backups, registerSecrets } = options;
   const reviewCredential = await findConnectedModelCredential(
     deps.prisma,
     deps.secretStore,
@@ -69,45 +106,39 @@ export async function autoReviewCheckerProvider(
       operationId: `auto-review:${runId}`,
       operationKind: "setup",
     });
-  return decisionModel(checker.provider, checker.model)
-    ? new DecisionAutoReviewProvider({
-        provider: new HttpDecisionProvider("openrouter", {
-          apiKey: judgeKey.apiKey ?? "",
-          callObserver: judgeKey.callObserver,
-          onUsage,
-        }),
-        providerId: checker.provider,
-        model: checker.model,
-      })
-    : createAutoReviewProvider("llm", {
-        llm: {
-          onUsage,
-          runtime: deps.runtime,
-          checker,
-          apiKey: judgeKey.oauth ? undefined : judgeKey.apiKey,
-          callObserver: judgeKey.callObserver,
-          accountId: judgeKey.accountId,
-          gatewayId: judgeKey.gatewayId,
-          baseUrl: judgeKey.baseUrl,
-          headers: judgeKey.headers,
-          allowPrivateEndpoint: judgeKey.allowPrivateEndpoint,
-          cacheCapabilities: judgeKey.cacheCapabilities,
-          contextWindow: judgeKey.contextWindow,
-          maxTokens: judgeKey.maxTokens,
-          reasoning: judgeKey.reasoning,
-          oauth: judgeKey.oauth
-            ? {
-                credential: judgeKey.oauth,
-                persist: judgeKey.persistOAuth,
-                retire: judgeKey.retireOAuth,
-              }
-            : undefined,
-          runId,
-          spaceId,
-          userId,
-          botId,
-          threadId,
-          timeoutMs: autoReviewTimeoutMs(),
-        },
-      });
+  return { judgeKey, onUsage };
+}
+
+/** What the JSON-text checker needs to ask this checker choice one question. */
+export function checkerLlmOptions(
+  deps: ExecutorDeps,
+  scope: CheckerScope,
+  checker: AutoReviewChecker,
+  { judgeKey, onUsage }: CheckerAccess,
+): LlmAutoReviewOptions {
+  return {
+    onUsage,
+    runtime: deps.runtime,
+    checker,
+    apiKey: judgeKey.oauth ? undefined : judgeKey.apiKey,
+    callObserver: judgeKey.callObserver,
+    accountId: judgeKey.accountId,
+    gatewayId: judgeKey.gatewayId,
+    baseUrl: judgeKey.baseUrl,
+    headers: judgeKey.headers,
+    allowPrivateEndpoint: judgeKey.allowPrivateEndpoint,
+    cacheCapabilities: judgeKey.cacheCapabilities,
+    contextWindow: judgeKey.contextWindow,
+    maxTokens: judgeKey.maxTokens,
+    reasoning: judgeKey.reasoning,
+    oauth: judgeKey.oauth
+      ? {
+          credential: judgeKey.oauth,
+          persist: judgeKey.persistOAuth,
+          retire: judgeKey.retireOAuth,
+        }
+      : undefined,
+    ...scope,
+    timeoutMs: autoReviewTimeoutMs(),
+  };
 }
