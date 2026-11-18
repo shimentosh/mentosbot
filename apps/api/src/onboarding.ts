@@ -1,8 +1,13 @@
+import type { JobPublisher } from "@rakazo/adapter-kit";
+import { runContinueJob } from "@rakazo/adapter-kit";
 import type { ConnectorRegistry } from "@rakazo/adapters";
+import { appConnectedResumePrompt } from "@rakazo/adapters";
 import type { Actor, MessageBlock } from "@rakazo/contracts";
 import {
+  ACTIVE_RUN_STATUSES,
   appConnectCard,
   connectedAppBlocks,
+  isOwnerStartedRun,
   matchAppCatalog,
   matchesAppConnection,
 } from "@rakazo/core";
@@ -12,6 +17,7 @@ import {
   createThreadMessageInTransaction,
   IsolationError,
 } from "@rakazo/db";
+import { getLogger } from "@rakazo/logging";
 import { requireBotThread } from "./bot-thread.js";
 import { resolveThreadTarget } from "./thread-target.js";
 
@@ -303,7 +309,7 @@ export async function chooseFocus(
 }
 
 export async function markAppConnected(
-  deps: OnboardingDeps,
+  deps: OnboardingDeps & { jobs?: Pick<JobPublisher, "enqueue"> },
   actor: Actor,
   botId: string,
   provider: string,
@@ -346,7 +352,7 @@ export async function markAppConnected(
     await tx.$executeRaw`SELECT id FROM threads WHERE id = ${thread.id} FOR UPDATE`;
     // Onboarding cards sit at the start of the chat and inline cards near the end;
     // bound both reads so a long chat is never scanned in full.
-    const select = { id: true, blocks: true } as const;
+    const select = { id: true, blocks: true, runId: true, createdAt: true } as const;
     const first = await tx.message.findMany({
       where: { threadId: thread.id },
       select,
@@ -364,6 +370,8 @@ export async function markAppConnected(
       : [];
     const messages = [...new Map([...first, ...latest, ...own].map((m) => [m.id, m])).values()];
     const events = [];
+    // The newest card a run showed for this app: that run's task picks back up.
+    let card: (typeof messages)[number] | undefined;
     for (const message of messages) {
       const blocks = message.blocks as MessageBlock[];
       if (
@@ -374,6 +382,7 @@ export async function markAppConnected(
       )
         continue;
       const next = connectedAppBlocks(blocks, connectorId, entry.slug);
+      if (message.runId && (!card || message.createdAt > card.createdAt)) card = message;
       await tx.message.update({ where: { id: message.id }, data: { blocks: next } });
       events.push(
         await appendEventInTransaction(tx, {
@@ -383,9 +392,91 @@ export async function markAppConnected(
         }),
       );
     }
-    return events;
+    const resumeRunId = card
+      ? await resumeAfterConnect(tx, actor, { ...target, card, appName: entry.name })
+      : undefined;
+    return { events, resumeRunId };
   });
-  for (const event of updates) await deps.events.notify(thread.id, event.seq);
+  for (const event of updates.events) await deps.events.notify(thread.id, event.seq);
+  if (updates.resumeRunId) {
+    // The run reconciler recovers a queued run after an enqueue failure.
+    await deps.jobs?.enqueue(runContinueJob(updates.resumeRunId)).catch((error) => {
+      getLogger().warn("app connected resume deferred to reconciliation", error);
+    });
+  }
+}
+
+/**
+ * Queue a run that continues the task a connect card interrupted, so the user does not have to
+ * ask again. Only for a card the owner's own finished run showed, while nothing else is running
+ * in the chat and the owner has not written since: by then the conversation has moved on.
+ */
+async function resumeAfterConnect(
+  tx: Prisma.TransactionClient,
+  actor: Actor,
+  input: {
+    spaceId: string;
+    botId: string;
+    threadId: string;
+    card: { id: string; runId: string | null; createdAt: Date };
+    appName: string;
+  },
+): Promise<string | undefined> {
+  const { spaceId, botId, threadId, card } = input;
+  if (!card.runId) return undefined;
+  const shown = await tx.run.findFirst({
+    where: { id: card.runId, spaceId, botId, threadId, userId: actor.userId },
+    select: {
+      status: true,
+      trigger: true,
+      sourceMessageId: true,
+      sourceMessage: { select: { role: true } },
+    },
+  });
+  if (
+    shown?.status !== "completed" ||
+    !shown.sourceMessageId ||
+    !isOwnerStartedRun(shown.trigger, shown.sourceMessage?.role === "user")
+  )
+    return undefined;
+  const clientNonce = `app-connected:${card.id}`;
+  const blocking = await tx.run.findFirst({
+    where: {
+      spaceId,
+      OR: [{ clientNonce }, { threadId, status: { in: [...ACTIVE_RUN_STATUSES] } }],
+    },
+    select: { id: true },
+  });
+  if (blocking) return undefined;
+  const written = await tx.message.findFirst({
+    where: { threadId, role: "user", createdAt: { gt: card.createdAt } },
+    select: { id: true },
+  });
+  if (written) return undefined;
+  const task = await tx.task.create({
+    data: {
+      spaceId,
+      botId,
+      threadId,
+      userId: actor.userId,
+      prompt: appConnectedResumePrompt(input.appName),
+      status: "queued",
+    },
+  });
+  const run = await tx.run.create({
+    data: {
+      spaceId,
+      botId,
+      threadId,
+      userId: actor.userId,
+      taskId: task.id,
+      status: "queued",
+      trigger: "follow_up",
+      sourceMessageId: shown.sourceMessageId,
+      clientNonce,
+    },
+  });
+  return run.id;
 }
 
 function capitalize(value: string): string {

@@ -244,3 +244,124 @@ it("updates the authorized card's own message even outside the bounded scan", as
     data: { blocks: [{ ...card, status: "connected" }] },
   });
 });
+
+describe("picking the task back up after a connect card", () => {
+  const cardBlocks = [
+    {
+      kind: "app_connect",
+      connectorId: "pipedream",
+      provider: "slack",
+      name: "Slack",
+      status: "pending",
+    },
+  ];
+  function resumeFixture(options: {
+    shown?: Record<string, unknown> | null;
+    blocking?: boolean;
+    written?: boolean;
+  }) {
+    const { deps, actor, tx } = fixture([
+      { connectorId: "pipedream", slug: "slack", name: "Slack", connected: true },
+    ]);
+    const created = { tasks: [] as unknown[], runs: [] as Array<Record<string, unknown>> };
+    const run = {
+      // The first lookup is the run that showed the card; the second is anything in its way.
+      findFirst: vi
+        .fn()
+        .mockResolvedValueOnce(
+          options.shown === undefined
+            ? {
+                status: "completed",
+                trigger: "user",
+                sourceMessageId: "asked",
+                sourceMessage: { role: "user" },
+              }
+            : options.shown,
+        )
+        .mockResolvedValueOnce(options.blocking ? { id: "busy" } : null),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        created.runs.push(data);
+        return { id: "resume-run" };
+      }),
+    };
+    Object.assign(tx, {
+      run,
+      task: {
+        create: vi.fn(async ({ data }: { data: unknown }) => {
+          created.tasks.push(data);
+          return { id: "resume-task" };
+        }),
+      },
+    });
+    tx.message.findMany = vi.fn(async () => [
+      { id: "card", runId: "shown-run", createdAt: new Date(1000), blocks: cardBlocks },
+    ]) as never;
+    Object.assign(tx.message, {
+      findFirst: vi.fn(async () => (options.written ? { id: "newer" } : null)),
+    });
+    const enqueue = vi.fn(async () => undefined);
+    return { deps: { ...deps, jobs: { enqueue } }, actor, created, enqueue };
+  }
+
+  it("queues a follow-up run for the owner's finished request", async () => {
+    const { deps, actor, created, enqueue } = resumeFixture({});
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream");
+    expect(created.tasks).toEqual([
+      expect.objectContaining({ prompt: expect.stringContaining("The user connected Slack") }),
+    ]);
+    expect(created.runs).toEqual([
+      expect.objectContaining({
+        trigger: "follow_up",
+        sourceMessageId: "asked",
+        clientNonce: "app-connected:card",
+        userId: "user",
+      }),
+    ]);
+    expect(enqueue).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [
+      "the run that showed the card is still going",
+      {
+        shown: {
+          status: "running",
+          trigger: "user",
+          sourceMessageId: "asked",
+          sourceMessage: { role: "user" },
+        },
+      },
+    ],
+    [
+      "a routine showed the card",
+      {
+        shown: {
+          status: "completed",
+          trigger: "routine",
+          sourceMessageId: "asked",
+          sourceMessage: { role: "user" },
+        },
+      },
+    ],
+    ["the run is not this owner's", { shown: null }],
+    ["another run is active or it already resumed", { blocking: true }],
+    ["the owner has written since", { written: true }],
+  ])("queues nothing when %s", async (_case, options) => {
+    const { deps, actor, created, enqueue } = resumeFixture(options);
+    await markAppConnected(deps, actor, "bot", "slack", "pipedream");
+    expect(created.runs).toEqual([]);
+    expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it("queues nothing for an onboarding card no run showed", async () => {
+    const { deps, actor, tx } = fixture([
+      { connectorId: "pipedream", slug: "slack", name: "Slack", connected: true },
+    ]);
+    tx.message.findMany = vi.fn(async () => [
+      { id: "card", runId: null, createdAt: new Date(1000), blocks: cardBlocks },
+    ]) as never;
+    await expect(
+      markAppConnected(deps, actor, "bot", "slack", "pipedream"),
+    ).resolves.toBeUndefined();
+  });
+});

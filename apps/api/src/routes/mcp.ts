@@ -1038,7 +1038,7 @@ export function mcpRoutes(ctx: RouterContext) {
       }),
       appConnected: authed.onboarding.appConnected.handler(async ({ context, input }) => {
         await markAppConnected(
-          onboardingDeps,
+          { ...onboardingDeps, jobs: deps.jobs },
           context.actor,
           input.botId,
           input.provider,
