@@ -866,11 +866,10 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
             ? `Update from ${peerMessage.fromBotName}: ${peerMessage.text}`
             : DELEGATED_EMPTY_NOTICE
           : undefined;
+        // Every owner turn, not only a compacted chat: a fact saved in another chat, or before
+        // this one was cleared, is in no visible history, so it has to be recalled to be known.
         const recallPromise =
-          threadContext.includeSemanticRecall &&
-          semanticMemory &&
-          memoryScope &&
-          thread.historyCompactedUpToSeq != null
+          threadContext.includeSemanticRecall && semanticMemory && memoryScope
             ? semanticMemory.recall(
                 {
                   query: task.prompt,
