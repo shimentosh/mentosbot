@@ -77,6 +77,8 @@ export const memoryTools: ToolHandlers = {
         existing?.content ?? "",
         String(args.content ?? ""),
         String(args.old_text ?? ""),
+        undefined,
+        String(args.topic ?? ""),
       );
       if ("error" in edit) return call.finish(edit);
       const { content } = edit;

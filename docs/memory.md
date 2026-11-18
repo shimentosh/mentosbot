@@ -10,7 +10,9 @@ indexed in a file called `MEMORY.md`.
 
 You can also just tell it: "remember that invoices go to the finance folder".
 
-A bot keeps its notes short, one fact per line. When something changes, it rewrites the old note
+A bot keeps its notes short, one fact per line, grouped under headings such as Preferences, People
+and Projects. It saves without being asked when you state a lasting preference or correct how it
+works. When something changes, it rewrites the old note
 instead of adding a second one, and it deletes notes that no longer hold. It keeps at most 4 KB of
 notes in `MEMORY.md`, merging or removing notes to make room. You can still add more by hand.
 

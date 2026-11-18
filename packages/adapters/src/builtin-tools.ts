@@ -855,11 +855,12 @@ export const builtinAgentTools: ConnectorTool[] = [
   },
   {
     name: "remember",
-    description: `Save one short new fact to your memory, one call per fact. To change or drop a fact, pass old_text from its entry with new or empty content. Holds ${BOT_MEMORY_MAX_BYTES / 1024} KB.`,
+    description: `Save one short new fact to your memory, one call per fact. topic is the heading it is filed under: reuse one already in memory when it fits, such as Preferences, People, Projects or How to work. To change or drop a fact, pass old_text from its entry with new or empty content. Holds ${BOT_MEMORY_MAX_BYTES / 1024} KB.`,
     inputSchema: {
       type: "object",
       properties: {
         content: { type: "string" },
+        topic: { type: "string" },
         old_text: { type: "string" },
       },
       required: ["content"],

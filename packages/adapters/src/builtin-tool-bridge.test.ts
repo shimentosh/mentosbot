@@ -61,8 +61,8 @@ describe("built-in tool bridge", () => {
     // request_secret carries the card and contact kinds; update_bot carries instructions paging;
     // show_card stays listed so receipts follow outward actions without a find_tool step, and
     // ask_user carries draft approval. skill_create and skill_update stay listed so "save this
-    // as a skill" and "fix that skill" need no find_tool step.
-    expect(definitionBytes(listed)).toBeLessThanOrEqual(34_869);
+    // as a skill" and "fix that skill" need no find_tool step. remember carries its topic.
+    expect(definitionBytes(listed)).toBeLessThanOrEqual(35_031);
     expect(deferred.map((tool) => tool.name)).toEqual(
       expect.arrayContaining([
         "render_plot",

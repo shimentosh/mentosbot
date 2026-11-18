@@ -149,3 +149,45 @@ describe("editMemory", () => {
     expect(editMemory(oversized, "", "bbb", 32)).toEqual({ content: `${"a".repeat(40)}\n` });
   });
 });
+
+describe("memory topics", () => {
+  it("files a fact under its topic, creating the heading once", () => {
+    const first = appendMemoryFact("", "Prefers short replies.", "Preferences");
+    expect(first).toBe("## Preferences\nPrefers short replies.\n");
+    const second = appendMemoryFact(first, "Sam is the accountant.", "People");
+    const third = appendMemoryFact(second, "Never email after 6pm.", "preferences");
+    expect(third).toBe(
+      "## Preferences\nPrefers short replies.\nNever email after 6pm.\n\n## People\nSam is the accountant.\n",
+    );
+  });
+
+  it("keeps a memory without topics as a plain list, and files loose facts once it has them", () => {
+    expect(appendMemoryFact("Likes tea.\n", "Lives in Dhaka.")).toBe(
+      "Likes tea.\nLives in Dhaka.\n",
+    );
+    expect(appendMemoryFact("## People\nSam is the accountant.\n", "Lives in Dhaka.")).toBe(
+      "## People\nSam is the accountant.\n\n## Notes\nLives in Dhaka.\n",
+    );
+  });
+
+  it("does not save a fact twice, whatever topic it is offered under", () => {
+    const memory = "## People\nSam is the accountant.\n";
+    expect(appendMemoryFact(memory, "Sam is the accountant.", "Team")).toBe(memory);
+  });
+
+  it("cannot be made to write a second heading through the topic", () => {
+    expect(appendMemoryFact("", "A fact.", "People\n## Secrets # x")).toBe(
+      "## People Secrets x\nA fact.\n",
+    );
+  });
+
+  it("replaces an entry in place and drops a topic left empty", () => {
+    const memory = "## Preferences\nPrefers short replies.\n\n## People\nSam is the accountant.\n";
+    expect(editMemory(memory, "Prefers detailed replies.", "Prefers short")).toEqual({
+      content: "## Preferences\nPrefers detailed replies.\n\n## People\nSam is the accountant.\n",
+    });
+    expect(editMemory(memory, "", "Sam is the accountant")).toEqual({
+      content: "## Preferences\nPrefers short replies.\n",
+    });
+  });
+});

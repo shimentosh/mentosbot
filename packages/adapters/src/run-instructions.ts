@@ -12,6 +12,13 @@ const VOICE_CALL_BASE_INSTRUCTION =
 
 export const VOICE_CALL_INSTRUCTION = `${VOICE_CALL_BASE_INSTRUCTION} If the user asks to end the call or hang up, or the conversation is finished, call end_call with a short title and a one-sentence farewell instead of saying goodbye in text, then do any remaining work as a normal chat reply.`;
 
+/**
+ * When and how a bot keeps its own memory: saved unasked, filed by topic, and kept current by
+ * replacing an entry instead of adding a second one that disagrees with it.
+ */
+export const MEMORY_INSTRUCTION =
+  "Keep your memory yourself with remember, without being asked: save a lasting preference, a correction to how you work, or a fact you will need again, such as who people are, their projects, accounts and regular schedules. File each under a topic. When something changes or you were wrong, replace that entry with old_text instead of adding another. Do not save one-off task details, secrets, or what is already there.";
+
 export function voiceCallInstruction(disabled?: ReadonlySet<string>): string {
   return builtinOffered(disabled, "end_call")
     ? VOICE_CALL_INSTRUCTION
@@ -348,7 +355,7 @@ function toolUsageLine(parts: {
     builtinOffered(disabled, "connect_app")
       ? "Use connect_app when an app needs connecting or the user asks to connect one, then wait for them."
       : undefined,
-    builtinOffered(disabled, "remember") ? "Use remember for durable facts." : undefined,
+    builtinOffered(disabled, "remember") ? MEMORY_INSTRUCTION : undefined,
     scratchpadClause(disabled),
     parts.followUpsOffered ? FOLLOW_UP_INSTRUCTION : undefined,
     builtinOffered(disabled, "request_takeover")
