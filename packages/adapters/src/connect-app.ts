@@ -3,8 +3,16 @@ import type { MessageBlock } from "@rakazo/contracts";
 import { appConnectCard, matchAppCatalog, matchesAppConnection } from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
 import { appendEventInTransaction, createThreadMessageInTransaction } from "@rakazo/db";
+import { automated } from "./automated-messages.js";
 
 const RECENT_MESSAGES = 50;
+
+/** The task of the run that picks the work back up once the user connected the app. */
+export function appConnectedResumePrompt(appName: string): string {
+  return automated(
+    `The user connected ${appName}, and its tools are available now. Continue the task you showed the connect card for.`,
+  );
+}
 
 /** Catalog data is the only source of card content; serialize dedupe with the message write. */
 export async function connectApp(
