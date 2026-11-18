@@ -36,9 +36,6 @@ their notes. In **Settings → Memory**, choose **Connect memory provider**:
 - **Serenity**: choose **Recall and write**, or **Recall only** to keep it read-only.
 - **Honcho**: reads from an existing Honcho peer and never writes to it.
 
-On each of your turns the bot is given the saved facts that best match your message, including ones
-it saved in another chat or before you cleared this one.
-
 Once connected, **Default scope** decides what bots share in the provider:
 
 - **Isolated**: each bot recalls only what it saved. This is the default.

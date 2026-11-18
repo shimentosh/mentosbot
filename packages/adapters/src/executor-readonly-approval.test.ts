@@ -330,8 +330,6 @@ function fixture({
   let checkpointCapture:
     | { executionId: string; checkpoint: Omit<TurnCheckpoint, "provider" | "model"> }
     | undefined;
-  // Null until a test connects a provider with useMemoryProvider.
-  let memoryProvider: unknown = null;
   const skillRows: Array<Record<string, unknown>> = [];
   const prisma = {
     user: { findUnique: vi.fn(async () => null) },
@@ -639,7 +637,7 @@ function fixture({
       },
       commit,
     },
-    memoryProviders: { resolve: async () => memoryProvider },
+    memoryProviders: { resolve: async () => null },
     events: {
       append: vi.fn(async () => undefined),
       notify: vi.fn(async () => undefined),
@@ -695,10 +693,6 @@ function fixture({
       checkpointCapture = { executionId, checkpoint };
     },
     results,
-    useMemoryProvider(provider: unknown) {
-      memoryProvider = provider;
-    },
-    runtimeRun,
     skillRows,
     execute,
     commit,
@@ -1511,32 +1505,6 @@ describe("create_space", () => {
     expect(f.pauseRunForInput).not.toHaveBeenCalled();
     expect(f.effects).toHaveLength(1);
     expect(f.effects[0]?.status).not.toBe("intended");
-  });
-});
-
-describe("long-term memory", () => {
-  it("recalls saved facts on a turn of a chat that was never compacted", async () => {
-    const f = fixture({ prompt: "What does Sam do?" });
-    const recall = vi.fn(async () => ({
-      ok: true as const,
-      value: [{ id: "m1", memory: "Sam is the accountant." }],
-    }));
-    f.useMemoryProvider({
-      provider: {
-        describe: () => ({ id: "fake", capabilities: { recall: true, save: true } }),
-        recall,
-      },
-      defaultScope: "bot",
-    });
-    f.setCalls([]);
-    await f.run(true);
-    expect(recall).toHaveBeenCalledWith(
-      expect.objectContaining({ query: "What does Sam do?", botId: expect.any(String) }),
-      expect.anything(),
-    );
-    expect(JSON.stringify(f.runtimeRun.mock.calls[0]?.[0].history)).toContain(
-      "Sam is the accountant.",
-    );
   });
 });
 
