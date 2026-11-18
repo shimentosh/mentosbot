@@ -1,13 +1,19 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import type { MobileSnapshot } from "../../lib/api";
+import { rpc } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
 import { openModelSettings } from "../../lib/model-settings";
 import { runErrorActionLabel } from "../../lib/run-error-presentation";
 import { useRunError } from "../run-error-sheet";
 
 /** The chat's failed run: its error, the recovery action, and whether its details are open. */
-export function useThreadRunError(run: MobileSnapshot["run"] | undefined, botId?: string) {
+export function useThreadRunError(
+  run: MobileSnapshot["run"] | undefined,
+  botId?: string,
+  /** The open chat, so a failure nothing else fixes can be tried again. */
+  retry?: { target: { botId: string } | { groupId: string }; onQueued: () => void },
+) {
   const { t } = useI18n();
   const router = useRouter();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -35,6 +41,17 @@ export function useThreadRunError(run: MobileSnapshot["run"] | undefined, botId?
                 openModelSettings();
               },
       }
-    : null;
+    : failedRunId && retry
+      ? {
+          label: t("Try again"),
+          onPress: () => {
+            setDetailsOpen(false);
+            void rpc("threads/retry", { ...retry.target, runId: failedRunId })
+              .then(retry.onQueued)
+              // A reply that can no longer be retried keeps its notice; sending again still works.
+              .catch(() => undefined);
+          },
+        }
+      : null;
   return { runError, normalizedRunError, runErrorAction, detailsOpen, setDetailsOpen };
 }

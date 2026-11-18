@@ -423,7 +423,17 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
   });
 
   const { runError, normalizedRunError, runErrorAction, detailsOpen, setDetailsOpen } =
-    useThreadRunError(snap?.run, botId);
+    useThreadRunError(
+      snap?.run,
+      botId,
+      readOnly
+        ? undefined
+        : groupId
+          ? { target: { groupId }, onQueued: () => void refresh() }
+          : botId
+            ? { target: { botId }, onQueued: () => void refresh() }
+            : undefined,
+    );
 
   // Event actions read the latest committed screen state without invalidating settled rows.
   const rowActions = useLatestRowActions({

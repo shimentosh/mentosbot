@@ -16,6 +16,7 @@ export function ComposerError({
   onRunErrorPresented,
   onOpenModels,
   onOpenConnections,
+  onRetryRun,
   onDismissError,
   textareaRef,
 }: {
@@ -28,6 +29,8 @@ export function ComposerError({
   onRunErrorPresented: (runId: string) => void;
   onOpenModels: () => void;
   onOpenConnections: () => void;
+  /** Runs the failed reply again. Offered when nothing else fixes the failure. */
+  onRetryRun?: () => void;
   onDismissError: () => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
 }) {
@@ -114,7 +117,7 @@ export function ComposerError({
   const normalizedRunError = runError
     ? normalizeRunError(runError, translateRunError, i18n.locale || "en")
     : null;
-  // The one action that fixes the failure; a transient one already says to try again.
+  // The one action that fixes the failure; one nothing fixes can be run again as it was.
   const recovery = sendError ? undefined : normalizedRunError?.recovery;
   const recoveryAction =
     recovery === "model"
@@ -124,7 +127,9 @@ export function ComposerError({
             label: normalizedRunError?.kind === "auth" ? t`Replace key` : t`Connect a model`,
             onClick: onOpenConnections,
           }
-        : null;
+        : normalizedRunError && !sendError && onRetryRun
+          ? { label: t`Try again`, onClick: onRetryRun }
+          : null;
 
   const warning = Boolean(sendError) && imageConfirmation;
   return sendError || runError ? (

@@ -156,6 +156,26 @@ it.each([
   expect(container?.querySelector('[data-testid="composer-error-action"]')).toBeNull();
 });
 
+it("offers Try again for a failure nothing else fixes, and never beside a fix", () => {
+  const onRetryRun = vi.fn();
+  renderComposer(async () => true, {
+    runError: "Request timed out.",
+    runErrorId: "failed-run",
+    onRetryRun,
+  });
+  const action = container?.querySelector<HTMLButtonElement>(
+    '[data-testid="composer-error-action"]',
+  );
+  expect(action?.textContent).toBe("Try again");
+  act(() => action?.click());
+  expect(onRetryRun).toHaveBeenCalledOnce();
+
+  rerenderComposer({ runError: '401: {"message":"Invalid API key"}' });
+  expect(container?.querySelector('[data-testid="composer-error-action"]')?.textContent).toBe(
+    "Replace key",
+  );
+});
+
 it.each([MODEL_REQUIRED_SEND_ERROR, `  ${MODEL_REQUIRED_SEND_ERROR}  `])(
   "links the missing-model send error to model settings: %s",
   (sendError) => {

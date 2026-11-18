@@ -81,6 +81,7 @@ const ComposerBody = memo(function Composer({
   runError,
   runErrorId,
   onRunErrorPresented,
+  onRetryRun,
   onDismissError,
   sending,
   fileInputRef,
@@ -114,6 +115,7 @@ const ComposerBody = memo(function Composer({
   runError: string | null;
   runErrorId: string | null;
   onRunErrorPresented: (runId: string) => void;
+  onRetryRun?: () => void;
   onDismissError: () => void;
   sending: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
@@ -644,6 +646,7 @@ const ComposerBody = memo(function Composer({
         onRunErrorPresented={onRunErrorPresented}
         onOpenModels={onOpenModels}
         onOpenConnections={onOpenConnections}
+        onRetryRun={onRetryRun}
         onDismissError={onDismissError}
         textareaRef={textareaRef}
       />

@@ -600,6 +600,32 @@ export function useComposerActions({
     }
   }
 
+  async function retryFailedRun() {
+    const failedRunId = displayedRunErrorId;
+    const groupTarget = activeGroupId.current;
+    const botTarget = activeBotId.current;
+    if (!failedRunId || (!groupTarget && !botTarget)) return;
+    try {
+      await rpc.threads.retry(
+        groupTarget
+          ? { groupId: groupTarget, runId: failedRunId }
+          : { botId: botTarget ?? undefined, runId: failedRunId },
+      );
+    } catch (error) {
+      setSendError(errorText(error, t`Couldn't try again`));
+      return;
+    }
+    // The failure is being handled, so its strip goes; the new run shows its own state.
+    rememberSeenRunErrorId(failedRunId);
+    setDismissedRunErrorIds((current) => new Set(current).add(failedRunId));
+    await (groupTarget
+      ? refreshGroupThreadRef.current(groupTarget)
+      : botTarget
+        ? refreshThreadRef.current(botTarget)
+        : undefined
+    )?.catch(() => undefined);
+  }
+
   return {
     activePendingAttachments,
     attachmentNotice,
@@ -626,6 +652,7 @@ export function useComposerActions({
     displayedRunError,
     displayedRunErrorId,
     handleRunErrorPresented,
+    retryFailedRun,
     dismissComposerError,
     startFocusPrompt,
   };

@@ -1247,6 +1247,7 @@ function SpaceShell() {
               runError={composer.displayedRunError}
               runErrorId={composer.displayedRunErrorId}
               onRunErrorPresented={composer.handleRunErrorPresented}
+              onRetryRun={() => void composer.retryFailedRun()}
               onDismissError={composer.dismissComposerError}
               sending={sending}
               fileInputRef={composer.fileInputRef}

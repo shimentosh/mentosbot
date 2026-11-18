@@ -815,6 +815,10 @@ export const appContract = {
       )
       .output(z.object({ ok: z.literal(true), runIds: z.array(Id).optional() })),
     stop: oc.input(threadTarget).output(z.object({ ok: z.literal(true) })),
+    /** Runs the caller's own failed reply again, while it is still the chat's last run. */
+    retry: oc
+      .input(threadTarget.safeExtend({ runId: Id }))
+      .output(z.object({ ok: z.literal(true) })),
     followUp: oc
       .input(
         threadTarget.safeExtend({
