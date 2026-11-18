@@ -16,6 +16,7 @@ import type {
   AgentRuntimeEvent,
   AgentSteeringMessage,
   AgentUsage,
+  FinalReplyToolRecord,
   ModelCallObserver,
 } from "@rakazo/adapter-kit";
 import { ModelAccountError, ModelOutputError, TransientModelError } from "@rakazo/adapter-kit";
@@ -83,6 +84,7 @@ import { PiJsonlSessionRecorder } from "./pi-session.js";
 import { withPiTelemetry } from "./pi-telemetry.js";
 import { withPiThinkingActivity } from "./pi-thinking-activity.js";
 import { observedPiStream } from "./pi-usage.js";
+import { MAX_TOOL_RESULT_CHARS } from "./reply-claim-check.js";
 import type { RuntimeContextDecision } from "./runtime-context.js";
 import { createRuntimeContextPolicy } from "./runtime-context.js";
 import { deliverFinishedShells } from "./shell-command-stream.js";
@@ -94,6 +96,14 @@ import {
   unresolvedTurnCheckpointCalls,
 } from "./turn-checkpoint.js";
 import { midTaskMessageFromPrompt, midTaskMessagePrompt } from "./user-progress.js";
+
+/** The text a tool returned, for the final-reply check; images and other parts are left out. */
+function toolResultText(content: AgentToolResult<unknown>["content"]): string {
+  return content
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n")
+    .slice(0, MAX_TOOL_RESULT_CHARS);
+}
 
 const running = new Map<string, { controller: AbortController; work: Promise<void> }>();
 // Some OpenAI-compatible models return EOS immediately after a tool result
@@ -770,6 +780,10 @@ export class PiAgentRuntime implements AgentRuntime {
           streamed += text;
           queue.push({ type: "text", text });
         };
+        // What this turn's tools did, for the one check of the reply that would end it.
+        const replyToolRecord: FinalReplyToolRecord[] = [];
+        // A resumed turn's earlier calls are not in the record, so its reply is not checked.
+        let finalReplyReviewed = Boolean(request.turnCheckpoint || request.resumeFromCheckpoint);
         let toolWorkPendingFinal = false;
         // Text streamed before this point is tool-turn narration. Only text after
         // it counts as the final reply, including when the completed message omits it.
@@ -777,6 +791,13 @@ export class PiAgentRuntime implements AgentRuntime {
         agent.subscribe(async (event) => {
           if (event.type === "tool_execution_end" && isTerminatingReplyResult(event.result)) {
             terminatedReply = terminatingReplyText(event.result) ?? terminatedReply;
+          }
+          if (event.type === "tool_execution_end") {
+            replyToolRecord.push({
+              name: event.toolName,
+              failed: event.isError,
+              result: toolResultText(event.result.content),
+            });
           }
           if (event.type === "tool_execution_end" && !event.result.terminate) {
             finishedCalls.set(event.toolCallId, {
@@ -880,6 +901,28 @@ export class PiAgentRuntime implements AgentRuntime {
                     : SILENT_TOOL_CONTINUATION_PROMPT,
                   timestamp: Date.now(),
                 });
+              }
+            }
+            // The reply that would end the turn is checked once against what the tools did.
+            if (
+              request.reviewFinalReply &&
+              !finalReplyReviewed &&
+              !hasToolCalls &&
+              !hasToolResults &&
+              messageText.trim() &&
+              !providerFailureText(event.message) &&
+              !host.pausePending &&
+              !signal.aborted
+            ) {
+              finalReplyReviewed = true;
+              const correction = await request
+                .reviewFinalReply({ reply: messageText, tools: [...replyToolRecord] })
+                .catch((error) => {
+                  getLogger().warn("final reply review", error);
+                  return undefined;
+                });
+              if (correction && !signal.aborted) {
+                agent.followUp({ role: "user", content: correction, timestamp: Date.now() });
               }
             }
           }

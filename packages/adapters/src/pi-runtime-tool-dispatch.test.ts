@@ -1317,6 +1317,73 @@ describe("Pi connector tool dispatch", () => {
     });
   });
 
+  it("checks the reply that ends the turn once, and sends a correction back", async () => {
+    fakeAgentState.mode = "silent-continuation";
+    const reviewFinalReply = vi.fn(async () => "Correct that reply.");
+    for await (const _event of new PiAgentRuntime().run(
+      {
+        botId: "b",
+        threadId: "t",
+        runId: "reply-review",
+        prompt: "send the update and report back",
+        instructions: "Use the destination tool, then tell the user what happened.",
+        history: [],
+        tools: [destinationTool],
+        model: { provider: "test", id: "dispatch-test-model" },
+        executeTool: vi.fn(async () => ({ ok: true })),
+        reviewFinalReply,
+      },
+      {
+        operationId: "reply-review",
+        traceId: "reply-review",
+        spaceId: "w",
+        userId: "u",
+        signal: new AbortController().signal,
+      },
+    )) {
+      // Drain the run.
+    }
+    expect(reviewFinalReply).toHaveBeenCalledOnce();
+    expect(reviewFinalReply).toHaveBeenCalledWith({
+      reply: "The final answer.",
+      // This fake agent emits no tool results, so the record it builds stays empty.
+      tools: [],
+    });
+    expect(fakeAgentState.followUpMessages.at(-1)).toEqual(
+      expect.objectContaining({ role: "user", content: "Correct that reply." }),
+    );
+  });
+
+  it("leaves a resumed turn's reply unchecked, since its earlier calls are not on record", async () => {
+    fakeAgentState.mode = "silent-continuation";
+    const reviewFinalReply = vi.fn(async () => undefined);
+    for await (const _event of new PiAgentRuntime().run(
+      {
+        botId: "b",
+        threadId: "t",
+        runId: "reply-review-resumed",
+        prompt: "send the update and report back",
+        instructions: "Use the destination tool, then tell the user what happened.",
+        history: [],
+        tools: [destinationTool],
+        model: { provider: "test", id: "dispatch-test-model" },
+        executeTool: vi.fn(async () => ({ ok: true })),
+        resumeFromCheckpoint: "takeover",
+        reviewFinalReply,
+      },
+      {
+        operationId: "reply-review-resumed",
+        traceId: "reply-review-resumed",
+        spaceId: "w",
+        userId: "u",
+        signal: new AbortController().signal,
+      },
+    )) {
+      // Drain the run.
+    }
+    expect(reviewFinalReply).not.toHaveBeenCalled();
+  });
+
   it("does not wait for a slow tool completion hook", async () => {
     let resolveAudit!: () => void;
     const audit = new Promise<void>((resolve) => {

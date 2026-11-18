@@ -187,6 +187,7 @@ import {
   runAllowsSilentEmpty,
   runReplyGuidance,
 } from "./run-replies.js";
+import { finalReplyReviewer } from "./run-reply-check.js";
 import {
   notifyRoutineRetryAttemptsExhausted,
   retryRoutineRun,
@@ -1987,6 +1988,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
               script,
               allowSilentEmpty: allowSilentEmptyRun,
               emptyResponseText,
+              reviewFinalReply: scripted ? undefined : finalReplyReviewer(ctx),
               executeTool: scripted
                 ? undefined
                 : (name, args, executionId, route, observer) =>

@@ -295,6 +295,32 @@ export async function runAutoReviewJudge(
     signal?: AbortSignal;
   },
 ): Promise<AutoReviewJudgeResult> {
+  const judged = await runCheckerJudge({
+    ...input,
+    operation: "auto-review",
+    parse: (text) => {
+      const parsed = parseAutoReviewJudgeText(text);
+      return parsed.decision === "error" ? undefined : parsed;
+    },
+  });
+  if ("error" in judged) return { decision: "error", model: judged.model, reason: judged.error };
+  return { ...judged.value, model: judged.model };
+}
+
+/**
+ * One tool-free question to the checker model, answered as JSON that `parse` reads. An
+ * unreadable answer gets one more try. Timeouts, provider failures and a second unreadable
+ * answer come back as an error, never as a verdict.
+ */
+export async function runCheckerJudge<T>(
+  input: LlmAutoReviewOptions & {
+    prompt: string;
+    signal?: AbortSignal;
+    /** Names the usage record and trace, such as `auto-review`. */
+    operation: string;
+    parse: (text: string) => T | undefined;
+  },
+): Promise<{ value: T; model: string } | { error: string | undefined; model: string }> {
   const modelLabel = `${input.checker.provider}/${input.checker.model}`;
   const timeoutMs = input.timeoutMs ?? autoReviewTimeoutMs();
   const timeoutSignal = AbortSignal.timeout(timeoutMs);
@@ -307,7 +333,7 @@ export async function runAutoReviewJudge(
         {
           botId: input.botId,
           threadId: input.threadId,
-          runId: `${input.runId}:auto-review`,
+          runId: `${input.runId}:${input.operation}`,
           usageOperationKind: "setup",
           onUsage: async (event) => {
             await input.onUsage?.(event);
@@ -338,8 +364,8 @@ export async function runAutoReviewJudge(
           },
         },
         {
-          operationId: `auto-review:${input.runId}`,
-          traceId: `auto-review:${input.runId}`,
+          operationId: `${input.operation}:${input.runId}`,
+          traceId: `${input.operation}:${input.runId}`,
           spaceId: input.spaceId,
           userId: input.userId,
           signal,
@@ -382,25 +408,19 @@ export async function runAutoReviewJudge(
             200,
           )}`;
       // biome-ignore lint/suspicious/noConsole: Emit one sanitized checker diagnostic.
-      console.warn(`[auto-review] checker ${redactSecrets(modelLabel, secrets)} ${detail}`);
-      return {
-        decision: "error",
-        model: modelLabel,
-        reason: timedOut ? "Checker timed out." : "Checker failed.",
-      };
+      console.warn(`[${input.operation}] checker ${redactSecrets(modelLabel, secrets)} ${detail}`);
+      return { model: modelLabel, error: timedOut ? "Checker timed out." : "Checker failed." };
     }
 
     if (failed || !text) {
-      return { decision: "error", model: modelLabel, reason: "Checker returned no decision." };
+      return { model: modelLabel, error: "Checker returned no decision." };
     }
-    const parsed = parseAutoReviewJudgeText(text);
-    // An unreadable verdict gets one more try before the owner is asked.
-    if (parsed.decision === "error" && attempt === 0) continue;
-    return {
-      decision: parsed.decision,
-      reason: parsed.reason,
-      model: modelLabel,
-    };
+    const value = input.parse(text);
+    // An unreadable verdict gets one more try before it counts as an error.
+    if (value === undefined && attempt === 0) continue;
+    return value === undefined
+      ? { model: modelLabel, error: undefined }
+      : { value, model: modelLabel };
   }
 }
 

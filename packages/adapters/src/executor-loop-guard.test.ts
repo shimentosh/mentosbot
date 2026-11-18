@@ -270,6 +270,14 @@ async function runLoop(
         defaultModelId: "example-model",
       })),
     },
+    // Ask mode: in Auto the reply that ends a turn is checked by the same fake model, and
+    // these tests count its requests.
+    userActionAutoReviewPreference: {
+      findUnique: vi.fn(async () => ({ enabled: false, skipApprovals: false })),
+    },
+    actionAutoReviewPreference: {
+      findUnique: vi.fn(async () => ({ enabled: false, skipApprovals: false })),
+    },
   };
   // Models and methods the run touches but this test does not care about behave as empty tables.
   const table = (model: object) =>
