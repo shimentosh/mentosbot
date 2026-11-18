@@ -4,7 +4,7 @@ import {
   desktopProtectionGuardMessage,
   protectedComputerLifecycleRefusal,
 } from "./desktop-command-guard.js";
-import type { ToolHandlers } from "./run-tool-gate.js";
+import type { ToolCall, ToolHandlers } from "./run-tool-gate.js";
 import {
   cancelScheduleFromTool,
   commandWatchFromTool,
@@ -21,6 +21,7 @@ import {
   removeScratchpadItemFromTool,
   updateScratchpadItemFromTool,
 } from "./scratchpad-tools.js";
+import type { ApprovedSharedSkillChange } from "./skill-tools.js";
 import {
   skillCreateFromTool,
   skillDeleteFromTool,
@@ -292,6 +293,8 @@ export const taskTools: ToolHandlers = {
   async skill_update(ctx, call) {
     const { deps, run } = ctx;
     const { args } = call;
+    const approved = approvedSharedSkillChange(call);
+    if (approved && "error" in approved) return call.finish(approved);
     return call.finish(
       await skillUpdateFromTool(
         deps.prisma,
@@ -307,12 +310,15 @@ export const taskTools: ToolHandlers = {
           body: args.body !== undefined ? String(args.body) : undefined,
           content: args.content ? String(args.content) : undefined,
         },
+        approved,
       ),
     );
   },
   async skill_delete(ctx, call) {
     const { deps, run } = ctx;
     const { args } = call;
+    const approved = approvedSharedSkillChange(call);
+    if (approved && "error" in approved) return call.finish(approved);
     return call.finish(
       await skillDeleteFromTool(
         deps.prisma,
@@ -324,7 +330,22 @@ export const taskTools: ToolHandlers = {
           name: args.name ? String(args.name) : undefined,
           skillId: args.skillId ? String(args.skillId) : undefined,
         },
+        approved,
       ),
     );
   },
 };
+
+/**
+ * A held change to a skill other spaces read (see prepareSharedSkillChange) runs only once the
+ * owner or Auto Review approves it.
+ */
+function approvedSharedSkillChange(
+  call: ToolCall,
+): ApprovedSharedSkillChange | { error: string } | undefined {
+  const { previousContent } = call.args;
+  if (typeof previousContent !== "string") return undefined;
+  if ((call.nextApprovedTool !== call.name && !call.bypassApproval) || !call.claimedEffect)
+    return { error: "Changing a skill other spaces use needs the owner's approval." };
+  return { previousContent };
+}

@@ -97,6 +97,15 @@ function onlyInSpace(owner: SkillOwner) {
 
 const SHARED_SKILL_ERROR =
   "Could not change this skill. A skill available in other spaces can only be changed by the user.";
+const STALE_SKILL_ERROR = "This skill changed since the request. Read it again and retry.";
+
+/** A change to a skill other spaces read, as the owner approved it: the text it replaces. */
+export type ApprovedSharedSkillChange = { previousContent: string };
+
+/** One of the owner's skills this space can use, wherever else it is available. */
+function sharedWithSpace(owner: SkillOwner, approved: ApprovedSharedSkillChange) {
+  return { ...availableInSpace(owner), content: approved.previousContent };
+}
 
 export async function listAgentSkillRecords(
   prisma: PrismaClient,
@@ -223,18 +232,27 @@ export async function skillCreateFromTool(
   }
 }
 
-export async function skillUpdateFromTool(
+type SkillUpdateInput = {
+  name?: string;
+  skillId?: string;
+  newName?: string;
+  description?: string;
+  body?: string;
+  content?: string;
+};
+
+type ResolvedSkillUpdate = {
+  existing: SkillRecord & { id: string };
+  nextName: string;
+  nextDescription: string;
+  nextContent: string;
+};
+
+async function resolveSkillUpdate(
   prisma: PrismaClient,
   owner: SkillOwner,
-  input: {
-    name?: string;
-    skillId?: string;
-    newName?: string;
-    description?: string;
-    body?: string;
-    content?: string;
-  },
-): Promise<Record<string, unknown>> {
+  input: SkillUpdateInput,
+): Promise<{ error: string } | ResolvedSkillUpdate> {
   const existing = await findOwnedSkill(prisma, owner, {
     skillId: input.skillId,
     name: input.name,
@@ -284,17 +302,66 @@ export async function skillUpdateFromTool(
     }
   }
 
+  return { existing, nextName, nextDescription, nextContent };
+}
+
+async function isSharedSkill(prisma: PrismaClient, owner: SkillOwner, id: string) {
+  const local = await prisma.agentSkill.count({
+    where: { id, ...onlyInSpace(owner), source: "user" },
+  });
+  return local === 0;
+}
+
+/**
+ * The request an approval card shows for a change to a skill other spaces read: the resolved
+ * skill, the whole new text and the text it replaces. Undefined when the bot may change the
+ * skill itself, or when the ordinary call already explains why it cannot.
+ */
+export async function prepareSharedSkillChange(
+  prisma: PrismaClient,
+  owner: SkillOwner,
+  toolName: "skill_update" | "skill_delete",
+  input: SkillUpdateInput,
+): Promise<{ error: string } | { args: Record<string, unknown> } | undefined> {
+  const existing = await findOwnedSkill(prisma, owner, input);
+  if (!existing || existing.readOnly || existing.source !== "user") return undefined;
+  if (!(await isSharedSkill(prisma, owner, existing.id))) return undefined;
+  const target = {
+    skillId: existing.id,
+    skillName: existing.name,
+    previousContent: existing.content,
+  };
+  if (toolName === "skill_delete") return { args: target };
+  const resolved = await resolveSkillUpdate(prisma, owner, input);
+  if ("error" in resolved) return resolved;
+  if (resolved.nextContent === existing.content) return { error: "Nothing to change." };
+  return { args: { ...target, content: resolved.nextContent } };
+}
+
+export async function skillUpdateFromTool(
+  prisma: PrismaClient,
+  owner: SkillOwner,
+  input: SkillUpdateInput,
+  approved?: ApprovedSharedSkillChange,
+): Promise<Record<string, unknown>> {
+  const resolved = await resolveSkillUpdate(prisma, owner, input);
+  if ("error" in resolved) return resolved;
+  const { existing, nextName, nextDescription, nextContent } = resolved;
   try {
     // Re-scope mutate to owner + user source so a stale id cannot cross tenants.
     const updated = await prisma.agentSkill.updateMany({
-      where: { id: existing.id, ...onlyInSpace(owner), source: "user" },
+      where: {
+        id: existing.id,
+        ...(approved ? sharedWithSpace(owner, approved) : onlyInSpace(owner)),
+        source: "user",
+      },
       data: {
         name: nextName,
         description: nextDescription,
         content: nextContent,
       },
     });
-    if (updated.count !== 1) return { error: SHARED_SKILL_ERROR };
+    if (updated.count !== 1) return { error: approved ? STALE_SKILL_ERROR : SHARED_SKILL_ERROR };
     return { ok: true, id: existing.id, name: nextName, description: nextDescription };
   } catch {
     return { error: "Could not update skill." };
@@ -305,6 +372,7 @@ export async function skillDeleteFromTool(
   prisma: PrismaClient,
   owner: SkillOwner,
   input: { name?: string; skillId?: string },
+  approved?: ApprovedSharedSkillChange,
 ): Promise<Record<string, unknown>> {
   const existing = await findOwnedSkill(prisma, owner, input);
   if (!existing) return { error: "Skill not found." };
@@ -312,8 +380,12 @@ export async function skillDeleteFromTool(
     return { error: "Builtin and plugin skills are read-only." };
   }
   const deleted = await prisma.agentSkill.deleteMany({
-    where: { id: existing.id, ...onlyInSpace(owner), source: "user" },
+    where: {
+      id: existing.id,
+      ...(approved ? sharedWithSpace(owner, approved) : onlyInSpace(owner)),
+      source: "user",
+    },
   });
-  if (deleted.count !== 1) return { error: SHARED_SKILL_ERROR };
+  if (deleted.count !== 1) return { error: approved ? STALE_SKILL_ERROR : SHARED_SKILL_ERROR };
   return { ok: true, name: existing.name };
 }

@@ -47,7 +47,7 @@ import { fleetPrepareDeps } from "./run-model.js";
 import { BUILTIN_AGENT_TOOL_NAMES, FLEET_WRITE_TOOL_NAMES_SET } from "./run-tool-selection.js";
 import { USER_COMPUTER_TOOLS } from "./run-tools-user-computer.js";
 import { SCHEDULE_TOOL_NAMES } from "./schedule-tools.js";
-import { SKILL_TOOL_NAMES } from "./skill-tools.js";
+import { prepareSharedSkillChange, SKILL_TOOL_NAMES } from "./skill-tools.js";
 import { argumentGiven } from "./update-bot-patch.js";
 import type { VaultCardUse } from "./vault-card-use.js";
 import { cardUseSummary, requestedCardUse, vaultCardUseOf } from "./vault-card-use.js";
@@ -352,6 +352,11 @@ export async function prepareToolRequest(
     if (refused) return refused;
     args = request.args;
   }
+  if (name === "skill_update" || name === "skill_delete") {
+    const refused = await prepareSkillChange(ctx, request, name);
+    if (refused) return refused;
+    args = request.args;
+  }
   if (isFleetApprovalTool(name) && nextApprovedTool !== name) {
     // Resolve names, members, model and schedule now; an approved replay runs the stored
     // request above and never resolves them again.
@@ -471,8 +476,53 @@ export async function prepareToolRequest(
       request.effectRequest = args;
   }
   request.args = args;
-  if (name === "respond_agent_connection" || name === "update_bot" || isFleetApprovalTool(name))
+  if (
+    name === "respond_agent_connection" ||
+    name === "update_bot" ||
+    request.heldForApproval ||
+    isFleetApprovalTool(name)
+  )
     request.effectRequest = args;
+  return undefined;
+}
+
+/**
+ * A skill other spaces read is changed only with the owner's approval, on a card that shows
+ * the change: what this space taught the bot would otherwise reach the others unseen.
+ */
+async function prepareSkillChange(
+  ctx: RunContext,
+  request: ToolRequest,
+  name: "skill_update" | "skill_delete",
+): Promise<PrepareRefusal | undefined> {
+  if (request.nextApprovedTool === name) {
+    // The approved replay runs the stored request.
+    request.heldForApproval = typeof request.args.previousContent === "string";
+    return undefined;
+  }
+  const { previousContent: _previous, skillName: _name, ...args } = request.args;
+  request.args = args;
+  const shared = await prepareSharedSkillChange(
+    ctx.deps.prisma,
+    { spaceId: ctx.run.spaceId, userId: ctx.run.userId },
+    name,
+    {
+      name: args.name ? String(args.name) : undefined,
+      skillId: args.skillId ? String(args.skillId) : undefined,
+      newName: args.newName ? String(args.newName) : undefined,
+      description: args.description !== undefined ? String(args.description) : undefined,
+      body: args.body !== undefined ? String(args.body) : undefined,
+      content: args.content ? String(args.content) : undefined,
+    },
+  );
+  if (!shared) return undefined;
+  if ("error" in shared) return shared;
+  if (isSubagentToolExecution(request.executionId) || !ctx.source.ownerStartedRun)
+    return {
+      error: "A skill other spaces use can only be changed from the owner's own chat.",
+    };
+  request.args = shared.args;
+  request.heldForApproval = true;
   return undefined;
 }
 

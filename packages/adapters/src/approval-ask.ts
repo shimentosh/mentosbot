@@ -4,6 +4,7 @@ import { BOT_INSTRUCTIONS_MAX_LENGTH } from "@rakazo/contracts";
 import {
   batchActions,
   CARD_TITLE_ESCAPED_CHARACTERS,
+  changedLinesDiff,
   humanizeToolName,
   instructionUpdateDiff,
   messagingProviderName,
@@ -110,6 +111,39 @@ export function buildApprovalAskBlock(
       status: "pending",
       actions: [
         { id: "allow", label: "Apply" },
+        { id: "deny", label: "Dismiss" },
+      ],
+    };
+  }
+  // Only a change to a skill other spaces read is held with the text it replaces.
+  if (
+    (toolName === "skill_update" || toolName === "skill_delete") &&
+    typeof args.previousContent === "string"
+  ) {
+    const skill = sanitizeMessagingLabel(String(args.skillName ?? "")).replace(
+      new RegExp(CARD_TITLE_ESCAPED_CHARACTERS, "g"),
+      "\\$&",
+    );
+    const removing = toolName === "skill_delete";
+    return {
+      kind: "ask",
+      approvalEffectId: effectId,
+      text: redactSecrets(`${removing ? "Delete" : "Update"} skill “${skill}”?`, secrets),
+      ...(removing
+        ? {}
+        : {
+            detail: truncate(
+              redactSecrets(
+                changedLinesDiff(args.previousContent, String(args.content ?? "")),
+                secrets,
+              ),
+              MAX_APPROVAL_DETAIL_LENGTH,
+            ),
+            detailFormat: "code" as const,
+          }),
+      status: "pending",
+      actions: [
+        { id: "allow", label: removing ? "Delete" : "Apply" },
         { id: "deny", label: "Dismiss" },
       ],
     };

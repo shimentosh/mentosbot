@@ -102,6 +102,47 @@ it("shows the full instruction replacement as a diff with Apply and Dismiss", ()
   expect(JSON.stringify(block)).not.toContain("previousInstructionsFromBaseline");
 });
 
+it("shows only the changed lines of a skill other spaces use, with Apply and Dismiss", () => {
+  const block = buildApprovalAskBlock(
+    "effect-1",
+    "skill_update",
+    {
+      skillId: "skill-1",
+      skillName: "Invoices",
+      previousContent: "---\nname: Invoices\n---\n1. Draft.\n2. Send fake-token.\n3. File.",
+      content: "---\nname: Invoices\n---\n1. Draft.\n2. Ask first.\n3. File.",
+    },
+    ["fake-token"],
+  );
+  expect(block).toMatchObject({
+    kind: "ask",
+    text: "Update skill “Invoices”?",
+    detail: "- 2. Send [redacted].\n+ 2. Ask first.",
+    detailFormat: "code",
+    actions: [
+      { id: "allow", label: "Apply" },
+      { id: "deny", label: "Dismiss" },
+    ],
+  });
+});
+
+it("asks before deleting a skill other spaces use", () => {
+  expect(
+    buildApprovalAskBlock(
+      "effect-1",
+      "skill_delete",
+      { skillId: "skill-1", skillName: "Invoices", previousContent: "body" },
+      [],
+    ),
+  ).toMatchObject({
+    text: "Delete skill “Invoices”?",
+    actions: [
+      { id: "allow", label: "Delete" },
+      { id: "deny", label: "Dismiss" },
+    ],
+  });
+});
+
 it("redacts known secrets in instruction approval details and editable metadata", () => {
   const block = buildApprovalAskBlock(
     "effect-1",

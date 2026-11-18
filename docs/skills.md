@@ -31,6 +31,10 @@ After a multi-step task, ask the bot to "save that as a skill". It writes the sk
 other bots, can repeat the task next time. A skill a bot saves stays in the [space](./spaces.md) it
 was made in.
 
+Ask the bot to change a skill the same way: "update the invoices skill to ask before sending". A
+skill that only its own space uses is changed at once. A skill your other spaces use too is changed
+only after you approve a card that shows the lines being replaced.
+
 ## Teach a task by showing it
 
 Some tasks are easier to show than describe.
