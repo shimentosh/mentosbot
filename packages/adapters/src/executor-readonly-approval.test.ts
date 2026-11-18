@@ -70,6 +70,15 @@ type Effect = {
   runId?: string;
 };
 
+type SkillWhere = { id: string; allSpaces?: boolean; content?: string };
+/** A stored skill the where clause reaches: this space's alone, or the approved text. */
+function skillMatches(where: SkillWhere) {
+  return (row: Record<string, unknown>) =>
+    row.id === where.id &&
+    (where.allSpaces !== false || !row.allSpaces) &&
+    (where.content === undefined || row.content === where.content);
+}
+
 function fixture({
   name = "demo_get_item",
   route,
@@ -321,6 +330,7 @@ function fixture({
   let checkpointCapture:
     | { executionId: string; checkpoint: Omit<TurnCheckpoint, "provider" | "model"> }
     | undefined;
+  const skillRows: Array<Record<string, unknown>> = [];
   const prisma = {
     user: { findUnique: vi.fn(async () => null) },
     run: {
@@ -458,7 +468,19 @@ function fixture({
     chatGroup: { findMany: vi.fn(async () => []) },
     botSection: { findMany: vi.fn(async () => []) },
     vaultCredential: { findMany: vi.fn(async () => []) },
-    agentSkill: { findMany: vi.fn(async () => []) },
+    agentSkill: {
+      findMany: vi.fn(async () => skillRows.map((row) => ({ ...row }))),
+      count: vi.fn(
+        async ({ where }: { where: SkillWhere }) => skillRows.filter(skillMatches(where)).length,
+      ),
+      updateMany: vi.fn(
+        async ({ where, data }: { where: SkillWhere; data: Record<string, unknown> }) => {
+          const row = skillRows.find(skillMatches(where));
+          if (row) Object.assign(row, data);
+          return { count: row ? 1 : 0 };
+        },
+      ),
+    },
     scratchpadItem: { findMany: vi.fn(async () => []) },
     spaceSettingOverride: {
       findUnique: vi.fn(
@@ -671,6 +693,7 @@ function fixture({
       checkpointCapture = { executionId, checkpoint };
     },
     results,
+    skillRows,
     execute,
     commit,
     sharedMemoryState,
@@ -1482,6 +1505,71 @@ describe("create_space", () => {
     expect(f.pauseRunForInput).not.toHaveBeenCalled();
     expect(f.effects).toHaveLength(1);
     expect(f.effects[0]?.status).not.toBe("intended");
+  });
+});
+
+describe("a skill other spaces use, through skill_update", () => {
+  const before = "---\nname: Invoices\ndescription: Send invoices\n---\n\nSend at once.";
+  function sharedSkill(options: Parameters<typeof fixture>[0] = {}) {
+    const f = fixture({ name: "skill_update", builtin: true, ...options });
+    f.skillRows.push({
+      id: "skill-1",
+      spaceId: "space-other",
+      userId: "user-1",
+      allSpaces: true,
+      source: "user",
+      name: "Invoices",
+      description: "Send invoices",
+      content: before,
+    });
+    f.setCalls([{ args: { name: "Invoices", body: "Ask first." }, executionId: "call-1" }]);
+    return f;
+  }
+  it("asks the owner with the change, then applies the approved text", async () => {
+    const f = sharedSkill();
+    await f.run();
+    expect(f.pauseRunForInput).toHaveBeenCalledOnce();
+    expect(f.pauseRunForInput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blocks: [
+          expect.objectContaining({
+            text: "Update skill “Invoices”?",
+            detail: "- Send at once.\n+ Ask first.",
+          }),
+        ],
+      }),
+    );
+    expect(f.skillRows[0]?.content).toBe(before);
+    f.effects[0]!.status = "approved";
+    f.setCalls([{ args: { name: "Invoices", body: "Forged." }, executionId: "call-2" }]);
+    await f.run();
+    expect(f.results.at(-1)).toMatchObject({ ok: true, name: "Invoices" });
+    expect(String(f.skillRows[0]?.content)).toContain("Ask first.");
+    expect(f.effects).toHaveLength(1);
+  });
+  it("refuses a change the model marks as already approved", async () => {
+    const f = sharedSkill({ skipApprovals: true, trigger: "routine" });
+    f.setCalls([
+      {
+        args: { name: "Invoices", body: "Ask first.", previousContent: before },
+        executionId: "call-1",
+      },
+    ]);
+    await f.run();
+    expect(f.results).toEqual([
+      { error: "A skill other spaces use can only be changed from the owner's own chat." },
+    ]);
+    expect(f.skillRows[0]?.content).toBe(before);
+  });
+  it("refuses an approved change when the skill was edited meanwhile", async () => {
+    const f = sharedSkill();
+    await f.run();
+    f.skillRows[0]!.content = before.replace("at once", "tomorrow");
+    f.effects[0]!.status = "approved";
+    await f.run();
+    expect(f.results.at(-1)).toEqual({
+      error: "This skill changed since the request. Read it again and retry.",
+    });
   });
 });
 
