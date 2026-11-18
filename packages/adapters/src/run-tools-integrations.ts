@@ -47,7 +47,7 @@ export async function connectorTool(ctx: RunContext, call: ToolCall) {
         }
       }
       if (event.type === "error") {
-        result = { error: event.message };
+        result = { error: (await offerReconnect(ctx, call, event.reconnectApp)) ?? event.message };
         for (const logId of event.logIds ?? []) {
           await deps.events.append({
             spaceId: run.spaceId,
@@ -63,6 +63,29 @@ export async function connectorTool(ctx: RunContext, call: ToolCall) {
     return call.finish(result);
   }
   return call.finish({ error: `unknown tool ${name}` });
+}
+
+/**
+ * An app whose sign-in ended gets its connect card in the chat straight away, instead of
+ * leaving it to the bot to ask. Returns what the bot is told, or nothing when no card is up.
+ */
+async function offerReconnect(
+  ctx: RunContext,
+  call: ToolCall,
+  app: string | undefined,
+): Promise<string | undefined> {
+  if (!app) return undefined;
+  const { deps, run, runId, context } = ctx;
+  const shown = await connectApp(
+    deps,
+    deps.connectors?.managedProviders?.() ?? [],
+    context,
+    run,
+    app,
+    `reconnect:${call.applied?.effect.id ?? runScopedToolExecutionId(runId, call.executionId)}`,
+  ).catch(() => undefined);
+  if (shown?.status !== "pending") return undefined;
+  return `The ${app} connection is no longer active, so this did not run. A card to reconnect ${app} is now in the chat. Tell the user briefly; do not retry until they reconnect.`;
 }
 
 /** Web, cloud agents, MCP servers, app connections and connector tools. */

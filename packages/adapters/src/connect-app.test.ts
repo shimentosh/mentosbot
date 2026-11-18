@@ -3,6 +3,9 @@ import type { ConnectionCatalogItem, MessageBlock } from "@rakazo/contracts";
 import type * as db from "@rakazo/db";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { connectApp } from "./connect-app.js";
+import type { RunContext } from "./run-context.js";
+import type { ToolCall } from "./run-tool-gate.js";
+import { connectorTool } from "./run-tools-integrations.js";
 
 const stored = vi.hoisted(() => [] as { blocks: MessageBlock[]; clientNonce: string }[]);
 vi.mock("@rakazo/db", async (original) => ({
@@ -142,4 +145,53 @@ it("treats an app connected through a later provider as connected", async () => 
   const result = await connectApp(f.deps, providers, f.context, f.target, "Gmail", "effect");
   expect(result).toMatchObject({ status: "connected" });
   expect(stored).toHaveLength(0);
+});
+
+describe("a connector call whose sign-in ended", () => {
+  function run(event: { message: string; reconnectApp?: string }, items = [entry]) {
+    const { deps, providers, context, target } = fixture(items);
+    const ctx = {
+      deps: {
+        ...deps,
+        connector: {
+          async *execute() {
+            yield { type: "error" as const, ...event };
+          },
+        },
+        connectors: { managedProviders: () => providers },
+      },
+      run: target,
+      runId: "run",
+      bot: { id: "bot" },
+      thread: { id: "chat" },
+      context,
+    } as unknown as RunContext;
+    const call = {
+      name: "gmail_send",
+      args: {},
+      executionId: "call-1",
+      effectKey: "effect",
+      connectorCall: {},
+      applied: undefined,
+      finish: async (result: unknown) => result,
+    } as unknown as ToolCall;
+    return connectorTool(ctx, call);
+  }
+
+  it("puts the app's connect card in the chat and tells the bot it is there", async () => {
+    const result = (await run({ message: "gmail is gone", reconnectApp: "gmail" })) as {
+      error: string;
+    };
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.blocks[0]).toMatchObject({ kind: "app_connect", provider: "gmail" });
+    expect(result.error).toContain("A card to reconnect gmail is now in the chat");
+  });
+
+  it("keeps the connector's own error when there is no card to show", async () => {
+    expect(await run({ message: "rate limited" })).toEqual({ error: "rate limited" });
+    expect(await run({ message: "gmail is gone", reconnectApp: "gmail" }, [])).toEqual({
+      error: "gmail is gone",
+    });
+    expect(stored).toHaveLength(0);
+  });
 });

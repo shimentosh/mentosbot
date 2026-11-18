@@ -320,7 +320,13 @@ export interface ConnectorCall {
 export type ConnectorEvent =
   | { type: "log"; message: string }
   | { type: "result"; data: unknown }
-  | { type: "error"; message: string; logIds?: string[] };
+  | {
+      type: "error";
+      message: string;
+      logIds?: string[];
+      /** The app whose sign-in ended, so the chat can offer to connect it again. */
+      reconnectApp?: string;
+    };
 
 export interface ConnectorCapabilities {
   discover: boolean;

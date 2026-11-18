@@ -554,6 +554,7 @@ export class ComposioConnector implements ComposioProvider {
         yield {
           type: "error",
           message: `The ${stale} connection is no longer active. Ask the user to reconnect ${stale}.`,
+          reconnectApp: stale,
         };
         return;
       }
