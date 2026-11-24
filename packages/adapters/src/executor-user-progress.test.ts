@@ -64,7 +64,16 @@ async function runTurn(
     runtimeCancel?: boolean;
     failHelperId?: string;
     failMessageOnce?: boolean;
-    history?: Array<{ id: string; seq: number; role: string; text: string; clientNonce?: string }>;
+    history?: Array<{
+      id: string;
+      seq: number;
+      role: string;
+      text: string;
+      clientNonce?: string;
+      createdAt?: string;
+    }>;
+    /** The run fires a routine; `previousRunAt` is when it last ran. */
+    routine?: { createdAt: string; previousRunAt?: string };
     /** When the run started; defaults to now, a turn too fresh for interim messages. */
     startedAt?: Date;
     /** Runs each scripted tool call through the executor, as a real runtime does. */
@@ -103,6 +112,9 @@ async function runTurn(
     leaseFence: 0,
     groupReplyOptional: options.group?.optional ?? false,
     ...(options.startedAt ? { startedAt: options.startedAt } : {}),
+    ...(options.routine
+      ? { routineId: "routine-1", createdAt: new Date("2026-11-24T12:00:00.000Z") }
+      : {}),
   };
   const runtimeRun = vi.fn(async function* (request: AgentRunRequest) {
     // A later message that names the member reaches the run while it works.
@@ -228,7 +240,7 @@ async function runTurn(
               botId: message.role === "bot" ? run.botId : null,
               runId: null,
               blocks: [{ kind: "text", text: message.text }],
-              createdAt: new Date("2026-10-24T08:00:00.000Z"),
+              createdAt: new Date(message.createdAt ?? "2026-10-24T08:00:00.000Z"),
               replyToMessageId: null,
               replyQuote: null,
               replyTo: null,
@@ -260,6 +272,20 @@ async function runTurn(
         id: run.taskId,
         prompt: "Look again",
       })),
+    },
+    routine: {
+      findUnique: vi.fn(async () =>
+        options.routine
+          ? {
+              createdAt: new Date(options.routine.createdAt),
+              timezone: "UTC",
+              runs: options.routine.previousRunAt
+                ? [{ createdAt: new Date(options.routine.previousRunAt) }]
+                : [],
+            }
+          : null,
+      ),
+      count: vi.fn(async () => 0),
     },
     computer: { updateMany: vi.fn(async () => ({ count: 1 })) },
     connection: { findMany: vi.fn(async () => []) },
@@ -1670,6 +1696,52 @@ describe("a kept partial reply in later history", () => {
     const content = (id: string) => history.find((entry) => entry.id === id)?.content;
     expect(content("m2")).toBe(`Part one. Part tw\n\n${PARTIAL_REPLY_NOTE}`);
     expect(content("m4")).toBe("A whole reply.");
+  });
+});
+
+describe("a routine run's view of the chat", () => {
+  const history = [
+    {
+      id: "m1",
+      seq: 1,
+      role: "user",
+      text: "Check in every hour",
+      createdAt: "2026-11-24T08:00:00.000Z",
+    },
+    {
+      id: "m2",
+      seq: 2,
+      role: "bot",
+      text: "What did you finish?",
+      createdAt: "2026-11-24T11:00:00.000Z",
+    },
+    {
+      id: "m3",
+      seq: 3,
+      role: "user",
+      text: "Put our chat in a file",
+      createdAt: "2026-11-24T11:05:00.000Z",
+    },
+  ];
+
+  it("reads only what was said since the routine last ran", async () => {
+    const { runtimeRun } = await runTurn("Done.", false, [], [], "fyi", {
+      trigger: "routine",
+      history,
+      routine: { createdAt: "2026-11-20T08:00:00.000Z", previousRunAt: "2026-11-24T11:00:00.000Z" },
+    });
+    const sent = runtimeRun.mock.calls[0]?.[0].history ?? [];
+    expect(sent.map((entry) => entry.id)).toEqual(["m3"]);
+  });
+
+  it("reads what was said since it was set when it has never run", async () => {
+    const { runtimeRun } = await runTurn("Done.", false, [], [], "fyi", {
+      trigger: "routine",
+      history,
+      routine: { createdAt: "2026-11-24T09:00:00.000Z" },
+    });
+    const sent = runtimeRun.mock.calls[0]?.[0].history ?? [];
+    expect(sent.map((entry) => entry.id)).toEqual(["m2", "m3"]);
   });
 });
 

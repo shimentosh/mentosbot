@@ -480,7 +480,10 @@ export function userTurnInstructions(parts: {
   ];
 }
 
-export function threadContextForRun<T extends { id?: string; role: string }>(
+/** The most chat messages a routine run reads: the latest of those since it last ran. */
+export const ROUTINE_RECENT_CHAT_LIMIT = 20;
+
+export function threadContextForRun<T extends { id?: string; role: string; createdAt?: string }>(
   trigger: string,
   context: {
     messages: T[];
@@ -489,6 +492,8 @@ export function threadContextForRun<T extends { id?: string; role: string }>(
   },
   messagingChannelRun: boolean,
   sourceMessageId?: string | null,
+  /** For a routine run: when it last ran, or when it was made if it never has. */
+  routineSince?: Date,
 ) {
   // The current reaction is supplied with its target in the prompt, once.
   if (trigger === "reaction" && sourceMessageId) {
@@ -497,11 +502,19 @@ export function threadContextForRun<T extends { id?: string; role: string }>(
       messages: context.messages.filter((message) => message.id !== sourceMessageId),
     };
   }
-  // Routine runs stay isolated from thread history. The creation intro does
-  // too: a message that arrives during it waits and is answered afterward.
+  // A routine reads only what was said since it last ran, so a check-in does not ask again what
+  // the user already answered, or miss what they asked for; older history, summaries and recall
+  // stay out. The creation intro reads none: a message that arrives during it waits and is
+  // answered afterward.
   if (!runReadsThreadHistory(trigger)) {
+    const since = trigger === "routine" ? routineSince?.getTime() : undefined;
     return {
-      messages: [] as T[],
+      messages:
+        since === undefined
+          ? ([] as T[])
+          : context.messages
+              .filter((message) => message.createdAt && Date.parse(message.createdAt) > since)
+              .slice(-ROUTINE_RECENT_CHAT_LIMIT),
       summary: null,
       historyCompactedUpToSeq: null,
       includeSemanticRecall: false,
