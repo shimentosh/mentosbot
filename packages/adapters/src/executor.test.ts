@@ -1484,6 +1484,15 @@ describe("userTurnInstructions", () => {
     expect(without).toContain("give the link to the result");
   });
 
+  it("puts recurring reports on one page only when save_page is offered", () => {
+    expect(replyShapeClause()).toContain("keep it on one page with save_page");
+    expect(replyShapeClause()).toContain("Remember the page's pageId");
+    const noMemory = replyShapeClause(new Set(["remember"]));
+    expect(noMemory).toContain("save_page");
+    expect(noMemory).not.toContain("Remember the page's pageId");
+    expect(replyShapeClause(new Set(["save_page"]))).not.toContain("save_page");
+  });
+
   it("places stable guidance before volatile context when every optional context is present", () => {
     const instructions = userTurnInstructions({
       ...base,
