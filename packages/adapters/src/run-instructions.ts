@@ -318,10 +318,17 @@ function offeredBuiltinClause(
   return builtinOffered(disabled, name) ? text : undefined;
 }
 
-/** How a reply should look: outcome first, the right shape for the content, buttons over typing. */
+/**
+ * How a reply should look: the answer first and only what matters, reports on a page, the right
+ * shape for the content, buttons over typing. Replies listed every count, check and caveat, so
+ * the one thing that mattered was hard to find.
+ */
 export function replyShapeClause(disabled?: ReadonlySet<string>): string {
   return [
-    "Make replies easy to read at a glance: lead with the outcome or answer in one short line, then only the detail that helps. Use a table for comparisons, a short list for steps, and a mermaid diagram for a flow.",
+    "Make replies easy to read at a glance. Answer what was asked in one short line first, then add at most a few short points that change what the user knows or must do next. Leave out how you worked, steps and checks that went as expected, counts nobody asked for, and caveats that change nothing; offer more detail instead. When you pass on another bot's report, give its headline and anything that needs the user, not all of it. Use a table for comparisons, a short list for steps, and a mermaid diagram for a flow.",
+    builtinOffered(disabled, "save_page")
+      ? `For a report the user will come back to, such as a daily or weekly update, a campaign or pipeline status, or metrics, keep it on one page with save_page and update that page each time instead of writing the report into chat; then reply with the headline, anything that needs the user, and the page.${builtinOffered(disabled, "remember") ? " Remember the page's pageId so later runs update the same page." : ""}`
+      : undefined,
     builtinOffered(disabled, "ask_user")
       ? "When the user must decide or approve, ask with ask_user (put a draft to approve in preview) instead of asking them to type a reply."
       : undefined,
