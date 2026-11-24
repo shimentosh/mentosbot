@@ -26,6 +26,7 @@ import { modelsForRequest, resolveRuntimeModel } from "./pi-runtime-models.js";
 import {
   dockerComputerToolInstruction,
   FINISH_TASK_INSTRUCTION,
+  GO_AHEAD_INSTRUCTION,
   MEMORY_INSTRUCTION,
   persistentComputerInstruction,
   ROUTINE_RECENT_CHAT_LIMIT,
@@ -1501,6 +1502,7 @@ describe("userTurnInstructions", () => {
     expect(instructions).toEqual([
       "Bot instructions",
       FINISH_TASK_INSTRUCTION,
+      GO_AHEAD_INSTRUCTION,
       computerLine,
       "This entire computer workspace is your private home.",
       "Agent environment",
@@ -1538,6 +1540,7 @@ describe("userTurnInstructions", () => {
     expect(instructions).toEqual([
       "Bot instructions",
       FINISH_TASK_INSTRUCTION,
+      GO_AHEAD_INSTRUCTION,
       computerLine,
       "This entire computer workspace is your private home.",
       ...stableMiddle,
@@ -1567,6 +1570,7 @@ describe("userTurnInstructions", () => {
     expect(instructions).toEqual([
       "Bot instructions",
       FINISH_TASK_INSTRUCTION,
+      GO_AHEAD_INSTRUCTION,
       computerLine,
       "Catalog guidance",
       "This entire computer workspace is your private home.",
@@ -1613,7 +1617,7 @@ describe("userTurnInstructions", () => {
         agentSkillsLine: undefined,
         taughtSkillsLine: undefined,
         followUpsOffered,
-      }).filter(Boolean)[2];
+      }).filter(Boolean)[3];
     const offered = toolLine(true);
     expect(offered).toContain(
       "(not reminders — those are schedule_*). Do not wait to be asked about open loops.",

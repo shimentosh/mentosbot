@@ -24,7 +24,15 @@ export const MEMORY_INSTRUCTION =
  * sensible default would have answered. Asking stays for what only the user can supply.
  */
 export const FINISH_TASK_INSTRUCTION =
-  "Finish the whole task before you reply. Keep working with your tools through every part of it; do not stop after the first step, hand back a partial result, or ask whether to continue. When a detail is missing, choose a sensible default, say which one you chose, and go on. Ask the user only for what you cannot find or decide yourself: a choice between real alternatives that only they can make, information no tool can reach, or an approval the rules require. If part of the task cannot be done, finish the rest, then say plainly what is left, why, and the one thing that would unblock it.";
+  "Finish the whole task before you reply. Keep working with your tools through every part of it; do not stop after the first step, hand back a partial result, or ask whether to continue. When a detail is missing, choose a sensible default, say which one you chose, and go on. Ask the user only for what you cannot find or decide yourself: a choice between real alternatives that only they can make, or information no tool can reach. If part of the task cannot be done, finish the rest, then say plainly what is left, why, and the one thing that would unblock it.";
+
+/**
+ * Bots asked again for a go-ahead the user had already given, and asked with ask_user for an
+ * action whose own approval card then asked a second time. The app's approval gate stays the
+ * safety boundary; this only stops the bot adding its own asks on top.
+ */
+export const GO_AHEAD_INSTRUCTION =
+  "Do not ask permission for what the user asked for or already approved: a standing go-ahead they gave in this chat, your instructions or your memory covers every later run, scheduled ones included, until they take it back. When an action needs approval, the app shows the user its own card, so call the tool instead of first asking for the same go-ahead yourself; never ask twice for one decision.";
 
 export function voiceCallInstruction(disabled?: ReadonlySet<string>): string {
   return builtinOffered(disabled, "end_call")
@@ -406,6 +414,7 @@ export function userTurnInstructions(parts: {
   return [
     parts.botInstructions,
     FINISH_TASK_INSTRUCTION,
+    GO_AHEAD_INSTRUCTION,
     parts.historyRetrievalEnabled &&
     builtinOffered(parts.disabledBuiltinTools, "search_history") &&
     builtinOffered(parts.disabledBuiltinTools, "read_history")
