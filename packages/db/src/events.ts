@@ -1046,12 +1046,15 @@ async function commitAnswerRunInput(
     }
   }
 
-  // Answering the creation intro's or a daily check-in's question resumes as the user's
-  // turn: with the conversation and every tool, to get going on that answer.
+  // Answering the creation intro's, a daily check-in's or the owner's own routine's question
+  // resumes as the user's turn: with the conversation and every tool, to get going on that
+  // answer. A routine cannot see the chat, so resumed as itself it would file a new request
+  // typed into the composer as a reply to its question and never act on it.
   const answersOpener =
     run.trigger === "created" ||
     (run.trigger === "routine" &&
-      Boolean(run.clientNonce?.startsWith(`${STRATEGIC_INITIATIVE_NONCE_PREFIX}:`)));
+      (run.userId === input.answeredByUserId ||
+        Boolean(run.clientNonce?.startsWith(`${STRATEGIC_INITIATIVE_NONCE_PREFIX}:`))));
   const resumedTrigger = answersOpener && !approvalAsk && !secretAsk ? "user" : run.trigger;
   const queued = await tx.run.updateMany({
     where: {

@@ -1655,10 +1655,10 @@ describe("answerRunInput", () => {
     );
   });
 
-  it("resumes an answered creation intro or daily check-in as the user's turn", async () => {
+  it("resumes an answered creation intro, daily check-in or own routine as the user's turn", async () => {
     const answerIntro = async (
       answer: string,
-      opener: { trigger: string; clientNonce?: string } = { trigger: "created" },
+      opener: { trigger: string; clientNonce?: string; userId?: string } = { trigger: "created" },
     ) => {
       const tx = {
         $queryRaw: vi.fn().mockResolvedValue([{ id: "thread-1" }]),
@@ -1737,6 +1737,25 @@ describe("answerRunInput", () => {
     });
     expect(checkIn.run.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ trigger: "user" }) }),
+    );
+
+    // The routine cannot see the chat, so a request typed as the answer needs the user's turn.
+    const ownRoutine = await answerIntro("Put our conversation in a file", {
+      trigger: "routine",
+      userId: "user-1",
+    });
+    expect(ownRoutine.run.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ trigger: "user" }) }),
+    );
+    expect(ownRoutine.task.updateMany).toHaveBeenCalledWith({
+      where: { runs: { some: { id: "run-1" } } },
+      data: { prompt: "Put our conversation in a file" },
+    });
+
+    // Someone else answering stays inside the routine's turn.
+    const teammate = await answerIntro("choice-1", { trigger: "routine", userId: "user-2" });
+    expect(teammate.run.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: "queued", checkpoint: null } }),
     );
 
     const typed = await answerIntro("Track our competitors' launches");
