@@ -135,6 +135,7 @@ describe("remote computer access", () => {
       token: string;
       closed: boolean;
       cancelled: number;
+      active: number;
       revoke: (reason?: "session-ended") => void;
       authorize: () => Promise<boolean>;
     }[] = [];
@@ -155,6 +156,7 @@ describe("remote computer access", () => {
           token,
           closed: false,
           cancelled: 0,
+          active: 0,
           revoke: events.onRevoked,
           authorize: events.authorize,
         };
@@ -165,6 +167,9 @@ describe("remote computer access", () => {
           },
           cancelAll: () => {
             client.cancelled += 1;
+          },
+          active: () => {
+            client.active += 1;
           },
         };
       },
@@ -465,6 +470,23 @@ describe("remote computer access", () => {
     expect(clients).toHaveLength(2);
     access.close();
     expect(clients[1]!.closed).toBe(true);
+  });
+
+  it("reports use only on the connection of the server it shows", async () => {
+    await savePairedDevice(
+      userData,
+      origin,
+      { token: "saved-token", deviceId: "d1", userId: null },
+      cipher,
+    );
+    const { access, clients } = setup();
+    access.active();
+    await access.select(origin);
+    access.active();
+    expect(clients).toMatchObject([{ origin, active: 1 }]);
+    access.close();
+    access.active();
+    expect(clients[0]!.active).toBe(1);
   });
 
   it("ties a saved pairing to the sign-in once, retrying until the server ties it", async () => {

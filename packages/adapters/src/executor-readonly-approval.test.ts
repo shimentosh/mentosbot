@@ -3302,7 +3302,7 @@ describe("retry of an action a person denied in the same run", () => {
 });
 
 describe("user_computer_shell", () => {
-  const device = { deviceId: "device-1", name: "Laptop", platform: "darwin" };
+  const device = { deviceId: "device-1", name: "Laptop", platform: "darwin", activeAt: null };
   function devices(connected = true, paired = connected, pairedAt = new Date(0)) {
     const requests: Array<{ userId: string; request: HostComputerRequest }> = [];
     const gateway = {
@@ -3612,6 +3612,7 @@ describe("user computer screen control", () => {
         deviceId: "device-1",
         name: "Laptop",
         platform,
+        activeAt: null,
       })),
       pairedSince: vi.fn(async (_userId: string) => new Date(0)),
       async *request<T>(_userId: string, request: HostComputerRequest) {

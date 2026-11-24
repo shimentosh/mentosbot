@@ -168,6 +168,8 @@ model UserDevice {
   sessionId    String?
   createdAt    DateTime               @default(now())
   lastSeenAt   DateTime?
+  /// When its app last reported someone using this computer; runs reach the latest first.
+  lastActiveAt DateTime?
   revokedAt    DateTime?
   /// Who revoked it: "owner", "device" or "session" (its sign-in ended). Null when unknown.
   revokedBy    String?

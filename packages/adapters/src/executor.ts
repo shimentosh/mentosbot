@@ -205,6 +205,7 @@ import { historyMyChatsAllowed } from "./run-tools-memory.js";
 import type { UserComputerState } from "./run-tools-user-computer.js";
 import {
   botMessageFromOwnersWork,
+  pickUserComputer,
   USER_COMPUTER_SHELL_TOOL,
   userComputerOwner,
 } from "./run-tools-user-computer.js";
@@ -1368,15 +1369,20 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           deps.userDevices &&
           !disabledBuiltinTools.has(USER_COMPUTER_SHELL_TOOL)
         ) {
-          const device = await deps.userDevices.connected(userComputerOwnerId).catch(() => null);
+          const folder = await deps.prisma.botFolder.findUnique({
+            where: { botId_userId: { botId: bot.id, userId: userComputerOwnerId } },
+            select: { path: true, deviceId: true, device: { select: { name: true } } },
+          });
+          // The same choice the tools make when they run, so the prompt names that computer.
+          const device = await pickUserComputer(
+            deps.userDevices,
+            userComputerOwnerId,
+            folder?.deviceId,
+          );
           if (device) {
             userComputer = "connected";
             // The macOS and Windows desktops fetch a screen driver; Linux has none yet.
             userComputerScreen = device.platform === "darwin" || device.platform === "win32";
-            const folder = await deps.prisma.botFolder.findUnique({
-              where: { botId_userId: { botId: bot.id, userId: userComputerOwnerId } },
-              select: { path: true, deviceId: true, device: { select: { name: true } } },
-            });
             if (folder)
               userComputerFolder = {
                 path: folder.path,

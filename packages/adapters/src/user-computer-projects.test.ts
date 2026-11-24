@@ -27,7 +27,12 @@ import type { UserDeviceGateway } from "./user-device-protocol.js";
  */
 function localDevice(home: string, extraEnv: Record<string, string> = {}): UserDeviceGateway {
   return {
-    connected: async () => ({ deviceId: "mac", name: "Mac", platform: process.platform }),
+    connected: async () => ({
+      deviceId: "mac",
+      name: "Mac",
+      platform: process.platform,
+      activeAt: null,
+    }),
     pairedSince: async () => new Date(0),
     async *request<T>(_owner: string, request: HostComputerRequest) {
       if (request.method !== "execute") throw new Error(`unexpected ${request.method}`);

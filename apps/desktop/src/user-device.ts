@@ -177,11 +177,11 @@ export function createUserDeviceAccess(deps: {
       onRevoked: UserDeviceClientOptions["onRevoked"];
       authorize: () => Promise<boolean>;
     },
-  ) => { close(): void; cancelAll(): void };
+  ) => { close(): void; cancelAll(): void; active(): void };
 }) {
   let current: string | null = null;
   let generation = 0;
-  let client: { origin: string; close(): void; cancelAll(): void } | undefined;
+  let client: { origin: string; close(): void; cancelAll(): void; active(): void } | undefined;
   const paired = new Map<string, Omit<PairedDevice, "token">>();
   /** The token of the connection started for each origin, which only this process holds. */
   const tokens = new Map<string, string>();
@@ -211,6 +211,7 @@ export function createUserDeviceAccess(deps: {
       origin,
       close: () => connection.close(),
       cancelAll: () => connection.cancelAll(),
+      active: () => connection.active(),
     };
     const connection = deps.connect(origin, token, {
       onRevoked: (reason) => {
@@ -598,6 +599,10 @@ export function createUserDeviceAccess(deps: {
       const device = paired.get(origin);
       // Kept for this account, so the next pairing puts it back.
       if (device) await remember(origin, device.userId, { routeTraffic }).catch(() => undefined);
+    },
+    /** Someone is using this computer, so the owner's runs reach it before their other ones. */
+    active() {
+      client?.active();
     },
     close() {
       ++generation;

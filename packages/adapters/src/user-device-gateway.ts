@@ -40,6 +40,8 @@ export const USER_DEVICE_LIMIT = 10;
 const PING_INTERVAL_MS = 25_000;
 /** A connection row older than this has lost its holding process. */
 const STALE_AFTER_MS = 3 * PING_INTERVAL_MS;
+/** A computer in use reports it every few seconds; the database hears it this often at most. */
+const ACTIVE_WRITE_INTERVAL_MS = 20_000;
 const MAX_MESSAGE_BYTES = HOST_COMPUTER_MAX_BYTES + 64 * 1024;
 
 export class UserDeviceOfflineError extends Error {
@@ -116,6 +118,8 @@ interface LiveDevice {
   socket: UserDeviceSocket;
   pending: Map<string, FrameQueue>;
   alive: boolean;
+  /** When this connection last wrote that someone is using the computer. */
+  activeAt?: number;
 }
 
 export interface UserDeviceRoute {
@@ -463,7 +467,24 @@ export class UserDeviceHub {
     }
     const message = userDeviceClientMessage.safeParse(parsed);
     if (!message.success) return;
+    if (message.data.type === "active") {
+      this.markActive(entry);
+      return;
+    }
     entry.pending.get(message.data.id)?.push(message.data.frame, text.length);
+  }
+
+  /** Records that someone is using this computer, at most once per interval per connection. */
+  private markActive(entry: LiveDevice) {
+    const now = Date.now();
+    if (entry.activeAt !== undefined && now - entry.activeAt < ACTIVE_WRITE_INTERVAL_MS) return;
+    entry.activeAt = now;
+    void runAsSystem("record a user device in use", () =>
+      this.deps.prisma.userDevice.updateMany({
+        where: { id: entry.device.id, revokedAt: null },
+        data: { lastActiveAt: new Date(now) },
+      }),
+    ).catch((error) => getLogger().warn("user device activity write failed", { error }));
   }
 
   /** Forgets a connection and fails its requests; without a close code the socket is dead and is terminated. */
@@ -554,7 +575,14 @@ export class UserDevices implements UserDeviceGateway {
 
   async connected(userId: string, deviceId?: string): Promise<UserDevice | null> {
     const route = await this.route(userId, deviceId);
-    return route && { deviceId: route.deviceId, name: route.name, platform: route.platform };
+    return (
+      route && {
+        deviceId: route.deviceId,
+        name: route.name,
+        platform: route.platform,
+        activeAt: route.activeAt,
+      }
+    );
   }
 
   /** Revokes the user's devices whose pairing sign-in ended while they were offline. */
@@ -683,8 +711,12 @@ export class UserDevices implements UserDeviceGateway {
           device: { userId, revokedAt: null, ...(routeTraffic ? { routeTraffic } : {}) },
           ...(deviceId ? { deviceId } : {}),
         },
-        orderBy: { connectedAt: "desc" },
-        include: { device: { select: { name: true, platform: true } } },
+        // The computer someone is using comes first; apps that never report it, by connection.
+        orderBy: [
+          { device: { lastActiveAt: { sort: "desc", nulls: "last" } } },
+          { connectedAt: "desc" },
+        ],
+        include: { device: { select: { name: true, platform: true, lastActiveAt: true } } },
       }),
     );
     if (!connection) return null;
@@ -694,6 +726,7 @@ export class UserDevices implements UserDeviceGateway {
       address: connection.address,
       name: connection.device.name,
       platform: connection.device.platform,
+      activeAt: connection.device.lastActiveAt,
     };
   }
 

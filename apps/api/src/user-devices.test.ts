@@ -13,7 +13,7 @@ import { USER_DEVICE_ROUTE_TRAFFIC_PATH } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { installSecurityEventStore } from "@rakazo/db";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { endUserDeviceSession, mountUserDeviceRoutes } from "./user-devices.js";
 
 interface Row {
@@ -283,6 +283,21 @@ describe("device pairing", () => {
         ]),
       ),
     ).toEqual({ "device-1": true, "device-2": false, "device-3": false });
+  });
+});
+
+describe("a computer in use", () => {
+  it("records when its app reports someone using it, at most once per interval", async () => {
+    const { pair, attach, rows } = setup();
+    const { deviceId } = await (await pair("user-1")).json();
+    const socket = await attach(deviceId);
+    const activeAt = () => (rows[0] as Row & { lastActiveAt?: Date }).lastActiveAt;
+    socket.emit("message", JSON.stringify({ type: "active" }));
+    await vi.waitFor(() => expect(activeAt()).toBeInstanceOf(Date));
+    const first = activeAt();
+    socket.emit("message", JSON.stringify({ type: "active" }));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(activeAt()).toBe(first);
   });
 });
 

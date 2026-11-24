@@ -96,6 +96,22 @@ describe("user device client", () => {
     await vi.waitFor(() => expect(check()).toBe(true), { timeout: 10_000, interval: 10 });
   }
 
+  it("tells the server someone is using this computer once it is connected", async () => {
+    start();
+    // Not connected yet: nothing to tell.
+    client!.active();
+    const ws = await connection();
+    const received: unknown[] = [];
+    ws.on("message", (data) => received.push(JSON.parse(data.toString())));
+    await until(() => {
+      client!.active();
+      return received.length > 0;
+    });
+    expect(new Set(received.map((message) => JSON.stringify(message)))).toEqual(
+      new Set([JSON.stringify({ type: "active" })]),
+    );
+  });
+
   it("refuses cleartext non-loopback transport before connecting", () => {
     // Keep even the failing base-case reproduction on the local machine.
     const remote = new URL(serverUrl);

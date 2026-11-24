@@ -15,7 +15,7 @@ export class UserDeviceEmulator implements UserDeviceGateway {
 
   async connected(_userId: string, deviceId?: string): Promise<UserDevice | null> {
     if (deviceId && deviceId !== "emulated-device") return null;
-    return { deviceId: "emulated-device", name: "Fixture Mac", platform: "darwin" };
+    return { deviceId: "emulated-device", name: "Fixture Mac", platform: "darwin", activeAt: null };
   }
 
   async pairedSince(_userId: string): Promise<Date> {

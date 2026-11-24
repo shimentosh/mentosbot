@@ -42,6 +42,8 @@ function setup(
   folder?: Folder,
   /** Connected computers, the latest first. */
   connectedDevices = ["device-1"],
+  /** The connected computer someone is using, which the gateway lists first. */
+  inUse?: string,
 ) {
   const controller = new AbortController();
   const botFolder = {
@@ -54,8 +56,17 @@ function setup(
   const deviceIds: (string | undefined)[] = [];
   const gateway: UserDeviceGateway = {
     connected: async (_userId, deviceId) => {
-      const found = deviceId ? connectedDevices.find((id) => id === deviceId) : connectedDevices[0];
-      return found ? { deviceId: found, name: "Laptop", platform: "darwin" } : null;
+      const found = deviceId
+        ? connectedDevices.find((id) => id === deviceId)
+        : (inUse ?? connectedDevices[0]);
+      return found
+        ? {
+            deviceId: found,
+            name: "Laptop",
+            platform: "darwin",
+            activeAt: found === inUse ? new Date() : null,
+          }
+        : null;
     },
     pairedSince: async () => new Date(0),
     async *request<T>(
@@ -341,6 +352,20 @@ describe("userComputerShell with a project folder", () => {
     await userComputerShell(ctx, call({ command: "ls" }));
     expect(new Set(deviceIds)).toEqual(new Set(["device-2"]));
     expect(requests.at(-1)).toMatchObject({ command: { cwd: "/Users/fake/Projects/site" } });
+  });
+
+  it("runs on the computer the person is using, ahead of the one holding the folder", async () => {
+    const { ctx, call, requests, deviceIds } = setup(
+      exit,
+      [],
+      { deviceId: "device-2", path: "/Users/fake/Projects/site" },
+      ["device-1", "device-2"],
+      "device-1",
+    );
+    await userComputerShell(ctx, call({ command: "ls" }));
+    expect(new Set(deviceIds)).toEqual(new Set(["device-1"]));
+    // The folder is on the other computer, so the command starts in the home folder.
+    expect(requests.at(-1)).toMatchObject({ command: { cwd: "/Users/fake" } });
   });
 });
 

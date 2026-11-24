@@ -32,9 +32,13 @@ export const userDeviceServerMessage = z.discriminatedUnion("type", [
 ]);
 export type UserDeviceServerMessage = z.infer<typeof userDeviceServerMessage>;
 
-/** One HostComputerFrame per message, tagged with the request id. */
+/**
+ * One HostComputerFrame per message, tagged with the request id. "active" says someone is using
+ * this computer now, so the owner's runs reach it before their other connected computers.
+ */
 export const userDeviceClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("frame"), id: z.string().min(1).max(64), frame: z.unknown() }),
+  z.object({ type: z.literal("active") }),
 ]);
 export type UserDeviceClientMessage = z.infer<typeof userDeviceClientMessage>;
 
@@ -42,11 +46,16 @@ export interface UserDevice {
   deviceId: string;
   name: string;
   platform: string;
+  /** When its app last reported someone using it; null when it never has (older apps). */
+  activeAt: Date | null;
 }
 
 /** How runs reach the requesting user's connected device, from any API or worker process. */
 export interface UserDeviceGateway {
-  /** The user's most recently connected device, or that one device when `deviceId` is given. */
+  /**
+   * The user's connected device someone used most recently, else the most recently connected;
+   * or that one device when `deviceId` is given.
+   */
   connected(userId: string, deviceId?: string): Promise<UserDevice | null>;
   /** When the oldest device still paired was paired, connected or not; null when none is. */
   pairedSince(userId: string): Promise<Date | null>;
