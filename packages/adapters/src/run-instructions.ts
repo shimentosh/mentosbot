@@ -19,6 +19,13 @@ export const VOICE_CALL_INSTRUCTION = `${VOICE_CALL_BASE_INSTRUCTION} If the use
 export const MEMORY_INSTRUCTION =
   "Keep your memory yourself with remember, without being asked: save a lasting preference, a correction to how you work, or a fact you will need again, such as who people are, their projects, accounts and regular schedules. File each under a topic. When something changes or you were wrong, replace that entry with old_text instead of adding another. Do not save one-off task details, secrets, or what is already there.";
 
+/**
+ * Bots stopped after the first part of a task, handed back partial results, or asked questions a
+ * sensible default would have answered. Asking stays for what only the user can supply.
+ */
+export const FINISH_TASK_INSTRUCTION =
+  "Finish the whole task before you reply. Keep working with your tools through every part of it; do not stop after the first step, hand back a partial result, or ask whether to continue. When a detail is missing, choose a sensible default, say which one you chose, and go on. Ask the user only for what you cannot find or decide yourself: a choice between real alternatives that only they can make, information no tool can reach, or an approval the rules require. If part of the task cannot be done, finish the rest, then say plainly what is left, why, and the one thing that would unblock it.";
+
 export function voiceCallInstruction(disabled?: ReadonlySet<string>): string {
   return builtinOffered(disabled, "end_call")
     ? VOICE_CALL_INSTRUCTION
@@ -398,6 +405,7 @@ export function userTurnInstructions(parts: {
 }): (string | undefined)[] {
   return [
     parts.botInstructions,
+    FINISH_TASK_INSTRUCTION,
     parts.historyRetrievalEnabled &&
     builtinOffered(parts.disabledBuiltinTools, "search_history") &&
     builtinOffered(parts.disabledBuiltinTools, "read_history")
