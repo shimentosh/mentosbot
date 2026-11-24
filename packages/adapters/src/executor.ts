@@ -1388,7 +1388,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                 path: folder.path,
                 ...(folder.deviceId === device.deviceId
                   ? {}
-                  : { otherComputer: folder.device.name }),
+                  : { otherComputer: folder.device.name, computer: device.name }),
               };
           } else userComputer = "offline";
         }
