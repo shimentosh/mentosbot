@@ -1,7 +1,8 @@
 name: build-apps
 
 # Internal builds for the team: the Windows and macOS desktop apps, neither store-signed. A push to
-# main that changes the desktop app builds it and releases it under the next `app-v*` tag; pushing
+# main that changes the desktop app or this workflow builds it and releases it under the next
+# `app-v*` tag; pushing
 # an `app-v*` tag by hand does the same under that tag. Run it from the Actions tab to get the
 # files as run artifacts only. Shared packages are left out of the paths on purpose: the app loads
 # its screens from the server, and macOS minutes are costly on a private repository.
@@ -9,7 +10,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["apps/desktop/**"]
+    paths: ["apps/desktop/**", ".github/workflows/build-apps.yml"]
     tags: ["app-v*"]
 
 permissions:
@@ -48,12 +49,29 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - name: Select the newest Xcode
+      # The image can carry an Xcode newer than its macOS runs: Xcode 26.3's actool passed its
+      # version check, then crashed compiling the icon on macOS 15.6 with missing system symbols.
+      # Take the newest Xcode 26 that compiles the app icon the way electron-builder does.
+      - name: Select the newest Xcode that builds the icon
         if: runner.os == 'macOS'
         run: |
-          xcode="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
-          echo "Using $xcode"
-          sudo xcode-select -s "$xcode"
+          for xcode in $(ls -d /Applications/Xcode_26*.app | sort -V -r); do
+            probe="$(mktemp -d)"
+            cp -R packages/ui-tokens/assets/Rakazo.icon "$probe/Icon.icon"
+            if DEVELOPER_DIR="$xcode/Contents/Developer" xcrun actool "$probe/Icon.icon" \
+                --compile "$probe" --output-partial-info-plist "$probe/info.plist" \
+                --app-icon Icon --include-all-app-icons --accent-color AccentColor \
+                --enable-on-demand-resources NO --development-region en --target-device mac \
+                --minimum-deployment-target 26.0 --platform macosx >/dev/null 2>&1 \
+              && [ -f "$probe/Assets.car" ]; then
+              echo "Using $xcode"
+              sudo xcode-select -s "$xcode"
+              exit 0
+            fi
+            echo "Skipping $xcode: it cannot compile the app icon on this macOS"
+          done
+          echo "No Xcode 26 here can compile the app icon"
+          exit 1
       - run: pnpm install --frozen-lockfile
       - name: Generate the database client for desktop compilation
         run: pnpm db:generate
