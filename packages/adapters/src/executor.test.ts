@@ -27,6 +27,7 @@ import {
   dockerComputerToolInstruction,
   MEMORY_INSTRUCTION,
   persistentComputerInstruction,
+  ROUTINE_RECENT_CHAT_LIMIT,
   replyShapeClause,
   threadContextForRun,
   userTurnInstructions,
@@ -37,6 +38,7 @@ import { createRunWorkspaceCheckpoint } from "./run-lifecycle.js";
 import { isTerminalModelSetupError } from "./run-model.js";
 import { runNotificationsEnabled } from "./run-notifications.js";
 import { REACTION_SILENT_REPLY_GUIDANCE } from "./run-replies.js";
+import { loadRoutineSince } from "./run-routines.js";
 import {
   followUpsOffered,
   offeredFleetTools,
@@ -2077,23 +2079,83 @@ describe("createRunExecutor", () => {
     ).toEqual([messages[0]]);
   });
 
-  it("isolates routine runs from every thread-history source", () => {
+  it("gives a routine run only the chat since it last ran", () => {
+    const at = (minute: number) => new Date(Date.UTC(2026, 10, 24, 10, minute)).toISOString();
     const threadContext = {
-      messages: [{ role: "user", content: "Create this routine" }],
+      messages: [
+        { role: "user", content: "Create this routine", createdAt: at(0) },
+        { role: "assistant", content: "What did you finish this hour?", createdAt: at(10) },
+        { role: "user", content: "Put our conversation in a file", createdAt: at(12) },
+      ],
       summary: "The user just configured this routine.",
       historyCompactedUpToSeq: 4,
+    };
+    const isolated = {
+      summary: null,
+      historyCompactedUpToSeq: null,
+      includeSemanticRecall: false,
     };
 
     expect(threadContextForRun("routine", threadContext, false)).toEqual({
       messages: [],
-      summary: null,
-      historyCompactedUpToSeq: null,
-      includeSemanticRecall: false,
+      ...isolated,
     });
+    expect(
+      threadContextForRun("routine", threadContext, false, undefined, new Date(at(5))),
+    ).toEqual({ messages: threadContext.messages.slice(1), ...isolated });
+    // The creation intro reads none, whatever it is given.
+    expect(
+      threadContextForRun("created", threadContext, false, undefined, new Date(at(5))).messages,
+    ).toEqual([]);
     expect(threadContextForRun("user", threadContext, false)).toEqual({
       ...threadContext,
       includeSemanticRecall: true,
     });
+  });
+
+  it("caps a routine run's recent chat at the latest messages", () => {
+    const messages = Array.from({ length: ROUTINE_RECENT_CHAT_LIMIT + 5 }, (_, index) => ({
+      role: "user",
+      content: `message ${index}`,
+      createdAt: new Date(Date.UTC(2026, 10, 24, 10, index)).toISOString(),
+    }));
+    const recent = threadContextForRun(
+      "routine",
+      { messages, summary: null, historyCompactedUpToSeq: null },
+      false,
+      undefined,
+      new Date(Date.UTC(2026, 10, 24, 9)),
+    ).messages;
+    expect(recent).toEqual(messages.slice(-ROUTINE_RECENT_CHAT_LIMIT));
+  });
+
+  it("starts a routine's chat at its previous run, or at its creation before it has run", async () => {
+    const created = new Date("2026-11-20T08:00:00.000Z");
+    const previous = new Date("2026-11-24T09:00:00.000Z");
+    const run = { id: "run-2", createdAt: new Date("2026-11-24T10:00:00.000Z") };
+    const prismaWith = (routine: unknown) => {
+      const findUnique = vi.fn(async () => routine);
+      return { prisma: { routine: { findUnique } } as never, findUnique };
+    };
+
+    const ran = prismaWith({ createdAt: created, runs: [{ createdAt: previous }] });
+    await expect(loadRoutineSince(ran.prisma, "routine-1", run)).resolves.toEqual(previous);
+    expect(ran.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "routine-1" },
+        select: expect.objectContaining({
+          runs: expect.objectContaining({
+            where: { id: { not: "run-2" }, createdAt: { lt: run.createdAt } },
+          }),
+        }),
+      }),
+    );
+    await expect(
+      loadRoutineSince(prismaWith({ createdAt: created, runs: [] }).prisma, "routine-1", run),
+    ).resolves.toEqual(created);
+    await expect(
+      loadRoutineSince(prismaWith(null).prisma, "routine-1", run),
+    ).resolves.toBeUndefined();
   });
 
   it("stores the next 30-day run from the scheduled anchor after a fire", async () => {

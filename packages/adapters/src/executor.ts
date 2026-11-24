@@ -189,6 +189,7 @@ import {
 } from "./run-replies.js";
 import { finalReplyReviewer } from "./run-reply-check.js";
 import {
+  loadRoutineSince,
   notifyRoutineRetryAttemptsExhausted,
   retryRoutineRun,
   wakeRoutine,
@@ -768,6 +769,14 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           { spaceId: run.spaceId, bot },
           messages,
         );
+        // Recent chat is optional context for a routine; a failed lookup runs it without.
+        const routineSince =
+          run.trigger === "routine" && run.routineId
+            ? await loadRoutineSince(deps.prisma, run.routineId, run).catch((error) => {
+                getLogger().warn("routine recent chat lookup failed", { runId, error });
+                return undefined;
+              })
+            : undefined;
         const threadContext = threadContextForRun(
           run.trigger,
           {
@@ -797,6 +806,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           },
           nonOwnerChatRun,
           run.sourceMessageId,
+          routineSince,
         );
         const compactedHistory = selectCompactedHistory({
           messages: threadContext.messages,

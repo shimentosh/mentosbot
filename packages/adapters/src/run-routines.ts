@@ -308,6 +308,30 @@ export async function wakeRoutine(deps: ExecutorDeps, routineId: string, schedul
   }
 }
 
+/**
+ * Where a routine run's view of the chat starts: its previous run, or the routine's creation when
+ * it has never run, so a follow-up sees the replies since it was set.
+ */
+export async function loadRoutineSince(
+  prisma: ExecutorDeps["prisma"],
+  routineId: string,
+  run: { id: string; createdAt: Date },
+): Promise<Date | undefined> {
+  const routine = await prisma.routine.findUnique({
+    where: { id: routineId },
+    select: {
+      createdAt: true,
+      runs: {
+        where: { id: { not: run.id }, createdAt: { lt: run.createdAt } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { createdAt: true },
+      },
+    },
+  });
+  return routine ? (routine.runs[0]?.createdAt ?? routine.createdAt) : undefined;
+}
+
 export async function notifyRoutineRetryAttemptsExhausted(deps: ExecutorDeps, runId: string) {
   const failed = await deps.prisma.run.findUnique({ where: { id: runId } });
   if (
