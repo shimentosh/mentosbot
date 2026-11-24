@@ -125,6 +125,64 @@ describePostgres("user devices (PostgreSQL)", () => {
     await expect(hub.authenticate(`Bearer ${token}`)).resolves.toBeNull();
   });
 
+  it("reaches the computer someone is using before one that connected later", async () => {
+    const owner = `${userId}-two`;
+    await prisma.user.create({
+      data: { id: owner, name: "Two computers", email: `${owner}@example.test` },
+    });
+    try {
+      const session = await prisma.session.create({
+        data: {
+          id: `${suffix}-two-session`,
+          token: `${suffix}-two-session-token`,
+          userId: owner,
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      });
+      const hub = new UserDeviceHub({ prisma: raw, address: "http://127.0.0.1:1" });
+      hubs.push(hub);
+      const connect = async (name: string) => {
+        const token = createUserDeviceToken();
+        const device = await prisma.userDevice.create({
+          data: {
+            userId: owner,
+            name,
+            platform: "darwin",
+            tokenHash: hashUserDeviceToken(token),
+            sessionId: session.id,
+          },
+        });
+        const socket = new Socket();
+        await hub.attach((await hub.authenticate(`Bearer ${token}`))!, socket);
+        return { device, socket };
+      };
+      const mac = await connect("Mac");
+      const pc = await connect("PC");
+      const gateway = new UserDevices({
+        prisma: raw,
+        forwardSecret: userDeviceForwardSecret("k"),
+        hub,
+      });
+      // No app has reported use yet, so the one connected last comes first.
+      await expect(gateway.connected(owner)).resolves.toMatchObject({
+        deviceId: pc.device.id,
+        activeAt: null,
+      });
+      mac.socket.emit("message", JSON.stringify({ type: "active" }));
+      await vi.waitFor(async () =>
+        expect(
+          (await prisma.userDevice.findUnique({ where: { id: mac.device.id } }))?.lastActiveAt,
+        ).toBeInstanceOf(Date),
+      );
+      await expect(gateway.connected(owner)).resolves.toMatchObject({
+        deviceId: mac.device.id,
+        activeAt: expect.any(Date),
+      });
+    } finally {
+      await prisma.user.deleteMany({ where: { id: owner } });
+    }
+  });
+
   it("revokes a connected device once the sign-in that paired it is gone", async () => {
     const session = await prisma.session.create({
       data: {

@@ -239,8 +239,15 @@ export function startUserDeviceClient(options: UserDeviceClientOptions) {
     }
   }
 
+  /** Tells the server someone is using this computer now; skipped while it is not connected. */
+  function active() {
+    if (stopped || socket?.readyState !== WebSocket.OPEN) return;
+    const message: UserDeviceClientMessage = { type: "active" };
+    socket.send(JSON.stringify(message), () => undefined);
+  }
+
   connect();
-  return { close: stop, cancelAll };
+  return { close: stop, cancelAll, active };
 }
 
 export type UserDeviceClient = ReturnType<typeof startUserDeviceClient>;

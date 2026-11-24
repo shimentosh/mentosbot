@@ -58,6 +58,7 @@ import {
   USER_COMPUTER_TOOLS,
   userComputerAppName,
 } from "./user-computer-tools.js";
+import type { UserDevice, UserDeviceGateway } from "./user-device-protocol.js";
 
 export {
   USER_COMPUTER_ACT_TOOL,
@@ -254,9 +255,22 @@ async function lastValue<T>(values: AsyncIterable<T>): Promise<T> {
 }
 
 /**
- * Checked again at execution: the desktop can disconnect or be revoked after the offer. With
- * several computers connected, the one holding this bot's project folder wins.
+ * The computer a run reaches: the connected one the person used most recently. When no app
+ * reports use (older desktop apps), the one holding this bot's project folder, then the most
+ * recently connected.
  */
+export async function pickUserComputer(
+  devices: UserDeviceGateway,
+  owner: string,
+  folderDeviceId: string | undefined,
+): Promise<UserDevice | null> {
+  const latest = await devices.connected(owner).catch(() => null);
+  if (!latest || latest.activeAt || !folderDeviceId || latest.deviceId === folderDeviceId)
+    return latest;
+  return (await devices.connected(owner, folderDeviceId).catch(() => null)) ?? latest;
+}
+
+/** Checked again at execution: the desktop can disconnect or be revoked after the offer. */
 async function connectedUserComputer(ctx: RunContext) {
   const owner = ctx.source.userComputerOwner;
   const devices = ctx.deps.userDevices;
@@ -265,9 +279,7 @@ async function connectedUserComputer(ctx: RunContext) {
     where: { botId_userId: { botId: ctx.bot.id, userId: owner } },
     select: { deviceId: true },
   });
-  const device =
-    (folder && (await devices.connected(owner, folder.deviceId).catch(() => null))) ||
-    (await devices.connected(owner).catch(() => null));
+  const device = await pickUserComputer(devices, owner, folder?.deviceId);
   return device ? { owner, devices, deviceId: device.deviceId } : undefined;
 }
 

@@ -154,6 +154,9 @@ let hostComputer: Awaited<ReturnType<typeof prepareHostComputer>> | undefined;
 let requestingComputerAccess = false;
 let userDevices: UserDeviceAccess | undefined;
 let hostScreen: HostScreen | undefined;
+/** How often this computer checks whether someone is using it, and how recent input counts. */
+const IN_USE_CHECK_MS = 15_000;
+const IN_USE_IDLE_SECONDS = 60;
 
 markOnce("rk:main:module-evaluated");
 if (PERFORMANCE_USER_DATA) {
@@ -1413,6 +1416,14 @@ app.whenReady().then(async () => {
         ...events,
       }),
   });
+  // Runs reach the computer the person is using: report it while they recently typed or moved
+  // the mouse here, or this app's window has focus.
+  const reportInUse = () => {
+    if (BrowserWindow.getFocusedWindow() || powerMonitor.getSystemIdleTime() < IN_USE_IDLE_SECONDS)
+      userDevices?.active();
+  };
+  setInterval(reportInUse, IN_USE_CHECK_MS).unref();
+  app.on("browser-window-focus", () => userDevices?.active());
   localStack = new LocalStackController({
     hostComputer: hostComputer?.connection,
     platform: process.platform,
