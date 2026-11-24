@@ -3362,8 +3362,9 @@ describe("user_computer_shell", () => {
     });
     await away.run();
     expect(away.offeredTools()).not.toContain("user_computer_agent");
+    // The bot is told which computer it is on, so it works there instead of waiting.
     expect(away.instructions()).toContain(
-      `Your project folder is "${path}" on their computer "Studio Mac", which is not connected.`,
+      `You are on their computer "Laptop", the one they are using; work there. Your project folder "${path}" is on their other computer "Studio Mac"`,
     );
   });
 
