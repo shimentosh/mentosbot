@@ -34,7 +34,6 @@ export const COMPUTER_IMAGE = resolveComputerImage();
 /** The files from infra/sandboxes/computer the supervisor sends when it builds the image locally. */
 export const COMPUTER_IMAGE_CONTEXT_FILES = [
   "Dockerfile",
-  "apt-security.sh",
   "start.sh",
   "user-env.sh",
   "control.py",
@@ -45,7 +44,6 @@ export const COMPUTER_IMAGE_CONTEXT_FILES = [
   "page_secrets.py",
   "install-agent-browser.sh",
   "rakazo-browser.desktop",
-  "mimeapps.list",
   "browser-policy.json",
   "embed.html",
   "clipboard-bridge.js",

@@ -17,6 +17,14 @@ export function decisionModel(provider: string, id: string) {
     (model) => model.provider === provider && (model.id === id || model.aliases?.includes(id)),
   );
 }
+/** Providers whose connections only answer decisions; they never run a chat. */
+export function decisionOnlyProvider(provider: string): boolean {
+  return models.some((model) => model.provider === provider && model.decisionsOnly);
+}
+/** How a decisions-only provider tells a rejected key from a valid one. */
+export function decisionKeyCheck(provider: string) {
+  return models.find((model) => model.provider === provider && model.decisionsOnly)?.keyCheck;
+}
 export function decisionModelCatalog(): ModelCatalogEntry[] {
   return models.flatMap((model) =>
     model.catalog

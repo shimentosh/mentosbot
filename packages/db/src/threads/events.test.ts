@@ -1654,6 +1654,82 @@ describe("answerRunInput", () => {
     expect(publish).toHaveBeenCalledWith("thread:thread-1", JSON.stringify({ cursor: 9 }));
   });
 
+  it("records a decision model's pick as chosen automatically, never as the owner's words", async () => {
+    const ask = {
+      kind: "ask",
+      text: "Which city?",
+      status: "pending",
+      actions: [
+        { id: "choice-1", label: "Berlin" },
+        { id: "choice-2", label: "Paris" },
+      ],
+    };
+    const decidedTx = () => ({
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "thread-1" }]),
+      message: {
+        findFirst: vi.fn().mockResolvedValue({ id: "message-1", blocks: [ask] }),
+        update: vi.fn().mockResolvedValue({ id: "message-1" }),
+      },
+      run: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValue({ botId: "bot-2", userId: "user-1", taskId: "task-1" }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn().mockResolvedValue({
+          status: "queued",
+          createdAt: new Date("2026-08-16T12:00:00.000Z"),
+          threadId: "thread-1",
+        }),
+      },
+      task: { update: vi.fn().mockResolvedValue({ id: "task-1" }) },
+      thread: { update: vi.fn().mockResolvedValue({ nextEventSeq: 10 }) },
+      event: {
+        create: vi.fn(async ({ data }: { data: { seq: number; type: string } }) => ({
+          ...event(data.seq),
+          type: data.type,
+        })),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    });
+    const answer = (tx: ReturnType<typeof decidedTx>, choice: string) =>
+      answerRunInput(
+        {
+          $transaction: vi.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)),
+        } as unknown as PrismaClient,
+        {
+          spaceId: "workspace-1",
+          threadId: "thread-1",
+          runId: "run-1",
+          messageId: "message-1",
+          answeredByUserId: "user-1",
+          answer: choice,
+          decidedAutomatically: true,
+        },
+        new TestFanout(),
+      );
+
+    const tx = decidedTx();
+    await expect(answer(tx, "choice-2")).resolves.toBe(true);
+    expect(tx.message.update).toHaveBeenCalledWith({
+      where: { id: "message-1" },
+      data: {
+        blocks: [{ ...ask, status: "answered", answer: "choice-2", decidedAutomatically: true }],
+      },
+    });
+    expect(tx.task.update).toHaveBeenCalledWith({
+      where: { id: "task-1" },
+      data: {
+        prompt:
+          "The owner's decision model chose choice-2: Paris. Say so when you report what you did, since the owner did not pick it.",
+      },
+      select: { id: true },
+    });
+
+    const unoffered = decidedTx();
+    await expect(answer(unoffered, "Rome")).resolves.toBe(false);
+    expect(unoffered.message.update).not.toHaveBeenCalled();
+  });
+
   it("answers a card whose message also holds a block this release's schema rejects", async () => {
     const legacyBlock = { kind: "block_from_an_earlier_release", detail: "kept as stored" };
     const tx = {

@@ -178,7 +178,7 @@ profile_browser_pid() {
 # The profile scan above is capped at 0.4s. The spawn poll is those two bounds plus
 # a little shell, so a forward that fails after the scan is still reported.
 open_live_browser_url() {
-  timeout 1.6 /usr/bin/python3 -I - "$@" <<'PY'
+  timeout 1.6 python3 - "$@" <<'PY'
 import json
 import sys
 import time
@@ -432,86 +432,26 @@ if [ -n "${LD_PRELOAD:-}" ]; then
   unset _kept _rest _entry
 fi
 
-# With the owner's own network, the owner's time zone and language, so the browser
-# agrees with the address sites see. The supervisor passes only a plain zone name
-# and language tag; the language then replaces the account's LANGUAGE below.
+# This container has no GPU. --disable-gpu keeps Chromium from probing one.
+# WebGL still needs SwiftShader: --disable-software-rasterizer blocks it, and
+# current Chromium allows that fallback only with --enable-unsafe-swiftshader.
+FLAGS="--test-type --no-sandbox --disable-dev-shm-usage --disable-gpu --enable-unsafe-swiftshader --no-first-run --no-default-browser-check --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic --restore-last-session --start-maximized --remote-debugging-address=127.0.0.1 --remote-debugging-port=$DEBUG_PORT"
+# The owner's own network, when they chose one: the supervisor sets only the proxy address.
+# WebRTC may then use UDP only through the proxy, so it cannot reveal the computer's address.
+if [ -n "${RAKAZO_BROWSER_PROXY:-}" ]; then
+  FLAGS="$FLAGS --proxy-server=$RAKAZO_BROWSER_PROXY --force-webrtc-ip-handling-policy=disable_non_proxied_udp"
+fi
+# With it, the owner's time zone and language, so the browser agrees with the address sites see.
+# The supervisor passes only a plain zone name and language tag.
 if [ -n "${RAKAZO_BROWSER_TZ:-}" ]; then
   export TZ="$RAKAZO_BROWSER_TZ"
 fi
 if [ -n "${RAKAZO_BROWSER_LANG:-}" ]; then
   LANGUAGE=$(printf %s "$RAKAZO_BROWSER_LANG" | tr - _)
   export LANGUAGE
-fi
-# Without a GPU, --disable-gpu keeps Chromium from probing one. WebGL still
-# needs SwiftShader: --disable-software-rasterizer blocks it, and current
-# Chromium allows that fallback only with --enable-unsafe-swiftshader.
-# With a render node passed in, ANGLE on Vulkan renders on that GPU; under Xvfb
-# the default and EGL paths fall back to software and lose WebGL. A GPU that
-# the image's Mesa cannot drive would lose WebGL on Vulkan too, so that path
-# needs vulkaninfo to list a real GPU. The supervisor sets RAKAZO_BROWSER_GPU
-# only for that render node: GPUs passed in for programs leave the browser in
-# software.
-gpu_usable() {
-  [ "${RAKAZO_BROWSER_GPU:-}" = 1 ] || return 1
-  for node in /dev/dri/renderD*; do
-    [ -r "$node" ] && [ -w "$node" ] || continue
-    timeout 5 vulkaninfo --summary 2>/dev/null |
-      grep -qE 'deviceType += PHYSICAL_DEVICE_TYPE_(INTEGRATED|DISCRETE)_GPU'
-    return
-  done
-  return 1
-}
-GPU_FLAGS="--disable-gpu --enable-unsafe-swiftshader"
-if gpu_usable; then
-  # SwiftShader stays allowed so WebGL falls back to software if the GPU fails later.
-  GPU_FLAGS="--use-angle=vulkan --enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan --enable-unsafe-swiftshader"
-  # Per-screen launchers pass the software flags too; drop them here.
-  for arg in "$@"; do
-    shift
-    case "$arg" in
-      --disable-gpu|--enable-unsafe-swiftshader) ;;
-      *) set -- "$@" "$arg" ;;
-    esac
-  done
-fi
-# The account's language arrives as LANGUAGE, which Chrome on Linux reads for its
-# own language (it ignores --lang). For the languages pages see, it reads LANGUAGE
-# only when it creates a profile and keeps that profile's list afterwards, so a
-# saved profile gets the account's language through --accept-lang on each start.
-LANGUAGE_FLAGS=""
-language="${LANGUAGE:-}"
-language="$(printf '%s' "${language%%:*}" | tr _ -)"
-case "$language" in
-  ''|-*|*[!A-Za-z0-9-]*) ;;
-  [Ee][Nn])
-    LANGUAGE_FLAGS="--accept-lang=en-US,en"
-    ;;
-  *)
-    base="${language%%-*}"
-    languages="$language"
-    [ "$base" = "$language" ] || languages="$languages,$base"
-    case "$base" in
-      [Ee][Nn]) ;;
-      *) languages="$languages,en-US,en" ;;
-    esac
-    LANGUAGE_FLAGS="--accept-lang=$languages"
-    ;;
-esac
-# An operator may send some sites through a proxy with a PAC script
-# (SANDBOX_COMPUTER_BROWSER_PROXY_PAC_URL on the supervisor). It is passed as
-# one quoted argument, so a data: URL's * is never globbed; a value with
-# whitespace is not a URL the supervisor would set, so it is ignored.
-PROXY_PAC_URL="${RAKAZO_BROWSER_PROXY_PAC_URL:-}"
-case "$PROXY_PAC_URL" in
-  *[[:space:]]*) PROXY_PAC_URL="" ;;
-esac
-FLAGS="--test-type --no-sandbox --disable-dev-shm-usage $GPU_FLAGS $LANGUAGE_FLAGS --no-first-run --no-default-browser-check --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic --restore-last-session --start-maximized --remote-debugging-address=127.0.0.1 --remote-debugging-port=$DEBUG_PORT"
-# The owner's own network, when they chose one: the supervisor sets only the proxy address.
-# WebRTC may then use UDP only through the proxy, so it cannot reveal the computer's address.
-if [ -n "${RAKAZO_BROWSER_PROXY:-}" ]; then
-  FLAGS="$FLAGS --proxy-server=$RAKAZO_BROWSER_PROXY --force-webrtc-ip-handling-policy=disable_non_proxied_udp"
+  FLAGS="$FLAGS --lang=$RAKAZO_BROWSER_LANG"
 fi
 if [ "$USER_DATA_DIR_SET" -eq 0 ]; then
-  exec "$BIN" $FLAGS ${PROXY_PAC_URL:+"--proxy-pac-url=$PROXY_PAC_URL"} --user-data-dir="$PROFILE" "$@"
+  exec "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@"
 fi
-exec "$BIN" $FLAGS ${PROXY_PAC_URL:+"--proxy-pac-url=$PROXY_PAC_URL"} "$@"
+exec "$BIN" $FLAGS "$@"

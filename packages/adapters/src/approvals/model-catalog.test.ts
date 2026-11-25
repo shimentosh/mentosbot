@@ -1,5 +1,12 @@
+import { ConnectionSetupError } from "@rakazo/contracts";
 import { expect, it } from "vitest";
-import { decisionModel, decisionModelCatalog } from "./decision-models.js";
+import { verifyCatalogProviderApiKey } from "../runtime/pi/models/pi-models.js";
+import {
+  decisionKeyCheck,
+  decisionModel,
+  decisionModelCatalog,
+  decisionOnlyProvider,
+} from "./decision-models.js";
 
 it.each([
   ["openrouter", "typesafe/jev-1.14", "https://openrouter.ai/typesafe/jev-1.14"],
@@ -30,5 +37,24 @@ it("keeps protocol IDs provider-scoped and publishes only declared catalog entri
       protocol: "decisions",
       dataRetentionControl: true,
     }),
+    expect.objectContaining({ provider: "typesafe", id: "jev-1.14", protocol: "decisions" }),
   ]);
+  expect(decisionOnlyProvider("typesafe")).toBe(true);
+  expect(decisionOnlyProvider("openrouter")).toBe(false);
+});
+it("checks a decisions-only connection's key before it is saved", async () => {
+  const sent: string[] = [];
+  const answer = (status: number) =>
+    (async (url: string) => {
+      sent.push(url);
+      return new Response("{}", { status });
+    }) as unknown as typeof fetch;
+  await expect(
+    verifyCatalogProviderApiKey({ provider: "typesafe", apiKey: "test-key" }, answer(401)),
+  ).rejects.toBeInstanceOf(ConnectionSetupError);
+  await expect(
+    verifyCatalogProviderApiKey({ provider: "typesafe", apiKey: "test-key" }, answer(200)),
+  ).resolves.toBeUndefined();
+  expect(sent).toEqual([decisionKeyCheck("typesafe")!.url, decisionKeyCheck("typesafe")!.url]);
+  expect(decisionKeyCheck("openrouter")).toBeUndefined();
 });

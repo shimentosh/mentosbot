@@ -1,5 +1,5 @@
 FROM node:24.22.3-bookworm@sha256:9d266751ca3d7fdbe651c878ffd5ad0a42fed49a18c283509267c97f025b7496
-COPY --chmod=755 infra/sandboxes/computer/apt-security.sh /tmp/apt-security.sh
+COPY --chmod=755 infra/compose/apt-security.sh /tmp/apt-security.sh
 RUN /tmp/apt-security.sh \
   && apt-get update && apt-get upgrade -y --no-install-recommends \
   && apt-get install -y --no-install-recommends gosu tini fontconfig fonts-dejavu-core \

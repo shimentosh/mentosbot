@@ -136,6 +136,14 @@ export function ModelSettingsOverlay({
         )
       : !credentialByProvider.has(entry.id),
   );
+  // A provider that only answers decisions serves only the purposes that ask for a choice.
+  const answersDecisions = (id: string, only: boolean) => {
+    const entries = groups.find((group) => group.id === id)?.entries ?? [];
+    const decides = (entry: (typeof entries)[number]) => entry.protocol === "decisions";
+    return entries.length > 0 && (only ? entries.every(decides) : entries.some(decides));
+  };
+  const chatProviders = providers.filter((entry) => !answersDecisions(entry.id, true));
+  const decisionProviders = providers.filter((entry) => answersDecisions(entry.id, false));
   const connectionName = (entry: ModelCredential) => {
     const group = groups.find((item) => item.id === entry.provider);
     return modelConnectionNames(
@@ -382,7 +390,7 @@ export function ModelSettingsOverlay({
             title={t`Main model`}
             hideHeading={firstConnection}
             defaultLabel={firstConnection ? t`Connect a model` : t`Choose a model`}
-            providers={providers}
+            providers={chatProviders}
             providerLabel={providerLabel}
             onConnect={(next, intent) => openConnection(next, intent, null, "main")}
             onManage={(_id, credentialId) => openProvider(credentialId)}
@@ -419,7 +427,7 @@ export function ModelSettingsOverlay({
               modelRole="approval"
               title={t`Approval model`}
               defaultLabel={t`Choose a model`}
-              providers={providers}
+              providers={chatProviders}
               providerLabel={providerLabel}
               onConnect={(next, intent) => openConnection(next, intent, null, "approval")}
               onManage={(_id, credentialId) => openProvider(credentialId)}
@@ -438,7 +446,7 @@ export function ModelSettingsOverlay({
               defaultLabel={
                 mainSeesImages ? t`Same as main model` : t`Choose a model that can see the screen`
               }
-              providers={providers}
+              providers={chatProviders}
               providerLabel={providerLabel}
               onConnect={(next, intent) => openConnection(next, intent, null, "computer")}
               onManage={(_id, credentialId) => openProvider(credentialId)}
@@ -446,6 +454,23 @@ export function ModelSettingsOverlay({
               panel={connectionAt === "computer" ? panelFor(true) : null}
             />
           ) : null}
+          {firstConnection ? null : (
+            <ModelRoleSettings
+              userId={me.userId}
+              spaceId={me.spaceId}
+              scope={scope}
+              credentials={credentials}
+              modelRole="decision"
+              title={t`Decision model`}
+              defaultLabel={t`None`}
+              providers={decisionProviders}
+              providerLabel={providerLabel}
+              onConnect={(next, intent) => openConnection(next, intent, null, "decision")}
+              onManage={(_id, credentialId) => openProvider(credentialId)}
+              onManageModel={(choice) => openModel(choice.credentialId, choice.modelId, null)}
+              panel={connectionAt === "decision" ? panelFor(true) : null}
+            />
+          )}
           {firstConnection ? null : (
             <MediaModelSettings
               userId={me.userId}

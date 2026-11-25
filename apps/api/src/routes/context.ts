@@ -227,7 +227,7 @@ export function createRouterContext(deps: RouterDeps) {
         auth,
         applyProviderLiveCatalog(codexMerged, auth, providerLive, selected),
       ),
-      ...(role === "approval"
+      ...(role === "approval" || role === "decision"
         ? decisionModelCatalog().filter((entry) =>
             modelProviderAllowed(modelProviderAllowlist(), entry.provider),
           )

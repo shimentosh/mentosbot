@@ -341,6 +341,14 @@ export default function Models() {
                 defaultLabel={t`Same as main model`}
               />
             )}
+            {firstConnection ? null : (
+              <ModelRoleSettings
+                {...shared}
+                modelRole="decision"
+                title={t`Decision model`}
+                defaultLabel={t`None`}
+              />
+            )}
             {media && !firstConnection ? (
               <MediaModelSettings
                 view={media}

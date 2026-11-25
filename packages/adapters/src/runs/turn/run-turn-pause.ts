@@ -1,6 +1,7 @@
 import { AGENT_IMPORT_ASK_ACTION_ID, FIRST_BOT_SPAWN_KEY } from "@rakazo/contracts";
 import { displayName, redactSecrets, TAKEOVER_COMPUTER_PENDING_STATE } from "@rakazo/core";
 import { storedMessageBlocks } from "@rakazo/db";
+import { getLogger } from "@rakazo/logging";
 import { MAX_APPROVAL_DETAIL_LENGTH, truncate } from "../../approvals/approval-ask.js";
 import { scheduleComputerSleep } from "../../computers/computer-idle.js";
 import { holdComputerExecutionLeaseForTakeover } from "../../computers/computer-lifecycle.js";
@@ -19,6 +20,7 @@ import {
 } from "../lifecycle/run-progress.js";
 import { clampUserProgressMessage } from "../lifecycle/user-progress.js";
 import { wakeRun } from "../wakeups/wake-run.js";
+import { decideAskForRunOwner } from "./run-ask-decision.js";
 import type { RuntimeEvent } from "./run-turn.js";
 
 export async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
@@ -35,6 +37,15 @@ export async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">
     label: redactSecrets(action.label, ctx.secrets),
   }));
   const previewImages = await askPreviewImages(deps, run, event.previewImages);
+  // The owner's decision model may settle the question; the card is still shown, answered.
+  const decided = await decideAskForRunOwner(ctx, {
+    text: safeText,
+    detail: safeDetail,
+    actions: safeActions,
+    preview: event.preview,
+    previewImages: event.previewImages,
+    multiple: event.multiple,
+  });
   await ctx.computer.checkpoint.flush();
   await persistTurnCheckpoint(ctx, event.executionId);
   await ctx.settleRunningHelpers();
@@ -80,6 +91,8 @@ export async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">
   });
   if (!paused) return;
   await enqueueSteeringContinuation(deps, paused.continuationRunId);
+  // Answered for the owner, so nobody is told the bot waits.
+  if (!paused.continuationRunId && decided && (await answerDecidedAsk(ctx, decided))) return;
   await reportBotMessageWait(deps, run, bot, safeText, ctx.attempt.id);
   await notifyRun(deps, run, {
     kind: "help",
@@ -88,6 +101,36 @@ export async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">
     botId: bot.id,
     threadId: thread.id,
   });
+}
+
+/** Answers the question this run just paused on with its owner's decision model's pick. */
+async function answerDecidedAsk(ctx: RunContext, answer: string): Promise<boolean> {
+  const { deps, run, runId } = ctx;
+  try {
+    const message = await deps.prisma.message.findFirst({
+      where: { threadId: run.threadId, runId, role: "bot" },
+      orderBy: { seq: "desc" },
+      select: { id: true },
+    });
+    if (!message) return false;
+    const answered = await deps.events.answerRunInput({
+      spaceId: run.spaceId,
+      threadId: run.threadId,
+      runId,
+      messageId: message.id,
+      answeredByUserId: run.userId,
+      answer,
+      decidedAutomatically: true,
+    });
+    if (!answered) return false;
+    await wakeRun(deps.jobs, runId);
+    return true;
+  } catch (error) {
+    getLogger().warn("decided answer", {
+      failure: error instanceof Error ? error.name : "unknown",
+    });
+    return false;
+  }
 }
 
 const IMPORT_ACTION = { id: AGENT_IMPORT_ASK_ACTION_ID, label: "Move from another assistant" };

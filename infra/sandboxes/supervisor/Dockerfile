@@ -1,5 +1,5 @@
 FROM node:24.22.3-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
-COPY infra/sandboxes/computer/apt-security.sh /tmp/apt-security.sh
+COPY infra/compose/apt-security.sh /tmp/apt-security.sh
 RUN /tmp/apt-security.sh \
   && apt-get update && apt-get upgrade -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*

@@ -9,6 +9,8 @@ import {
   compatibleEndpointPreset,
   compatibleThinkingLevels,
   dataRetentionForConnect,
+  decisionModelCatalog,
+  decisionOnlyProvider,
   defaultCatalogModelId,
   enabledOpenAiCompatibleModelIds,
   keptModelSettings,
@@ -172,20 +174,24 @@ export async function prepareModelCredential(
   ) {
     throw new ORPCError("BAD_REQUEST", { message: authError });
   }
-  const defaultModel =
-    resolvedCodexModelId ??
-    defaultCatalogModelId(input.provider, input.plaintext) ??
-    usableModelId(deps.env.defaultModel);
+  // A decisions-only connection's model answers choices; it never runs a chat.
+  const decisionOnly = decisionOnlyProvider(input.provider);
+  const defaultModel = decisionOnly
+    ? decisionModelCatalog().find((entry) => entry.provider === input.provider)?.id
+    : (resolvedCodexModelId ??
+      defaultCatalogModelId(input.provider, input.plaintext) ??
+      usableModelId(deps.env.defaultModel));
   // A compatible connect may enable its new default, so judge it by the secret being saved.
-  const allowedThinking = !defaultModel
-    ? undefined
-    : input.provider === OPENAI_COMPATIBLE_PROVIDER_ID
-      ? compatibleThinkingLevels(
-          { id: "", provider: input.provider, label: "", defaultModel },
-          input.plaintext,
-          defaultModel,
-        ).allowed
-      : await allowedThinkingLevels(deps, actor, input.provider, defaultModel);
+  const allowedThinking =
+    !defaultModel || decisionOnly
+      ? undefined
+      : input.provider === OPENAI_COMPATIBLE_PROVIDER_ID
+        ? compatibleThinkingLevels(
+            { id: "", provider: input.provider, label: "", defaultModel },
+            input.plaintext,
+            defaultModel,
+          ).allowed
+        : await allowedThinkingLevels(deps, actor, input.provider, defaultModel);
   const stored = await deps.secrets.put(input.plaintext, {
     operationId: "cred",
     traceId: "cred",
@@ -294,6 +300,7 @@ async function writeModelCredential(
   // Only an explicit main-model connect changes a role. Omitted means yes for older apps.
   const becomesMain =
     input.makeDefault !== false &&
+    !decisionOnlyProvider(input.provider) &&
     Boolean(defaultModel) &&
     (!input.keepExistingDefault || !mainRole.primary);
   // A main-model connect keeps the effort its model already had.
@@ -551,7 +558,12 @@ export function createModelConnector(deps: RouterDeps, codexCatalog: CodexLiveCa
         );
         const modelId =
           usableModelId(input.modelId) ?? defaultCatalogModelId(input.provider, plaintext);
-        if (saved.kind === "api_key" && modelId && deps.modelConnectionCheck) {
+        if (
+          saved.kind === "api_key" &&
+          modelId &&
+          deps.modelConnectionCheck &&
+          !decisionOnlyProvider(input.provider)
+        ) {
           await deps.modelConnectionCheck(
             {
               provider: input.provider,

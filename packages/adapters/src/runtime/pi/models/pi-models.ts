@@ -15,6 +15,7 @@ import {
   MODEL_KEY_REJECTED_ERROR,
   trimEndChars,
 } from "@rakazo/contracts";
+import { decisionKeyCheck } from "../../../approvals/decision-models.js";
 import {
   approvedModelCreditOffering,
   modelCreditOfferings,
@@ -150,7 +151,7 @@ export async function verifyCatalogProviderApiKey(
   assertHeaderSafeApiKey(input.apiKey.trim());
   const provider = canonicalPiProviderId(input.provider);
   // Public catalogs cannot establish key validity, so only a provider's own check can.
-  const check = modelProviderDefinition(provider)?.keyCheck;
+  const check = modelProviderDefinition(provider)?.keyCheck ?? decisionKeyCheck(provider);
   if (!check) return;
   let response: Response;
   try {

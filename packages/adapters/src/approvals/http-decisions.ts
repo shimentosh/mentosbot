@@ -18,6 +18,7 @@ const answerSchema = z.object({
   type: z.literal("choice"),
   choice: z.string(),
   confidence: z.number().min(0).max(1).optional(),
+  probabilities: z.record(z.string(), z.number().min(0).max(1)).optional(),
 });
 const responseSchema = z.object({
   id: z.string().optional(),

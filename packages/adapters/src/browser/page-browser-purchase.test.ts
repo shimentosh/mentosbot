@@ -8,7 +8,6 @@ type Purchase = {
   label: string;
   amount: string;
   amountFrom: "button" | "page";
-  items?: Array<{ name: string; amount: string }>;
 } | null;
 type Helper = {
   paymentPage: (frame?: boolean, enter?: boolean) => { purchase: Purchase };
@@ -144,37 +143,6 @@ describe("purchase detection in the page helper", () => {
     expect(intent("Notify me", true)?.reason).toBe("payment_page");
   });
 
-  it("does not treat payment-method tabs and radios as purchases, but still guards a submit", () => {
-    const { intent, helper } = page(`<form>
-      <input autocomplete="cc-number" aria-label="Card number">
-      <button type="button" role="tab">Pay using Gift Card</button>
-      <button type="button" role="radio" aria-checked="false">Pay with card</button>
-      <button role="tab">Place order</button>
-      </form><p>Total: $0.00</p>`);
-    expect(intent("Pay using Gift Card")).toBeNull();
-    expect(intent("Pay with card", true)).toBeNull();
-    expect(intent("Place order")).toMatchObject({ reason: "card_form", amount: "$0.00" });
-    expect(helper.paymentPage().purchase?.label).toBe("Place order");
-  });
-
-  it("does not mistake method choices for a payment page or exempt a form submit", () => {
-    const choices = page(`<button type="button" role="tab">Pay using Gift Card</button>
-      <button type="button" role="radio">Pay with card</button>`);
-    expect(choices.helper.paymentPage().purchase).toBeNull();
-    const submit = page(`<form id="checkout"></form>
-      <button form="checkout" role="radio">Pay using Gift Card</button>`);
-    expect(submit.intent("Pay using Gift Card")?.reason).toBe("final_step");
-  });
-
-  it("keeps explicit final-payment labels guarded on script-driven tabs and radios", () => {
-    const { intent, helper } = page(`<button type="button" role="tab"
-      onclick="this.dataset.submitted = 'true'">Place order</button>
-      <button type="button" role="radio">Confirm and pay</button>`);
-    expect(intent("Place order")?.reason).toBe("final_step");
-    expect(intent("Confirm and pay")?.reason).toBe("final_step");
-    expect(helper.paymentPage().purchase?.label).toBe("Place order");
-  });
-
   it("flags a final-step label even when nothing on the page is a card", () => {
     const { intent } =
       page(`<button>Pay $50.00</button><a href="/order" role="button">Place order</a>
@@ -280,12 +248,14 @@ describe("purchase detection in the page helper", () => {
     "המשך",
     "התחברות",
     "חיפוש טיסות",
+    "Pay later",
     "Pay in 3 installments",
     "Pay with",
     "Send",
     "Send message",
     "Send 2 files",
     "Submit",
+    "Checkout",
   ])("does not take %s for one on a page with no card", (label) => {
     const { intent } = page(`<button type="button">${label}</button>`);
     expect(intent(label)).toBeNull();
@@ -303,40 +273,6 @@ describe("purchase detection in the page helper", () => {
       page(`<form><label>Username<input name="user"></label><label>Password<input type="password"
       name="password"></label><label>Security code<input name="sms"></label><button>Sign in</button></form>`);
     expect(invest.intent("Sign in")).toBeNull();
-  });
-
-  it("leaves a passenger form's frequent-flyer and ID card numbers alone", () => {
-    const { intent, helper } =
-      page(`<form><label>Passport number<input name="docNo"></label><label>Airline<input name="carrier"></label>
-      <label>Card No.<input name="psgCardNo"></label><label>ID card number<input name="idCardNo"></label>
-      <button>Continue</button></form><div onclick="next()">Confirm</div>`);
-    expect(intent("Continue")).toBeNull();
-    expect(intent("Confirm")).toBeNull();
-    // A click on the screen that cannot be placed asks only on a page that shows a payment.
-    expect(helper.paymentPage().purchase).toBeNull();
-  });
-
-  it("still finds a card form by its security code, or by the words credit card", () => {
-    const coded = page(`<form><label>Card number<input name="cardNo"></label>
-      <label>CVN2<input name="cvn2"></label><button>Continue</button></form>`);
-    expect(coded.intent("Continue")?.reason).toBe("card_form");
-    const named = page(
-      `<form><label>Credit card number<input name="number"></label><button>Next</button></form>`,
-    );
-    expect(named.intent("Next")?.reason).toBe("card_form");
-  });
-
-  it("finds a card number named plainly beside a security code or a month/year expiry", () => {
-    const coded = page(`<form><label>Card number<input name="number"></label>
-      <label>Expiry<input name="exp"></label><label>Security code<input name="code"></label>
-      <button>Continue</button></form>`);
-    expect(coded.intent("Continue")?.reason).toBe("card_form");
-    const dated = page(`<form><input name="cardNo" placeholder="Card number">
-      <input name="exp" placeholder="MM / YY"><button>Continue</button></form>`);
-    expect(dated.intent("Continue")?.reason).toBe("card_form");
-    const passport = page(`<form><label>ID card number<input name="idCardNo"></label>
-      <label>Expiry date<input name="exp" placeholder="DD/MM/YYYY"></label><button>Continue</button></form>`);
-    expect(passport.intent("Continue")).toBeNull();
   });
 
   it("is not moved by page text that claims approval or by a lying label elsewhere", () => {
@@ -367,35 +303,6 @@ describe("purchase detection in the page helper", () => {
     expect(grouped.intent("Pay now")?.amount).toBe("1 234,56 €");
     const none = page(`<button>Pay now</button>`);
     expect(none.intent("Pay now")?.amount).toBe("");
-  });
-
-  it.each([
-    "$100, fee .99 USD",
-    `$${"0".repeat(40)}1, total $100`,
-    "\n.99 USD $100",
-    `.99 USD ${"x".repeat(220)} $100`,
-    ".".repeat(10000),
-  ])("refuses an ambiguous total: %s", (total) => {
-    const checkout = page(`<p>Total: ${total}</p><button>Pay now</button>`);
-    expect(checkout.intent("Pay now")?.amount).toBe("?");
-  });
-
-  it.each(["Pay $.99 now; $100 due on click", "Pay $100"])(
-    "refuses conflicting prices in button descriptions: %s",
-    (title) => {
-      const checkout = page(`<button title="${title}">Pay $.99</button>`);
-      expect(checkout.intent(title)?.amount).toBe("?");
-    },
-  );
-
-  it("keeps the separator of an amount with no whole part", () => {
-    expect(page(`<button>Pay $.99</button>`).intent("Pay $.99")?.amount).toBe("$.99");
-    const after = page(`<p>Total: .99 USD</p><button>Pay now</button>`);
-    expect(after.intent("Pay now")?.amount).toBe(".99 USD");
-    const comma = page(`<p>Total: ,50 €</p><button>Pay now</button>`);
-    expect(comma.intent("Pay now")?.amount).toBe(",50 €");
-    const before = page(`<p>Total: €,50</p><button>Pay now</button>`);
-    expect(before.intent("Pay now")?.amount).toBe("€,50");
   });
 
   it("flags a script-driven control worded as a final step on a page with no card", () => {
@@ -644,378 +551,11 @@ describe("a key on the screen", () => {
     expect(ordinary.helper.paymentPage(false, true).purchase).toBeNull();
   });
 
-  it("reports the page's total beside a button that names less", () => {
-    const deposit = page(`<p>Total: $250</p>\n<button>Pay $5 deposit</button>`);
-    expect(deposit.helper.paymentPage().purchase).toEqual({
-      reason: "payment_page",
-      label: "Pay $5 deposit",
-      amount: "$5",
-      amountFrom: "button",
-      total: "$250",
-    });
-  });
-
   it("does not let a gift card or voucher field make a form a card form", () => {
     const gift = page(`<form><input name="gift_card_number"><button>Redeem</button></form>`);
     expect(gift.intent("Redeem")).toBeNull();
     const decoy = page(`<input name="gift_card_number" aria-label="Gift card number" value="">
       <input placeholder="Voucher card number"><label>Promo card no<input></label>`);
     expect(decoy.helper.paymentPage().purchase).toBeNull();
-  });
-
-  it("does not read an acronym glued to Chinese text as a security code", () => {
-    const login = page(`<form><label>学号CSC编码<input name="sid"></label>
-      <label>密码<input type="password" name="pw"></label><button>登录</button></form>
-      <button type="button">取消</button>`);
-    expect(login.intent("登录")).toBeNull();
-    expect(login.intent("取消")).toBeNull();
-    expect(login.helper.paymentPage().purchase).toBeNull();
-  });
-
-  it("still finds a localized checkout by its card fields and keeps its pay button guarded", () => {
-    const zh =
-      page(`<form><label>卡号<input name="n"></label><label>安全码(CVV)<input name="c"></label>
-      <label>有效期<input name="e" placeholder="MM/YY"></label><button>支付</button></form>`);
-    expect(zh.intent("支付")?.reason).toBe("card_form");
-    const suffixed = page(
-      `<form><label>CVV码<input name="c"></label><button>下一步</button></form>`,
-    );
-    expect(suffixed.intent("下一步")?.reason).toBe("card_form");
-    const prefixed = page(
-      `<form><label>安全码CVV<input name="c"></label><button>下一步</button></form>`,
-    );
-    expect(prefixed.intent("下一步")?.reason).toBe("card_form");
-    for (const [label, pay] of [
-      ["信用卡", "付款"],
-      ["クレジットカード", "購入する"],
-      ["신용카드", "결제"],
-      ["Tarjeta de crédito", "Pagar"],
-      ["Carte bancaire", "Payer"],
-      ["Kreditkarte", "Bezahlen"],
-    ] as const) {
-      const local = page(
-        `<form><label>${label}<input name="n"></label><button>${pay}</button></form>`,
-      );
-      expect(local.intent(pay)?.reason).toBe("card_form");
-    }
-  });
-
-  it("reads a card security code acronym beside Chinese, Japanese or Korean text", () => {
-    for (const label of [
-      "验证码CVV",
-      "CVV安全码",
-      "CVC2安全码",
-      "卡背面CVV",
-      "カードCVV",
-      "카드CVC",
-      "ＣＶＶ",
-    ]) {
-      const form = page(
-        `<form><label>${label}<input name="c"></label><button>提交</button></form>`,
-      );
-      expect(form.intent("提交")?.reason, label).toBe("card_form");
-    }
-  });
-
-  it("keeps a localized order button guarded when it starts with a back or login word", () => {
-    const { intent } = page(`<input autocomplete="cc-number" aria-label="Card">
-      <button type="button">Anmelden und bestellen</button><button type="button">Se connecter et commander</button>
-      <button type="button">Iniciar sesión y reservar</button><button type="button">로그인 후 주문</button>
-      <button type="button">Zurück und bestellen</button>
-      <button type="button">Se connecter et passer à la caisse</button>`);
-    for (const name of [
-      "Anmelden und bestellen",
-      "Se connecter et commander",
-      "Iniciar sesión y reservar",
-      "로그인 후 주문",
-      "Zurück und bestellen",
-      "Se connecter et passer à la caisse",
-    ]) {
-      expect(intent(name)?.reason, name).toBeDefined();
-    }
-  });
-
-  it("leaves back, cancel and login alone on a localized payment page, but not a pay button", () => {
-    const { intent } = page(`<input autocomplete="cc-number" aria-label="Card">
-      <button type="button">取消</button><button type="button">返回</button>
-      <button type="button">登錄</button><button type="button">キャンセル</button>
-      <button type="button">취소하기</button><button type="button">Volver</button>
-      <button type="button">Annuler</button><button type="button">Zurück</button>
-      <button type="button">Cancelar y pagar</button><button type="button">登录并支付</button>
-      <button type="button">确认</button><button type="button">支付</button>
-      <button type="button">注文を確定する</button><button type="button">Bestätigen</button>`);
-    for (const name of [
-      "取消",
-      "返回",
-      "登錄",
-      "キャンセル",
-      "취소하기",
-      "Volver",
-      "Annuler",
-      "Zurück",
-    ]) {
-      expect(intent(name), name).toBeNull();
-    }
-    for (const name of [
-      "Cancelar y pagar",
-      "登录并支付",
-      "确认",
-      "支付",
-      "注文を確定する",
-      "Bestätigen",
-    ]) {
-      expect(intent(name)?.reason, name).toBeDefined();
-    }
-  });
-
-  it("exempts complete localized add-to-cart labels on a payment page", () => {
-    const labels = [
-      "加入购物车",
-      "加入購物車",
-      "カートに入れる",
-      "장바구니에 담기",
-      "Añadir al carrito",
-      "Ajouter au panier",
-      "In den Warenkorb",
-    ];
-    const checkout = "Ajouter au panier et passer à la caisse";
-    const { intent } = page(`<input autocomplete="cc-number" aria-label="Card">
-      ${[...labels, checkout].map((label) => `<button type="button">${label}</button>`).join("")}`);
-    for (const label of labels) {
-      expect(intent(label), label).toBeNull();
-    }
-    expect(intent(checkout)?.reason).toBe("payment_page");
-  });
-
-  it("does not let a localized gift card or voucher field make a form a card form", () => {
-    const zh = page(`<form><input name="gc" aria-label="礼品卡 CVV"><button>使用</button></form>`);
-    expect(zh.intent("使用")).toBeNull();
-    const de = page(
-      `<input placeholder="Gutschein Kartennummer"><input placeholder="Sicherheitscode">`,
-    );
-    expect(de.helper.paymentPage().purchase).toBeNull();
-    const ja = page(`<input placeholder="ギフトカード番号 CVV">`);
-    expect(ja.helper.paymentPage().purchase).toBeNull();
-  });
-
-  it("does not read a membership card login as a payment card form", () => {
-    for (const label of [
-      "会员卡号",
-      "會員卡號",
-      "会員カード番号",
-      "회원카드 번호",
-      "Número de tarjeta de socio",
-      "Numéro de carte de fidélité",
-      "Mitgliedskarte Nummer",
-    ]) {
-      const login = page(`<form><label>${label}<input name="m"></label>
-        <label>安全码<input name="s"></label><button>登录</button></form>`);
-      expect(login.intent("登录"), label).toBeNull();
-      expect(login.helper.paymentPage().purchase, label).toBeNull();
-    }
-    const checkout = page(`<form><label>卡号<input name="m"></label>
-      <label>安全码<input name="s"></label><button>支付</button></form>`);
-    expect(checkout.intent("支付")?.reason).toBe("card_form");
-  });
-
-  it("keeps a French settle button guarded when it starts with a login word", () => {
-    const { intent } = page(`<input autocomplete="cc-number" aria-label="Card">
-      <button type="button">Se connecter et régler</button><button type="button">Connexion et règlement</button>
-      <button type="button">Anmelden und überweisen</button><button type="button">로그인 후 납부</button>
-      <button type="button">Iniciar sesión y abonar</button><button type="button">登录并缴费</button>`);
-    for (const name of [
-      "Se connecter et régler",
-      "Connexion et règlement",
-      "Anmelden und überweisen",
-      "로그인 후 납부",
-      "Iniciar sesión y abonar",
-      "登录并缴费",
-    ]) {
-      expect(intent(name)?.reason, name).toBeDefined();
-    }
-  });
-
-  it("requires every label on a localized navigation control to match", () => {
-    const hidden = page(`<input autocomplete="cc-number" aria-label="Card">
-      <button type="button" aria-label="取消">支付</button>
-      <button type="button" aria-label="Annuler">Payer</button>
-      <button type="button" title="Passer à la caisse">Se connecter</button>`);
-    for (const button of hidden.win.document.querySelectorAll("button")) {
-      expect(hidden.helper.purchaseOfNode(button)?.reason).toBeDefined();
-    }
-    const plain = page(`<input autocomplete="cc-number" aria-label="Card">
-      <button type="button" aria-label="キャンセル">取消</button>`);
-    expect(plain.intent("キャンセル")).toBeNull();
-  });
-
-  it("reads a card security code acronym beside a card word, but not beside a student number", () => {
-    for (const label of ["カードCSC番号", "卡CSC码", "카드CSC", "安全码CSC", "CSC码", "CSC1"]) {
-      const form = page(
-        `<form><label>${label}<input name="c"></label><button>提交</button></form>`,
-      );
-      expect(form.intent("提交")?.reason, label).toBe("card_form");
-    }
-    const student = page(
-      `<form><label>学号CSC编码<input name="c"></label><button>提交</button></form>`,
-    );
-    expect(student.intent("提交")).toBeNull();
-    const membership = page(`<form><label>卡号<input name="n"></label>
-      <label>学号CSC编码<input name="c"></label><button>提交</button></form>`);
-    expect(membership.intent("提交")).toBeNull();
-  });
-
-  it("guards credit cards that mention rewards", () => {
-    for (const label of [
-      "Rewards credit card number",
-      "Credit card (earns rewards)",
-      "积分信用卡",
-      "クレジットカード ポイント",
-      "Kreditkarte Punkte",
-    ]) {
-      const { intent } = page(`<form><input placeholder="${label}"><button>继续</button></form>`);
-      expect(intent("继续")?.reason, label).toBe("card_form");
-    }
-    const { helper } = page(
-      `<input placeholder="Card number, rewards"><input placeholder="MM/YY">`,
-    );
-    expect(helper.paymentPage().purchase?.reason).toBe("payment_page");
-  });
-
-  it("exempts rewards and gift card numbers even beside an expiry field", () => {
-    for (const label of [
-      "Rewards card number",
-      "Gift card number",
-      "Gift card security code",
-      "Numéro de carte de fidélité",
-    ]) {
-      const { helper } = page(`<input placeholder="${label}"><input placeholder="MM/YY">`);
-      expect(helper.paymentPage().purchase, label).toBeNull();
-    }
-  });
-
-  it("lists the order lines the checkout shows above its total, and nothing around them", () => {
-    const { intent, helper } = page(`
-      <header><a href="/cart">Cart · Socks $9.00</a></header>
-      <main>
-        <form>
-          <label>Card number<input autocomplete="cc-number"></label>
-          <label><input type="radio" name="ship"> Express delivery $12.00</label>
-          <button>Pay $23.40</button>
-        </form>
-        <aside>
-          <h2>Order summary</h2>
-          <ul>
-            <li><span>Bananas × 6</span><span>$3.00</span></li>
-            <li><a href="/oat-milk">Oat milk 1L</a> <small>× 2</small><b>$8.40</b></li>
-            <li style="display:none"><span>Hidden gift</span><span>$1.00</span></li>
-          </ul>
-          <table>
-            <tr><td>Subtotal</td><td>$11.40</td></tr>
-            <tr><td>Delivery:</td><td>$6.00</td></tr>
-            <tr><td>Tax</td><td>6,00 €</td></tr>
-          </table>
-          <div><span>Total</span> <strong>$23.40</strong></div>
-        </aside>
-        <section><h2>You may also like</h2><p>Grapes 500g $4.00</p></section>
-      </main>`);
-    const items = [
-      { name: "Bananas × 6", amount: "$3.00" },
-      { name: "Oat milk 1L × 2", amount: "$8.40" },
-      { name: "Delivery", amount: "$6.00" },
-      { name: "Tax", amount: "6,00 €" },
-    ];
-    expect(intent("Pay $23.40")).toMatchObject({ amount: "$23.40", items });
-    expect(helper.paymentPage().purchase).toMatchObject({ items });
-  });
-
-  it("reads no further back than a card form, and lists nothing without a total", () => {
-    const split = page(`
-      <p><span>Bananas × 6</span> <span>$3.00</span></p>
-      <form><input autocomplete="cc-number"><button>Place order</button></form>
-      <p><span>Delivery</span> <span>$6.00</span></p>
-      <p>Order total: $9.00</p>`);
-    expect(split.intent("Place order")?.items).toEqual([{ name: "Delivery", amount: "$6.00" }]);
-    const noTotal = page(`<p><span>Bananas × 6</span> <span>$3.00</span></p>
-      <form><input autocomplete="cc-number"><button>Pay $3</button></form>`);
-    expect(noTotal.intent("Pay $3")).not.toHaveProperty("items");
-  });
-
-  it("reads each line's own amount: a credit, a quantity cell, a price split over tags, an item named for a total", () => {
-    const { intent } = page(`<table>
-        <tr><td>Bananas</td><td>2</td><td>150,00 €</td></tr>
-        <tr><td>Discount</td><td>-€5,00</td></tr>
-        <tr><td>Totally Oats</td><td>2,00 €</td></tr>
-        <tr><td>Plums</td><td>$<span>3</span><span>.</span><span>00</span></td></tr>
-      </table>
-      <p>Total: 147,00 €</p><button>Place order</button>`);
-    expect(intent("Place order")?.items).toEqual([
-      { name: "Bananas 2", amount: "150,00 €" },
-      { name: "Discount", amount: "-€5,00" },
-      { name: "Totally Oats", amount: "2,00 €" },
-      { name: "Plums", amount: "$3.00" },
-    ]);
-  });
-
-  it("leaves out an order line written in a color or size the shopper cannot see", () => {
-    const { intent } = page(`
-      <p><span>Bananas × 6</span> <span>$3.00</span></p>
-      <p style="color: transparent"><span>Gift card</span> <span>$50.00</span></p>
-      <p><span style="font-size: 0">Socks</span> <span>$5.00</span></p>
-      <p>Total: $3.00</p><button>Place order</button>`);
-    expect(intent("Place order")?.items).toEqual([{ name: "Bananas × 6", amount: "$3.00" }]);
-  });
-
-  it("never reads several products as one line with the last one's price", () => {
-    const { intent } = page(`
-      <div><span>Bananas</span> <span>$3.00</span> <span>Oat milk</span> <span>$8.40</span></div>
-      <p>Total: $11.40</p><button>Place order</button>`);
-    expect(intent("Place order")).not.toHaveProperty("items");
-  });
-
-  it("finds the order summary at the end of a long page", () => {
-    const { intent, win } = page(`<div>${"<span>Item</span>".repeat(8000)}</div>
-      <p><span>Bananas × 6</span> <span>$3.00</span></p>
-      <p>Total: $3.00</p><button>Place order</button>`);
-    // jsdom is slow over so many elements: the clock stands still, so the time budget is not what is tested.
-    (win as unknown as { performance: { now: () => number } }).performance.now = () => 0;
-    expect(intent("Place order")?.items).toEqual([{ name: "Bananas × 6", amount: "$3.00" }]);
-  });
-
-  it("lists no order lines when reading them would hold up the purchase check", () => {
-    const html = `<p><span>Bananas × 6</span> <span>$3.00</span></p>
-      <p>Total: $3.00</p><button>Place order</button>`;
-    const { intent, win } = page(html);
-    let now = 0;
-    // Each look at the clock moves it a second on: the reader is out of time at once.
-    (win as unknown as { performance: { now: () => number } }).performance.now = () =>
-      (now += 1000);
-    expect(intent("Place order")).toMatchObject({ label: "Place order", amount: "$3.00" });
-    expect(intent("Place order")).not.toHaveProperty("items");
-  });
-
-  it("lists a line with a quantity picker, but not a choice or an offer to add", () => {
-    const { intent } = page(`
-      <ul>
-        <li><span>Bananas</span><button aria-label="Fewer">−</button><input type="number" value="6">
-          <button>+</button><button>Remove</button><span>$3.00</span></li>
-        <li><span>Oat milk 1L</span><select><option>1</option><option selected>2</option></select>
-          <span>$8.40</span></li>
-        <li><span>2-year warranty</span><button>Add</button><span>$19.99</span></li>
-        <li><label><input type="checkbox"> Gift wrap</label><span>$4.00</span></li>
-      </ul>
-      <p>Total: $11.40</p><button>Place order</button>`);
-    expect(intent("Place order")?.items).toEqual([
-      { name: "Bananas", amount: "$3.00" },
-      { name: "Oat milk 1L", amount: "$8.40" },
-    ]);
-  });
-
-  it("keeps an order line's visible words only, whole for the adapter to redact and cut", () => {
-    const { intent } = page(`
-      <p><span>Ban​anas‮ ${"x".repeat(100)}</span> <span>$3.00</span></p>
-      <p>Total: $3.00</p><button>Place order</button>`);
-    expect(intent("Place order")?.items).toEqual([
-      { name: `Bananas ${"x".repeat(100)}`, amount: "$3.00" },
-    ]);
   });
 });

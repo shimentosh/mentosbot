@@ -62,7 +62,7 @@ RUN find . -name node_modules -type d -prune -exec rm -rf {} + \
   && rm -rf apps/desktop apps/mobile apps/www docs examples
 
 FROM node:24.22.3-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
-COPY infra/sandboxes/computer/apt-security.sh /tmp/apt-security.sh
+COPY infra/compose/apt-security.sh /tmp/apt-security.sh
 RUN /tmp/apt-security.sh
 # Prisma's migration engine detects and links against OpenSSL. A stdio MCP server that runs on
 # another machine is launched over ssh, which the slim base image does not ship.

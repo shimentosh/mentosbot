@@ -12,14 +12,11 @@ export function isTouchBrowser(
 export function attachMobileTrackpad(
   rfb: {
     viewOnly?: boolean;
-    addEventListener?: (type: string, listener: () => void) => void;
-    removeEventListener?: (type: string, listener: () => void) => void;
+    showDotCursor?: boolean;
   },
   options: {
     button: unknown;
     surface: unknown;
-    pointer?: unknown;
-    viewControls?: unknown;
     documentTarget?: unknown;
     sensitivity?: number;
   },

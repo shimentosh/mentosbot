@@ -10,7 +10,7 @@ COPY --from=dockercli /usr/local/libexec/docker/cli-plugins/docker-compose \
   /usr/local/libexec/docker/cli-plugins/docker-compose
 COPY --from=dockercli /usr/local/libexec/docker/cli-plugins/docker-buildx \
   /usr/local/libexec/docker/cli-plugins/docker-buildx
-COPY infra/sandboxes/computer/apt-security.sh /tmp/apt-security.sh
+COPY infra/compose/apt-security.sh /tmp/apt-security.sh
 RUN /tmp/apt-security.sh \
   && apt-get update && apt-get upgrade -y --no-install-recommends \
   && apt-get install -y --no-install-recommends git ca-certificates \

@@ -2,12 +2,11 @@
 # Version gate for CVE-2026-109518. No network and no image build.
 set -euo pipefail
 root="$(cd "$(dirname "$0")" && pwd)"
-# The computer, Compose, and desktop image builds each have their own context,
-# so each directory keeps a copy. They have to stay the same file.
-cmp -s "$root/../sandboxes/computer/apt-security.sh" "$root/apt-security.sh"
-cmp -s "$root/../sandboxes/computer/apt-security.sh" "$root/../sandboxes/desktop/apt-security.sh"
+# The Compose and desktop image builds each have their own context, so each directory keeps
+# a copy. They have to stay the same file. (This fork keeps its own computer image.)
+cmp -s "$root/apt-security.sh" "$root/../sandboxes/desktop/apt-security.sh"
 # shellcheck disable=SC1091
-source "$root/../sandboxes/computer/apt-security.sh"
+source "$root/apt-security.sh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 

@@ -2700,10 +2700,6 @@ msgstr "Chat with {0}"
 msgid "Chat with your bots from other apps."
 msgstr "Chat with your bots from other apps."
 
-#: packages/adapters/src/models/model-provider-registry.ts
-msgid "ChatGPT subscription"
-msgstr "ChatGPT subscription"
-
 #: apps/web/src/pages/shell/app-rail.tsx
 #: packages/i18n/src/identity-display.ts
 msgid "Chats"
@@ -2836,6 +2832,10 @@ msgstr "Choose your {home} folder, or a backup of it."
 msgid "Choosing a join option shares transcripts with this Space."
 msgstr "Choosing a join option shares transcripts with this Space."
 
+#: apps/web/src/components/messages/AskCard.tsx
+msgid "Chosen automatically"
+msgstr "Chosen automatically"
+
 #. js-lingui-explicit-id
 #: packages/i18n/src/vault.ts
 msgid "Chosen bots"
@@ -2859,10 +2859,6 @@ msgstr "Claim"
 #: apps/mobile/components/bots/bot-email.tsx
 msgid "Claim {address}"
 msgstr "Claim {address}"
-
-#: packages/adapters/src/models/model-provider-registry.ts
-msgid "Claude subscription"
-msgstr "Claude subscription"
 
 #: apps/mobile/app/computer.tsx
 #: apps/web/src/components/settings/StorageSettings.tsx
@@ -5168,6 +5164,11 @@ msgstr "Day-to-day work"
 #: packages/i18n/src/cron.ts
 msgid "days"
 msgstr "days"
+
+#: apps/mobile/app/(settings)/models.tsx
+#: apps/web/src/pages/model-settings/ModelSettingsOverlay.tsx
+msgid "Decision model"
+msgstr "Decision model"
 
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/mobile/components/calls/IncomingCall.tsx
@@ -8519,6 +8520,7 @@ msgid "No website and password columns found."
 msgstr "No website and password columns found."
 
 #: apps/mobile/app/(settings)/billing.tsx
+#: apps/mobile/app/(settings)/models.tsx
 #: apps/mobile/app/(settings)/spending-limit.tsx
 #: apps/mobile/components/cards/ToolQuestionCard.tsx
 #: apps/mobile/components/settings/spending-limit-row.tsx
@@ -8526,6 +8528,7 @@ msgstr "No website and password columns found."
 #: apps/web/src/components/billing/SpendingLimitSettings.tsx
 #: apps/web/src/components/messages/ToolQuestionCard.tsx
 #: apps/web/src/components/vault/VaultItemEditor.tsx
+#: apps/web/src/pages/model-settings/ModelSettingsOverlay.tsx
 #: packages/i18n/src/routine-approval.ts
 msgid "None"
 msgstr "None"
@@ -12942,10 +12945,6 @@ msgstr "Type without recording"
 #: apps/web/src/components/messages/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "Type your answer"
-
-#: apps/web/src/pages/integrations/IntegrationsOverlay.tsx
-msgid "Typed decisions from the Jev model"
-msgstr "Typed decisions from the Jev model"
 
 #: apps/mobile/components/inbox/bot-organize-modal.tsx
 #: apps/mobile/components/inbox/chat-menu-items.ios.tsx

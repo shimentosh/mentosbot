@@ -1,5 +1,6 @@
 import type { DecisionProvider, DecisionProviderOptions } from "@rakazo/adapter-kit";
 import type { ModelCatalogEntry } from "@rakazo/contracts";
+import type { ModelProviderDefinition } from "../models/model-provider-registry.js";
 
 /** How a decision model's `confidence` relates to p, the probability of the answer it chose. */
 export interface DecisionCalibration {
@@ -24,4 +25,8 @@ export interface DecisionModelDescriptor {
   /** Whether its host can keep requests to endpoints that retain no prompts. */
   dataRetentionControl?: true;
   includedByDefault?: boolean;
+  /** Its provider's connections only answer decisions and never run a chat. */
+  decisionsOnly?: true;
+  /** How a decisions-only connection's key is checked before it is saved. */
+  keyCheck?: ModelProviderDefinition["keyCheck"];
 }

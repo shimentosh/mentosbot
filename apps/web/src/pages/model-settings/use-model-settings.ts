@@ -20,7 +20,7 @@ import {
 import { fetchFresh } from "@rakazo/core/query";
 import { modelDisconnectWarning } from "@rakazo/i18n/model-disconnect";
 import { localizeModelEntry } from "@rakazo/i18n/model-provider";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCopyText } from "../../lib/copy-text";
 import type { ModelCatalogEntry } from "../../lib/models/model-auth";
@@ -57,9 +57,21 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
   // What the space has is cached, so a revisit paints at once and refreshes behind it.
   const queries = useSpaceQueries();
   const queryClient = useQueryClient();
+  // Providers that only answer decisions are connected here too, though no chat lists them.
+  const loadCatalog = async () => {
+    const [chat, decisions] = await Promise.all([
+      rpc.models.list(),
+      rpc.models.forRole({ role: "decision" }),
+    ]);
+    const chatProviders = new Set(chat.map((entry) => entry.provider));
+    return [...chat, ...decisions.filter((entry) => !chatProviders.has(entry.provider))];
+  };
   const catalogQuery = {
-    queryKey: queries.models.list.queryKey(),
-    queryFn: () => rpc.models.list(),
+    ...queryOptions({
+      queryKey: [...queries.models.list.queryKey(), "connectable"],
+      queryFn: loadCatalog,
+    }),
+    queryFn: loadCatalog,
   };
   const credentialsQuery = {
     queryKey: queries.models.credentials.queryKey(),
