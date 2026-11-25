@@ -7217,6 +7217,10 @@ msgstr "Type without recording"
 msgid "Type your answer"
 msgstr "Type your answer"
 
+#: src/pages/IntegrationsOverlay.tsx
+msgid "Typed decisions from the Jev model"
+msgstr "Typed decisions from the Jev model"
+
 #: src/pages/BotContextMenu.tsx
 #: src/pages/Shell.tsx
 msgid "Unassigned"

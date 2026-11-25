@@ -89,6 +89,13 @@ const KEY_INTEGRATIONS: Integration[] = [
     fields: [{ name: "fish-audio-api-key", label: <Trans>API key</Trans>, secret: true }],
   },
   {
+    id: "typesafe",
+    title: "TypeSafe AI",
+    site: "https://typesafe.ai",
+    description: <Trans>Typed decisions from the Jev model</Trans>,
+    fields: [{ name: "typesafe-api-key", label: <Trans>API key</Trans>, secret: true }],
+  },
+  {
     id: "r2",
     title: "Cloudflare R2",
     site: "https://www.cloudflare.com",
