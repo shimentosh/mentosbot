@@ -8,6 +8,7 @@ import type { MeetingCalendarAction } from "@rakazo/i18n/meeting";
 import {
   meetingCalendarActionLabel,
   meetingCalendarActions,
+  meetingCalendarSharingNotice,
   meetingCalendarStatusLabel,
   meetingPlatformLabel,
 } from "@rakazo/i18n/meeting";
@@ -16,6 +17,7 @@ import { ActivityIndicator, Alert, Platform, ScrollView } from "react-native";
 import { SettingsFooter, SettingsGroup, SettingsRow } from "../components/settings/settings-group";
 import { useSpaceChanges } from "../lib/api/roster-signals";
 import { errorText } from "../lib/api/user-error";
+import { useDateLocale } from "../lib/i18n/i18n";
 import { useSideInsets } from "../lib/layout/side-insets";
 import { showIOSActionSheet } from "../lib/native/ios-action-sheet";
 import { useScreenHeader } from "../lib/navigation/screen-header";
@@ -27,7 +29,8 @@ type UpcomingEvent = RpcOutput<"meetingCalendar/upcoming">["events"][number];
 
 export default function MeetingCalendarScreen() {
   const { botId = "" } = useLocalSearchParams<{ botId: string }>();
-  const { t, i18n } = useLingui();
+  const { t } = useLingui();
+  const dateLocale = useDateLocale();
   const read = rpcQuery("meetingCalendar/upcoming", { botId });
   const { data, error, refetch } = useScreenQuery(read, { enabled: Boolean(botId) });
   const focused = useIsFocused();
@@ -78,6 +81,7 @@ export default function MeetingCalendarScreen() {
             botId,
             eventId: action.eventId,
             scope: action.kind,
+            shareTranscript: true,
           });
       }
     },
@@ -85,10 +89,15 @@ export default function MeetingCalendarScreen() {
   });
   useScreenHeader({ title: t`Auto-join` });
   const sideInsets = useSideInsets();
-  const format = new Intl.DateTimeFormat(i18n.locale, { dateStyle: "medium", timeStyle: "short" });
+  const format = new Intl.DateTimeFormat(dateLocale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
   function pick(event: UpcomingEvent, title: string) {
-    const actions = meetingCalendarActions(event).map((kind) => ({
+    const availableActions = meetingCalendarActions(event);
+    const message = meetingCalendarSharingNotice(availableActions);
+    const actions = availableActions.map((kind) => ({
       kind,
       label: meetingCalendarActionLabel(kind),
     }));
@@ -97,6 +106,7 @@ export default function MeetingCalendarScreen() {
       showIOSActionSheet(
         {
           title,
+          message,
           options: [...actions.map(({ label }) => label), t`Cancel`],
           cancelButtonIndex: actions.length,
         },
@@ -106,7 +116,7 @@ export default function MeetingCalendarScreen() {
         },
       );
     } else {
-      Alert.alert(title, undefined, [
+      Alert.alert(title, message, [
         { text: t`Cancel`, style: "cancel" },
         ...actions.map(({ label, kind }) => ({ text: label, onPress: () => dispatch(kind) })),
       ]);

@@ -1,4 +1,4 @@
-import { translate } from "@rakazo/core";
+import { translate } from "@rakazo/core/translate";
 
 const LANGUAGE_TAG = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,3}$/;
 

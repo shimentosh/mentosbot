@@ -19,23 +19,25 @@ function provider(text: string): WebFetchProvider {
 describe("web_fetch", () => {
   it("points a page that needs script to the page browser, when the run has it", async () => {
     const url = "https://app.example.test/";
-    expect(await webFetchFromTool(provider("Loading…"), context, { url }, true)).toMatchObject({
+    expect(
+      await webFetchFromTool(provider("Loading…"), context, { url }, false, true),
+    ).toMatchObject({
       hint: SCRIPT_PAGE_HINT,
     });
     const notice = `You need to enable JavaScript to run this app. ${"x".repeat(400)}`;
-    expect(await webFetchFromTool(provider(notice), context, { url }, true)).toMatchObject({
+    expect(await webFetchFromTool(provider(notice), context, { url }, false, true)).toMatchObject({
       hint: SCRIPT_PAGE_HINT,
     });
     // A readable page, a run without the browser, or a later part of a long page gets no hint.
     const article = "A long article about the city. ".repeat(20);
-    expect(await webFetchFromTool(provider(article), context, { url }, true)).not.toHaveProperty(
-      "hint",
-    );
-    expect(await webFetchFromTool(provider(""), context, { url }, false)).not.toHaveProperty(
+    expect(
+      await webFetchFromTool(provider(article), context, { url }, false, true),
+    ).not.toHaveProperty("hint");
+    expect(await webFetchFromTool(provider(""), context, { url }, false, false)).not.toHaveProperty(
       "hint",
     );
     expect(
-      await webFetchFromTool(provider(""), context, { url, offset: 8000 }, true),
+      await webFetchFromTool(provider(""), context, { url, offset: 8000 }, false, true),
     ).not.toHaveProperty("hint");
   });
 });

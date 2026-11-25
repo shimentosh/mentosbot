@@ -1,28 +1,36 @@
-import { useLingui } from "@lingui/react/macro";
 import { computerHoursOut } from "@rakazo/contracts";
+import { canRetryRun } from "@rakazo/core";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { rpc } from "../../lib/api/api";
+import { useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
 import type { MobileSnapshot } from "../../lib/api/mobile-types";
+import { errorText } from "../../lib/api/user-error";
 import { computerHoursOutCopy, runErrorActionLabel } from "../../lib/cards/run-error-presentation";
 import { openModelSettings } from "../../lib/models/model-settings";
-import { queryClient, rpcQuery } from "../../lib/query/query";
+import { queryClient, rpcQuery, useSave } from "../../lib/query/query";
 import { useRunError } from "../cards/run-error-sheet";
 
-/** The chat's failed run: its error, the recovery action, and whether its details are open. */
+/** The chat's failed run: its error, the recovery action, retry, and whether its details are open. */
 export function useThreadRunError(
   run: MobileSnapshot["run"] | undefined,
-  botId?: string,
-  /** The open chat, so a failure nothing else fixes can be tried again. */
-  retry?: { target: { botId: string } | { groupId: string }; onQueued: () => void },
+  thread: {
+    botId?: string;
+    groupId?: string;
+    userId: string;
+    isCurrentTarget: (botId?: string, groupId?: string) => boolean;
+  },
 ) {
-  const { t } = useLingui();
+  const { botId } = thread;
   const router = useRouter();
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const runError = run?.status === "failed" ? (run.error ?? null) : null;
+  // Hide the old failure while the live retry signal refreshes the thread.
+  const [retriedRunId, setRetriedRunId] = useState<string | null>(null);
+  const runError = run?.status === "failed" && retriedRunId !== run.id ? (run.error ?? null) : null;
   const classified = useRunError(runError, false);
   const failedRunId = runError ? run?.id : null;
+  const failedRunIdRef = useRef(failedRunId);
+  failedRunIdRef.current = failedRunId;
   useEffect(() => setDetailsOpen(false), [failedRunId]);
   const needsPlan = classified?.recovery === "plan";
   const asksBilling = needsPlan && Boolean(failedRunId);
@@ -59,17 +67,36 @@ export function useThreadRunError(
           else openModelSettings();
         },
       }
-    : failedRunId && retry
+    : null;
+  const retrySave = useSave({
+    save: (input: { botId?: string; groupId?: string; runId: string }, send) =>
+      send("threads/retry", {
+        ...(input.groupId ? { groupId: input.groupId } : { botId: input.botId! }),
+        runId: input.runId,
+      }),
+    onSaved: (_, input) => setRetriedRunId(input.runId),
+    onFailed: (error, input) => {
+      if (
+        thread.isCurrentTarget(input.botId, input.groupId) &&
+        failedRunIdRef.current === input.runId
+      ) {
+        Alert.alert(errorText(error));
+      }
+    },
+  });
+  const { groupId } = thread;
+  const retryingOther = retrySave.pending && retrySave.input?.runId !== run?.id;
+  const retry =
+    runError &&
+    run &&
+    !retryingOther &&
+    !normalizedRunError?.recovery &&
+    canRetryRun(run, thread.userId) &&
+    (botId || groupId)
       ? {
-          label: t`Try again`,
-          onPress: () => {
-            setDetailsOpen(false);
-            void rpc("threads/retry", { ...retry.target, runId: failedRunId })
-              .then(retry.onQueued)
-              // A reply that can no longer be retried keeps its notice; sending again still works.
-              .catch(() => undefined);
-          },
+          busy: retrySave.pending && retrySave.input?.runId === run.id,
+          onPress: () => retrySave.run({ botId, groupId, runId: run.id }),
         }
       : null;
-  return { runError, normalizedRunError, runErrorAction, detailsOpen, setDetailsOpen };
+  return { runError, normalizedRunError, runErrorAction, retry, detailsOpen, setDetailsOpen };
 }

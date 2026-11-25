@@ -188,6 +188,38 @@ it("downloads an opened chat image under its own name", async () => {
   }
 });
 
+it.each([
+  ["Gmail", "G"],
+  ["🦞 OpenClaw", "🦞"],
+  ["𠮷野", "𠮷"],
+])("starts a logo-less %s card with a whole first character", async (name, initial) => {
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <AppConnectCard
+          botId="bot"
+          threadId="normal-chat"
+          block={{
+            kind: "app_connect",
+            connectorId: "fake",
+            provider: "custom",
+            name,
+            description: "",
+            logo: null,
+            status: "pending",
+          }}
+        />,
+      ),
+    );
+    expect(host.querySelector("span.grid")?.textContent).toBe(initial);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
 it("shows a loading image, then lets a failed one try again", async () => {
   vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: () => "blob:image" }));
   let fail!: (error: Error) => void;

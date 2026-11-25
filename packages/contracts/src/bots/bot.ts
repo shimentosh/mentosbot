@@ -21,6 +21,9 @@ export const TrackerUrlSchema = z
     }
   }, "Enter an https link");
 
+/** The spawn key of the bot a new account starts with. */
+export const FIRST_BOT_SPAWN_KEY = "onboarding:first";
+
 export const AgentSecretSchema = z.object({
   id: Id,
   name: z.string().regex(AGENT_SECRET_NAME_PATTERN),
@@ -104,6 +107,9 @@ export const BotSchema = z.object({
     .nullable()
     .optional(),
 });
+export const ListedBotSchema = BotSchema.omit({ instructionHistory: true });
+export type ListedBot = z.infer<typeof ListedBotSchema>;
+
 export type Bot = z.infer<typeof BotSchema>;
 
 /** The caller identity and request needed by every incoming-call surface. */

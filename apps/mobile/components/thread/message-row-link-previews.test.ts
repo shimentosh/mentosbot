@@ -38,6 +38,7 @@ vi.mock("../../lib/native/native", () => ({
 }));
 vi.mock("../../lib/messages/message-action-sheet", () => ({ presentMessageActionSheet: vi.fn() }));
 vi.mock("../messages/message-action-menu", () => ({ presentMessageMenu: vi.fn() }));
+vi.mock("../native/native-symbol", () => ({ NativeSymbol: () => null }));
 vi.mock("../messages/message-context-menu", () => ({
   MessageContextMenu: ({ children }: { children: unknown }) => children,
 }));

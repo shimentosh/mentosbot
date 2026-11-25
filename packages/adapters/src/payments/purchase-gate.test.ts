@@ -32,6 +32,13 @@ function contextWith(
   } as unknown as RunContext;
 }
 
+/** The purchase a check found, for a test whose check reads the page. */
+async function foundPurchase(...args: Parameters<typeof detectPurchase>) {
+  const purchase = await detectPurchase(...args);
+  if (typeof purchase === "string") throw new Error(`press refused: ${purchase}`);
+  return purchase;
+}
+
 describe("purchase detection for the page tools", () => {
   it("asks the browser about a click or Enter on the screen, and about nothing else", async () => {
     const check = vi.fn(async (_computer: unknown, _request: unknown) => ({ purchase: found }));
@@ -192,6 +199,58 @@ describe("purchase detection for the page tools", () => {
     expect(await replay(approval)).toEqual(changed);
     // A card that named nothing, because the check failed, has nothing to compare.
     expect(await replay({ steps: [], site: "", label: "", amount: "" })).toBeUndefined();
+    // A page that cannot be read now no longer shows what the card did.
+    const unreadable = contextWith(
+      vi.fn(async () => {
+        throw new Error("Page browser timed out");
+      }),
+    );
+    expect(
+      await prepareToolRequest(unreadable, {
+        name: "computer_act",
+        nextApprovedTool: "computer_act",
+        args: { actions: [{ kind: "click", x: 1, y: 2 }], purchaseApproval: approval },
+      } as unknown as ToolRequest),
+    ).toEqual(changed);
+  });
+
+  it("asks about a press it could not check only in Ask mode, and otherwise lets it carry the unread check", async () => {
+    const check = vi.fn(async (): Promise<{ purchase: null }> => {
+      throw new Error("Page browser timed out");
+    });
+    for (const [preference, asks] of [
+      [{ enabled: false, skipApprovals: false }, true],
+      [{ enabled: true, skipApprovals: false }, false],
+      [{ enabled: false, skipApprovals: true }, false],
+    ] as const) {
+      const ctx = contextWith(check, {
+        trust: { loadAutoReviewPreference: async () => preference },
+      });
+      for (const name of ["browser_act", "computer_act"]) {
+        const request = {
+          name,
+          args: {
+            actions: [
+              name === "browser_act" ? { kind: "click", ref: "e1" } : { kind: "click", x: 1, y: 2 },
+            ],
+          },
+        } as unknown as ToolRequest;
+        expect(await prepareToolRequest(ctx, request)).toBeUndefined();
+        if (asks) {
+          expect(request.purchase).toMatchObject({ site: "", evidence: "unverified" });
+          expect(request.fleetSummary?.title).toBe("Page could not be verified—allow this click?");
+        } else {
+          expect(request.purchase).toBeUndefined();
+          expect(request.fleetSummary).toBeUndefined();
+          expect(request.args.purchaseApproval).toMatchObject({ evidence: "unverified" });
+        }
+      }
+    }
+    expect(
+      await detectPurchase(contextWith(check), "computer_act", {
+        actions: [{ kind: "click", x: 1, y: 2 }],
+      }),
+    ).toMatchObject({ site: "", evidence: "unverified" });
   });
 
   it("shows no card only where this run typed an approved wallet card or token, and still approves the click", async () => {
@@ -224,7 +283,7 @@ describe("purchase detection for the page tools", () => {
       purchase: { ...found, label: "Pay with 4242424242424242", amount: "$5" },
     }));
     const ctx = contextWith(check as never, { secrets: ["4242424242424242"] });
-    const purchase = await detectPurchase(ctx, "browser_act", {
+    const purchase = await foundPurchase(ctx, "browser_act", {
       actions: [{ kind: "click", ref: "e1" }],
     });
     expect(purchase?.label).not.toContain("4242424242424242");
@@ -247,7 +306,7 @@ describe("purchase detection for the page tools", () => {
 
   it("cuts the page's words by characters, so no half of an emoji is stored", async () => {
     const long = { ...found, label: `${"a".repeat(79)}😀tail`, amount: `${"1".repeat(39)}😀` };
-    const purchase = await detectPurchase(
+    const purchase = await foundPurchase(
       contextWith(async () => ({ purchase: long })),
       "computer_act",
       { actions: [{ kind: "click", x: 1, y: 2 }] },
@@ -270,7 +329,7 @@ describe("purchase detection for the page tools", () => {
     expect(check).not.toHaveBeenCalled();
   });
 
-  it("asks about a press after the batch opens a URL, without looking at the page first", async () => {
+  it("leaves a press after the batch opens a URL unverified, without looking at the page first", async () => {
     const check = vi.fn(async () => ({ purchase: null }));
     const ctx = contextWith(check as never);
     const act = (actions: unknown[]) => detectPurchase(ctx, "computer_act", { actions });
@@ -304,6 +363,51 @@ describe("purchase detection for the page tools", () => {
     expect(check).toHaveBeenCalledTimes(2);
   });
 
+  it("lets one press answer an alert or a Leave site? dialog, and refuses the rest", async () => {
+    let dialog = "alert";
+    const check = vi.fn(async () => ({ purchase: null, dialog }));
+    const ctx = contextWith(check as never);
+    const prepare = (actions: unknown[]) =>
+      prepareToolRequest(ctx, {
+        name: "computer_act",
+        args: { actions },
+      } as unknown as ToolRequest);
+    const ok = { kind: "click", x: 5, y: 6 };
+    for (dialog of ["alert", "beforeunload"]) {
+      expect(await prepare([ok])).toBeUndefined();
+      expect(await prepare([{ kind: "key", key: "Return" }])).toBeUndefined();
+    }
+    // A confirm or prompt hands its answer to the page's script, which can place an order on OK.
+    for (dialog of ["confirm", "prompt", "something-new"]) {
+      expect(await prepare([ok])).toEqual({
+        error:
+          "A confirmation dialog is open and couldn't be checked for a payment, so nothing was pressed. Press Escape to cancel it, or stop and ask the user.",
+      });
+    }
+    // Only the first press reaches the dialog; a later one would land on the page unchecked.
+    dialog = "alert";
+    for (const actions of [
+      [{ kind: "key", key: "Return" }, ok],
+      [ok, ok],
+      [ok, { kind: "type", text: "go\n" }],
+      [{ ...ok, double: true }],
+      [{ kind: "type", text: "\n\n" }],
+      // An Escape or a scroll may close the dialog first, so the click after it would reach the page.
+      [{ kind: "key", key: "Escape" }, ok],
+      [{ kind: "scroll", x: 1, y: 1 }, ok],
+    ]) {
+      expect(await prepare(actions)).toEqual({
+        error:
+          "A dialog is open on the page, so nothing was pressed. Answer it with a single press in its own call, then continue.",
+      });
+    }
+    // Escape presses nothing on the page, so it is never checked and always cancels the dialog.
+    check.mockClear();
+    dialog = "confirm";
+    expect(await prepare([{ kind: "key", key: "Escape" }])).toBeUndefined();
+    expect(check).not.toHaveBeenCalled();
+  });
+
   it("reads a stored approval only when it is whole", () => {
     const good = {
       steps: [0, 3],
@@ -320,6 +424,13 @@ describe("purchase detection for the page tools", () => {
       onceOnly: true,
       title: "Page could not be verified—allow this click?",
       lines: ["The page could not be read before this click."],
+    });
+    // A page without a host that showed a payment knows no site; its card still shows what the page says.
+    const hostless = { ...good, site: "", label: "Pay $5", amount: "$5", evidence: "final_step" };
+    expect(purchaseApprovalOf(hostless)).toEqual(hostless);
+    expect(purchaseCardSummary(hostless as PurchaseApproval)).toMatchObject({
+      title: "Complete a payment on this page?",
+      receipt: { button: "Pay $5", amount: "$5" },
     });
     const kept = { ...good, evidence: "final_step", url: "https://shop.example.test/pay" };
     expect(purchaseApprovalOf(kept)).toEqual(kept);
@@ -465,7 +576,7 @@ describe("purchase detection for the page tools", () => {
     const ctx = contextWith(async () => ({ purchase: { ...found, items } }) as never, {
       secrets: ["4242424242424242", "9".repeat(30)],
     });
-    const purchase = await detectPurchase(ctx, "computer_act", {
+    const purchase = await foundPurchase(ctx, "computer_act", {
       actions: [{ kind: "click", x: 1, y: 2 }],
     });
     expect(JSON.stringify(purchase)).not.toContain("4242424242424242");

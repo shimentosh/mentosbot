@@ -48,6 +48,7 @@ export function finalReplyReviewer(ctx: RunContext): AgentRunRequest["reviewFina
       userId: run.userId,
       botId: bot.id,
       threadId: thread.id,
+      operationId: `reply-check:${runId}`,
     };
     const access = await checkerModelAccess(
       deps,

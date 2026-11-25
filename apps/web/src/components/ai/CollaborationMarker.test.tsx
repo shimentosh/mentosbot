@@ -99,6 +99,7 @@ describe("peer message card", () => {
 
     expect(html).toContain('role="status"');
     expect(html).toContain('data-working="true"');
-    expect(html).toContain("rakazo-organic-avatar-body-working");
+    expect(html).toContain("rakazo-mascot-avatar-body-working");
+    expect(html).toContain('<span class="text-shimmer">Searching the web: injury news</span>');
   });
 });

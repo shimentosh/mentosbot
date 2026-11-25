@@ -1,5 +1,6 @@
 import type { MessageBlock } from "@rakazo/contracts";
 import { cardPlainText } from "../messages/status-card.js";
+import { stripDirectionalControls } from "../messages/text-safety.js";
 
 /** Instruction-stack note for bots whose owner has a messaging identity. */
 export function messagingDmSurfaceNote(): string {
@@ -57,10 +58,11 @@ export function isMessagingChannelRun(
 
 /**
  * Group names and owner names are attacker-controlled text interpolated
- * into prompts and DMs; strip framing characters before they get near one.
+ * into prompts and DMs; strip framing characters and directional controls
+ * before they get near one.
  */
 export function sanitizeMessagingLabel(value: string): string {
-  return value
+  return stripDirectionalControls(value)
     .replace(/[\r\n"[\]]/g, " ")
     .replace(/\s+/g, " ")
     .trim()

@@ -772,6 +772,7 @@ export async function listSharedBots(
       },
     },
   });
+  if (rows.length === 0) return [];
   const owners = await prisma.user.findMany({
     where: { id: { in: [...new Set(rows.map((row) => row.bot.userId))] } },
     select: { id: true, name: true, email: true },

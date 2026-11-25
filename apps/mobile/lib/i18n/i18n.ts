@@ -1,6 +1,8 @@
 import { i18n } from "@lingui/core";
 import { translate } from "@rakazo/core";
 import { messages as en } from "@rakazo/i18n/locales/en/messages.po";
+import { bestEffort } from "@rakazo/logging/best-effort";
+import { useSyncExternalStore } from "react";
 import { installPluralRules } from "./plural-rules";
 
 /** The app is English only. */
@@ -11,14 +13,67 @@ i18n.load({ en });
 i18n.activate("en");
 
 const NO_TRANSLATIONS: Record<string, string> = {};
+const listeners = new Set<() => void>();
+
+function emit(): void {
+  for (const listener of listeners) listener();
+}
+
+function subscribeI18n(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
 export function getActiveUiLocale(): UiLocale {
   return "en";
 }
 
-/** Dates and numbers read the English way everywhere. */
+type DeviceDateFormat = { region: string | null; hourCycle: "h12" | "h23" | null };
+
+const NO_DEVICE_DATE_FORMAT: DeviceDateFormat = { region: null, hourCycle: null };
+let deviceDateFormat = NO_DEVICE_DATE_FORMAT;
+
+/**
+ * The locale dates, times and numbers are formatted in: English written the way the phone's
+ * region writes it, on the phone's 12- or 24-hour clock (`en-GB-u-hc-h23`).
+ */
 export function dateLocaleForUi(_locale?: UiLocale): string {
-  return "en-US";
+  const { region, hourCycle } = deviceDateFormat;
+  const base = region ? `en-${region}` : "en-US";
+  return hourCycle ? `${base}-u-hc-${hourCycle}` : base;
+}
+
+export function useDateLocale(): string {
+  return useSyncExternalStore(subscribeI18n, dateLocaleForUi, dateLocaleForUi);
+}
+
+export async function refreshDeviceDateFormat(): Promise<void> {
+  const format = await bestEffort(
+    "read device date format",
+    import("expo-localization").then(({ getLocales, getCalendars }): DeviceDateFormat => {
+      const region = getLocales()[0]?.regionCode;
+      const uses24hourClock = getCalendars()[0]?.uses24hourClock;
+      return {
+        region: region && /^([A-Z]{2}|\d{3})$/.test(region) ? region : null,
+        hourCycle: uses24hourClock === true ? "h23" : uses24hourClock === false ? "h12" : null,
+      };
+    }),
+  );
+  if (format) updateDeviceDateFormat(format);
+}
+
+function updateDeviceDateFormat(format: DeviceDateFormat): void {
+  if (format.region === deviceDateFormat.region && format.hourCycle === deviceDateFormat.hourCycle)
+    return;
+  deviceDateFormat = format;
+  emit();
+}
+
+/** Test-only: set the phone's date preferences without native modules. */
+export function setDeviceDateFormatForTests(format: Partial<DeviceDateFormat>): void {
+  updateDeviceDateFormat({ ...NO_DEVICE_DATE_FORMAT, ...format });
 }
 
 /** The app language. Strings come from Lingui's `useLingui`. */
@@ -35,9 +90,11 @@ export function useI18n(): { locale: UiLocale; t: typeof t } {
   return { locale: "en", t };
 }
 
-/** Puts English back for a test; the app has no other language to switch to. */
-export function resetI18nForTests(): void {
+/** Puts English and the default date format back for a test; the app has no other language. */
+export function resetI18nForTests(_locale: UiLocale = "en"): void {
+  deviceDateFormat = NO_DEVICE_DATE_FORMAT;
   i18n.activate("en");
+  emit();
 }
 
 async function applyDirection(): Promise<void> {
@@ -70,6 +127,7 @@ export async function deviceLanguage(): Promise<string | null> {
 }
 
 export async function bootstrapI18n(): Promise<UiLocale> {
+  await refreshDeviceDateFormat();
   await applyDirection();
   return "en";
 }

@@ -1,21 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { secretDestinationLabel, siteHost } from "./secret-destination";
+import { secretDestinationLabel } from "./secret-destination";
 
 describe("mobile credential destination label", () => {
-  it("shows the derived variable for a command credential, not the empty origin", () => {
+  it("omits the destination for a command credential", () => {
     const label = secretDestinationLabel({
-      name: "netbird-setup-key",
       origin: "",
       auth: { type: "command" },
     });
-    expect(label).toBe("Command variable $NETBIRD_SETUP_KEY");
-    expect(label).not.toBe("");
+    expect(label).toBe("");
   });
 
   it("shows the site origin for non-login credential types", () => {
     expect(
       secretDestinationLabel({
-        name: "example_api",
         origin: "https://api.example.test",
         auth: { type: "bearer" },
       }),
@@ -25,7 +22,6 @@ describe("mobile credential destination label", () => {
   it("shows a login's host in the punycode form it was saved in", () => {
     expect(
       secretDestinationLabel({
-        name: "site_login",
         origin: "https://xn--bcher-kva.example.test",
         auth: { type: "login" },
       }),
@@ -39,12 +35,5 @@ it.each([
   ["https://example.com:443", "example.com"],
   ["invalid origin", "invalid origin"],
 ])("formats login destination %s as %s", (origin, expected) => {
-  expect(secretDestinationLabel({ name: "login", origin, auth: { type: "login" } })).toBe(expected);
-});
-
-describe("mobile site host", () => {
-  it("shows the host of an origin, and the text itself when it is not one", () => {
-    expect(siteHost("https://login.example.test")).toBe("login.example.test");
-    expect(siteHost("not a url")).toBe("not a url");
-  });
+  expect(secretDestinationLabel({ origin, auth: { type: "login" } })).toBe(expected);
 });

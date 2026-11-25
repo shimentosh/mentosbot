@@ -36,7 +36,13 @@ import {
   UserMentionsContext,
   userMentionTargets,
 } from "../../lib/messages/message-mentions";
-import { messagePresentationSegments } from "../../lib/messages/message-presentation";
+import {
+  askOptions,
+  hasMessageSenderContent,
+  messagePresentationSegments,
+  splitMessageBlocks,
+} from "../../lib/messages/message-presentation";
+import type { RoutineEventBlock } from "../../lib/messages/routine-event-label";
 import type { UserBubble } from "../../lib/messages/user-bubble";
 import { withUserBubble } from "../../lib/messages/user-bubble";
 import { useResolvedAppearance } from "../../lib/native/native";
@@ -52,6 +58,7 @@ import { ChangeUndo, isUndoableChange } from "../cards/change-undo";
 import { ImportSetupCard } from "../cards/ImportSetupCard";
 import { McpApprovalCard } from "../cards/McpApprovalCard";
 import { OutgoingDraftCard } from "../cards/OutgoingDraftCard";
+import { RoutineApprovalDetail } from "../cards/routine-approval-detail";
 import { ToolQuestionCard } from "../cards/ToolQuestionCard";
 import { AudioAttachment } from "../media/audio-attachment";
 import type { ImageArtifactPreviewTarget } from "../media/image-artifact-viewer";
@@ -62,6 +69,7 @@ import { AskBlock } from "./ask-block";
 import { McpAppCard } from "./mcp-app-card";
 import type { MessageRowActions } from "./message-row";
 import { PeerMessageCard } from "./peer-message-card";
+import { RoutineEventRows } from "./routine-event-row";
 import { isSpecialMessageBlock, SpecialMessageCard } from "./special-message-card";
 import { StatusCard } from "./status-card";
 
@@ -176,19 +184,19 @@ function isOwnCardBlock(block: MessageBlock): boolean {
   );
 }
 
+function pieceShowsSender(blocks: readonly MessageBlock[]): boolean {
+  return !blocks.some(isOwnCardBlock) && hasMessageSenderContent(blocks);
+}
+
+export function hasSenderLabelContent(message: { blocks: MessageBlock[] }): boolean {
+  return splitMessageBlocks(message.blocks, isOwnCardBlock).some(pieceShowsSender);
+}
+
 function MessageBubbleBody(props: ComponentProps<typeof MessageBubbleContent>) {
   const { message } = props;
-  if (!message.blocks.some(isOwnCardBlock)) return <MessageBubbleContent {...props} />;
-
-  const pieces: MessageBlock[][] = [];
-  for (const block of message.blocks) {
-    const previous = pieces.at(-1);
-    if (isOwnCardBlock(block) || !previous || isOwnCardBlock(previous[0]!)) {
-      pieces.push([block]);
-    } else {
-      previous.push(block);
-    }
-  }
+  const pieces = splitMessageBlocks(message.blocks, isOwnCardBlock);
+  if (pieces[0] === message.blocks) return <MessageBubbleContent {...props} />;
+  const firstContent = pieces.findIndex(pieceShowsSender);
   const content = pieces.map((blocks, index) => {
     const first = blocks[0]!;
     if (first.kind === "page")
@@ -234,6 +242,7 @@ function MessageBubbleBody(props: ComponentProps<typeof MessageBubbleContent>) {
       <MessageBubbleContent
         {...props}
         key={`content-${index}`}
+        hideSenderLabel={props.hideSenderLabel || index !== firstContent}
         message={{ ...message, blocks }}
         onAnswer={(_, ...answer) => props.onAnswer(message, ...answer)}
       />
@@ -250,6 +259,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   botId,
   authorName,
   botName,
+  hideSenderLabel,
   showBotSenderName,
   bots,
   groupId,
@@ -274,6 +284,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   /** Someone else in a shared space wrote this message: named and set apart. */
   authorName?: string;
   botName?: string;
+  hideSenderLabel?: boolean;
   showBotSenderName: boolean;
   bots: MobileBot[];
   groupId?: string;
@@ -303,8 +314,9 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
 }) {
   const colorScheme = useResolvedAppearance();
   const tokens = withUserBubble(mobileTokens(), userBubble);
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const outgoing = message.role === "user" && !authorName;
+  const showSpeaker = !hideSenderLabel && (showBotSenderName || Boolean(authorName));
   const artifactTarget: MobileArtifactTarget = groupId ? { groupId } : { botId };
   const cardBotId = message.botId ?? botId;
   const computerBotId = message.botId ?? (groupId ? undefined : botId);
@@ -431,6 +443,14 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
       </Pressable>
     );
   }
+  const routineEvents = message.blocks.filter(
+    (block): block is RoutineEventBlock => block.kind === "routine_event",
+  );
+  if (routineEvents.length > 0 && routineEvents.length === message.blocks.length) {
+    return (
+      <RoutineEventRows blocks={routineEvents} botId={message.botId} actionProps={actionProps} />
+    );
+  }
   const inlineCardCount = appConnectBlocks.length + mcpApprovalBlocks.length;
   if (inlineCardCount > 0 && inlineCardCount === message.blocks.length) {
     return (
@@ -507,7 +527,9 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                     : plainAskTitle(askBlock.text)}
                 </Text>
               ) : null}
-              {askBlock.receipt ? (
+              {askBlock.routineUpdate ? (
+                <RoutineApprovalDetail review={askBlock.routineUpdate} />
+              ) : askBlock.receipt ? (
                 <AskReceiptView receipt={askBlock.receipt} />
               ) : askBlock.detail ? (
                 <Text
@@ -549,7 +571,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                 />
               ) : question && (answered || canAnswer) ? (
                 <AskActions
-                  actions={askBlock.actions}
+                  actions={askOptions(askBlock)}
                   approval={false}
                   disabled={answered}
                   selectedAnswer={answered ? askBlock.answer : undefined}
@@ -589,6 +611,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                   site={askBlock.site}
                   approval={isApprovalAskBlock(askBlock)}
                   instructions={askBlock.instructionUpdate?.after}
+                  routineUpdate={Boolean(askBlock.routineUpdate)}
                   accessibilityActions={actionProps.accessibilityActions}
                   onAccessibilityAction={actionProps.onAccessibilityAction}
                   onAnswer={(answer) => onAnswer(message, answer)}
@@ -659,9 +682,9 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
     } as const;
     return (
       <View style={hasInlineImages ? { maxWidth: "100%", gap: 8 } : bubbleStyle}>
-        {((showBotSenderName || authorName) && speaker) || caption ? (
+        {(showSpeaker && speaker) || caption ? (
           <View style={hasInlineImages ? bubbleStyle : undefined}>
-            {(showBotSenderName || authorName) && speaker ? (
+            {showSpeaker && speaker ? (
               <Text
                 style={{ color: speakerColor ?? tokens.mutedForeground, ...typeScale.footnote }}
               >
@@ -763,7 +786,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                 >
                   📎 {attachment.name ?? t`File`}
                 </Text>
-                {formatFileSize(attachment.size) ? (
+                {formatFileSize(attachment.size, i18n.locale) ? (
                   <Text
                     style={{
                       color: outgoing ? tokens.chatUserForeground : tokens.mutedForeground,
@@ -771,7 +794,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                       fontSize: 13,
                     }}
                   >
-                    {formatFileSize(attachment.size)}
+                    {formatFileSize(attachment.size, i18n.locale)}
                   </Text>
                 ) : null}
               </Pressable>
@@ -807,7 +830,6 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
     message.role === "bot" ? (botDisplayName(members, bots, message.botId) ?? botName) : authorName;
   const speakerColor =
     message.role === "bot" ? speakerColorFor(bots, members, message.botId) : undefined;
-  const showSpeaker = showBotSenderName || Boolean(authorName);
   const firstContent = segments.findIndex((segment) => segment.kind === "content");
   const choiceBlocks = message.blocks.filter(
     (block): block is Extract<MessageBlock, { kind: "choice" }> => block.kind === "choice",

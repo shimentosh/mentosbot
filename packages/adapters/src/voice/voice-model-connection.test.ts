@@ -3,15 +3,19 @@ import { VoiceAccountError } from "@rakazo/adapter-kit";
 import { describe, expect, it, vi } from "vitest";
 import { serializeModelSecret } from "../models/model-secret.js";
 import type { VoiceKeyDeps } from "./voice-model-connection.js";
-import { MODEL_CONNECTION_VOICE_SECRET, resolveVoiceKey } from "./voice-model-connection.js";
+import {
+  modelConnectionVoiceSecret,
+  parseModelConnectionVoiceSecret,
+  resolveVoiceKey,
+} from "./voice-model-connection.js";
 
 const scope = { userId: "user-1", spaceId: "space-1" };
 
-function credential(id: string, updatedAt: number) {
+function credential(id: string, updatedAt: number, provider = "xai") {
   return {
     id,
     userId: scope.userId,
-    provider: "xai",
+    provider,
     label: id,
     secretId: `secret-${id}`,
     createdAt: new Date(updatedAt),
@@ -57,8 +61,8 @@ describe("resolveVoiceKey", () => {
 
   it("treats the marker as a pasted key for a provider that cannot use the model connection", async () => {
     const { prisma, deps: d } = deps({});
-    await expect(resolveVoiceKey(d, scope, "openai", MODEL_CONNECTION_VOICE_SECRET)).resolves.toBe(
-      MODEL_CONNECTION_VOICE_SECRET,
+    await expect(resolveVoiceKey(d, scope, "openai", modelConnectionVoiceSecret())).resolves.toBe(
+      modelConnectionVoiceSecret(),
     );
     expect(prisma.userModelCredential.findMany).not.toHaveBeenCalled();
   });
@@ -68,9 +72,53 @@ describe("resolveVoiceKey", () => {
       credentials: [credential("old", 1_000), credential("new", 2_000)],
       secrets: { "secret-old": "xai-old-model-key", "secret-new": "xai-new-model-key" },
     });
-    await expect(resolveVoiceKey(d, scope, "xai", MODEL_CONNECTION_VOICE_SECRET)).resolves.toBe(
+    await expect(resolveVoiceKey(d, scope, "xai", modelConnectionVoiceSecret())).resolves.toBe(
       "xai-new-model-key",
     );
+  });
+
+  it("refuses a linked OpenRouter connection set to zero data retention", async () => {
+    const { deps: d } = deps({
+      credentials: [credential("zdr", 1_000, "openrouter")],
+      secrets: {
+        "secret-zdr": serializeModelSecret({
+          kind: "api_key",
+          key: "openrouter-zdr-key",
+          zeroDataRetention: true,
+        }),
+      },
+    });
+    await expect(
+      resolveVoiceKey(d, scope, "openrouter", modelConnectionVoiceSecret()),
+    ).rejects.toBeInstanceOf(VoiceAccountError);
+  });
+
+  it("uses a linked OpenRouter connection without zero data retention", async () => {
+    const { deps: d } = deps({
+      credentials: [credential("plain", 1_000, "openrouter")],
+      secrets: {
+        "secret-plain": serializeModelSecret({ kind: "api_key", key: "openrouter-key" }),
+      },
+    });
+    await expect(
+      resolveVoiceKey(d, scope, "openrouter", modelConnectionVoiceSecret()),
+    ).resolves.toBe("openrouter-key");
+  });
+
+  it("refuses a model connection the deployment allowlist leaves out", async () => {
+    vi.stubEnv("RAKAZO_MODEL_PROVIDER_ALLOWLIST", "openrouter");
+    try {
+      const { prisma, deps: d } = deps({
+        credentials: [credential("new", 2_000)],
+        secrets: { "secret-new": "xai-new-model-key" },
+      });
+      await expect(
+        resolveVoiceKey(d, scope, "xai", modelConnectionVoiceSecret()),
+      ).rejects.toBeInstanceOf(VoiceAccountError);
+      expect(prisma.secret.findFirst).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   // A due refresh takes a Postgres advisory lock and calls the provider, so only a current
@@ -89,7 +137,7 @@ describe("resolveVoiceKey", () => {
       credentials: [credential("signin", 1_000)],
       secrets: { "secret-signin": secret },
     });
-    await expect(resolveVoiceKey(d, scope, "xai", MODEL_CONNECTION_VOICE_SECRET)).resolves.toBe(
+    await expect(resolveVoiceKey(d, scope, "xai", modelConnectionVoiceSecret())).resolves.toBe(
       "grok-access-token",
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -109,10 +157,35 @@ describe("resolveVoiceKey", () => {
     ],
   ])("asks to connect xAI in Models settings for %s", async (_name, options) => {
     const { deps: d } = deps(options);
-    const error = await resolveVoiceKey(d, scope, "xai", MODEL_CONNECTION_VOICE_SECRET).catch(
+    const error = await resolveVoiceKey(d, scope, "xai", modelConnectionVoiceSecret()).catch(
       (caught: unknown) => caught,
     );
     expect(error).toBeInstanceOf(VoiceAccountError);
     expect(error).toMatchObject({ code: undefined, message: "Connect xAI in Models settings." });
+  });
+});
+
+describe("parseModelConnectionVoiceSecret", () => {
+  it("reads the link, including one saved before a connection could be chosen", () => {
+    expect(parseModelConnectionVoiceSecret(modelConnectionVoiceSecret("model-1"))).toEqual({
+      credentialId: "model-1",
+    });
+    // Rows saved by the first release hold exactly this string.
+    expect(parseModelConnectionVoiceSecret('{"kind":"model_connection"}')).toEqual({});
+  });
+
+  it("treats anything else as a pasted key", () => {
+    for (const key of [
+      "xai-test-key",
+      '{"kind":"model_connection","credentialId":42}',
+      '{"kind":"model_connection",',
+      ' {"kind":"model_connection"}',
+      '{"kind":"api_key"}',
+      '{"kind":"model_connection","note":"a pasted key"}',
+      '{"kind":"model_connection","credentialId":"model-1","note":"a pasted key"}',
+      '{"credentialId":"model-1","kind":"model_connection"}',
+    ]) {
+      expect(parseModelConnectionVoiceSecret(key)).toBeUndefined();
+    }
   });
 });

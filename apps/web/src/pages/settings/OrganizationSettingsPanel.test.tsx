@@ -180,7 +180,13 @@ describe("renaming the organization", () => {
         <QueryClientProvider client={queryClient}>
           <QueryUserProvider value="user-a">
             <SpaceRpcProvider spaceId="space-work">
-              {panel ? <OrganizationSettingsPanel onBusyChange={onBusyChange} /> : null}
+              {panel ? (
+                <OrganizationSettingsPanel
+                  page="main"
+                  onPageChange={() => {}}
+                  onBusyChange={onBusyChange}
+                />
+              ) : null}
               <Names />
             </SpaceRpcProvider>
           </QueryUserProvider>

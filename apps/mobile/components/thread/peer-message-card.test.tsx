@@ -92,6 +92,7 @@ vi.mock("../cards/McpApprovalCard", () => ({ McpApprovalCard: () => null }));
 vi.mock("../cards/ImportSetupCard", () => ({ ImportSetupCard: () => null }));
 vi.mock("./mcp-app-card", () => ({ McpAppCard: () => null }));
 vi.mock("../native/native-symbol", () => ({ NativeSymbol: () => null }));
+vi.mock("./routine-event-row", () => ({ RoutineEventRows: () => null }));
 
 import { MessageBubble } from "./message-bubble";
 

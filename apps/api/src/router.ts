@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import type {
   AgentHomeStore,
   ArtifactStore,
@@ -14,6 +15,7 @@ import type {
   CloudAgentConnection,
   CodexLiveCatalog,
   ConnectorRegistry,
+  createPageRevisions,
   FaviconResolver,
   IntegrationProviderSettings,
   LinkPreviewResolver,
@@ -43,6 +45,7 @@ import type { LabFeature, ModelCredential, NavLink } from "@rakazo/contracts";
 import type { BoardEvents, PrismaClient, ThreadEvents } from "@rakazo/db";
 import type { BillingService } from "./billing/billing.js";
 import type { VoiceDeps } from "./calls/voice.js";
+import type { AppEnv } from "./env.js";
 import { meetingCalendarRoutes } from "./meetings/calendar/calendar-routes.js";
 import type { createMeetingAnswers } from "./meetings/meeting-answers.js";
 import { meetingRoutes } from "./meetings/meeting-routes.js";
@@ -87,7 +90,10 @@ export interface RouterDeps {
   meetingCalendar?: MeetingCalendarService;
   meetingAnswers?: ReturnType<typeof createMeetingAnswers>;
   pushTokens: PushTokenStore;
-  /** The owners' connected desktops, for their bots' project folders; absent hides them. */
+  /**
+   * The computers people paired, never this server's own screen: their bots' project folders and
+   * routines' "Use my computer". Absent hides them.
+   */
   userDevices?: UserDeviceGateway;
   /** Absent when the deployment cannot update a phone's live status card. */
   workActivities?: Pick<WorkActivities, "register" | "registerStarts">;
@@ -104,6 +110,7 @@ export interface RouterDeps {
   ticketChanges: TicketChangeNotifier;
   auth: Auth;
   jobs: JobPublisher;
+  pageRevisions?: Pick<ReturnType<typeof createPageRevisions>, "start" | "recipient">;
   sandbox: SandboxProvider;
   memory: MemoryStore;
   memoryProviders: MemoryProviderResolver;
@@ -160,6 +167,8 @@ export interface RouterDeps {
     deploymentVoice?: NonNullable<VoiceDeps["env"]>["deploymentVoice"];
     /** Domain of bots' email addresses; unset when this server receives no email. */
     inboundEmailDomain?: string;
+    /** The public origin webhooks reach, when an ingress provider publishes one. */
+    publishedInboundOrigin?: string;
     navLinks?: NavLink[];
     adminEmails?: string[];
     /** Labs features this deployment turns on for every account. */
@@ -230,4 +239,43 @@ export function createRouter(deps: RouterDeps) {
     ...paymentWalletRoutes(ctx),
     ...spendingLimitRoutes(ctx),
   });
+}
+
+/** What the procedures read from the deployment's settings. */
+export function routerEnv(env: AppEnv): RouterDeps["env"] {
+  return {
+    inboundEmailDomain: env.inboundEmail?.domain,
+    publishedInboundOrigin: env.publishedInboundOrigin,
+    deploymentLabs: env.deploymentLabs,
+    deploymentVoice: env.deploymentVoice,
+    phoneCallsEnabled: env.phoneCallsEnabled,
+    phoneCallRingSeconds: env.phoneCallRingSeconds,
+    navLinks: env.navLinks,
+    adminEmails: env.adminEmails,
+    maxUploadSizeBytes: env.maxUploadSizeBytes,
+    maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,
+    agentRuntime: env.agentRuntime,
+    defaultProvider: env.defaultProvider,
+    defaultModel: env.defaultModel,
+    teamChatJudgeProvider: env.teamChatJudgeProvider,
+    teamChatJudgeModel: env.teamChatJudgeModel,
+    deploymentModelConfigured: env.deploymentModelConfigured,
+    deploymentModelHostCredentials: env.deploymentModelHostCredentials,
+    webOrigin: env.webOrigin,
+    privacyPolicyUrl: env.privacyPolicyUrl,
+    screenProxySecret: env.screenProxySecret,
+    invitationRecipientKey: createHmac("sha256", env.authSecret)
+      .update("organization-invitation-recipient")
+      .digest("hex"),
+    sandboxProvider: env.sandboxProvider,
+    sandboxSupervisorUrl: env.sandboxSupervisorUrl,
+    sandboxSupervisorToken: env.sandboxSupervisorToken,
+    gitSha: env.gitSha,
+    integrationsCatalogUrl: env.integrationsCatalogUrl,
+    mcpAllowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
+    desktopHostChoiceEnabled: Boolean(env.desktopStackToken),
+    computerSettingsEnabled: env.computerSettingsEnabled,
+    mcpStdioEnabled: env.mcpStdioEnabled,
+    mcpStdioAllowedCommands: env.mcpStdioAllowedCommands,
+  };
 }

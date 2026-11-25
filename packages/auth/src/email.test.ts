@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { agentImportEmail } from "./agent-import-email.js";
 import {
   accountDeletionEmail,
   emailLocale,
@@ -7,6 +8,7 @@ import {
   signInCodeEmail,
   verificationEmail,
 } from "./email.js";
+import { writeEmailCopyDir } from "./email-copy/email-copy.test-support.js";
 import { homeDeletionEmail } from "./home-deletion-email.js";
 import { modelConnectionEmail } from "./model-connection-email.js";
 import {
@@ -21,6 +23,16 @@ import {
 } from "./plugin-submission-email.js";
 import { referralEmail } from "./referral-email.js";
 import { welcomeEmail } from "./welcome-email.js";
+
+const copyDir = writeEmailCopyDir({
+  welcome: true,
+  referral: true,
+  "model-connection": true,
+  "agent-import": true,
+});
+beforeEach(() => {
+  vi.stubEnv("EMAIL_COPY_DIR", copyDir);
+});
 
 describe("account email templates", () => {
   const url = "https://app.example.test/verify?token=fake-token&callbackURL=%2Fsign-in";
@@ -65,6 +77,7 @@ it("shares the layout across account, product and marketplace emails", async () 
     homeDeletionEmail(user, new Date(), "unused", url),
     referralEmail(user, url, url),
     modelConnectionEmail(user, { webOrigin: url, unsubscribeUrl: url }),
+    agentImportEmail(user, { webOrigin: url, unsubscribeUrl: url }),
     organizationInvitationEmail(user.email, {
       organizationName: "Acme",
       inviterName: "Sam",
@@ -107,9 +120,9 @@ describe("email language", () => {
     const reset = await passwordResetEmail(user, "https://example.test/r", emailLocale("es"));
     expect(reset.text).toContain("Hi Ana,");
     const english = await welcomeEmail(user, "https://example.test/u");
-    expect(english.subject).toBe("Welcome to Rakazo");
+    expect(english.subject).toBe("Test subject");
     expect(english.text).toContain("Hi Ana,");
-    expect(english.text).toContain("Rakazo runs on iPhone");
+    expect(english.text).toContain("Test apps iPhone");
   });
 
   it("names a Space invitation's Space, never an organization", async () => {
@@ -127,18 +140,27 @@ it("asks for one thing in the model connection email: the connect step", async (
     { name: "Ana", email: "user@example.test" },
     { webOrigin: "https://app.example.test", unsubscribeUrl },
   );
-  expect(message.subject).toBe("Connect a model to start using Rakazo");
+  expect(message.subject).toBe("Test subject");
   expect(message.text).toContain("Hi Ana,");
-  expect(message.text).toContain(
-    "Your Rakazo plan has started, but your bots can't reply until a model is connected.",
-  );
-  expect(message.text).toContain(
-    "Sign in with your ChatGPT or Claude subscription, or paste an API key.",
-  );
+  expect(message.text).toContain("Test connect ChatGPT or Claude");
   const links = [...message.html!.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
   expect(links).toEqual([
     "https://app.example.test/sign-in?next=%2Fonboarding%2Fmodel",
     unsubscribeUrl,
   ]);
+  expect(message.headers?.["List-Unsubscribe"]).toBe(`<${unsubscribeUrl}>`);
+});
+
+it("asks for one thing in the agent import email: opening the import", async () => {
+  const unsubscribeUrl = "https://app.example.test/unsubscribe?token=fake-token";
+  const message = await agentImportEmail(
+    { name: "Ana", email: "user@example.test" },
+    { webOrigin: "https://app.example.test", unsubscribeUrl },
+  );
+  expect(message.subject).toBe("Test subject");
+  expect(message.text).toContain("Hi Ana,");
+  expect(message.text).toContain("Test intro Grok Bot, Hermes, or OpenClaw");
+  const links = [...message.html!.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
+  expect(links).toEqual(["https://app.example.test/sign-in?next=%2Fapp%3Fimport", unsubscribeUrl]);
   expect(message.headers?.["List-Unsubscribe"]).toBe(`<${unsubscribeUrl}>`);
 });

@@ -1,19 +1,20 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { AskChoiceAnswer } from "@rakazo/contracts";
 import {
+  AGENT_IMPORT_ASK_ACTION_ID,
   ASK_USER_OTHER_MAX_LENGTH,
   ASK_USER_PREVIEW_MAX_LENGTH,
   askTextLength,
   encodeAskChoiceAnswer,
   parseAskChoiceAnswer,
 } from "@rakazo/contracts";
-import { askChoiceSelection } from "@rakazo/core";
+import { askChoiceSelection, askOptionLetter } from "@rakazo/core";
 import { Button, cn, Input, Textarea } from "@rakazo/ui-web";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { Fragment, useState } from "react";
 import type { AskBlock } from "./AskCard";
-import { OptionRow, optionLetter } from "./OptionRow";
+import { OptionRow } from "./OptionRow";
 
 /** What the card shows as chosen: the saved answer, or the one just accepted before the block updates. */
 function shownSelection(block: AskBlock, acceptedAnswer: string | undefined) {
@@ -39,22 +40,27 @@ function shownSelection(block: AskBlock, acceptedAnswer: string | undefined) {
  */
 export function ChoiceAsk({
   block,
+  actions,
   canAnswer,
   acceptedAnswer,
   pendingAnswer,
   onAnswer,
+  onOpenAgentImport,
   renderImage,
 }: {
   block: AskBlock;
+  /** The options to show, without any the card leaves out. */
+  actions: NonNullable<AskBlock["actions"]>;
   canAnswer: boolean;
   acceptedAnswer?: string;
   pendingAnswer: string | null;
   onAnswer: (answer: string) => void;
+  /** Opens the agent import, for the option a first bot's opening question offers. */
+  onOpenAgentImport?: () => void;
   /** Shows one of the draft's images, such as a post's picture; without it they are left out. */
   renderImage?: (image: { artifactId: string; name: string; mimeType: string }) => ReactNode;
 }) {
   const { t } = useLingui();
-  const actions = block.actions ?? [];
   const [draft, setDraft] = useState(block.preview ?? "");
   const [editing, setEditing] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
@@ -226,12 +232,18 @@ export function ChoiceAsk({
             {actions.map((action, index) => (
               <OptionRow
                 key={action.id}
-                letter={optionLetter(index)}
+                letter={askOptionLetter(index)}
+                // Only an answered card says which option was chosen; before that they are plain actions.
                 selected={
-                  answered ? chosen.has(action.id) : block.multiple && picked.has(action.id)
+                  answered
+                    ? chosen.has(action.id)
+                    : block.multiple
+                      ? picked.has(action.id)
+                      : undefined
                 }
                 disabled={disabled}
                 onClick={() => {
+                  if (action.id === AGENT_IMPORT_ASK_ACTION_ID) return onOpenAgentImport?.();
                   if (!block.multiple) return onAnswer(answerFor([action.id]));
                   setPicked((current) => {
                     const next = new Set(current);
@@ -240,18 +252,29 @@ export function ChoiceAsk({
                   });
                 }}
               >
-                {block.multiple ? action.label : sendingLabel(answerFor([action.id]), action.label)}
+                {action.id === AGENT_IMPORT_ASK_ACTION_ID ? (
+                  <Trans>Move from another assistant</Trans>
+                ) : block.multiple ? (
+                  action.label
+                ) : (
+                  sendingLabel(answerFor([action.id]), action.label)
+                )}
               </OptionRow>
             ))}
             {block.other ? (
               <OptionRow
-                letter={optionLetter(actions.length)}
-                selected={answered ? Boolean(selection.other) : block.multiple && otherOpen}
+                letter={askOptionLetter(actions.length)}
+                selected={
+                  answered ? Boolean(selection.other) : block.multiple ? otherOpen : undefined
+                }
                 disabled={disabled}
                 onClick={() => setOtherOpen((open) => (block.multiple ? !open : true))}
               >
                 {answered && selection.other ? selection.other : <Trans>Other…</Trans>}
               </OptionRow>
+            ) : null}
+            {answered ? (
+              <span className="sr-only">{block.expired ? t`Expired` : t`Answered`}</span>
             ) : null}
           </div>
           {otherField}

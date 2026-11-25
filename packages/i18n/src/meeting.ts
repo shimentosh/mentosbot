@@ -29,8 +29,8 @@ export function meetingStatusLabel(status: MeetingStatus): string {
   }
 }
 
-export function meetingTime(utcMs: number): string {
-  return new Date(utcMs).toLocaleString(i18n.locale || "en", {
+export function meetingTime(utcMs: number, locale = i18n.locale || "en"): string {
+  return new Date(utcMs).toLocaleString(locale, {
     month: "short",
     day: "numeric",
     hour: "numeric",
@@ -38,9 +38,15 @@ export function meetingTime(utcMs: number): string {
   });
 }
 
+/** A turn's offset into the meeting: "4:05", or "1:02:03" once it passes an hour. */
 export function transcriptTime(offsetMs: number): string {
-  const seconds = Math.floor(Math.max(0, offsetMs) / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const total = Math.floor(Math.max(0, offsetMs) / 1000);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = String(total % 60).padStart(2, "0");
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`
+    : `${minutes}:${seconds}`;
 }
 
 type CalendarEventState = {
@@ -70,6 +76,14 @@ export function meetingCalendarActions(event: CalendarEventState): MeetingCalend
   if (event.selection === "series") return ["skip", "removeSeries"];
   if (event.selection === "once") return event.recurring ? ["series", "skip"] : ["skip"];
   return event.recurring ? ["once", "series"] : ["once"];
+}
+
+export function meetingCalendarSharingNotice(actions: readonly MeetingCalendarAction[]) {
+  if (!actions.includes("once") && !actions.includes("series")) return;
+  return i18n._({
+    id: "Choosing a join option shares transcripts with this Space.",
+    message: "Choosing a join option shares transcripts with this Space.",
+  });
 }
 
 export function meetingCalendarActionLabel(action: MeetingCalendarAction) {

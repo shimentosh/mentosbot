@@ -182,6 +182,46 @@ describe("setup", () => {
     delete (window as { rakazoSetup?: RakazoSetup }).rakazoSetup;
   });
 
+  it.each([
+    ["server-url", { ok: true, url: "https://one.example" }, "ok"],
+    ["server-headers", { ok: true, url: "https://one.example" }, "ok"],
+    ["server-url", { ok: false, error: "Server did not answer." }, "error"],
+    ["server-headers", { ok: false, error: "Server did not answer." }, "error"],
+  ] as const)("clears a completed check after editing %s (%s)", async (id, result, tone) => {
+    const ui = await boot({ mode: "existing", serverUrl: "https://one.example" });
+    const check = element<HTMLButtonElement>("check");
+    check.click();
+    ui.resolveCheck(result);
+    await flush();
+
+    const status = element("status");
+    expect(status.textContent).not.toBe("");
+    expect(status.getAttribute("data-tone")).toBe(tone);
+    const field = element<HTMLInputElement | HTMLTextAreaElement>(id);
+    field.value = id === "server-url" ? "https://two.example" : "X-Example: sample";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(status.textContent).toBe("");
+    expect(status.hasAttribute("data-tone")).toBe(false);
+    expect(check.disabled).toBe(false);
+
+    check.click();
+    ui.resolveCheck({ ok: true, url: "https://two.example" });
+    await flush();
+    expect(status.textContent).toBe("Rakazo answered at https://two.example.");
+  });
+
+  it("does not clear an unrelated save error when an address is edited", async () => {
+    const ui = await boot({ mode: "existing", serverUrl: "https://one.example" });
+    submitForm();
+    ui.resolveSave({ ok: false, error: "Could not save that address." });
+    await flush();
+
+    const field = element<HTMLInputElement>("server-url");
+    field.value = "https://two.example";
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(element("status").textContent).toBe("Could not save that address.");
+  });
+
   it("keeps an address edited while the connection check is pending", async () => {
     const ui = await boot({ mode: "existing", serverUrl: "https://one.example" });
     element<HTMLButtonElement>("check").click();
@@ -534,4 +574,30 @@ describe("setup", () => {
       expect(element<HTMLButtonElement>("continue").disabled).toBe(false);
     });
   }
+
+  it("formats installer download sizes", async () => {
+    const ui = await boot(null);
+    selectMode("new");
+    submitForm();
+    ui.startResult.resolve(stackState("pulling"));
+    await flush();
+    expect(element("stack-detail").textContent).toBe("");
+
+    const sizes = [
+      [42, "42 B"],
+      [2_500, "3 kB"],
+      [2_500_000, "3 MB"],
+      [1_000_000_000, "1.0 GB"],
+      [1_150_000_000, "1.2 GB"],
+      [1_400_000_000, "1.4 GB"],
+    ] as const;
+    for (const [bytes, size] of sizes) {
+      const stack = { ...stackState("pulling"), layerBytes: { layer: bytes } };
+      ui.pushStackState(stack);
+      await flush();
+      ui.resolveStackState(stack);
+      await flush();
+      expect(element("stack-detail").textContent).toBe(`${size} downloaded`);
+    }
+  });
 });

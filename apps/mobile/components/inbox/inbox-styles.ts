@@ -32,7 +32,14 @@ export function createInboxStyles() {
       paddingTop: 8,
       paddingBottom: 10,
     },
+    headerTitle: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: "flex-start",
+      overflow: "hidden",
+    },
     headerActions: {
+      flexShrink: 0,
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
@@ -94,6 +101,11 @@ export function createInboxStyles() {
       paddingHorizontal: 20,
       paddingTop: 28,
     },
+    newBot: {
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 28,
+    },
     row: {
       flexDirection: "row",
       alignItems: "center",
@@ -115,7 +127,6 @@ export function createInboxStyles() {
       paddingBottom: 12,
     },
     pinnedTile: {
-      width: "33.33%",
       alignItems: "center",
       paddingVertical: 8,
       paddingHorizontal: 4,

@@ -3,8 +3,8 @@ import { recordUsage } from "@rakazo/db";
 import type { AutoReviewChecker, LlmAutoReviewOptions } from "../../approvals/auto-review.js";
 import {
   autoReviewTimeoutMs,
+  includedReviewChecker,
   isAutoReviewCheckerConfigured,
-  resolveAutoReviewChecker,
   resolveAutoReviewProviderKind,
 } from "../../approvals/auto-review.js";
 import { createAutoReviewProvider } from "../../approvals/auto-review-factory.js";
@@ -12,6 +12,7 @@ import { CheckerConnectionUnavailableError } from "../../approvals/auto-review-f
 import { DecisionAutoReviewProvider } from "../../approvals/decision-auto-review.js";
 import { decisionModel } from "../../approvals/decision-models.js";
 import { operatorReviewObserver } from "../../approvals/operator-review-usage.js";
+import { DataRetentionRefusedError } from "../../models/endpoints/data-retention.js";
 import {
   findConnectedModelCredential,
   hasHostedModelCredits,
@@ -19,22 +20,11 @@ import {
 import type { ExecutorDeps } from "../executor/executor-deps.js";
 import { modelCreditBillingEnabled, resolveModelKey } from "./run-model.js";
 
-/**
- * The deployment's operator-funded reviewer, when hosted credits include one. It needs no
- * connection or credits of the member's, so it can still decide when their own choice cannot.
- */
+/** The deployment's operator-funded reviewer, when hosted credits include one. */
 export async function includedAutoReviewChecker(
   deps: Pick<ExecutorDeps, "prisma" | "billingEnabled">,
 ): Promise<AutoReviewChecker | null> {
-  if (!(await modelCreditBillingEnabled(deps))) return null;
-  const checker = resolveAutoReviewChecker(process.env, true);
-  if (
-    !checker ||
-    !decisionModel(checker.provider, checker.model) ||
-    !isAutoReviewCheckerConfigured({ checker })
-  )
-    return null;
-  return { ...checker, included: true };
+  return includedReviewChecker(await modelCreditBillingEnabled(deps));
 }
 
 type CheckerScope = {
@@ -43,6 +33,8 @@ type CheckerScope = {
   userId: string;
   botId: string;
   threadId: string;
+  /** Names the reviewed action on the review's usage records. */
+  operationId: string;
 };
 type CheckerAccess = Awaited<ReturnType<typeof checkerModelAccess>>;
 
@@ -57,7 +49,7 @@ export async function autoReviewCheckerProvider(
   },
   checker: AutoReviewChecker,
 ): Promise<AutoReviewProvider> {
-  const { runId, spaceId, userId, botId } = scope;
+  const { runId, spaceId, userId, botId, operationId } = scope;
   const { injectedReview, memberChecker, registerSecrets } = options;
   if (injectedReview) return injectedReview;
   const deploymentChoice = !memberChecker && !checker.credentialId && !checker.creditOfferingId;
@@ -65,20 +57,17 @@ export async function autoReviewCheckerProvider(
     memberChecker || (checker.provider !== "jev" && checker.provider !== "scripted")
       ? "llm"
       : resolveAutoReviewProviderKind();
-  const decision = decisionModel(checker.provider, checker.model);
-  // A checker model that is not a decision model answers in JSON text, on the member's own key.
-  if (kind === "llm" && !decision) {
-    const access = await checkerModelAccess(deps, scope, options, checker);
-    return createAutoReviewProvider("llm", {
-      llm: checkerLlmOptions(deps, scope, checker, access),
-    });
-  }
   const hosted =
     deploymentChoice &&
-    (Boolean(decision) || kind === "jev" || kind === "scripted") &&
+    (Boolean(decisionModel(checker.provider, checker.model)) ||
+      kind === "jev" ||
+      kind === "scripted") &&
     (await modelCreditBillingEnabled(deps));
   // Only the included decision checker uses operator auth without a personal connection.
-  const included = hosted && Boolean(decision) && isAutoReviewCheckerConfigured({ checker });
+  const included =
+    hosted &&
+    Boolean(decisionModel(checker.provider, checker.model)) &&
+    isAutoReviewCheckerConfigured({ checker });
   const reviewCredential =
     checker.creditOfferingId || included || kind === "jev" || kind === "scripted"
       ? null
@@ -91,7 +80,7 @@ export async function autoReviewCheckerProvider(
         botId,
         runId,
         parentRunId: runId,
-        operationId: `auto-review:${runId}`,
+        operationId,
         operationKind: "setup",
       })
     : undefined;
@@ -102,11 +91,10 @@ export async function autoReviewCheckerProvider(
       onUsage: operatorFunded ? undefined : onUsage,
     });
   }
-  // Every other llm checker is a decision model here; one without returned above.
-  if (!decision) throw new CheckerConnectionUnavailableError();
   await requireCheckerConnection(deps, scope, memberChecker, checker, reviewCredential);
+  const decision = decisionModel(checker.provider, checker.model);
   const deploymentKey =
-    deploymentChoice && !reviewCredential ? decision.deploymentApiKey(process.env) : undefined;
+    deploymentChoice && !reviewCredential ? decision?.deploymentApiKey(process.env) : undefined;
   if (deploymentKey) registerSecrets([deploymentKey]);
   const judgeKey = deploymentKey
     ? null
@@ -124,14 +112,25 @@ export async function autoReviewCheckerProvider(
           operatorFunded,
         },
       );
-  return new DecisionAutoReviewProvider({
-    provider: decision.create({
-      apiKey: deploymentKey ?? judgeKey?.apiKey ?? "",
-      callObserver: operatorObserver ?? judgeKey?.callObserver,
-      onUsage: operatorFunded ? undefined : onUsage,
-    }),
-    providerId: checker.provider,
-    model: checker.model,
+  const callObserver = operatorObserver ?? judgeKey?.callObserver;
+  if (decision && judgeKey?.zeroDataRetention && !decision.dataRetentionControl) {
+    throw new DataRetentionRefusedError("Selected checker cannot restrict data retention");
+  }
+  if (decision)
+    return new DecisionAutoReviewProvider({
+      provider: decision.create({
+        apiKey: deploymentKey ?? judgeKey?.apiKey ?? "",
+        ...(judgeKey?.zeroDataRetention ? { zeroDataRetention: true } : {}),
+        callObserver,
+        onUsage: operatorFunded ? undefined : onUsage,
+      }),
+      providerId: checker.provider,
+      model: checker.model,
+      calibration: decision.calibration,
+    });
+  if (!judgeKey) throw new CheckerConnectionUnavailableError();
+  return createAutoReviewProvider("llm", {
+    llm: checkerLlmOptions(deps, scope, checker, { judgeKey, onUsage }),
   });
 }
 
@@ -169,7 +168,7 @@ async function requireCheckerConnection(
 }
 
 function checkerUsageRecorder(deps: ExecutorDeps, scope: CheckerScope, operatorFunded: boolean) {
-  const { runId, spaceId, userId, botId } = scope;
+  const { runId, spaceId, userId, botId, operationId } = scope;
   return (event: Extract<AgentRuntimeEvent, { type: "usage" }>) =>
     recordUsage(deps.prisma, event, {
       spaceId,
@@ -177,7 +176,7 @@ function checkerUsageRecorder(deps: ExecutorDeps, scope: CheckerScope, operatorF
       botId,
       parentRunId: runId,
       runId,
-      operationId: `auto-review:${runId}`,
+      operationId,
       operationKind: "setup",
       fundingSource: operatorFunded ? "operator" : "customer",
     });
@@ -215,7 +214,7 @@ export async function checkerModelAccess(
 /** What the JSON-text checker needs to ask this checker choice one question. */
 export function checkerLlmOptions(
   deps: ExecutorDeps,
-  scope: CheckerScope,
+  { runId, spaceId, userId, botId, threadId }: CheckerScope,
   checker: AutoReviewChecker,
   { judgeKey, onUsage }: CheckerAccess,
 ): LlmAutoReviewOptions {
@@ -225,10 +224,12 @@ export function checkerLlmOptions(
     checker,
     apiKey: judgeKey.oauth ? undefined : judgeKey.apiKey,
     callObserver: judgeKey.callObserver,
+    billing: judgeKey.billing,
     accountId: judgeKey.accountId,
     gatewayId: judgeKey.gatewayId,
     projectId: judgeKey.projectId,
     region: judgeKey.region,
+    zeroDataRetention: judgeKey.zeroDataRetention,
     baseUrl: judgeKey.baseUrl,
     headers: judgeKey.headers,
     allowPrivateEndpoint: judgeKey.allowPrivateEndpoint,
@@ -244,7 +245,11 @@ export function checkerLlmOptions(
           retire: judgeKey.retireOAuth,
         }
       : undefined,
-    ...scope,
+    runId,
+    spaceId,
+    userId,
+    botId,
+    threadId,
     timeoutMs: autoReviewTimeoutMs(),
   };
 }

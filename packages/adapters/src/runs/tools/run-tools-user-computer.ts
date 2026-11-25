@@ -57,6 +57,7 @@ import {
   stopKeptCommand,
 } from "../../user-computer-projects.js";
 import type { RunContext } from "../assembly/run-context.js";
+import { isRunTaintedBeyondOwnComputer } from "../assembly/run-context.js";
 import { publishMessage } from "../assembly/run-messages.js";
 import type { ToolCall } from "./run-tool-gate.js";
 
@@ -74,13 +75,13 @@ export {
   userComputerAppName,
 };
 
-/** How far back a chain of bot messages is followed to the person or routine that began it. */
+/** How far back a chain of bot messages is followed to the person that began it. */
 const MAX_BOT_MESSAGE_HOPS = 6;
 
 /**
  * Whether a bot's message to another of its owner's bots comes from the owner's own work: a
- * message or routine of theirs started the chain, and no bot along it is shared with teammates.
- * Work a channel, webhook or someone else began never reaches the owner's computer this way.
+ * message of theirs started the chain, and no bot along it is shared with teammates. Work a
+ * routine, channel, webhook or someone else began never reaches the owner's computer this way.
  */
 export async function botMessageFromOwnersWork(
   prisma: RunContext["deps"]["prisma"],
@@ -127,6 +128,8 @@ export async function botMessageFromOwnersWork(
       messagingChannelRun: false,
       runUserId: sender.userId,
       botUserId: sender.bot.userId,
+      // A routine's use of the computer covers its own run only, never one it hands work to.
+      ownerComputerRoutine: false,
       // Every person's message names its writer; only a teammate's differs from the run's user.
       sharedWithTeammates: Boolean(
         sender.sourceMessage?.authorUserId && sender.sourceMessage.authorUserId !== sender.userId,
@@ -142,10 +145,11 @@ const USER_COMPUTER_UNAVAILABLE =
   'The user\'s computer is not connected. If the task needs it, ask them to open the Rakazo desktop app and turn on "Let bots use this computer" in its settings.';
 
 /**
- * Whose own computer this run may reach: the person whose message or routine started it, when
- * they own the bot. Webhooks, channels, other bots and other people's messages reach no one's, and
- * neither does a bot shared with teammates: they share its chat, so they could steer the run or
- * answer its approval cards.
+ * Whose own computer this run may reach: the bot owner's, when their own message started it or it
+ * is one of their routines they let use it (see routineRunUsesOwnerComputer). Other routines,
+ * webhooks, channels, other bots and other people's messages reach no one's, and neither does a
+ * bot shared with teammates: they share its chat, so they could steer the run or answer its
+ * approval cards.
  */
 export function userComputerOwner(input: {
   trigger: string;
@@ -153,15 +157,16 @@ export function userComputerOwner(input: {
   messagingChannelRun: boolean;
   runUserId: string;
   botUserId: string;
+  ownerComputerRoutine: boolean;
   sharedWithTeammates?: boolean;
 }): string | undefined {
   if (input.sharedWithTeammates || input.messagingChannelRun) return undefined;
-  // The owner's own routines run on their computer too, as they set them up.
-  const ownRoutine = input.trigger === "routine";
-  const ownMessage =
-    (input.trigger === "user" || input.trigger === "follow_up") && input.sourceRole === "user";
-  if (!ownRoutine && !ownMessage) return undefined;
-  return input.runUserId === input.botUserId ? input.runUserId : undefined;
+  if (input.runUserId !== input.botUserId) return undefined;
+  const allowed =
+    input.trigger === "routine"
+      ? input.ownerComputerRoutine
+      : (input.trigger === "user" || input.trigger === "follow_up") && input.sourceRole === "user";
+  return allowed ? input.runUserId : undefined;
 }
 
 /**
@@ -169,7 +174,9 @@ export function userComputerOwner(input: {
  * choose "Allow in this space"; Never ask runs it, since pairing was consent, and a block refuses it. These tools run
  * only in the user's own runs (see userComputerOwner), so any effect of them past "intended" in
  * this space traces back to that approval. Removing every paired computer ends it, so pairing again
- * asks again. Screen control is approved per app.
+ * asks again. Screen control is approved per app. A routine runs unattended, so once it has read
+ * outside content, such as a fetched page, every call asks again whatever the mode or earlier
+ * approvals. The owner's own computer output does not count, so a routine can take several steps.
  */
 export async function userComputerGate(
   ctx: RunContext,
@@ -179,6 +186,7 @@ export async function userComputerGate(
   mode: ApprovalMode,
 ): Promise<"deny" | "allow" | "ask"> {
   if (blocked) return "deny";
+  if (ctx.run.trigger === "routine" && (await isRunTaintedBeyondOwnComputer(ctx))) return "ask";
   // Pairing the desktop was the owner's consent; Never ask does not ask again.
   if (mode === "never") return "allow";
   const { deps, run } = ctx;
@@ -262,8 +270,8 @@ async function lastValue<T>(values: AsyncIterable<T>): Promise<T> {
 
 /**
  * The computer a run reaches: the connected one the person used most recently. When no app
- * reports use (older desktop apps), the one holding this bot's project folder, then the most
- * recently connected.
+ * reports use (older desktop apps), the one holding this bot's project folder, then the earliest
+ * paired.
  */
 export async function pickUserComputer(
   devices: UserDeviceGateway,
@@ -277,10 +285,15 @@ export async function pickUserComputer(
 }
 
 /** Checked again at execution: the desktop can disconnect or be revoked after the offer. */
-async function connectedUserComputer(ctx: RunContext) {
+async function connectedUserComputer(ctx: RunContext, computerId?: string) {
   const owner = ctx.source.userComputerOwner;
   const devices = ctx.deps.userDevices;
   if (!owner || !devices) return undefined;
+  // A computer the call names never falls back to another.
+  if (computerId !== undefined) {
+    const named = await devices.connected(owner, computerId).catch(() => null);
+    return named ? { owner, devices, deviceId: named.deviceId } : undefined;
+  }
   const folder = await ctx.deps.prisma.botFolder.findUnique({
     where: { botId_userId: { botId: ctx.bot.id, userId: owner } },
     select: { deviceId: true },
@@ -298,10 +311,39 @@ async function projectFolder(ctx: RunContext, owner: string, deviceId: string) {
   return folder?.deviceId === deviceId ? folder.path : undefined;
 }
 
+const TARGET_UNAVAILABLE =
+  "The selected computer is disconnected or not allowed for this user. Use user_computer_list to see available computers.";
+
+function requestedComputer(args: Record<string, unknown>): { computerId?: string; error?: string } {
+  if (args.computerId === undefined) return {};
+  if (typeof args.computerId !== "string" || !args.computerId.trim() || args.computerId.length > 64)
+    return { error: "computerId must be a non-empty computer id from user_computer_list." };
+  return { computerId: args.computerId };
+}
+
+export async function userComputerList(ctx: RunContext, call: ToolCall) {
+  const owner = ctx.source.userComputerOwner;
+  const devices = ctx.deps.userDevices;
+  if (!owner || !devices) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const computers = (await devices.list(owner))
+    .filter((device) => device.connected)
+    .map((device) => ({
+      computerId: device.deviceId,
+      name: device.name,
+      bound: device.bound === true,
+    }));
+  return call.finish({ computers });
+}
+
 export async function userComputerShell(ctx: RunContext, call: ToolCall) {
   const { bot, runId } = ctx;
-  const connected = await connectedUserComputer(ctx);
-  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const target = requestedComputer(call.args);
+  if (target.error) return call.finish({ error: target.error });
+  const connected = await connectedUserComputer(ctx, target.computerId);
+  if (!connected)
+    return call.finish({
+      error: target.computerId ? TARGET_UNAVAILABLE : USER_COMPUTER_UNAVAILABLE,
+    });
   const { owner, devices, deviceId } = connected;
   const { signal } = ctx.context;
   const command = String(call.args.command ?? "");
@@ -734,8 +776,13 @@ type ScreenRequest =
 /** The device gets the app name the approval card showed, never the raw argument. */
 async function userComputerScreen(ctx: RunContext, call: ToolCall, request: ScreenRequest) {
   if (!request.app) return call.finish({ error: "app must name an app on the user's computer." });
-  const connected = await connectedUserComputer(ctx);
-  if (!connected) return call.finish({ error: USER_COMPUTER_UNAVAILABLE });
+  const target = requestedComputer(call.args);
+  if (target.error) return call.finish({ error: target.error });
+  const connected = await connectedUserComputer(ctx, target.computerId);
+  if (!connected)
+    return call.finish({
+      error: target.computerId ? TARGET_UNAVAILABLE : USER_COMPUTER_UNAVAILABLE,
+    });
   const { owner, devices, deviceId } = connected;
   const { signal } = ctx.context;
   try {

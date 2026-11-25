@@ -10,12 +10,15 @@ import type { RunContext } from "../assembly/run-context.js";
 import type { ToolCall } from "./run-tool-gate.js";
 import {
   botMessageFromOwnersWork,
+  userComputerAct,
   userComputerAgent,
   userComputerAttach,
   userComputerAttachScript,
   userComputerCwd,
   userComputerFolder,
   userComputerGate,
+  userComputerList,
+  userComputerObserve,
   userComputerOwner,
   userComputerShell,
 } from "./run-tools-user-computer.js";
@@ -56,6 +59,7 @@ function setup(
   const signals: AbortSignal[] = [];
   const deviceIds: (string | undefined)[] = [];
   const gateway: UserDeviceGateway = {
+    list: async () => [],
     connected: async (_userId, deviceId) => {
       const found = deviceId
         ? connectedDevices.find((id) => id === deviceId)
@@ -169,23 +173,37 @@ describe("userComputerOwner", () => {
     messagingChannelRun: false,
     runUserId: "user-1",
     botUserId: "user-1",
+    ownerComputerRoutine: false,
+  };
+  const ownRoutine = {
+    ...own,
+    trigger: "routine",
+    sourceRole: undefined,
+    ownerComputerRoutine: true,
   };
 
-  it("is the bot owner when their own message started the run", () => {
+  it("is the bot owner when their own message or a routine they let use it started the run", () => {
     expect(userComputerOwner(own)).toBe("user-1");
     expect(userComputerOwner({ ...own, trigger: "follow_up" })).toBe("user-1");
     // A bot shared with teammates never reaches its owner's own computer.
     expect(userComputerOwner({ ...own, sharedWithTeammates: true })).toBeUndefined();
-  });
-
-  it("is the bot owner for their own routine, and nobody for a teammate's", () => {
-    const routine = { ...own, trigger: "routine", sourceRole: undefined };
-    expect(userComputerOwner(routine)).toBe("user-1");
-    expect(userComputerOwner({ ...routine, runUserId: "user-2" })).toBeUndefined();
-    expect(userComputerOwner({ ...routine, sharedWithTeammates: true })).toBeUndefined();
+    expect(userComputerOwner(ownRoutine)).toBe("user-1");
   });
 
   it.each([
+    { ownerComputerRoutine: false },
+    { runUserId: "user-2" },
+    { botUserId: "user-2" },
+    { messagingChannelRun: true },
+    { sharedWithTeammates: true },
+  ])("is nobody for a routine run with %o", (change) => {
+    expect(userComputerOwner({ ...ownRoutine, ...change })).toBeUndefined();
+  });
+
+  it.each([
+    { trigger: "routine" },
+    // Only a routine run counts, never an event run that claims the routine's permission.
+    { trigger: "webhook", ownerComputerRoutine: true },
     { trigger: "webhook" },
     { trigger: "messaging" },
     { trigger: "call_end" },
@@ -616,10 +634,8 @@ describe("botMessageFromOwnersWork", () => {
     sourceMessage: { role: "user", authorUserId: null },
   };
 
-  it("follows a handoff back to the owner's own message or routine", async () => {
+  it("follows a handoff back to the owner's own message", async () => {
     expect(await botMessageFromOwnersWork(world({ a: ownersMessage }), "in-from-a")).toBe(true);
-    const routine = { ...ownersMessage, trigger: "routine", sourceMessage: null };
-    expect(await botMessageFromOwnersWork(world({ a: routine }), "in-from-a")).toBe(true);
     // Social hands to Scout, which hands on: still the owner's work.
     const relay = { ...ownersMessage, trigger: "bot_message", sourceMessageId: "in-from-a" };
     expect(await botMessageFromOwnersWork(world({ a: ownersMessage, b: relay }), "in-from-b")).toBe(
@@ -627,8 +643,9 @@ describe("botMessageFromOwnersWork", () => {
     );
   });
 
-  it("never follows work a channel, webhook, teammate or shared bot began", async () => {
+  it("never follows work a routine, channel, webhook, teammate or shared bot began", async () => {
     for (const sender of [
+      { ...ownersMessage, trigger: "routine", sourceMessage: null },
       { ...ownersMessage, trigger: "messaging" },
       { ...ownersMessage, trigger: "webhook", sourceMessage: null },
       { ...ownersMessage, sourceMessage: { role: "user", authorUserId: "grace" } },
@@ -645,5 +662,92 @@ describe("botMessageFromOwnersWork", () => {
   it("stops following a loop of bots handing work to each other", async () => {
     const loop = { ...ownersMessage, trigger: "bot_message", sourceMessageId: "in-from-a" };
     expect(await botMessageFromOwnersWork(world({ a: loop }), "in-from-a")).toBe(false);
+  });
+});
+
+describe("explicit computer targeting", () => {
+  it("pins every shell request to the selected computer", async () => {
+    const { ctx, call, deviceIds } = setup(async function* () {
+      yield { type: "exit", code: 0 };
+    });
+    const connected = vi.fn(async (_owner: string, id?: string) => ({
+      deviceId: id ?? "device-1",
+      name: "Desk PC",
+      platform: "linux",
+      activeAt: null,
+    }));
+    ctx.deps.userDevices!.connected = connected;
+    await userComputerShell(ctx, call({ command: "pwd", computerId: "device-2" }));
+    expect(connected).toHaveBeenCalledWith("user-1", "device-2");
+    expect(deviceIds).toEqual(["device-2", "device-2", "device-2"]);
+  });
+
+  it.each([userComputerObserve, userComputerAct])(
+    "pins screen requests to the selected computer",
+    async (tool) => {
+      const { ctx, call, deviceIds } = setup(async function* () {
+        yield { app: "Notes", tree: "Window", completed: 1 };
+      });
+      ctx.computer = { acceptsImages: false } as RunContext["computer"];
+      ctx.deps.userDevices!.connected = vi.fn(async (_owner, id) => ({
+        deviceId: id!,
+        name: "Desk PC",
+        platform: "darwin",
+        activeAt: null,
+      }));
+      await tool(
+        ctx,
+        call({ app: "Notes", actions: [{ kind: "wait", ms: 1 }], computerId: "device-2" }),
+      );
+      expect(deviceIds).toEqual(["device-2"]);
+    },
+  );
+
+  it.each([userComputerShell, userComputerObserve, userComputerAct])(
+    "refuses unavailable targets without requests",
+    async (tool) => {
+      const { ctx, call, requests } = setup(async function* () {});
+      ctx.deps.userDevices!.connected = vi.fn(async () => null);
+      const result = await tool(
+        ctx,
+        call({
+          command: "pwd",
+          app: "Notes",
+          actions: [{ kind: "wait", ms: 1 }],
+          computerId: "missing",
+        }),
+      );
+      expect(result).toMatchObject({ error: expect.stringContaining("selected computer") });
+      expect(requests).toEqual([]);
+    },
+  );
+
+  it.each(["", null, 42])(
+    "rejects malformed ids (%s) instead of using the default",
+    async (computerId) => {
+      const { ctx, call, requests } = setup(async function* () {});
+      expect(await userComputerShell(ctx, call({ command: "pwd", computerId }))).toMatchObject({
+        error: expect.stringContaining("computerId"),
+      });
+      expect(requests).toEqual([]);
+    },
+  );
+
+  it("lists only the owner's connected computers, with the omitted-id binding", async () => {
+    const { ctx, call } = setup(async function* () {});
+    ctx.deps.userDevices!.list = vi.fn(async () => [
+      { deviceId: "d1", name: "Laptop", connected: true, routeTraffic: false, bound: false },
+      { deviceId: "d2", name: "Desk PC", connected: true, routeTraffic: false, bound: true },
+      { deviceId: "d3", name: "Offline PC", connected: false, routeTraffic: false },
+    ]);
+    expect(await userComputerList(ctx, call({}))).toEqual({
+      computers: [
+        { computerId: "d1", name: "Laptop", bound: false },
+        { computerId: "d2", name: "Desk PC", bound: true },
+      ],
+    });
+    expect(ctx.deps.userDevices!.list).toHaveBeenCalledWith("user-1");
+    ctx.source.userComputerOwner = undefined;
+    expect(await userComputerList(ctx, call({}))).toHaveProperty("error");
   });
 });

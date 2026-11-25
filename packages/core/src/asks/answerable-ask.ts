@@ -122,17 +122,3 @@ export function askChoiceAnswerText(block: ChoiceAskBlock): string | undefined {
   const parts = [...chosen.map((action) => action.label), ...(other ? [other] : [])];
   return parts.length ? parts.join(", ") : block.answer;
 }
-
-/**
- * A choice question where only text travels: the question, its draft, and numbered options a reply
- * can name.
- */
-export function askChoicePlainText(block: ChoiceAskBlock): string {
-  return [
-    block.text.trim(),
-    block.preview?.trim(),
-    block.actions?.map((action, index) => `${index + 1}. ${action.label}`).join("\n"),
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-}

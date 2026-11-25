@@ -3,7 +3,7 @@
     "name": "Mentosbot",
     "slug": "mentosbot",
     "scheme": "rakazo",
-    "version": "1.0.15",
+    "version": "1.0.20",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
@@ -36,6 +36,20 @@
         }
       ],
       "expo-localization",
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Rakazo saves photos and videos you download from Artifacts to your photo library.",
+          "granularPermissions": []
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Rakazo to read and add events in calendars you choose for your bots.",
+          "remindersPermission": "Allow Rakazo to create and complete reminders in lists you choose for your bots."
+        }
+      ],
       "@react-native-vector-icons/ionicons",
       "@react-native-vector-icons/material-design-icons",
       [
@@ -120,6 +134,7 @@
       }
     },
     "android": {
+      "blockedPermissions": ["android.permission.READ_MEDIA_VISUAL_USER_SELECTED"],
       "package": "com.mentosbot.app",
       "versionCode": 10,
       "softwareKeyboardLayoutMode": "resize",
@@ -143,7 +158,17 @@
               "appExtensions": [
                 {
                   "targetName": "RakazoWatch",
-                  "bundleIdentifier": "com.mentosbot.app.watchkitapp"
+                  "bundleIdentifier": "com.mentosbot.app.watchkitapp",
+                  "entitlements": {
+                    "com.apple.security.application-groups": ["group.com.mentosbot.app"]
+                  }
+                },
+                {
+                  "targetName": "RakazoWatchComplications",
+                  "bundleIdentifier": "com.mentosbot.app.watchkitapp.complications",
+                  "entitlements": {
+                    "com.apple.security.application-groups": ["group.com.mentosbot.app"]
+                  }
                 },
                 {
                   "targetName": "RakazoWidgets",

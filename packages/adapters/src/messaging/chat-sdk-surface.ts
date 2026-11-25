@@ -3,10 +3,10 @@ import { createMemoryState } from "@chat-adapter/state-memory";
 import type {
   AdapterContext,
   AdapterDescriptor,
-  MessagingCapabilities,
   MessagingInboundAttachment,
   MessagingInboundEvent,
   MessagingInboundMessage,
+  MessagingOutbound,
   MessagingOutboundAttachment,
   MessagingOutboundStatus,
   MessagingPlatformDescriptor,
@@ -15,9 +15,11 @@ import type {
   MessagingSendResult,
   MessagingSurface,
 } from "@rakazo/adapter-kit";
+
 import { trimEndChars } from "@rakazo/contracts";
+import { deadlineSignal, MAX_RETRY_AFTER_MS, withAbort } from "@rakazo/core";
 import { bestEffort, getLogger } from "@rakazo/logging";
-import type { Adapter, Message, PostableMarkdown, Root, Thread } from "chat";
+import type { Adapter, Attachment, Message, PostableMarkdown, Root, Thread } from "chat";
 import { Chat, isLinkNode, paragraph, parseMarkdown, root, text, toPlainText, walkAst } from "chat";
 import { getLarkTextParts } from "../providers/messaging/lark/text-parts.js";
 
@@ -69,19 +71,12 @@ export function boundInboundMarkdown(adapter: Adapter): void {
 /** Inbound webhook bodies larger than this are rejected before parsing. */
 export const MESSAGING_WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
 
-/** Telegram Bot API limits: photos up to 10 MB, any upload up to 50 MB. */
-const TELEGRAM_PHOTO_MAX_BYTES = 10_000_000;
-const TELEGRAM_UPLOAD_MAX_BYTES = 50_000_000;
-const TELEGRAM_PHOTO_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
-
 /**
  * One messaging platform mounted on the surface. The Chat SDK adapter owns
  * webhook verification, payload translation, and platform API calls; the
  * extra hooks cover the few per-platform facts the SDK does not surface.
  */
-export interface MessagingPlatform {
-  provider: string;
-  capabilities: MessagingCapabilities;
+export interface MessagingPlatform extends MessagingPlatformDescriptor {
   adapter: Adapter;
   /**
    * The adapter's own thread-id prefix when it differs from `provider`, so
@@ -90,14 +85,18 @@ export interface MessagingPlatform {
    * the adapter keeps its native ones. Defaults to `provider`.
    */
   adapterName?: string;
-  /** The line people message to reach this deployment (a phone number), when it has one. */
-  address?: string;
   /** Refresh an authenticated public destination without starting an inbound receiver. */
   resolveAddress?: (signal?: AbortSignal) => Promise<string | undefined>;
   /** Deterministic 1:1 thread id for platforms without openDM (sendblue). */
   directThreadId?: (address: string) => string;
   /** Delivery-status events the Chat SDK drops (sendblue is_outbound posts, WhatsApp statuses). */
   peekStatuses?: (payload: unknown) => MessagingOutboundStatus[];
+  /**
+   * The size of an inbound file the adapter left unreported, asked of the platform before the
+   * webhook is answered, so a file over the limit is refused without downloading it (WhatsApp's
+   * media lookup). Undefined when the platform cannot tell.
+   */
+  attachmentSize?: (attachment: Attachment, signal: AbortSignal) => Promise<number | undefined>;
   /**
    * State keys the adapter writes to drop vendor redeliveries of a webhook
    * (Slack's per-event marker). Cleared when the inbound sink fails so the
@@ -228,6 +227,7 @@ export class ChatSdkMessagingSurface implements MessagingSurface {
             );
           }
         }
+        await fillAttachmentSizes(platform, message);
         const event = this.toInbound(mounted, thread.id, thread.isDM, message);
         if (!event) return;
         try {
@@ -264,6 +264,7 @@ export class ChatSdkMessagingSurface implements MessagingSurface {
     return [...this.byProvider.values()].map(({ platform }) => ({
       provider: platform.provider,
       capabilities: platform.capabilities,
+      ...(platform.outbound ? { outbound: platform.outbound } : {}),
       address: platform.address,
     }));
   }
@@ -301,40 +302,30 @@ export class ChatSdkMessagingSurface implements MessagingSurface {
     const mounted = this.mountedForThread(request.threadId);
     await this.ensureInitialized();
     context.signal.throwIfAborted();
-    // Telegram converts Markdown and retries parse errors as plain text;
-    // WhatsApp renders it as its own formatting and Lark posts it as an md
-    // block; Photon's iMessage adapter renders it as native styled text. Keep
-    // the other adapters' plain payloads (Slack markdown_text has a lower
-    // limit, Sendblue's iMessage has no markup).
-    const telegram = mounted.adapterName === "telegram";
-    const markdown =
-      telegram ||
-      mounted.adapterName === "whatsapp" ||
-      mounted.adapterName === "lark" ||
-      mounted.adapterName === "imessage";
+    const outbound = mounted.platform.outbound;
     const { attachment } = request;
-    if (telegram && attachment && attachment.data.byteLength > TELEGRAM_UPLOAD_MAX_BYTES) {
-      throw new MessagingSendError(new Error("File is larger than Telegram accepts"), {
+    if (
+      outbound?.attachmentLimitBytes !== undefined &&
+      attachment &&
+      attachment.data.byteLength > outbound.attachmentLimitBytes
+    ) {
+      throw new MessagingSendError(new Error("File is larger than the platform accepts"), {
         permanent: true,
         retryAfterMs: null,
       });
     }
-    const message = attachment
-      ? attachmentMessage(telegram, request.body, attachment)
-      : markdown
-        ? { markdown: request.body }
-        : request.body;
+    const text = outbound?.markdown ? { markdown: request.body } : request.body;
     try {
       const threadId = toAdapterThreadId(mounted, request.threadId);
       const postOnce = mounted.platform.postOnce;
       const sent =
         postOnce && request.idempotencyKey && !attachment
-          ? await postOnce(
-              threadId,
-              markdown ? { markdown: request.body } : request.body,
-              request.idempotencyKey,
-            )
-          : await mounted.chat.thread(threadId).post(message);
+          ? await postOnce(threadId, text, request.idempotencyKey)
+          : await mounted.chat
+              .thread(threadId)
+              .post(
+                attachment ? attachmentMessage(outbound?.photo, request.body, attachment) : text,
+              );
       const handle = "id" in sent && typeof sent.id === "string" ? sent.id : "";
       return { handle };
     } catch (error) {
@@ -583,26 +574,48 @@ export class ChatSdkMessagingSurface implements MessagingSurface {
 }
 
 /**
- * One file as its own message. Telegram shows common image formats under its
- * photo limit inline; everything else is uploaded as a document.
+ * One file as its own message. A platform that declares its photo limits shows a common image
+ * format under that size inline; everything else is uploaded as a document.
  */
 function attachmentMessage(
-  telegram: boolean,
+  photo: MessagingOutbound["photo"],
   body: string,
   file: MessagingOutboundAttachment,
 ): PostableMarkdown {
   const data = Buffer.from(file.data.buffer, file.data.byteOffset, file.data.byteLength);
-  if (
-    telegram &&
-    TELEGRAM_PHOTO_TYPES.has(file.mimeType) &&
-    data.byteLength <= TELEGRAM_PHOTO_MAX_BYTES
-  ) {
+  if (photo && data.byteLength <= photo.maxBytes && photo.types.has(file.mimeType)) {
     return {
       markdown: body,
       attachments: [{ type: "image", data, name: file.name, mimeType: file.mimeType }],
     };
   }
   return { markdown: body, files: [{ data, filename: file.name, mimeType: file.mimeType }] };
+}
+
+/** Time the platform has to tell a message's file sizes, within its webhook. */
+const ATTACHMENT_SIZE_LOOKUP_MS = 2_000;
+
+/**
+ * Asks the platform the size of each downloadable file it left unreported, so the store can
+ * refuse one over the limit before downloading it. A slow or failed answer leaves it unknown.
+ */
+async function fillAttachmentSizes(platform: MessagingPlatform, message: Message): Promise<void> {
+  const lookup = platform.attachmentSize;
+  if (!lookup) return;
+  const unsized = message.attachments.filter(
+    (attachment) => attachment.fetchData && attachment.size === undefined,
+  );
+  if (unsized.length === 0) return;
+  const signal = deadlineSignal(ATTACHMENT_SIZE_LOOKUP_MS);
+  await Promise.all(
+    unsized.map(async (attachment) => {
+      const size = await bestEffort(
+        "look up the size of an inbound file",
+        withAbort(lookup(attachment, signal), signal),
+      );
+      if (size !== undefined) attachment.size = size;
+    }),
+  );
 }
 
 function inboundAttachments(message: Message): MessagingInboundAttachment[] {
@@ -784,10 +797,15 @@ export class MessagingSendError extends Error {
 }
 
 function sendError(platform: MessagingPlatform, error: unknown): MessagingSendError {
-  // Chat SDK AdapterRateLimitError and Slack's rate-limited error both carry seconds.
+  // Chat SDK AdapterRateLimitError and Slack's rate-limited error both carry seconds. A value
+  // that is not a finite positive number is ignored (the normal retry delay applies), and a
+  // large one is capped like any other Retry-After, so the backup job is never scheduled years out.
   const seconds = (error as { retryAfter?: unknown } | null)?.retryAfter;
   return new MessagingSendError(error, {
     permanent: platform.isPermanentSendError?.(error) ?? false,
-    retryAfterMs: typeof seconds === "number" && seconds > 0 ? seconds * 1000 : null,
+    retryAfterMs:
+      typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0
+        ? Math.min(seconds * 1000, MAX_RETRY_AFTER_MS)
+        : null,
   });
 }

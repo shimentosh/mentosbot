@@ -607,6 +607,7 @@ export class UserDevices implements UserDeviceGateway {
           id: true,
           name: true,
           routeTraffic: true,
+          platform: true,
           connections: {
             where: { heartbeatAt: { gt: new Date(Date.now() - STALE_AFTER_MS) } },
             select: { deviceId: true },
@@ -614,11 +615,14 @@ export class UserDevices implements UserDeviceGateway {
         },
       }),
     );
+    const bound = await this.connected(userId);
     return devices.map((device) => ({
       deviceId: device.id,
       name: device.name,
+      platform: device.platform,
       connected: device.connections.length > 0,
       routeTraffic: device.routeTraffic,
+      bound: device.id === bound?.deviceId,
     }));
   }
 
@@ -709,12 +713,14 @@ export class UserDevices implements UserDeviceGateway {
         where: {
           heartbeatAt: { gt: new Date(Date.now() - STALE_AFTER_MS) },
           device: { userId, revokedAt: null, ...(routeTraffic ? { routeTraffic } : {}) },
-          ...(deviceId ? { deviceId } : {}),
+          ...(deviceId !== undefined ? { deviceId } : {}),
         },
-        // The computer someone is using comes first; apps that never report it, by connection.
+        // The computer someone is using comes first. Apps that never report it go in pairing
+        // order, not connection time, so a reconnect never moves bots to another computer.
         orderBy: [
           { device: { lastActiveAt: { sort: "desc", nulls: "last" } } },
-          { connectedAt: "desc" },
+          { device: { createdAt: "asc" } },
+          { deviceId: "asc" },
         ],
         include: { device: { select: { name: true, platform: true, lastActiveAt: true } } },
       }),

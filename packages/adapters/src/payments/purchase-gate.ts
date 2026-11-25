@@ -37,7 +37,8 @@ const EVIDENCE: ReadonlySet<string> = new Set([
   "unverified",
 ]);
 
-// Empty when the check failed and the page is unknown.
+// Empty when the check failed and the page is unknown, and for a page without a host (about:blank,
+// data:, file:).
 const SITE = /^[\w.[\]:-]{0,253}$/;
 // Zero-width, bidirectional and tag characters would let a page show one thing and be read as another.
 const INVISIBLE = /[\u{E0000}-\u{E007F}​-‏⁠-⁤‪-‮⁦-⁩﻿]/gu;
@@ -104,9 +105,12 @@ export function purchaseApprovalOf(value: unknown): PurchaseApproval | undefined
   };
 }
 
-/** Whether the page showed a payment. An approval stored before evidence was kept had a site only when it did. */
+/**
+ * Whether the page showed a payment, on a site or on a page without a host. An approval stored before
+ * evidence was kept had a site only when it did.
+ */
 export function purchaseVerified(purchase: PurchaseApproval): boolean {
-  return Boolean(purchase.site) && (purchase.evidence ?? "final_step") !== "unverified";
+  return purchase.evidence ? purchase.evidence !== "unverified" : Boolean(purchase.site);
 }
 
 /**
@@ -131,13 +135,19 @@ export function purchaseCardSummary(purchase: PurchaseApproval): FleetCardSummar
       ],
     };
   }
-  const site = cardName(purchase.site);
+  const site = purchase.site ? cardName(purchase.site) : "";
   const items = purchase.items ?? [];
   const listed = items.length > CARD_ITEMS ? items.slice(0, CARD_ITEMS - 1) : items;
   return {
     onceOnly: true,
     title:
-      purchase.evidence === "payment_page" ? `Click on ${site}'s payment page?` : `Pay on ${site}?`,
+      purchase.evidence === "payment_page"
+        ? site
+          ? `Click on ${site}'s payment page?`
+          : "Click on this payment page?"
+        : site
+          ? `Pay on ${site}?`
+          : "Complete a payment on this page?",
     receipt: {
       ...(purchase.label ? { button: purchase.label } : {}),
       items: listed,
@@ -197,7 +207,8 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
         ref: step.ref === undefined ? undefined : String(step.ref).trim(),
       };
     });
-    return steps.some((step) => step.kind === "click") ? { actions: steps } : undefined;
+    const presses = steps.filter((step) => step.kind === "click").length;
+    return presses ? { actions: steps, presses, acts: steps.length } : undefined;
   }
   const points: Array<{ x: number; y: number }> = [];
   let enter = false;
@@ -209,6 +220,10 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
   // asks whatever the page looks like now, even when no tab is showing yet.
   let opened: string | undefined;
   let unchecked = false;
+  // Clicks, presses, releases and submitting keys: each one may answer a dialog or press the page.
+  let presses = 0;
+  // Every step but a pointer move: any of them (Escape, a scroll, typing) may close a dialog first.
+  let acts = 0;
   let pointer: { x: number; y: number } | undefined;
   for (const raw of actions) {
     const step = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -218,12 +233,14 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
         ? // Rounded as the desktop rounds it before pressing.
           { x: Math.round(step.x), y: Math.round(step.y) }
         : undefined;
+    if (kind !== "move") acts += 1;
     if (kind === "move") {
       pointer = own ?? pointer;
     } else if (["click", "down", "up"].includes(kind) && step.button === "right") {
       // A right-click opens a menu and presses nothing, but the page may change under later presses.
       disturbed = true;
     } else if (["click", "down", "up"].includes(kind)) {
+      presses += step.double === true ? 2 : 1;
       if (opened !== undefined) unchecked = true;
       // The main screen releases where the pointer is; an extra display moves to the up's own spot first.
       const spots = kind === "up" ? [pointer, ...(own ? [own] : [])] : [own];
@@ -244,20 +261,34 @@ function purchaseProbe(name: string, args: Record<string, unknown>) {
           ...(Array.isArray(step.modifiers) ? step.modifiers.map(String) : []),
         ];
         if (parts.some((part) => SUBMITTING_KEY.test(part.trim()))) {
+          presses += 1;
           enter = true;
           if (opened !== undefined) unchecked = true;
         }
       } else if (kind === "type" && /[\r\n]|^\s+$/.test(String(step.text ?? ""))) {
-        // A line break submits; text that is only spaces presses a focused button.
+        // A line break submits; text that is only spaces presses a focused button, once per character.
+        const text = String(step.text);
+        presses += text.match(/[\r\n]/g)?.length ?? text.length;
         enter = true;
         if (opened !== undefined) unchecked = true;
       } else if (kind === "focus" && step.uri !== undefined) opened = String(step.uri);
     }
   }
   return points.length || enter || unplaced
-    ? { desktop: true, enter, points, unplaced, unchecked, opened }
+    ? { desktop: true, enter, points, unplaced, unchecked, opened, presses, acts }
     : undefined;
 }
+
+/**
+ * Why a press could not be checked, so nothing is pressed: a dialog open on the page could confirm a
+ * payment, or the call has more presses than the open dialog can take. A page that could not be read,
+ * or one the same call opens, is not refused: it comes back unverified (see purchaseVerified).
+ */
+export type UncheckedPress = "dialog" | "dialog-batch";
+
+// Dialogs whose answer confirms nothing: an alert's OK only informs, and "Leave site?" leaves. A confirm or
+// prompt hands its answer to the page's script, which can place an order on OK.
+const HARMLESS_DIALOGS = new Set(["alert", "beforeunload"]);
 
 /**
  * Ask the page browser whether this call's clicks, or its click or key on the screen, would complete
@@ -268,7 +299,7 @@ export async function detectPurchase(
   ctx: RunContext,
   name: string,
   args: Record<string, unknown>,
-): Promise<PurchaseApproval | undefined> {
+): Promise<PurchaseApproval | UncheckedPress | undefined> {
   const probe = purchaseProbe(name, args);
   const { browser } = ctx.providers;
   if (!probe || !browser.purchaseCheck || !ctx.computer.pageBrowserAllowed) return undefined;
@@ -293,7 +324,9 @@ export async function detectPurchase(
         : {}),
     };
   }
+  const { presses, acts, ...request } = probe;
   let found: Awaited<ReturnType<NonNullable<typeof browser.purchaseCheck>>>["purchase"];
+  let dialog: string | undefined;
   let computer: Awaited<ReturnType<RunContext["computer"]["get"]>>;
   try {
     computer = await ctx.computer.get("tool", name);
@@ -303,17 +336,24 @@ export async function detectPurchase(
     return undefined;
   }
   try {
-    ({ purchase: found } = await browser.purchaseCheck(
+    ({ purchase: found, dialog } = await browser.purchaseCheck(
       computer,
-      { ...probe, signal: ctx.context.signal },
+      { ...request, signal: ctx.context.signal },
       ctx.context,
     ));
   } catch (error) {
     ctx.context.signal.throwIfAborted();
-    getLogger().warn("purchase check failed, asking", {
+    // A page that could not be read shows no payment: the click carries the unread check (see run-tool-request).
+    getLogger().warn("purchase check failed", {
       errorName: error instanceof Error ? error.name : typeof error,
     });
     found = { ...unchecked, steps: [] };
+  }
+  // The page is blocked by a dialog, so only the call's first step reaches it; anything after it (even
+  // after an Escape that closes the dialog) would land on the page unchecked.
+  if (dialog) {
+    if (!HARMLESS_DIALOGS.has(dialog)) return "dialog";
+    return presses === 1 && acts === 1 ? undefined : "dialog-batch";
   }
   if (!found) return undefined;
   const url = shownUrl(found.url);

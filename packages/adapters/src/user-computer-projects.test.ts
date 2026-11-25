@@ -27,6 +27,7 @@ import {
  */
 function localDevice(home: string, extraEnv: Record<string, string> = {}): UserDeviceGateway {
   return {
+    list: async () => [],
     connected: async () => ({
       deviceId: "mac",
       name: "Mac",

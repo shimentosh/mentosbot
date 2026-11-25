@@ -18,7 +18,7 @@ import {
 } from "@rakazo/ui-web";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { PasskeySignIn, usePasskeySignIn } from "../../components/account/PasskeySignIn";
 import { SocialSignInButtons } from "../../components/account/SocialSignInButtons";
 import { WindowChrome } from "../../components/WindowChrome";
@@ -27,6 +27,7 @@ import { authClient } from "../../lib/auth/auth";
 import type { AuthCapabilities } from "../../lib/auth/auth-capabilities";
 import { fetchAuthCapabilities } from "../../lib/auth/auth-capabilities";
 import { newAccountDestination, signInNext } from "../../lib/auth/sign-in-next";
+import { holdSsoAutoStart, ssoAutoStartAllowed } from "../../lib/auth/sso-auto-start";
 import { runSsoFlow } from "../../lib/auth/sso-flow";
 import { desktopBridge } from "../../lib/platform/desktop";
 import { clearSpaceSelection } from "../../lib/query/rpc";
@@ -34,10 +35,9 @@ import { authErrorText, credentialIssueText } from "../../lib/query/user-error";
 
 type AuthMode = "in" | "up" | "forgot";
 
-// off-scale: 16px below md stops iOS Safari zooming into a focused field.
-const fieldClass = "mt-2 h-12 rounded-xl px-4 text-[16px]/6 md:text-body-lg";
+const fieldClass = "mt-2";
 const CODE_LENGTH = 6;
-export const submitClass = "mt-3 h-12 w-full rounded-xl text-body-lg";
+export const submitClass = "mt-3 w-full";
 
 /** `adding`: another account is signed in and stays signed in next to this one. */
 export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: boolean }) {
@@ -75,6 +75,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
   // Signup triggers a session refresh that remounts the anonymous auth page.
   const sent = resetSent || searchParams.get("verify") === "email";
   const [reset, setReset] = useState<AuthCapabilities | null>(null);
+  const showAccountSwitch = mode !== "in" || reset?.registrationOpen !== false;
   const [capabilityError, setCapabilityError] = useState(false);
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
   const [codeSent, setCodeSent] = useState(false);
@@ -124,6 +125,26 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
       active = false;
     };
   }, [mode, capabilityAttempt]);
+
+  // A server whose only way in is one provider starts it at once, on sign-up too since a first
+  // visit lands there, but never after the provider sent back an error. Desktop keeps the click,
+  // as its sign-in opens a window.
+  const onlyProvider =
+    (mode === "in" || (mode === "up" && reset?.registrationOpen !== false)) &&
+    reset &&
+    !reset.passwordAuth &&
+    providers.length === 1 &&
+    (!reset.sso || reset.sso.availability === "available") &&
+    !searchParams.has("error") &&
+    !desktopBridge()
+      ? providers[0]?.id
+      : undefined;
+  useEffect(() => {
+    // The hold also keeps this from starting twice; when it cannot be saved, nothing starts.
+    if (onlyProvider && ssoAutoStartAllowed() && holdSsoAutoStart()) {
+      void signInWithProvider(onlyProvider);
+    }
+  }, [onlyProvider]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -290,6 +311,9 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
   if (!sent && !reset && !capabilityError) {
     return <div className="h-full bg-background" />;
   }
+  if (!sent && mode === "up" && reset?.registrationOpen === false) {
+    return <Navigate to={authPath("/sign-in")} replace />;
+  }
 
   return (
     <AuthFrame
@@ -372,23 +396,25 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                   {error}
                 </p>
               ) : null}
-              <p className="mt-8 text-center text-muted-foreground">
-                {mode === "in" ? (
-                  <>
-                    <Trans>Don’t have an account?</Trans>{" "}
-                    <Link to={authPath("/sign-up")} className="font-medium text-foreground">
-                      <Trans>Sign up</Trans>
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Trans>Already have an account?</Trans>{" "}
-                    <Link to={authPath("/sign-in")} className="font-medium text-foreground">
-                      <Trans>Sign in</Trans>
-                    </Link>
-                  </>
-                )}
-              </p>
+              {showAccountSwitch ? (
+                <p className="mt-8 text-center text-muted-foreground">
+                  {mode === "in" ? (
+                    <>
+                      <Trans>Don’t have an account?</Trans>{" "}
+                      <Link to={authPath("/sign-up")} className="font-medium text-foreground">
+                        <Trans>Sign up</Trans>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Trans>Already have an account?</Trans>{" "}
+                      <Link to={authPath("/sign-in")} className="font-medium text-foreground">
+                        <Trans>Sign in</Trans>
+                      </Link>
+                    </>
+                  )}
+                </p>
+              ) : null}
               {adding ? (
                 <Link to="/app" className="mt-3 self-center text-muted-foreground">
                   <Trans>Cancel</Trans>
@@ -410,6 +436,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t`Your name`}
+                    size="xl"
                     className={fieldClass}
                   />
                 </div>
@@ -456,6 +483,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                     placeholder={t`Your email address`}
                     type="email"
                     required
+                    size="xl"
                     className={fieldClass}
                   />
                   {emailSuggestion && emailBlurred ? (
@@ -491,6 +519,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                     required={!useCode}
                     minLength={mode === "up" ? MIN_PASSWORD_LENGTH : undefined}
                     maxLength={MAX_PASSWORD_LENGTH}
+                    size="xl"
                     className={fieldClass}
                   />
                   {mode === "in" && reset?.passwordReset ? (
@@ -512,7 +541,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
               ) : null}
               <Button
                 type="submit"
-                size="lg"
+                size="xl"
                 disabled={pending || (codeStep && code.length < CODE_LENGTH)}
                 className={submitClass}
               >
@@ -541,7 +570,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                 <Button
                   type="button"
                   variant="outline"
-                  size="lg"
+                  size="xl"
                   disabled={pending}
                   className={submitClass}
                   onClick={() => reset.demoAccount && void signInAsDemo(reset.demoAccount)}
@@ -561,7 +590,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                   <Trans>Back</Trans>
                 </Button>
               ) : null}
-              {codeStep ? null : (
+              {!codeStep && showAccountSwitch ? (
                 <p className="mt-8 text-center text-muted-foreground">
                   {mode === "in" ? (
                     <>
@@ -593,7 +622,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                     </Link>
                   )}
                 </p>
-              )}
+              ) : null}
               {adding && !codeStep ? (
                 <Link to="/app" className="mt-3 self-center text-muted-foreground">
                   <Trans>Cancel</Trans>
@@ -675,7 +704,7 @@ export function PasswordResetPage() {
           ) : null}
           <Button
             type="submit"
-            size="lg"
+            size="xl"
             disabled={pending || !params.get("token")}
             className={submitClass}
           >
@@ -781,6 +810,7 @@ function PasswordField({
         maxLength={MAX_PASSWORD_LENGTH}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        size="xl"
         className={fieldClass}
       />
     </div>

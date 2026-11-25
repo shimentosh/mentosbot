@@ -14,6 +14,7 @@ import type {
 } from "@rakazo/core";
 import {
   bindComposerMention,
+  clampMentionHighlightIndex,
   composerMentionQuery,
   composerMentionSegments,
   composerMentionsForPrompt,
@@ -21,19 +22,18 @@ import {
   composerSlashOptions,
   composerSlashQuery,
   filterComposerMentionTargets,
-  mentionChipKey,
   removeComposerSlashQuery,
   resolveComposerMentionBackspace,
   resolveComposerMentionEdit,
+  resolveMentionPickerKey,
   serializeComposerPrompt,
   truncateSlashDescription,
 } from "@rakazo/core";
 import { MAX_FONT_SCALE } from "@rakazo/ui-tokens";
 import type { Ref } from "react";
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import type { TextInputInstance, ViewStyle } from "react-native";
+import type { ScrollViewInstance, TextInputInstance, ViewStyle } from "react-native";
 import {
-  ActivityIndicator,
   AppState,
   Pressable,
   ScrollView,
@@ -45,13 +45,16 @@ import {
 import { useComposerDictation } from "../../lib/composer/composer-dictation";
 import type { ComposerDraftScope } from "../../lib/composer/composer-draft";
 import { readComposerDraft, writeComposerDraft } from "../../lib/composer/composer-draft";
+import { useComposerHardwareEnterPreference } from "../../lib/composer/composer-enter-to-send-preference";
 import type { ComposerModel } from "../../lib/composer/composer-model";
 import { useMobileTokens, useResolvedAppearance } from "../../lib/native/native";
 import type { ComposerSnapshot } from "../../lib/thread/send/thread-feedback";
-import { BotAvatar } from "../bots/bot-avatar";
 import { GlassSurface } from "../native/glass-surface";
 import { NativeSymbol } from "../native/native-symbol";
+import { ComposerKeyboard } from "./composer-keyboard";
+import { ComposerMentionPicker } from "./composer-mention-picker";
 import { ModelChip, TrailingControls } from "./composer-model-chip";
+import { DictationBar } from "./dictation-bar";
 
 type NativeEdit = {
   beforeText: string;
@@ -72,10 +75,12 @@ export type ThreadComposerHandle = {
 
 const DRAFT_SAVE_DELAY_MS = 500;
 const MENTION_PICKER_MAX_ROWS = 5;
-const MENTION_ROW_HEIGHT = 44;
-const MENTION_ROW_PADDING = 14;
-const MENTION_ROW_GAP = 12;
-const MENTION_AVATAR_SIZE = 24;
+
+function samePickerQuery(first: ComposerMentionQuery | null, second: ComposerMentionQuery | null) {
+  return (
+    first?.start === second?.start && first?.end === second?.end && first?.query === second?.query
+  );
+}
 
 type ThreadComposerProps = {
   ref: Ref<ThreadComposerHandle>;
@@ -91,7 +96,7 @@ type ThreadComposerProps = {
   botId?: string;
   onCall: boolean;
   sending: boolean;
-  styles: { circleButton: ViewStyle; composerFill: ViewStyle };
+  styles: { composerFill: ViewStyle };
   attachActions: MenuAction[];
   attachFrom: (source: string) => void;
   send: () => Promise<void>;
@@ -142,7 +147,6 @@ export function ThreadComposer({
   const [emptyRowHeight, setEmptyRowHeight] = useState<number>();
   // Text past one line moves the model, dictation and send to a row under it until the box empties.
   const [wrapped, setWrapped] = useState(false);
-  const stacked = Boolean(model) && wrapped;
   const draftRef = useRef(saved.text);
   const nativeSelection = useRef({ start: saved.text.length, end: saved.text.length });
   const completedSelection = useRef<number | null>(null);
@@ -190,12 +194,26 @@ export function ThreadComposer({
     setSlashQuery(null);
   }
   const dictation = useComposerDictation({ disabled: onCall, onWords: showDictation });
+  const recording = dictation.status !== "idle";
   function toggleDictation() {
     if (dictation.status === "idle") {
       dictatedBase.current = draftRef.current;
       dictated.current = draftRef.current;
     }
     dictation.toggle();
+  }
+  /** Drops the recording and any words it already put in the box. */
+  function discardDictation() {
+    const base = dictatedBase.current;
+    dictation.cancel();
+    if (base !== null && draftRef.current === dictated.current) showDictation("");
+    dictatedBase.current = null;
+  }
+  // Send during dictation stops it first and sends once its words are in.
+  const [sendAfterDictation, setSendAfterDictation] = useState(false);
+  function sendOrFinish() {
+    if (recording) dictation.finish(() => setSendAfterDictation(true));
+    else void send();
   }
   // Saving waits for a pause in typing; closing the conversation or leaving the app saves at once.
   // Set while the composer holds text that storage does not have yet.
@@ -298,25 +316,35 @@ export function ThreadComposer({
     slashQuery !== null && mentionQuery === null
       ? composerSlashOptions(slashQuery, agentSkills, (action) => slashActionLabel(action.id))
       : { skills: [], actions: [] };
+  const pickerScroll = useRef<ScrollViewInstance>(null);
+  const pickerRowOffsets = useRef<number[]>([]);
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+  const optionCount = mentionOptions.length || slashSkillOptions.length + slashActionOptions.length;
+  const activePickerIndex =
+    pickerIndex === null ? null : clampMentionHighlightIndex(pickerIndex, optionCount);
+
   function updatePickerQueries(value: string, start: number, end = start) {
     // One skill per message: a chosen skill keeps the slash menu closed.
-    setSlashQuery(
-      selectedSkill ? null : composerSlashQuery(value, start, end, bindingsRef.current),
-    );
+    const nextSlash = selectedSkill
+      ? null
+      : composerSlashQuery(value, start, end, bindingsRef.current);
     // A mention selected by a backspace is waiting to be deleted, not re-picked.
-    if (selectedMentionRef.current !== null) {
-      setMentionQuery(null);
-      return;
+    const nextMention =
+      selectedMentionRef.current !== null
+        ? null
+        : composerMentionQuery(
+            value,
+            start,
+            end,
+            [...composerMentionTargets, ...composerSelectedMentions(bindingsRef.current)],
+            bindingsRef.current,
+          );
+    if (!samePickerQuery(mentionQuery, nextMention) || !samePickerQuery(slashQuery, nextSlash)) {
+      setPickerIndex(null);
     }
-    const query = composerMentionQuery(
-      value,
-      start,
-      end,
-      [...composerMentionTargets, ...composerSelectedMentions(bindingsRef.current)],
-      bindingsRef.current,
-    );
-    if (query) onMentionRequested?.();
-    setMentionQuery(query);
+    if (nextMention) onMentionRequested?.();
+    setSlashQuery(nextSlash);
+    setMentionQuery(nextMention);
   }
 
   function updateDraft(nativeValue: string) {
@@ -422,90 +450,112 @@ export function ThreadComposer({
   }
 
   const composerPillStyle = {
-    width: 36,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   } as const;
+  // Each control keeps the 44-point tap target iOS asks for around its 32-point circle.
+  const pillHitSlop = (44 - composerPillStyle.width) / 2;
 
   // One line of text with its padding, as measured while the box is empty. The pills and attach
   // button centre on it: the bar can grow past 44 (font scale, Android text metrics), and a fixed
   // bottom margin would leave them high.
   const lineHeight = Math.max(44, emptyRowHeight ?? 22 + 22 * textScale);
+  // While dictating, the recording controls take a row under the text.
+  const stacked = recording || (Boolean(model) && wrapped);
   // Lines the controls up with a single line of text; under the text they center on each other.
   const pillInset = stacked ? 0 : (lineHeight - composerPillStyle.height) / 2;
 
   const canSend = Boolean(draft.trim()) || selectedSkill !== null || attachmentIds.length > 0;
-  // Sending resets the box, which would drop a clip still recording or words still being transcribed.
-  const sendBlocked = sending || !canSend || dictation.status !== "idle";
+  useEffect(() => {
+    if (!sendAfterDictation || recording) return;
+    setSendAfterDictation(false);
+    if (canSend) void send();
+  }, [sendAfterDictation, recording]);
+  // Sending resets the box, so words still being transcribed wait; send while the mic is open
+  // stops it and sends once its words are in.
+  const sendBlocked =
+    sending ||
+    sendAfterDictation ||
+    dictation.status === "transcribing" ||
+    (!canSend && dictation.status === "idle");
+
+  const enterToSend = useComposerHardwareEnterPreference();
+  function onHardwareKey(key: string) {
+    const action = resolveMentionPickerKey({
+      key: key === "CommandEnter" ? "Enter" : key,
+      metaKey: key === "CommandEnter",
+      optionCount,
+      highlightedIndex: activePickerIndex ?? (key === "ArrowDown" ? optionCount - 1 : 0),
+      enterToSend,
+    });
+    switch (action.type) {
+      case "complete": {
+        const mention = mentionOptions[action.index];
+        const skill = slashSkillOptions[action.index];
+        const slashAction = slashActionOptions[action.index - slashSkillOptions.length];
+        if (mention) insertMention(mention);
+        else if (skill) insertSkill(skill);
+        else if (slashAction) runSlashAction(slashAction.id);
+        break;
+      }
+      case "move":
+        setPickerIndex(action.index);
+        pickerScroll.current?.scrollTo({ y: pickerRowOffsets.current[action.index] ?? 0 });
+        break;
+      case "dismiss":
+        completedSelection.current = nativeSelection.current.start;
+        setMentionQuery(null);
+        setSlashQuery(null);
+        break;
+      case "send":
+        if (!sendBlocked) sendOrFinish();
+        break;
+    }
+  }
+
+  const sendButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t`Send`}
+      disabled={sendBlocked}
+      hitSlop={pillHitSlop}
+      onPress={sendOrFinish}
+      style={{ marginBottom: pillInset, opacity: sendBlocked ? 0.5 : 1 }}
+    >
+      <GlassSurface
+        tint={tokens.primary}
+        style={composerPillStyle}
+        fallbackStyle={{ backgroundColor: tokens.primary }}
+      >
+        <NativeSymbol
+          ios="arrow.up"
+          android="arrow-up"
+          size={15}
+          color={tokens.primaryForeground}
+        />
+      </GlassSurface>
+    </Pressable>
+  );
 
   return (
     <>
       {mentionOptions.length ? (
-        <ScrollView
-          testID="mention-picker"
-          keyboardShouldPersistTaps="handled"
-          style={{
-            flexGrow: 0,
-            flexShrink: 1,
-            marginTop: 12,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: tokens.border,
-            backgroundColor: tokens.card,
-            overflow: "hidden",
+        <ComposerMentionPicker
+          mentions={mentionOptions}
+          scrollRef={pickerScroll}
+          highlightedIndex={activePickerIndex}
+          onRowLayout={(index, y) => {
+            pickerRowOffsets.current[index] = y;
           }}
-        >
-          {mentionOptions.map((mention, index) => (
-            <View key={mentionChipKey(mention)}>
-              {index > 0 ? (
-                <View
-                  style={{
-                    height: 1,
-                    marginStart: MENTION_ROW_PADDING + MENTION_AVATAR_SIZE + MENTION_ROW_GAP,
-                    backgroundColor: tokens.border,
-                  }}
-                />
-              ) : null}
-              <Pressable
-                accessibilityLabel={t`@${ph({ name: mention.name })}`}
-                onPress={() => insertMention(mention)}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: MENTION_ROW_GAP,
-                  minHeight: MENTION_ROW_HEIGHT,
-                  paddingHorizontal: MENTION_ROW_PADDING,
-                }}
-              >
-                <MentionOptionIcon mention={mention} />
-                <Text
-                  numberOfLines={1}
-                  style={{ flexShrink: 1, color: tokens.foreground, fontSize: 17 }}
-                >
-                  {mention.name}
-                </Text>
-                {mention.kind === "routine" || mention.kind === "connector" ? (
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      flex: 1,
-                      textAlign: "right",
-                      color: tokens.mutedForeground,
-                      fontSize: 13,
-                    }}
-                  >
-                    {mention.subtitle}
-                  </Text>
-                ) : null}
-              </Pressable>
-            </View>
-          ))}
-        </ScrollView>
+          onPick={insertMention}
+        />
       ) : null}
       {slashSkillOptions.length || slashActionOptions.length ? (
         <ScrollView
+          ref={pickerScroll}
           testID="slash-picker"
           keyboardShouldPersistTaps="handled"
           style={{
@@ -519,17 +569,23 @@ export function ThreadComposer({
             overflow: "hidden",
           }}
         >
-          {slashSkillOptions.map((skill) => (
+          {slashSkillOptions.map((skill, index) => (
             <Pressable
+              accessibilityRole="button"
               key={skill.id}
               accessibilityLabel={t`Skill ${ph({ name: skill.name })}`}
               onPress={() => insertSkill(skill)}
+              accessibilityState={{ selected: index === activePickerIndex }}
+              onLayout={(event) => {
+                pickerRowOffsets.current[index] = event.nativeEvent.layout.y;
+              }}
               style={{
                 flexDirection: "row",
                 alignItems: "flex-start",
                 gap: 10,
                 paddingHorizontal: 14,
                 paddingVertical: 10,
+                backgroundColor: index === activePickerIndex ? tokens.muted : undefined,
               }}
             >
               <NativeSymbol
@@ -549,17 +605,27 @@ export function ThreadComposer({
               </View>
             </Pressable>
           ))}
-          {slashActionOptions.map((action) => (
+          {slashActionOptions.map((action, index) => (
             <Pressable
+              accessibilityRole="button"
               key={action.id}
               accessibilityLabel={slashActionLabel(action.id)}
               onPress={() => runSlashAction(action.id)}
+              accessibilityState={{
+                selected: slashSkillOptions.length + index === activePickerIndex,
+              }}
+              onLayout={(event) => {
+                pickerRowOffsets.current[slashSkillOptions.length + index] =
+                  event.nativeEvent.layout.y;
+              }}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 10,
                 paddingHorizontal: 14,
                 paddingVertical: 10,
+                backgroundColor:
+                  slashSkillOptions.length + index === activePickerIndex ? tokens.muted : undefined,
               }}
             >
               <NativeSymbol
@@ -575,43 +641,56 @@ export function ThreadComposer({
           ))}
         </ScrollView>
       ) : null}
-      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10, marginTop: 8 }}>
+      <GlassSurface
+        shape="roundedRectangle"
+        style={{
+          marginTop: 8,
+          minHeight: 44,
+          borderRadius: 22,
+          flexDirection: "row",
+          alignItems: "flex-end",
+          gap: 8,
+          // Inset the round buttons as far from the edge as from the top and bottom.
+          paddingStart: 6,
+          paddingEnd: 6,
+        }}
+        fallbackStyle={styles.composerFill}
+      >
         <MenuView
           actions={attachActions}
           colorScheme={colorScheme}
           onPressAction={(event) => attachFrom(event.nativeEvent.event)}
+          // The native menu host sizes to its child and drops the child's margin. The menu takes
+          // no hit slop, so its child is the full 44-point target, overlapping the space around it.
+          style={{
+            marginBottom: (stacked ? 8 : pillInset) - pillHitSlop,
+            marginHorizontal: -pillHitSlop,
+          }}
         >
           <View
             accessible
             accessibilityRole="button"
             accessibilityLabel={t`Attach file`}
-            style={{ width: 44, height: 44, marginBottom: (lineHeight - 44) / 2 }}
+            style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
           >
-            <GlassSurface
-              shape="circle"
-              style={styles.circleButton}
-              fallbackStyle={styles.composerFill}
-            >
-              <NativeSymbol ios="plus" android="add" size={18} color={tokens.mutedForeground} />
-            </GlassSurface>
+            <NativeSymbol ios="plus" android="add" size={20} color={tokens.foreground} />
           </View>
         </MenuView>
-        <GlassSurface
-          shape="roundedRectangle"
+        <View
           style={{
             flex: 1,
-            minHeight: 44,
-            borderRadius: 22,
             flexDirection: stacked ? "column" : "row",
             alignItems: stacked ? "stretch" : "flex-end",
-            // Keeps text clear of the call/send pill even when it runs to the trailing edge (RTL).
-            gap: 8,
-            paddingStart: 16,
-            paddingEnd: 8,
+            // Keeps text clear of the call/send button even when it runs to the trailing edge (RTL).
+            columnGap: 12,
+            rowGap: 8,
           }}
-          fallbackStyle={styles.composerFill}
         >
-          <View
+          <ComposerKeyboard
+            enterEnabled={enterToSend || optionCount > 0}
+            commandEnterEnabled={!sendBlocked}
+            pickerOpen={optionCount > 0}
+            onHardwareKey={(event) => onHardwareKey(event.nativeEvent.key)}
             style={{
               flex: stacked ? undefined : 1,
               // Room for the text comes first; the model chip shrinks instead.
@@ -649,6 +728,7 @@ export function ThreadComposer({
                   {selectedSkill.name}
                 </Text>
                 <Pressable
+                  accessibilityRole="button"
                   accessibilityLabel={t`Remove skill ${ph({ name: selectedSkill.name })}`}
                   hitSlop={8}
                   onPress={() => {
@@ -811,134 +891,73 @@ export function ThreadComposer({
                 ))}
               </TextInput>
             </Pressable>
-          </View>
-          <TrailingControls stacked={stacked}>
-            {model ? (
-              <ModelChip
-                model={model}
-                // A mark beside the text; its name and thinking once the controls sit under it.
-                full={stacked}
-                style={{ marginBottom: pillInset }}
-              />
-            ) : null}
-            {onCall ? null : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={dictation.status === "idle" ? t`Dictate` : t`Stop dictating`}
-                disabled={dictation.status === "transcribing"}
-                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                onPress={toggleDictation}
-                style={{ marginBottom: pillInset }}
-              >
-                <GlassSurface
-                  tint={dictation.status === "idle" ? undefined : tokens.foreground}
-                  style={composerPillStyle}
-                  fallbackStyle={{
-                    backgroundColor: dictation.status === "idle" ? tokens.muted : tokens.foreground,
-                  }}
+          </ComposerKeyboard>
+          {dictation.status !== "idle" ? (
+            <DictationBar
+              status={dictation.status}
+              onLevel={dictation.onLevel}
+              onCancel={discardDictation}
+              onStop={toggleDictation}
+              pillStyle={composerPillStyle}
+            >
+              {sendButton}
+            </DictationBar>
+          ) : (
+            <TrailingControls stacked={stacked}>
+              {model ? (
+                <ModelChip
+                  model={model}
+                  // A mark beside the text; its name and thinking once the controls sit under it.
+                  full={stacked}
+                  style={{ marginBottom: pillInset }}
+                />
+              ) : null}
+              {onCall ? null : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t`Dictate`}
+                  hitSlop={pillHitSlop}
+                  onPress={toggleDictation}
+                  style={{ marginBottom: pillInset }}
                 >
-                  {dictation.status === "transcribing" ? (
-                    <ActivityIndicator size="small" color={tokens.background} />
-                  ) : (
+                  <View style={composerPillStyle}>
                     <NativeSymbol
-                      ios={dictation.status === "listening" ? "mic.fill" : "mic"}
-                      android={dictation.status === "listening" ? "mic" : "mic-outline"}
-                      size={15}
-                      color={
-                        dictation.status === "idle" ? tokens.mutedForeground : tokens.background
-                      }
+                      ios="mic"
+                      android="mic-outline"
+                      size={18}
+                      color={tokens.foreground}
                     />
-                  )}
-                </GlassSurface>
-              </Pressable>
-            )}
-            {/* No call while dictation still owns the microphone or its words are on the way. */}
-            {!canSend && botId && !onCall && dictation.status === "idle" ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t`Call`}
-                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                onPress={() => void startVoiceCall()}
-                style={{ marginBottom: pillInset }}
-              >
-                <GlassSurface
-                  tint={tokens.primary}
-                  style={composerPillStyle}
-                  fallbackStyle={{ backgroundColor: tokens.primary }}
+                  </View>
+                </Pressable>
+              )}
+              {!canSend && botId && !onCall ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t`Call`}
+                  hitSlop={pillHitSlop}
+                  onPress={() => void startVoiceCall()}
+                  style={{ marginBottom: pillInset }}
                 >
-                  <NativeSymbol
-                    ios="waveform"
-                    android="pulse-outline"
-                    size={15}
-                    color={tokens.primaryForeground}
-                  />
-                </GlassSurface>
-              </Pressable>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t`Send`}
-                disabled={sendBlocked}
-                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-                onPress={() => void send()}
-                style={{ marginBottom: pillInset, opacity: sendBlocked ? 0.5 : 1 }}
-              >
-                <GlassSurface
-                  tint={tokens.primary}
-                  style={composerPillStyle}
-                  fallbackStyle={{ backgroundColor: tokens.primary }}
-                >
-                  <NativeSymbol
-                    ios="arrow.up"
-                    android="arrow-up"
-                    size={15}
-                    color={tokens.primaryForeground}
-                  />
-                </GlassSurface>
-              </Pressable>
-            )}
-          </TrailingControls>
-        </GlassSurface>
-      </View>
+                  <GlassSurface
+                    tint={tokens.primary}
+                    style={composerPillStyle}
+                    fallbackStyle={{ backgroundColor: tokens.primary }}
+                  >
+                    <NativeSymbol
+                      ios="waveform"
+                      android="pulse-outline"
+                      size={15}
+                      color={tokens.primaryForeground}
+                    />
+                  </GlassSurface>
+                </Pressable>
+              ) : (
+                sendButton
+              )}
+            </TrailingControls>
+          )}
+        </View>
+      </GlassSurface>
     </>
-  );
-}
-
-function MentionOptionIcon({ mention }: { mention: ComposerMention }) {
-  const tokens = useMobileTokens();
-  if (mention.kind === "bot") {
-    return (
-      <BotAvatar
-        color={mention.color ?? tokens.mutedForeground}
-        avatarSet={mention.avatarSet}
-        identity={mention.id}
-        size={MENTION_AVATAR_SIZE}
-      />
-    );
-  }
-  const symbol =
-    mention.kind === "routine"
-      ? ({ ios: "clock", android: "time-outline" } as const)
-      : mention.kind === "connector"
-        ? ({ ios: "puzzlepiece.extension", android: "extension-puzzle-outline" } as const)
-        : ({ ios: "person.3.fill", android: "people" } as const);
-  return (
-    <View
-      style={{
-        width: MENTION_AVATAR_SIZE,
-        height: MENTION_AVATAR_SIZE,
-        borderRadius: MENTION_AVATAR_SIZE / 2,
-        backgroundColor: tokens.muted,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <NativeSymbol
-        ios={symbol.ios}
-        android={symbol.android}
-        size={14}
-        color={tokens.mutedForeground}
-      />
-    </View>
   );
 }

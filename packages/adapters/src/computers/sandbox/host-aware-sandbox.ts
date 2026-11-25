@@ -40,11 +40,7 @@ import {
 } from "./configured-sandbox.js";
 import type { SandboxProviderOptions } from "./sandbox-factory.js";
 import { createSandboxProvider } from "./sandbox-factory.js";
-
-export function sandboxKindForBot(envKind: string, computerHost: string | null | undefined) {
-  if (envKind === "docker" && computerHost === "this-mac") return "desktop";
-  return envKind;
-}
+import { sandboxKindCapabilities } from "./sandbox-kind-capabilities.js";
 
 export async function createRunSandbox(
   kind: string,
@@ -143,7 +139,7 @@ async function createBaseRunSandbox(
         }
       : opts.onUnsafeStop,
   });
-  if (kind !== "docker" || !prisma) return primary;
+  if (!sandboxKindCapabilities(kind).offersHostComputer || !prisma) return primary;
   const hostAware = new HostAwareSandbox(
     primary,
     new HostComputerSandbox(opts.hostComputerUrl ?? "", opts.hostComputerToken ?? ""),
@@ -154,7 +150,7 @@ async function createBaseRunSandbox(
       return settings?.computerHost === "this-mac";
     },
   );
-  if (!secrets) return hostAware;
+  if (!secrets || kind !== "docker") return hostAware;
   // An organization's own servers run its computers beside the deployment's Docker host.
   return new ServerPoolSandbox(
     hostAware,

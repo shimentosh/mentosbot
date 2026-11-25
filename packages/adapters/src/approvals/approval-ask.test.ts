@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { approvalDetailLength, buildApprovalAskBlock } from "./approval-ask.js";
+import {
+  approvalActionName,
+  approvalDetailLength,
+  buildApprovalAskBlock,
+  readableToolName,
+  truncate,
+} from "./approval-ask.js";
+
+describe("truncate", () => {
+  it("does not leave half an emoji before the ellipsis", () => {
+    const cut = truncate(`${"a".repeat(9)}😀tail`, 10);
+    expect(cut).toBe(`${"a".repeat(9)}…`);
+    expect(() => encodeURIComponent(cut)).not.toThrow();
+  });
+});
 
 describe("buildApprovalAskBlock", () => {
   it("binds the approval to its effect and redacts secrets", () => {
@@ -119,7 +133,7 @@ describe("buildApprovalAskBlock", () => {
 
     expect(block).toMatchObject({
       kind: "ask",
-      text: "Review before schedule create",
+      text: "Allow Schedule create?",
       actions: [
         { id: "allow", label: "Allow once" },
         { id: "deny", label: "Deny" },
@@ -177,7 +191,7 @@ describe("buildApprovalAskBlock", () => {
   });
 });
 
-it("shows the full instruction replacement as a diff with Apply and Dismiss", () => {
+it("shows the instruction change as a line diff with Apply and Dismiss", () => {
   const block = buildApprovalAskBlock(
     "effect-1",
     "update_bot",
@@ -192,7 +206,7 @@ it("shows the full instruction replacement as a diff with Apply and Dismiss", ()
   );
   expect(block).toMatchObject({
     kind: "ask",
-    detail: "- Draft only\n+ Draft only\n+ Ask before sending",
+    detail: "  Draft only\n+ Ask before sending",
     instructionUpdate: {
       botId: "bot-1",
       before: "Draft only",
@@ -293,7 +307,7 @@ describe("bot management approval cards", () => {
       actions:
         toolName === "set_child_instructions"
           ? [
-              { id: "allow", label: "Allow once" },
+              { id: "allow", label: "Apply now" },
               { id: "deny", label: "Deny" },
             ]
           : [
@@ -340,6 +354,27 @@ describe("bot management approval cards", () => {
       amountSource: "page",
     });
     expect(block.detail).toBe("Socks: $9.00");
+  });
+
+  it("shows a redacted review reason in both versions of the routine card", () => {
+    const secret = "fake-review-token";
+    const changes = [{ field: "active", before: true, after: false }] as const;
+    const block = buildApprovalAskBlock("effect-1", "schedule_update", {}, [secret], {
+      summary: {
+        title: "Update “Groceries”?",
+        lines: ["Status: Paused", "Previously: Active"],
+        routineUpdate: { changes: [...changes] },
+      },
+      reviewReason: `Outside content included ${secret}`,
+    });
+    if (block.kind !== "ask") throw new Error("expected ask block");
+    expect(block.routineUpdate).toEqual({
+      changes,
+      reason: "Outside content included [redacted]",
+    });
+    expect(block.detail).toBe(
+      "Outside content included [redacted]\nStatus: Paused\nPreviously: Active",
+    );
   });
 
   it("never offers always allow on a tool that needs explicit approval", () => {
@@ -455,7 +490,7 @@ describe("approval card arguments", () => {
     });
     expect(detail.split("\n").slice(0, 2)).toEqual([
       "To: a@example.test",
-      "BCC: hidden@example.test",
+      "Bcc: hidden@example.test",
     ]);
     expect(detail.length).toBeLessThanOrEqual(4_001);
   });
@@ -512,5 +547,114 @@ describe("approval card arguments", () => {
     );
     if (block.kind !== "ask") throw new Error("expected ask block");
     expect(block.detail?.split("\n")).toContain("To email: f@example.test");
+  });
+
+  it.each([
+    ["GMAIL_FETCH_EMAILS", "Gmail fetch emails"],
+    ["web_fetch", "Web fetch"],
+    ["createIssue", "Create issue"],
+    ["mcp__tasklog__add_task", "Tasklog add task"],
+  ])("reads the tool name %s as words", (name, words) => {
+    expect(readableToolName(name)).toBe(words);
+  });
+
+  it("names a repeated batch action once, in words, with how often it runs", () => {
+    const query = { query: "verification code newer_than:30d", max_results: 50, verbose: false };
+    const entry = { tool_slug: "GMAIL_FETCH_EMAILS", arguments: query };
+    const block = buildApprovalAskBlock(
+      "effect-1",
+      "MULTI_EXECUTE",
+      { tools: [entry, entry] },
+      [],
+      { batch: { items: "tools", action: "tool_slug", arguments: "arguments" } },
+    );
+    expect(block).toMatchObject({
+      text: "Allow Gmail fetch emails?",
+      detail:
+        "Gmail fetch emails ×2\nQuery: verification code newer_than:30d\nMax results: 50\nVerbose: No",
+    });
+  });
+
+  it("keeps distinct and separated batch entries apart, in order", () => {
+    const entry = (slug: string) => ({ tool_slug: slug, arguments: { id: "1" } });
+    const block = buildApprovalAskBlock(
+      "effect-1",
+      "MULTI_EXECUTE",
+      { tools: [entry("SEND_NOTE"), entry("send_note"), entry("ARCHIVE"), entry("SEND_NOTE")] },
+      [],
+      { batch: { items: "tools", action: "tool_slug", arguments: "arguments" } },
+    );
+    if (block.kind !== "ask") throw new Error("expected ask block");
+    expect(block.detail?.split("\n")).toEqual([
+      "Send note",
+      "ID: 1",
+      "Send note",
+      "ID: 1",
+      "Archive",
+      "ID: 1",
+      "Send note",
+      "ID: 1",
+    ]);
+  });
+
+  it("keeps the unknown-action heading on a lone unnamed batch entry", () => {
+    const block = buildApprovalAskBlock(
+      "effect-1",
+      "MULTI_EXECUTE",
+      { tools: [{ arguments: { id: "1" } }] },
+      [],
+      { batch: { items: "tools", action: "tool_slug", arguments: "arguments" } },
+    );
+    if (block.kind !== "ask") throw new Error("expected ask block");
+    expect(block.detail?.split("\n")).toEqual(["…", "ID: 1"]);
+  });
+
+  it("keeps entries apart when their unreadable arguments differ", () => {
+    const block = buildApprovalAskBlock(
+      "effect-1",
+      "MULTI_EXECUTE",
+      {
+        tools: [
+          { tool_slug: "SEND_NOTE", arguments: "not json" },
+          { tool_slug: "SEND_NOTE", arguments: "[1]" },
+        ],
+      },
+      [],
+      { batch: { items: "tools", action: "tool_slug", arguments: "arguments" } },
+    );
+    if (block.kind !== "ask") throw new Error("expected ask block");
+    expect(block.detail?.split("\n")).toEqual(["Send note", "Send note"]);
+  });
+
+  it("redacts a secret in a tool name or argument key before rewording it", () => {
+    const secret = "SECRET_TOKEN";
+    const block = buildApprovalAskBlock("effect-1", `mcp__x__${secret}`, { [secret]: "value" }, [
+      secret,
+    ]);
+    const text = JSON.stringify(block).toLowerCase();
+    expect(text).not.toContain("secret token");
+    expect(text).not.toContain("secret_token");
+  });
+
+  it("still shows a fetch URL when a secret matches an argument name", () => {
+    const block = buildApprovalAskBlock(
+      "effect-1",
+      "web_fetch",
+      { url: "https://example.test/page" },
+      ["url"],
+    );
+    if (block.kind !== "ask") throw new Error("expected ask block");
+    expect(block.detail).toContain("example.test/page");
+  });
+
+  it("names a batch call's actions, not the batch tool, in its alert", () => {
+    const batch = { items: "tools", action: "tool_slug", arguments: "arguments" };
+    const args = {
+      tools: [{ tool_slug: "GMAIL_SEND_EMAIL", arguments: { to: "a@example.test" } }],
+    };
+    expect(approvalActionName("MULTI_EXECUTE", args, batch, [])).toBe("Gmail send email");
+    expect(approvalActionName("web_fetch", { url: "https://a.test" }, undefined, [])).toBe(
+      "Web fetch",
+    );
   });
 });

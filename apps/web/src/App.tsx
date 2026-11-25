@@ -24,8 +24,8 @@ import {
 } from "react-router-dom";
 import { LoadingState } from "./components/ai/primitives";
 import { SubscriptionGate } from "./components/billing/SubscriptionGate";
+import { AiDataConsentPrompt } from "./components/call/AiDataConsentPrompt";
 import { CallLayout } from "./components/call/CallLayout";
-import { VoiceConsentPrompt } from "./components/call/VoiceConsentPrompt";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MarkdownLinkPrompt } from "./components/messages/markdown-link-prompt";
 import { PageLoading } from "./components/PageLoading";
@@ -46,6 +46,7 @@ import {
   signInNext,
 } from "./lib/auth/sign-in-next";
 import { syncLogOutFailure } from "./lib/auth/sign-out";
+import { releaseSsoAutoStart } from "./lib/auth/sso-auto-start";
 import { completeSsoCallback, SSO_CALLBACK_PATH } from "./lib/auth/sso-flow";
 import { getLabs, subscribeLabs } from "./lib/bootstrap";
 import { syncWebLogoAvatarIdentity } from "./lib/bots/logo-avatar-activity";
@@ -66,7 +67,11 @@ import { McpOAuthCallbackPage } from "./pages/integrations/McpOAuthCallback";
 import { SlackInstallCallbackPage } from "./pages/integrations/SlackInstallCallback";
 import { SharedPagePage } from "./pages/SharedPage";
 import { ShellPage } from "./pages/Shell";
+import { AppRailLayout } from "./pages/shell/app-rail";
 
+const PageReviewHost = lazyComponent(() =>
+  import("./components/pages/PageReviewHost").then((module) => module.default),
+);
 const AuthPage = lazyComponent(() => import("./pages/auth/Auth").then((module) => module.AuthPage));
 const PasswordResetPage = lazyComponent(() =>
   import("./pages/auth/Auth").then((module) => module.PasswordResetPage),
@@ -152,6 +157,7 @@ function SessionApp() {
   const { pathname, search } = useLocation();
   const screen = analyticsScreen(pathname);
   const analyticsUserId = session.data?.user.id;
+  const sessionCreatedAt = session.data?.session?.createdAt;
   const lastScreen = useRef<string | undefined>(undefined);
   useEffect(() => {
     // A pending session is not a sign-out; startup already tagged the signed-in user.
@@ -177,8 +183,11 @@ function SessionApp() {
     syncWebLogoAvatarIdentity(analyticsUserId ?? null);
     syncCallIdentity(analyticsUserId ?? null);
     syncLogOutFailure(gate === "authenticated");
-    if (gate === "authenticated") rememberSignedIn();
-  }, [gate, analyticsUserId]);
+    if (gate === "authenticated") {
+      rememberSignedIn();
+      if (sessionCreatedAt) releaseSsoAutoStart(new Date(sessionCreatedAt));
+    }
+  }, [gate, analyticsUserId, sessionCreatedAt]);
   useEffect(() => {
     if (gate === "authenticated" || gate === "anonymous") setQueryUser(analyticsUserId ?? null);
   }, [gate, analyticsUserId]);
@@ -209,7 +218,7 @@ function SessionApp() {
   );
   return (
     <QueryUserProvider value={user?.id ?? null}>
-      <VoiceConsentPrompt key={user?.id ?? "anonymous"} />
+      <AiDataConsentPrompt key={user?.id ?? "anonymous"} />
       <MarkdownLinkPrompt>
         <div className="h-full" data-rakazo-app-state="ready">
           <Suspense fallback={<PageLoading />}>
@@ -272,6 +281,16 @@ function SessionApp() {
                 element={user ? <TeamInvitePage /> : <SignedOutInvite />}
               />
               <Route path="/p/:slugToken" element={<SharedPagePage />} />
+              <Route
+                path="/review/:pageId?"
+                element={
+                  user ? (
+                    <PageReviewHost />
+                  ) : (
+                    <Navigate to={`/sign-in?next=${encodeURIComponent(pathname)}`} replace />
+                  )
+                }
+              />
               <Route
                 path={MCP_OAUTH_CALLBACK_PATH}
                 element={
@@ -359,18 +378,24 @@ function SessionApp() {
                       <Outlet />
                     </SubscriptionGate>
                   ) : (
-                    <Navigate to="/sign-in" replace />
+                    <Navigate to={`/sign-in?next=${encodeURIComponent(pathname)}`} replace />
                   )
                 }
               >
-                <Route path="/app" element={<ShellPage />} />
-                <Route path="/app/g/:groupId" element={<ShellPage />} />
-                <Route path="/app/:botId" element={<ShellPage />} />
+                <Route element={<AppRailLayout enabled={boardEnabled} />}>
+                  <Route path="/app" element={<ShellPage />} />
+                  <Route path="/app/g/:groupId" element={<ShellPage />} />
+                  <Route path="/app/:botId" element={<ShellPage />} />
+                  {boardEnabled ? (
+                    <Route element={<CallLayout />}>
+                      <Route path="/app/board" element={<BoardPage />} />
+                    </Route>
+                  ) : null}
+                </Route>
                 <Route element={<CallLayout />}>
                   <Route path="/onboarding/:step?" element={<OnboardingPage />} />
                   <Route path="/app/artifacts" element={<ArtifactsPage />} />
                   <Route path="/app/artifacts/:artifactId" element={<ArtifactsPage />} />
-                  {boardEnabled ? <Route path="/app/board" element={<BoardPage />} /> : null}
                   <Route path="/app/x/:linkId" element={<NavLinkPage />} />
                 </Route>
               </Route>

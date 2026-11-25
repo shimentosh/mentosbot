@@ -1,16 +1,15 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useLinkPrompt } from "@rakazo/chat-ui/web";
 import type { MessageBlock } from "@rakazo/contracts";
-import { appConnectedInput, waitForSignIn } from "@rakazo/core";
+import { appConnectedInput, appConnectLabel, waitForSignIn } from "@rakazo/core";
 import { Button, Dialog, DialogClose, DialogContent, DialogTitle } from "@rakazo/ui-web";
-import { Download, Image as ImageIcon, X } from "lucide-react";
+import { Image as ImageIcon, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BuiCard, SuccessPop } from "../../../components/ai/primitives";
 import { ErrorNotice } from "../../../components/ErrorNotice";
 import { OptionRow } from "../../../components/messages/OptionRow";
 import { connectMcpOauth } from "../../../lib/integrations/mcp-connect";
 import type { ArtifactTarget } from "../../../lib/pages/artifact-open";
-import { downloadUrl } from "../../../lib/pages/artifact-open";
 import { chartViewport } from "../../../lib/pages/chart-viewport";
 import { useArtifactImageState } from "../../../lib/pages/use-artifact-image";
 import { importChunk } from "../../../lib/platform/preload-recovery";
@@ -19,6 +18,7 @@ import { rpc } from "../../../lib/query/rpc";
 import type { ErrorDetails } from "../../../lib/query/user-error";
 import { errorDetails, errorText } from "../../../lib/query/user-error";
 import { useEventListener } from "../../../lib/use-event-listener";
+import { galleryImageKey, ImageLightbox, useOpenImage } from "./image-gallery";
 
 export function ChoiceCard({
   botId,
@@ -83,7 +83,7 @@ export function ChoiceCard({
             <OptionRow
               key={option.id}
               letter={option.letter}
-              selected={block.answerId === option.id}
+              selected={block.answerId ? block.answerId === option.id : undefined}
               disabled={Boolean(block.answerId) || pending}
               onClick={() => answer.run({ optionId: option.id })}
             >
@@ -166,7 +166,7 @@ export function AppConnectCard({
       const started = await rpc.connections.begin({
         connectorId: block.connectorId,
         provider: block.provider,
-        displayName: block.name,
+        displayName: appConnectLabel(block),
       });
       if (started.authorizationUrl) {
         window.open(started.authorizationUrl, "rakazo-app-connect", "popup,width=560,height=720");
@@ -217,7 +217,7 @@ export function AppConnectCard({
           />
         ) : (
           <span className="grid h-10 w-10 place-items-center rounded-md bg-muted text-body-lg text-foreground">
-            {block.name.slice(0, 1).toUpperCase()}
+            {Array.from(block.name)[0]?.toUpperCase()}
           </span>
         )}
         <span className="min-w-0 flex-1">
@@ -529,6 +529,7 @@ export function ArtifactImage({
   const [visible, setVisible] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const { src, failed, retry } = useArtifactImageState(target, artifactId, visible);
+  const openImage = useOpenImage();
 
   useEffect(() => {
     const element = container.current;
@@ -554,7 +555,10 @@ export function ArtifactImage({
       {src ? (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            if (openImage) openImage({ artifactId, name, target });
+            else setOpen(true);
+          }}
           className="max-w-[240px] overflow-hidden rounded-2xl"
         >
           <img
@@ -580,36 +584,13 @@ export function ArtifactImage({
           <ImageIcon aria-hidden size={28} strokeWidth={1.5} />
         </div>
       )}
-      {src ? (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent
-            showCloseButton={false}
-            className="w-auto max-w-none bg-transparent p-0 ring-0 sm:max-w-none"
-          >
-            <DialogTitle className="sr-only">{name}</DialogTitle>
-            <div className="absolute end-2 top-2 flex gap-1">
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t`Download ${name}`}
-                onClick={() => downloadUrl(src, name)}
-              >
-                <Download />
-              </Button>
-              <DialogClose
-                aria-label={t`Close image preview`}
-                render={<Button variant="ghost" size="icon-sm" />}
-              >
-                <X />
-              </DialogClose>
-            </div>
-            <img
-              src={src}
-              alt={name}
-              className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain"
-            />
-          </DialogContent>
-        </Dialog>
+      {src && open && !openImage ? (
+        <ImageLightbox
+          images={[{ artifactId, name, target }]}
+          selectedKey={galleryImageKey({ artifactId, name, target })}
+          onSelect={() => undefined}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
     </div>
   );

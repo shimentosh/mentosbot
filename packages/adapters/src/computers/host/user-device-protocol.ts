@@ -1,3 +1,4 @@
+import type { UserDeviceSummary } from "@rakazo/contracts";
 import { z } from "zod";
 import type { HostComputerRequest } from "./host-computer-protocol.js";
 import { hostComputerRequest } from "./host-computer-protocol.js";
@@ -54,10 +55,12 @@ export interface UserDevice {
 /** How runs reach the requesting user's connected device, from any API or worker process. */
 export interface UserDeviceGateway {
   /**
-   * The user's connected device someone used most recently, else the most recently connected;
-   * or that one device when `deviceId` is given.
+   * The connected computer someone used most recently, else the earliest-paired connected one,
+   * when omitted; an explicit unavailable id never falls back.
    */
   connected(userId: string, deviceId?: string): Promise<UserDevice | null>;
+  /** Paired, allowed computers, including connection status and the omitted-id binding. */
+  list(userId: string): Promise<UserDeviceSummary[]>;
   /** When the oldest device still paired was paired, connected or not; null when none is. */
   pairedSince(userId: string): Promise<Date | null>;
   /**

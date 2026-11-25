@@ -1,4 +1,5 @@
 import type { AdapterContext, WebFetchProvider, WebSearchProvider } from "@rakazo/adapter-kit";
+import { imageToolResult } from "../media/tool-result-image.js";
 import { clampMaxChars, clampMaxResults, clampOffset } from "./web-limits.js";
 
 export async function webSearchFromTool(
@@ -30,10 +31,12 @@ const NEEDS_SCRIPT =
 export const SCRIPT_PAGE_HINT =
   "This page shows little or no text without JavaScript. Open it with browser_navigate to read it.";
 
+/** A picture comes back as image input when the run's model can see, and as a short note when not. */
 export async function webFetchFromTool(
   fetchProvider: WebFetchProvider,
   context: AdapterContext,
   args: Record<string, unknown>,
+  modelSeesImages = false,
   /** Whether the run has the page browser, which runs the page's script. */
   browser = false,
 ) {
@@ -49,6 +52,8 @@ export async function webFetchFromTool(
       },
       context,
     );
+    if (result.image)
+      return await imageToolResult(result.image, { url: result.url }, modelSeesImages);
     const text = result.text.trim();
     if (
       browser &&

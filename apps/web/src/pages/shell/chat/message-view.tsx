@@ -63,6 +63,7 @@ import {
   McpApprovalCard,
 } from "./message-cards";
 import { MessageHoverActions } from "./message-hover-actions";
+import { RoutineEventRow } from "./routine-event-row";
 
 export const MessageView = memo(function MessageView({
   artifactTarget,
@@ -78,6 +79,7 @@ export const MessageView = memo(function MessageView({
   onOpenBot,
   onOpenPeerMessages,
   peerExchange,
+  hideSenderLabel,
   speakerName,
   authorName,
   memberName,
@@ -95,6 +97,7 @@ export const MessageView = memo(function MessageView({
   onOpenComputer,
   onReleaseComputer,
   onOpenImportSetup,
+  onOpenAgentImport,
   rpc,
   showToolActivity,
   onReply,
@@ -126,6 +129,7 @@ export const MessageView = memo(function MessageView({
   onOpenPeerMessages: (peer: { peerBotId: string; peerBotName: string }) => void;
   /** The adjacent receipts represented by this peer line. */
   peerExchange?: PeerExchange;
+  hideSenderLabel?: boolean;
   speakerName?: string;
   /** Who wrote a person's message, when it was not the viewer. */
   authorName?: string;
@@ -153,6 +157,8 @@ export const MessageView = memo(function MessageView({
   ) => Promise<void>;
   /** Opens where an imported item's setup is finished. */
   onOpenImportSetup?: (target: ImportSetupTarget) => void;
+  /** Opens the agent import, for the option a first bot's opening question offers. */
+  onOpenAgentImport?: () => void;
   rpc: ReturnType<typeof createSpaceRpc>;
   showToolActivity: boolean;
   onReply: (message: ThreadMessage) => void;
@@ -261,7 +267,7 @@ export const MessageView = memo(function MessageView({
           {authorName}
         </div>
       ) : null}
-      {speakerName ? (
+      {hideSenderLabel ? null : speakerName ? (
         <div
           className="mb-1.5 flex items-center gap-2 text-body-sm font-semibold tracking-tight"
           dir="auto"
@@ -310,6 +316,7 @@ export const MessageView = memo(function MessageView({
     <MessageHoverActions
       message={message}
       side={message.role === "user" ? "start" : "end"}
+      speakerName={speakerName ?? author?.name}
       onReply={onReply}
       onMarkUnread={onMarkUnread}
       markedUnread={markedUnread}
@@ -336,7 +343,7 @@ export const MessageView = memo(function MessageView({
           <div className="flex w-fit max-w-full justify-start [@media(hover:none)]:w-full">
             <div
               data-testid="message-bot-bubble"
-              className="max-w-full space-y-2.5 rounded-2xl bg-muted px-[18px] py-3 text-body-lg text-foreground"
+              className="max-w-full space-y-2.5 rounded-2xl bg-muted px-4 py-2.5 text-body-lg text-foreground"
               dir="auto"
             >
               {visibleNarrationBlocks.map((block, i) => {
@@ -490,6 +497,9 @@ export const MessageView = memo(function MessageView({
               </div>
             );
           }
+          if (block.kind === "routine_event") {
+            return <RoutineEventRow key={i} block={block} botId={message.botId} rpc={rpc} />;
+          }
           if (block.kind === "meta") {
             return (
               <div
@@ -509,7 +519,7 @@ export const MessageView = memo(function MessageView({
               >
                 <div
                   data-testid="message-bot-bubble"
-                  className="max-w-full rounded-2xl bg-muted px-[18px] py-3 text-body-lg text-foreground"
+                  className="max-w-full rounded-2xl bg-muted px-4 py-2.5 text-body-lg text-foreground"
                   dir="auto"
                 >
                   <ChatMarkdown streaming renderMention={renderMention} onOpenPage={openPage}>
@@ -662,7 +672,7 @@ export const MessageView = memo(function MessageView({
                   data-testid="message-user-bubble"
                   data-quote-message-id={quoteMessageId}
                   className={cn(
-                    "max-w-full whitespace-pre-wrap wrap-anywhere rounded-2xl px-[18px] py-3 text-body-lg",
+                    "max-w-full whitespace-pre-wrap wrap-anywhere rounded-2xl px-4 py-2.5 text-body-lg",
                     author
                       ? "bg-muted text-foreground/90"
                       : "bg-chat-user text-chat-user-foreground",
@@ -683,7 +693,7 @@ export const MessageView = memo(function MessageView({
               >
                 <div
                   data-testid="message-bot-bubble"
-                  className="max-w-full rounded-2xl bg-muted px-[18px] py-3 text-body-lg text-foreground"
+                  className="max-w-full rounded-2xl bg-muted px-4 py-2.5 text-body-lg text-foreground"
                   dir="auto"
                 >
                   <div data-quote-message-id={quoteMessageId}>
@@ -760,6 +770,7 @@ export const MessageView = memo(function MessageView({
                         name={image.name}
                       />
                     )}
+                    onOpenAgentImport={onOpenAgentImport}
                   />
                 )}
                 {i === hoverAnchorIndex ? hoverActions : null}

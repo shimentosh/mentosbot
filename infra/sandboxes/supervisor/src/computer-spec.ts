@@ -7,6 +7,8 @@ import {
   screenPorts,
 } from "@rakazo/core/node/desktop-runtime";
 import type Docker from "dockerode";
+import type { ComputerGpu } from "./computer-gpu.js";
+import { BROWSER_GPU_ENV, computerGpuHostConfig } from "./computer-gpu.js";
 import type { ComputerLocale } from "./computer-locale.js";
 import { computerLocaleEnv } from "./computer-locale.js";
 
@@ -43,6 +45,7 @@ export const COMPUTER_IMAGE_CONTEXT_FILES = [
   "page_secrets.py",
   "install-agent-browser.sh",
   "rakazo-browser.desktop",
+  "mimeapps.list",
   "browser-policy.json",
   "embed.html",
   "clipboard-bridge.js",
@@ -671,6 +674,7 @@ export interface ComputerCreateInput {
   /** Added by features the computer was made for, such as its owner's own network. */
   env?: string[];
   labels?: Record<string, string>;
+  gpu?: ComputerGpu;
   /** Docker's GPU device count, where -1 means all (see resolveComputerComputeGpus). */
   computeGpus?: number;
   /** PAC URL for the bot browser (see resolveComputerBrowserProxyPacUrl). */
@@ -707,6 +711,8 @@ export function containerCreateOptions(input: ComputerCreateInput) {
       "NPM_CONFIG_PREFIX=/home/rakazo/.local",
       "PIP_USER=1",
       ...(input.controlToken ? [`RAKAZO_COMPUTER_CONTROL_TOKEN=${input.controlToken}`] : []),
+      // Only the render node setting is for the browser; compute GPUs alone keep it in software.
+      ...(input.gpu ? [BROWSER_GPU_ENV] : []),
       ...computerLocaleEnv(input.locale),
       ...(input.env ?? []),
       ...(input.browserProxyPacUrl ? [`${BROWSER_PROXY_PAC_ENV}=${input.browserProxyPacUrl}`] : []),
@@ -750,6 +756,7 @@ export function containerCreateOptions(input: ComputerCreateInput) {
       AutoRemove: false,
       NetworkMode: input.networkMode ?? "bridge",
       ...(input.dns ? { Dns: input.dns } : {}),
+      ...computerGpuHostConfig(input.gpu),
       // No driver named: Docker picks whichever one on the host provides GPUs.
       ...(input.computeGpus !== undefined
         ? { DeviceRequests: [{ Count: input.computeGpus, Capabilities: [["gpu"]] }] }
@@ -931,5 +938,15 @@ function mapKey(key: string) {
   if (lower === "alt") return "alt";
   if (lower === "shift") return "shift";
   if (lower === "meta" || lower === "cmd" || lower === "super") return "super";
+  if (lower === "pagedown" || lower === "page_down" || lower === "pgdn") return "Page_Down";
+  if (lower === "pageup" || lower === "page_up" || lower === "pgup") return "Page_Up";
+  if (lower === "arrowup" || lower === "up") return "Up";
+  if (lower === "arrowdown" || lower === "down") return "Down";
+  if (lower === "arrowleft" || lower === "left") return "Left";
+  if (lower === "arrowright" || lower === "right") return "Right";
+  if (lower === "delete" || lower === "del") return "Delete";
+  if (lower === "home") return "Home";
+  if (lower === "end") return "End";
+  if (lower === "insert" || lower === "ins") return "Insert";
   return key;
 }

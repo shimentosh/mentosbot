@@ -1,23 +1,37 @@
 import { useLingui } from "@lingui/react/macro";
-import type { VoiceCatalogEntry, VoiceCredential, VoiceInfo, VoiceStatus } from "@rakazo/contracts";
+import type {
+  VoiceCatalogEntry,
+  VoiceCredential,
+  VoiceInfo,
+  VoiceModelInfo,
+  VoiceStatus,
+} from "@rakazo/contracts";
 import {
   DEFAULT_COMPATIBLE_STT_MODEL,
   DEFAULT_COMPATIBLE_TTS_MODEL,
+  MAX_TRANSCRIPTION_VOCABULARY_LENGTH,
   OPENAI_COMPATIBLE_PROVIDER_ID,
+  savedVoiceTranscriptionVocabulary,
   voiceConnectionForm,
 } from "@rakazo/contracts";
 import { fetchFresh, writeSaved } from "@rakazo/core/query";
+import { bestEffort } from "@rakazo/logging/best-effort";
 import { isCancelledError } from "@tanstack/react-query";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { DisclosureRow } from "../../components/models/model-connection-fields";
+import { VoiceModelConnectionActions } from "../../components/models/voice-model-connection-actions";
 import { NativeActionButton } from "../../components/native/native-action-button";
 import { NativeSwitch } from "../../components/native/native-switch";
 import { LoadFailure } from "../../components/ui/load-failure";
 import { MenuPicker } from "../../components/ui/menu-picker";
 import { errorText } from "../../lib/api/user-error";
-import { mobileTokens } from "../../lib/appearance/appearance";
+import {
+  loadCallAutoLanguage,
+  saveCallAutoLanguage,
+} from "../../lib/calls/call-language-preference";
 import {
   loadCallGreetingEnabled,
   loadCallSoundsEnabled,
@@ -34,10 +48,18 @@ import type { SettingsTarget } from "../../lib/query/settings-target";
 import { settingsRpc, settingsTarget } from "../../lib/query/settings-target";
 import { loadDeviceVoiceEnabled, saveDeviceVoiceEnabled } from "../../lib/voice/device-voice";
 import { speakText } from "../../lib/voice/voice";
+import { createVoiceStyles } from "../../lib/voice/voice-settings-styles";
 
 const DEVICE_CHOICE = "device";
 
-const CONNECTION_FIELDS = ["speechModel", "baseUrl", "ttsModel", "sttModel", "sttBaseUrl"] as const;
+const CONNECTION_FIELDS = [
+  "speechModel",
+  "baseUrl",
+  "ttsModel",
+  "sttModel",
+  "sttBaseUrl",
+  "transcriptionVocabulary",
+] as const;
 type VoiceField = "voiceId" | (typeof CONNECTION_FIELDS)[number];
 
 /** A Space's override is read from that Space even when another one is selected. */
@@ -54,6 +76,8 @@ const voiceReads = (target: SettingsTarget) => {
 };
 const voicesRead = (target: SettingsTarget, provider: string) =>
   rpcQuery("voice/voices", { provider, scope: target.scope }, targetSpace(target));
+const modelsRead = (target: SettingsTarget, provider: string) =>
+  rpcQuery("voice/models", { provider, scope: target.scope }, targetSpace(target));
 
 function pickProvider(catalog: VoiceCatalogEntry[], status: VoiceStatus, preferred?: string) {
   return (
@@ -94,26 +118,43 @@ export default function VoiceSettings() {
   const [credentials, setCredentials] = useState<VoiceCredential[]>(cached?.credentials ?? []);
   const [status, setStatus] = useState<VoiceStatus | null>(cached?.status ?? null);
   const [voices, setVoices] = useState<VoiceInfo[]>(cached?.voices ?? []);
+  const [modelList, setModelList] = useState<{ provider: string; models: VoiceModelInfo[] }>({
+    provider: "",
+    models: [],
+  });
   const [provider, setProvider] = useState(cached?.provider ?? "");
   const [apiKey, setApiKey] = useState("");
   const [voiceId, setVoiceId] = useState(cached?.credential?.voiceId ?? "");
   const [speechModel, setSpeechModel] = useState(cached?.credential?.speechModel ?? "");
   const [baseUrl, setBaseUrl] = useState(cached?.credential?.endpoint ?? "");
   const [ttsModel, setTtsModel] = useState(cached?.credential?.ttsModel ?? "");
+  const [transcriptionVocabulary, setTranscriptionVocabulary] = useState<string>();
   const [sttModel, setSttModel] = useState(cached?.credential?.sttModel ?? "");
   const [sttBaseUrl, setSttBaseUrl] = useState(cached?.credential?.sttEndpoint ?? "");
   const [sttApiKey, setSttApiKey] = useState("");
+  // The provider whose API key form is unfolded below its model connection choices.
+  const [keyFormProvider, setKeyFormProvider] = useState<string | null>(null);
   // The connection fields as last rendered, read when a connect finishes.
   const connection = useRef({
     speechModel,
     baseUrl,
     ttsModel,
     sttModel,
+    transcriptionVocabulary,
     sttBaseUrl,
     apiKey,
     sttApiKey,
   });
-  connection.current = { speechModel, baseUrl, ttsModel, sttModel, sttBaseUrl, apiKey, sttApiKey };
+  connection.current = {
+    speechModel,
+    baseUrl,
+    ttsModel,
+    sttModel,
+    transcriptionVocabulary,
+    sttBaseUrl,
+    apiKey,
+    sttApiKey,
+  };
   // Fields typed into since the last load; an opening refresh keeps them only while their
   // provider stays selected.
   const edited = useRef(new Set<VoiceField>());
@@ -128,9 +169,10 @@ export default function VoiceSettings() {
   const [callSounds, setCallSounds] = useState<boolean | null>(null);
   const [waitSound, setWaitSound] = useState<boolean | null>(null);
   const [callGreeting, setCallGreeting] = useState<boolean | null>(null);
+  const [autoLanguage, setAutoLanguage] = useState<boolean | null>(null);
   // Prevent stale reads from overwriting a saved preference.
-  const soundPrefsRevision = useRef(0);
-  const soundPrefSaving = useRef(false);
+  const callPrefsRevision = useRef(0);
+  const callPrefSaving = useRef(false);
   // Only the first visit waits; a revisit paints what it saw last and refreshes behind it.
   const [loading, setLoading] = useState(!cached);
   const [pending, setPending] = useState<
@@ -176,6 +218,7 @@ export default function VoiceSettings() {
         ["sttBaseUrl", setSttBaseUrl, cred?.sttEndpoint],
       ];
       for (const [field, set, value] of fields) if (!edited.current.has(field)) set(value ?? "");
+      if (!edited.current.has("transcriptionVocabulary")) setTranscriptionVocabulary(undefined);
       if (cred) {
         const nextVoices = await fetchFresh(queryClient, voicesRead(target, selected), fresh);
         if (revision === loadRevision.current) setVoices(nextVoices);
@@ -219,17 +262,21 @@ export default function VoiceSettings() {
           setDeviceVoiceReady(true);
           setError(errorText(err, t`Could not load voice settings`));
         });
-      const soundRevision = soundPrefsRevision.current;
+      const callRevision = callPrefsRevision.current;
       void Promise.allSettled([
         loadCallSoundsEnabled(),
         loadWaitSoundEnabled(),
         loadCallGreetingEnabled(),
-      ]).then(([calls, waiting, greeting]) => {
-        if (soundPrefSaving.current || soundPrefsRevision.current !== soundRevision) return;
+        loadCallAutoLanguage(),
+      ]).then(([calls, waiting, greeting, language]) => {
+        if (callPrefSaving.current || callPrefsRevision.current !== callRevision) return;
         setCallSounds(calls.status === "fulfilled" ? calls.value : null);
         setWaitSound(waiting.status === "fulfilled" ? waiting.value : null);
         setCallGreeting(greeting.status === "fulfilled" ? greeting.value : null);
-        const failed = [calls, waiting, greeting].find((result) => result.status === "rejected");
+        setAutoLanguage(language.status === "fulfilled" ? language.value : null);
+        const failed = [calls, waiting, greeting, language].find(
+          (result) => result.status === "rejected",
+        );
         if (failed?.status === "rejected") {
           setError(errorText(failed.reason, t`Could not load voice settings`));
         }
@@ -237,15 +284,15 @@ export default function VoiceSettings() {
     }, [deviceSettings, open, t]),
   );
 
-  /** One sound-switch save at a time; a failed save rolls back only that switch. */
-  async function saveSoundPref(
+  /** One call preference save at a time; a failed save rolls back only that switch. */
+  async function saveCallPref(
     next: boolean,
     show: (value: boolean) => void,
     save: (value: boolean) => Promise<void>,
   ): Promise<boolean> {
-    if (soundPrefSaving.current) return false;
-    soundPrefSaving.current = true;
-    soundPrefsRevision.current += 1;
+    if (callPrefSaving.current) return false;
+    callPrefSaving.current = true;
+    callPrefsRevision.current += 1;
     show(next);
     try {
       await save(next);
@@ -255,24 +302,24 @@ export default function VoiceSettings() {
       setError(t`Could not save that preference`);
       return false;
     } finally {
-      soundPrefSaving.current = false;
-      soundPrefsRevision.current += 1;
+      callPrefSaving.current = false;
+      callPrefsRevision.current += 1;
     }
   }
 
   async function toggleWaitSound(next: boolean) {
     if (waitSound === null) return;
-    await saveSoundPref(next, setWaitSound, saveWaitSoundEnabled);
+    await saveCallPref(next, setWaitSound, saveWaitSoundEnabled);
   }
 
   async function toggleCallGreeting(next: boolean) {
     if (callGreeting === null) return;
-    await saveSoundPref(next, setCallGreeting, saveCallGreetingEnabled);
+    await saveCallPref(next, setCallGreeting, saveCallGreetingEnabled);
   }
 
   async function toggleCallSounds(next: boolean) {
     if (callSounds === null) return;
-    const saved = await saveSoundPref(next, setCallSounds, saveCallSoundsEnabled);
+    const saved = await saveCallPref(next, setCallSounds, saveCallSoundsEnabled);
     // The preview is a courtesy: if it cannot play, the saved choice still stands.
     if (saved && next) await playCallCue("start").catch(() => undefined);
   }
@@ -360,18 +407,47 @@ export default function VoiceSettings() {
     credentials.some((entry) => entry.provider === OPENAI_COMPATIBLE_PROVIDER_ID);
 
   const selfHosted = selected?.id === OPENAI_COMPATIBLE_PROVIDER_ID;
+  const listsSpeechModels = Boolean(selected?.speechModels && credential);
+  const speechModelChoices = modelList.provider === provider ? modelList.models : [];
+  useEffect(() => {
+    if (!listsSpeechModels || !provider) return;
+    let current = true;
+    fetchFresh(queryClient, modelsRead(target, provider), { reuse: true }).then(
+      (models) => {
+        if (current) setModelList({ provider, models });
+      },
+      // Without the list the field stays a text box.
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [listsSpeechModels, provider, target]);
   const keyless = Boolean(selected?.keyless);
-  const { keyOptional, linked, canConnect } = voiceConnectionForm({
+  const managesConnection = deviceSettings || !credential;
+  const { linked, canConnect, modelConnections, modelSignIn } = voiceConnectionForm({
     entry: selected,
     credential,
     apiKey,
     baseUrl,
   });
+  const offersModelConnection = modelConnections.length > 0 || Boolean(modelSignIn);
+  const showKeyForm = credential?.hasKey || !offersModelConnection || keyFormProvider === provider;
 
-  async function connect() {
-    if (!selected || !canConnect) return;
+  /**
+   * The sign-in already saved the model connection; when voice cannot connect through it, read
+   * the catalog again so it shows as a connection to use instead of another sign-in.
+   */
+  async function connectSignedIn(credentialId: string) {
+    if (await connect(credentialId)) return;
+    await bestEffort("refresh voice after model sign-in", load(selected?.id, { keepForm: true }));
+  }
+
+  /** Connects with the typed key, or through one of the account's model connections. */
+  async function connect(modelCredentialId?: string): Promise<boolean> {
+    if (!selected || !(modelCredentialId || canConnect)) return false;
     // What this connect carries; anything typed after this point was not saved.
-    const sentApiKey = apiKey;
+    const sentApiKey = modelCredentialId ? "" : apiKey;
     const sentSttApiKey = sttApiKey;
     const sent = connection.current;
     setPending("connect");
@@ -382,6 +458,7 @@ export default function VoiceSettings() {
         provider: selected.id,
         scope,
         apiKey: sentApiKey.trim(),
+        modelCredentialId,
         // The server drops this voice when the address or speech model really changed.
         voiceId: voiceId || undefined,
         ...(selected.speechModel ? { speechModel: speechModel.trim() } : {}),
@@ -390,6 +467,9 @@ export default function VoiceSettings() {
               baseUrl: baseUrl.trim(),
               ttsModel: ttsModel.trim() || undefined,
               sttModel: sttModel.trim() || undefined,
+              ...(selected.transcriptionVocabulary && edited.current.has("transcriptionVocabulary")
+                ? { transcriptionVocabulary }
+                : {}),
               sttBaseUrl: sttBaseUrl.trim(),
               sttApiKey: sentSttApiKey.trim(),
             }
@@ -430,11 +510,17 @@ export default function VoiceSettings() {
       // A key typed meanwhile stays pinned to the address it was typed for.
       if (connection.current.apiKey !== sent.apiKey) edited.current.add("baseUrl");
       if (connection.current.sttApiKey !== sent.sttApiKey) edited.current.add("sttBaseUrl");
+      if (connection.current.transcriptionVocabulary !== sent.transcriptionVocabulary) {
+        edited.current.add("baseUrl");
+        edited.current.add("sttBaseUrl");
+      }
       await load(selected.id, { keepForm: true }).catch((err: unknown) =>
         setError(errorText(err, t`Could not load voice settings`)),
       );
+      return true;
     } catch (err) {
       setError(errorText(err, t`Could not connect`));
+      return false;
     } finally {
       setPending(null);
     }
@@ -471,9 +557,9 @@ export default function VoiceSettings() {
     }
   }
 
-  async function saveSpeechModel() {
+  async function saveSpeechModel(value = speechModel) {
     if (!credential || !selected?.speechModel || pending !== null) return;
-    const next = speechModel.trim();
+    const next = value.trim();
     if (next === (credential.speechModel ?? "")) return;
     if (speechModelSave.current === next) return;
     speechModelSave.current = next;
@@ -492,9 +578,13 @@ export default function VoiceSettings() {
       loadRevision.current++;
       edited.current.delete("speechModel");
       setSpeechModel(saved.speechModel ?? "");
+      // The server moved the voice to one the new model has.
+      if (!edited.current.has("voiceId")) setVoiceId(saved.voiceId ?? "");
       setCredentials(merge);
       await writeSaved(queryClient, voiceReads(target).credentials.queryKey, merge);
-      void load(selected.id, { keepForm: true, reuse: true }).catch(() => undefined);
+      void load(selected.id, { keepForm: true, reuse: !selected.speechModels }).catch(
+        () => undefined,
+      );
     } catch (err) {
       setError(errorText(err, t`Could not save that speech model`));
     } finally {
@@ -517,6 +607,7 @@ export default function VoiceSettings() {
         scope,
       });
       setStatus(saved);
+      edited.current.delete("voiceId");
       // A cached revisit initializes the picker from credentials, not status.
       const merge = (current: VoiceCredential[] = []) =>
         current.map((entry) =>
@@ -607,7 +698,7 @@ export default function VoiceSettings() {
         ) : null}
         {selected && deviceVoiceReady && !deviceVoice ? (
           <>
-            {selfHosted ? (
+            {managesConnection && selfHosted ? (
               <TextInput
                 accessibilityLabel={t`Server URL`}
                 autoCapitalize="none"
@@ -623,7 +714,28 @@ export default function VoiceSettings() {
                 textContentType="URL"
               />
             ) : null}
-            {keyless || linked ? null : (
+            {managesConnection ? (
+              <VoiceModelConnectionActions
+                provider={selected.id}
+                target={target}
+                choices={modelConnections}
+                signInLabel={modelSignIn}
+                linked={linked}
+                disabled={pending !== null}
+                onChoose={connect}
+                onSignedIn={connectSignedIn}
+              />
+            ) : null}
+            {managesConnection && offersModelConnection && !linked && !credential?.hasKey ? (
+              <DisclosureRow
+                label={t`Or paste an API key`}
+                expanded={showKeyForm}
+                onPress={() =>
+                  setKeyFormProvider((current) => (current === provider ? null : provider))
+                }
+              />
+            ) : null}
+            {managesConnection && !keyless && !linked && showKeyForm ? (
               <TextInput
                 accessibilityLabel={t`API key`}
                 autoCapitalize="none"
@@ -634,7 +746,7 @@ export default function VoiceSettings() {
                 // The key belongs to this address, so a refresh must not swap it.
                 onChangeText={edit("baseUrl", setApiKey)}
                 placeholder={
-                  selfHosted || keyOptional
+                  selfHosted
                     ? t`Optional`
                     : credential
                       ? t`Paste a replacement key`
@@ -645,8 +757,8 @@ export default function VoiceSettings() {
                 style={styles.input}
                 textContentType="none"
               />
-            )}
-            {selfHosted ? (
+            ) : null}
+            {managesConnection && selfHosted ? (
               <>
                 <Text style={styles.fieldLabel}>{t`Speech model`}</Text>
                 <TextInput
@@ -670,6 +782,29 @@ export default function VoiceSettings() {
                   placeholderTextColor={native.tertiaryLabel}
                   style={styles.input}
                 />
+                {selected.transcriptionVocabulary ? (
+                  <>
+                    <Text style={styles.fieldLabel}>{t`Transcription vocabulary`}</Text>
+                    <TextInput
+                      accessibilityLabel={t`Transcription vocabulary`}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      maxLength={MAX_TRANSCRIPTION_VOCABULARY_LENGTH}
+                      placeholder={t`Names and terms (optional)`}
+                      placeholderTextColor={native.tertiaryLabel}
+                      value={
+                        transcriptionVocabulary ??
+                        savedVoiceTranscriptionVocabulary(credential, baseUrl, sttBaseUrl)
+                      }
+                      onChangeText={edit("transcriptionVocabulary", (value) => {
+                        edited.current.add("baseUrl");
+                        edited.current.add("sttBaseUrl");
+                        setTranscriptionVocabulary(value);
+                      })}
+                      style={styles.input}
+                    />
+                  </>
+                ) : null}
                 <Text style={styles.fieldLabel}>{t`Transcription server URL`}</Text>
                 <TextInput
                   accessibilityLabel={t`Transcription server URL`}
@@ -704,15 +839,16 @@ export default function VoiceSettings() {
                 ) : null}
               </>
             ) : null}
-            {(keyless && credential) || linked ? null : (
+            {managesConnection && !(keyless && credential) && !linked && showKeyForm ? (
               <NativeActionButton
                 disabled={pending !== null || !canConnect}
+                prominence={offersModelConnection ? "secondary" : "primary"}
                 label={
                   credential && selfHosted ? t`Reconnect` : credential ? t`Replace key` : t`Connect`
                 }
                 onPress={() => void connect()}
               />
-            )}
+            ) : null}
             {credential && scope === "account" ? (
               <NativeActionButton
                 disabled={pending !== null}
@@ -724,19 +860,44 @@ export default function VoiceSettings() {
             {credential && selected.speechModel ? (
               <>
                 <Text style={styles.fieldLabel}>{t`Speech model`}</Text>
-                <TextInput
-                  accessibilityLabel={t`Speech model`}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={pending === null}
-                  value={speechModel}
-                  onChangeText={edit("speechModel", setSpeechModel)}
-                  onBlur={() => void saveSpeechModel()}
-                  onSubmitEditing={() => void saveSpeechModel()}
-                  placeholder={t`Optional`}
-                  placeholderTextColor={native.tertiaryLabel}
-                  style={styles.input}
-                />
+                {listsSpeechModels && speechModelChoices.length ? (
+                  <View style={styles.group}>
+                    <MenuPicker
+                      label={t`Speech model`}
+                      disabled={pending !== null}
+                      choices={[
+                        { key: "", label: t`Default` },
+                        ...(speechModel &&
+                        !speechModelChoices.some((model) => model.id === speechModel)
+                          ? [{ key: speechModel, label: speechModel }]
+                          : []),
+                        ...speechModelChoices.map((model) => ({
+                          key: model.id,
+                          label: model.label,
+                        })),
+                      ]}
+                      value={speechModel}
+                      onChange={(key) => {
+                        edit("speechModel", setSpeechModel)(key);
+                        void saveSpeechModel(key);
+                      }}
+                    />
+                  </View>
+                ) : (
+                  <TextInput
+                    accessibilityLabel={t`Speech model`}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={pending === null}
+                    value={speechModel}
+                    onChangeText={edit("speechModel", setSpeechModel)}
+                    onBlur={() => void saveSpeechModel()}
+                    onSubmitEditing={() => void saveSpeechModel()}
+                    placeholder={t`Optional`}
+                    placeholderTextColor={native.tertiaryLabel}
+                    style={styles.input}
+                  />
+                )}
               </>
             ) : null}
             {voices.length ? (
@@ -749,6 +910,28 @@ export default function VoiceSettings() {
                   onChange={(key) => void chooseVoice(key)}
                 />
               </View>
+            ) : credential && selected.freeformVoice ? (
+              <>
+                <Text style={styles.fieldLabel}>{t`Voice`}</Text>
+                <TextInput
+                  accessibilityLabel={t`Voice`}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={pending === null}
+                  value={voiceId}
+                  onChangeText={edit("voiceId", setVoiceId)}
+                  onBlur={() => {
+                    const next = voiceId.trim();
+                    if (next && next !== credential.voiceId) void chooseVoice(next);
+                    else if (!next) {
+                      edited.current.delete("voiceId");
+                      setVoiceId(credential.voiceId);
+                    }
+                  }}
+                  placeholderTextColor={native.tertiaryLabel}
+                  style={styles.input}
+                />
+              </>
             ) : null}
           </>
         ) : null}
@@ -794,44 +977,22 @@ export default function VoiceSettings() {
                 onValueChange={(next) => void toggleCallGreeting(next)}
               />
             </View>
+            <View style={[styles.groupRow, styles.groupDivider]}>
+              <View style={styles.rowCopy}>
+                <Text style={styles.cardTitle}>{t`Detect call language automatically`}</Text>
+              </View>
+              <NativeSwitch
+                accessibilityLabel={t`Detect call language automatically`}
+                value={autoLanguage === true}
+                disabled={autoLanguage === null}
+                onValueChange={(next) =>
+                  void saveCallPref(next, setAutoLanguage, saveCallAutoLanguage)
+                }
+              />
+            </View>
           </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function createVoiceStyles() {
-  const tokens = mobileTokens();
-  return StyleSheet.create({
-    screen: { flex: 1, backgroundColor: native.page },
-    content: { padding: 20, gap: 10 },
-    error: { color: tokens.destructive, marginBottom: 8 },
-    group: { borderRadius: 14, backgroundColor: native.fill, overflow: "hidden" },
-    groupRow: {
-      minHeight: 52,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    groupDivider: {
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: native.separator,
-    },
-    rowCopy: { flex: 1 },
-    cardTitle: { color: native.label, fontSize: 16 },
-    fieldLabel: { color: native.label, marginTop: 16 },
-    input: {
-      marginTop: 8,
-      borderRadius: 12,
-      backgroundColor: native.fill,
-      color: native.label,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-    },
-    disabled: { opacity: 0.4 },
-    pressed: { opacity: 0.7 },
-  });
 }

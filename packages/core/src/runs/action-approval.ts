@@ -1,4 +1,9 @@
-import type { ActionApprovalRule as StoredActionApprovalRule } from "@rakazo/contracts";
+import type {
+  EffectiveApprovalTarget,
+  RpcInput,
+  RpcOutput,
+  ActionApprovalRule as StoredActionApprovalRule,
+} from "@rakazo/contracts";
 import { BUILTIN_TOOL_NAMES } from "@rakazo/contracts";
 
 export { isSecretAskBlock } from "../asks/ask-kind.js";
@@ -12,6 +17,7 @@ const APPROVAL_EXEMPT_TOOLS = new Set([
   "browser_snapshot",
   "browser_act",
   "list_files",
+  "user_computer_list",
   "read_file",
   "read_history",
   "search_history",
@@ -47,6 +53,7 @@ const OUTSIDE_RUN_SAFE_BUILTIN_TOOLS = new Set([
   "cloud_agent_status",
   "computer_observe",
   "list_files",
+  "user_computer_list",
   "list_fleet",
   "list_secrets",
   "message_user",
@@ -69,6 +76,9 @@ const OUTSIDE_RUN_SAFE_BUILTIN_TOOLS = new Set([
 ]);
 
 const APPROVAL_REQUIRED_BUILTIN_TOOLS = new Set([
+  "create_calendar_event",
+  "create_reminder",
+  "complete_reminder",
   "generate_image",
   "generate_video",
   "service_call",
@@ -76,6 +86,9 @@ const APPROVAL_REQUIRED_BUILTIN_TOOLS = new Set([
   "secret_request",
   "forget_secret",
   "forget_memory",
+  "delete_shared_memory",
+  "skill_delete",
+  "remove_mcp_server",
   // Permanent, and only for mail the bot received; its owner may still want it.
   "delete_email",
   "cloud_agent_launch",
@@ -249,6 +262,28 @@ export function isOwnerStartedRun(
  * not run; a card from a chat someone is in stays open until answered.
  */
 export const UNATTENDED_APPROVAL_EXPIRE_AFTER_MS = 30 * 60 * 1000;
+
+/** One minute to thirty days, the same span the stuck-work settings accept. */
+const UNATTENDED_APPROVAL_MIN_MS = 60 * 1000;
+const UNATTENDED_APPROVAL_MAX_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * How long an unattended approval card stays open, in ms: the deployment's
+ * `UNATTENDED_APPROVAL_EXPIRE_AFTER_MS` when it names a span from one minute to thirty days,
+ * else the 30-minute default. A routine that should wait for an evening approval and one that
+ * should give up before the next tick cannot both use one constant.
+ */
+export function unattendedApprovalExpireAfterMs(
+  raw: string | undefined = process.env.UNATTENDED_APPROVAL_EXPIRE_AFTER_MS,
+): number {
+  const value = raw?.trim() ? Number(raw) : Number.NaN;
+  return Number.isFinite(value) &&
+    value >= UNATTENDED_APPROVAL_MIN_MS &&
+    value <= UNATTENDED_APPROVAL_MAX_MS
+    ? value
+    : UNATTENDED_APPROVAL_EXPIRE_AFTER_MS;
+}
+
 const UNATTENDED_TRIGGERS = new Set(["routine", "webhook", "bot_message", "spawn", "tickets"]);
 
 export function approvalCardExpires(trigger: string): boolean {
@@ -288,6 +323,7 @@ const OWN_STATE_RESULT_TOOLS = new Set([
   "save_page",
   "save_secret",
   "save_shared_memory",
+  "delete_shared_memory",
   "schedule_cancel",
   "schedule_create",
   "schedule_list",
@@ -340,6 +376,122 @@ export async function savedContextWriteNeedsReview(
 ): Promise<boolean> {
   return (
     (MEMORY_WRITE_TOOLS.has(toolName) || SKILL_WRITE_TOOLS.has(toolName)) && (await actionTainted())
+  );
+}
+
+export type LastingWrite = "memory" | "routine" | "instructions";
+
+/** Providers send omitted optional fields as null or blank; only anything else counts as given. */
+export function argumentGiven(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  return typeof value !== "string" || value.trim().length > 0;
+}
+
+/**
+ * The write that outlives the run an Auto Review is about, which gets its own narrow question:
+ * a memory or skill save after outside content, a routine's words, or the bot's own instructions.
+ * A routine update writes its words only when it changes its prompt or events; a pause or a new
+ * time does not. A child bot's instructions always ask its owner, unreviewed. Each is judged on the
+ * owner's own words only.
+ */
+export function lastingWriteKind(input: {
+  toolName: string;
+  args: Record<string, unknown>;
+  newSite?: boolean;
+  savedContextWrite?: boolean;
+  ownComputerAction?: boolean;
+}): LastingWrite | undefined {
+  if (input.newSite || input.ownComputerAction) return undefined;
+  if (input.savedContextWrite) return "memory";
+  if (input.toolName === "schedule_create" || input.toolName === "create_child_routine")
+    return "routine";
+  if (
+    input.toolName === "schedule_update" &&
+    (argumentGiven(input.args.prompt) || argumentGiven(input.args.on))
+  )
+    return "routine";
+  // A blank value leaves the instructions as they are, and a paged read (an offset) only returns
+  // the settings, as the update reads its arguments.
+  if (
+    input.toolName === "update_bot" &&
+    argumentGiven(input.args.instructions) &&
+    !argumentGiven(input.args.instructions_offset ?? input.args.instructionsOffset)
+  )
+    return "instructions";
+  return undefined;
+}
+
+/** What open_path opens as a page rather than a workspace file, as its handler decides. */
+const HTTP_LINK = /^https?:\/\//i;
+/** Page actions that put text or files the bot chose into the page. */
+const PAGE_TYPING_KINDS = new Set(["fill", "type", "upload"]);
+
+function actionsOf(args: Record<string, unknown>): Record<string, unknown>[] {
+  return Array.isArray(args.actions)
+    ? args.actions.filter(
+        (action): action is Record<string, unknown> => !!action && typeof action === "object",
+      )
+    : [];
+}
+
+/**
+ * Whether a call on the bot's own computer could send something off it, and so goes to the approval
+ * model in Auto once outside text entered the run (see isRunTainted): a shell command, which can
+ * reach anything; a page opened, or typed or uploaded into, on a site the run was not given
+ * (`pageSiteGiven`, see outboundSiteGate); desktop typing or key presses (which can paste), or an
+ * app opened with a URI. Page clicks, pointer moves, scrolling and opening a file or app send
+ * nothing the bot chose. Like every taint check it only informs the review; Ask and Never ask treat
+ * the call as they treat any other. The predicates are only checked for calls that could send
+ * something.
+ */
+export async function ownComputerActionNeedsReview(
+  toolName: string,
+  args: Record<string, unknown>,
+  checks: { tainted: () => Promise<boolean>; pageSiteGiven: () => Promise<boolean> },
+): Promise<boolean> {
+  const sends = whatCouldSend(toolName, args);
+  if (!sends || !(await checks.tainted())) return false;
+  return sends !== "page" || !(await checks.pageSiteGiven());
+}
+
+/** "page" when what leaves goes to a page's site, which may be one the run was given. */
+function whatCouldSend(
+  toolName: string,
+  args: Record<string, unknown>,
+): "page" | "other" | undefined {
+  switch (toolName) {
+    case "shell":
+      return "other";
+    case "browser_navigate":
+      return "page";
+    case "open_path":
+      // Only an http(s) link opens as a page; anything else is a workspace file.
+      return HTTP_LINK.test(String(args.path ?? "").trim()) ? "page" : undefined;
+    case "browser_act":
+      return actionsOf(args).some((action) => PAGE_TYPING_KINDS.has(String(action.kind)))
+        ? "page"
+        : undefined;
+    case "computer_act":
+      // Keys can paste or spell out text as well as typing can; only the pointer sends nothing.
+      return actionsOf(args).some(
+        (action) =>
+          action.kind === "type" || action.kind === "key" || String(action.uri ?? "").trim(),
+      )
+        ? "other"
+        : undefined;
+    case "launch_app":
+      return String(args.uri ?? "").trim() ? "other" : undefined;
+    default:
+      return undefined;
+  }
+}
+
+/** A click before what a page action types can leave the page, so the typing lands on another. */
+export function clicksBeforeTyping(args: Record<string, unknown>): boolean {
+  const kinds = actionsOf(args).map((action) => String(action.kind));
+  const firstClick = kinds.indexOf("click");
+  return (
+    firstClick !== -1 && kinds.slice(firstClick + 1).some((kind) => PAGE_TYPING_KINDS.has(kind))
   );
 }
 
@@ -633,7 +785,8 @@ export function planActionGate(input: {
   consequential: boolean;
   /**
    * A call outside content may have steered (a connector read, a memory or skill save, a routine
-   * naming a new site or adding a trigger, a settings change). Only the approval model checks it.
+   * naming a new site or adding a trigger, a settings change, an action on the bot's own
+   * computer). Only the approval model checks it.
    */
   reviewOnly?: boolean;
   checkerConfigured: boolean;
@@ -734,9 +887,96 @@ export function approvalRuleEffectChoices(
   return APPROVAL_RULE_EFFECTS;
 }
 
+export type AppPermissionTool = RpcOutput<"connections/tools">[number];
+export type AppToolPermission = ActionApprovalRule["effect"] | "default";
+export type AppToolPermissionChange = { key: string; permission: AppToolPermission };
+
+export function appToolPermissionChoices(mode: ApprovalMode | null | undefined) {
+  return [
+    { permission: "default", disabled: false },
+    ...APPROVAL_RULE_EFFECTS.map((permission) => ({
+      permission,
+      disabled: !approvalRuleApplies(mode, permission),
+    })),
+  ] satisfies { permission: AppToolPermission; disabled: boolean }[];
+}
+
+export function groupAppPermissionTools(tools: readonly AppPermissionTool[]) {
+  const reads: AppPermissionTool[] = [];
+  const other: AppPermissionTool[] = [];
+  for (const tool of tools) {
+    const group = connectorToolRequiresApproval(tool.name, tool.readOnly) ? other : reads;
+    group.push(tool);
+  }
+  return { reads, other };
+}
+
+export function appToolRules(rules: readonly StoredActionApprovalRule[]) {
+  return new Map(
+    rules
+      .filter((rule) => rule.matchKind === "tool")
+      .map((rule) => [rule.matchValue.toLowerCase(), rule]),
+  );
+}
+
+type AppToolPermissionRequest =
+  | { kind: "set"; input: RpcInput<"approvalRules/set"> }
+  | { kind: "remove"; input: RpcInput<"approvalRules/remove"> };
+
+export function appToolPermissionRequest(
+  { key, permission }: AppToolPermissionChange,
+  rules: ReturnType<typeof appToolRules>,
+  expectedTarget: EffectiveApprovalTarget,
+): AppToolPermissionRequest | undefined {
+  if (permission === "default") {
+    const rule = rules.get(key.toLowerCase());
+    return rule ? { kind: "remove", input: { id: rule.id, expectedTarget } } : undefined;
+  }
+  return {
+    kind: "set",
+    input: { effect: permission, matchKind: "tool", matchValue: key, expectedTarget },
+  };
+}
+
+const APP_TOOL_RULE_PREFIX = "app-tool/";
+
+export function appToolApprovalKey(route?: {
+  connectionId?: string;
+  connectorId: string;
+  resourceId?: string;
+  toolName: string;
+}): string | undefined {
+  if (!route?.connectionId || !route.resourceId) return undefined;
+  return (
+    APP_TOOL_RULE_PREFIX + JSON.stringify([route.connectorId, route.resourceId, route.toolName])
+  );
+}
+
+export function connectorToolApprovalIdentity(
+  name: string,
+  route?: Parameters<typeof appToolApprovalKey>[0],
+) {
+  const approvalName = route?.connectionId ? route.toolName : name;
+  const aliases = approvalName === name ? [] : [name];
+  const appKey = appToolApprovalKey(route);
+  if (appKey) aliases.push(appKey);
+  return { name: approvalName, aliases };
+}
+
 /** A site reads as itself; a tool, app or older category by its name. */
 export function approvalRuleLabel(rule: ActionApprovalRule): string {
-  return rule.matchKind === "site" ? rule.matchValue : humanizeToolName(rule.matchValue);
+  if (rule.matchKind === "site") return rule.matchValue;
+  if (rule.matchKind === "tool" && rule.matchValue.startsWith(APP_TOOL_RULE_PREFIX)) {
+    try {
+      const parts: unknown = JSON.parse(rule.matchValue.slice(APP_TOOL_RULE_PREFIX.length));
+      if (Array.isArray(parts) && typeof parts[1] === "string" && typeof parts[2] === "string") {
+        return `${humanizeToolName(parts[1])} · ${humanizeToolName(parts[2])}`;
+      }
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) throw error;
+    }
+  }
+  return humanizeToolName(rule.matchValue);
 }
 
 /** A built-in tool a person can add a rule for. */

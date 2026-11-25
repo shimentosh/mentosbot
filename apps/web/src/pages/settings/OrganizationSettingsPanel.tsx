@@ -1,7 +1,18 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import { canDeleteOrganization } from "@rakazo/core";
-import { Button, Field, FieldLabel, Input } from "@rakazo/ui-web";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Field,
+  FieldLabel,
+  Input,
+} from "@rakazo/ui-web";
+import { MoreHorizontal } from "lucide-react";
 import { useEffect, useId, useState } from "react";
+import { AuditLog } from "../../components/audit/AuditLog";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { SettingsGroup, SettingsRow } from "../../components/settings/SettingsRows";
 import { useQueryUserId, useSave } from "../../lib/query/query";
@@ -11,10 +22,16 @@ import type { Organization } from "../../lib/spaces/organizations";
 import { organizationsQuery, useOrganizations } from "../../lib/spaces/organizations";
 import { TeamMembersSettings } from "./TeamMembersSettings";
 
-/** The organization the app is showing: its name, and, for its owner, renaming and deletion. */
+export type OrganizationPage = "main" | "log";
+
+/** The organization the app is showing: its name, its members and, for its owner, renaming. */
 export function OrganizationSettingsPanel({
+  page,
+  onPageChange,
   onBusyChange,
 }: {
+  page: OrganizationPage;
+  onPageChange: (page: OrganizationPage) => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
   const { organizations, activeOrganizationId } = useOrganizations();
@@ -24,22 +41,67 @@ export function OrganizationSettingsPanel({
     <OrganizationSettings
       key={organization.id}
       organization={organization}
-      // Only an organization nobody else has joined can be deleted.
-      canDelete={
-        canDeleteOrganization(organizations, organization) && organization.memberCount === 1
-      }
+      page={page}
+      onPageChange={onPageChange}
       onBusyChange={onBusyChange}
     />
   );
 }
 
+/** In the page header: the organization's activity log and, when allowed, its deletion. */
+export function OrganizationOptionsMenu({ onActivityLog }: { onActivityLog: () => void }) {
+  const { t } = useLingui();
+  const { organizations, activeOrganizationId } = useOrganizations();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const organization = organizations.find((candidate) => candidate.id === activeOrganizationId);
+  if (!organization) return null;
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground"
+              aria-label={t`Organization options`}
+            />
+          }
+        >
+          <MoreHorizontal />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-[200px]">
+          <DropdownMenuItem onClick={onActivityLog}>
+            <Trans>Activity log</Trans>
+          </DropdownMenuItem>
+          {/* Only an organization nobody else has joined can be deleted. */}
+          {canDeleteOrganization(organizations, organization) && organization.memberCount === 1 ? (
+            <DropdownMenuItem variant="destructive" onClick={() => setConfirmingDelete(true)}>
+              <Trans>Delete organization</Trans>
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {confirmingDelete ? (
+        <DeleteOrganizationDialog
+          organization={organization}
+          onCancel={() => setConfirmingDelete(false)}
+          onConfirm={() => removeOrganization(organization)}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function OrganizationSettings({
   organization,
-  canDelete,
+  page,
+  onPageChange,
   onBusyChange,
 }: {
   organization: Organization;
-  canDelete: boolean;
+  page: OrganizationPage;
+  onPageChange: (page: OrganizationPage) => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
   const userId = useQueryUserId();
@@ -52,7 +114,6 @@ function OrganizationSettings({
     onSaved: (_renamed, name) => setDraft(name),
   });
   const pending = rename.pending;
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
   useEffect(() => {
     onBusyChange?.(pending);
   }, [pending, onBusyChange]);
@@ -67,6 +128,15 @@ function OrganizationSettings({
     }
     rename.run(trimmed);
   }
+
+  if (page === "log")
+    return (
+      <AuditLog
+        organizationId={organization.id}
+        spaceId={organization.defaultSpaceId}
+        onBack={() => onPageChange("main")}
+      />
+    );
 
   return (
     <div className="space-y-8" data-testid="organization-settings">
@@ -117,22 +187,6 @@ function OrganizationSettings({
         </SettingsRow>
       </SettingsGroup>
       <TeamMembersSettings organizationId={organization.id} />
-      {canDelete ? (
-        <Button
-          variant="destructive"
-          className="rounded-full"
-          onClick={() => setConfirmingDelete(true)}
-        >
-          <Trans>Delete organization</Trans>
-        </Button>
-      ) : null}
-      {confirmingDelete ? (
-        <DeleteOrganizationDialog
-          organization={organization}
-          onCancel={() => setConfirmingDelete(false)}
-          onConfirm={() => removeOrganization(organization)}
-        />
-      ) : null}
     </div>
   );
 }

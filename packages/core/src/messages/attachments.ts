@@ -1,5 +1,6 @@
 import type { AttachmentMimeType, HistoryToolStep, MessageBlock } from "@rakazo/contracts";
 import {
+  AGENT_IMPORT_ASK_ACTION_ID,
   ATTACHMENT_COUNT_CEILING,
   ATTACHMENT_MAX_BYTES,
   ATTACHMENT_MAX_COUNT,
@@ -7,11 +8,9 @@ import {
   isAllowedAttachmentMimeType,
   isAttachmentImageMimeType,
 } from "@rakazo/contracts";
-import {
-  askChoiceAnswerText,
-  askChoicePlainText,
-  askChoiceSelection,
-} from "../asks/answerable-ask.js";
+import { askChoiceAnswerText, askChoiceSelection } from "../asks/answerable-ask.js";
+import { askOptionLetter, isQuestionAskBlock } from "../asks/ask-kind.js";
+import { sliceWellFormed } from "../primitives/utf8.js";
 import { isApprovalAskBlock, isSecretAskBlock } from "../runs/action-approval.js";
 import { cardPlainText } from "./status-card.js";
 
@@ -146,7 +145,7 @@ export function normalizeVoiceTranscript(value: string | null | undefined): stri
       return code >= 32 && !(code >= 0x7f && code <= 0x9f);
     })
     .join("");
-  return printable.trim().slice(0, VOICE_TRANSCRIPT_MAX_CHARS);
+  return sliceWellFormed(printable.trim(), VOICE_TRANSCRIPT_MAX_CHARS);
 }
 
 export function promptTextForAttachments(
@@ -191,7 +190,7 @@ export function toolStepsHistoryText(
   const lines = shown.map((step) => {
     const name =
       !full && step.label.length > TOOL_STEP_LABEL_MAX_CHARS
-        ? `${step.label.slice(0, TOOL_STEP_LABEL_MAX_CHARS)}…`
+        ? `${sliceWellFormed(step.label, TOOL_STEP_LABEL_MAX_CHARS)}…`
         : step.label;
     const counted = Number(step.count) > 1 ? `${name} ×${step.count}` : name;
     const outcome = toolStepOutcomeText(step);
@@ -199,7 +198,7 @@ export function toolStepsHistoryText(
     const whole = typeof step.note === "string" ? step.note.replace(/\s+/g, " ").trim() : "";
     const note =
       !full && whole.length > TOOL_STEP_NOTE_MAX_CHARS
-        ? `${whole.slice(0, TOOL_STEP_NOTE_MAX_CHARS)}…`
+        ? `${sliceWellFormed(whole, TOOL_STEP_NOTE_MAX_CHARS)}…`
         : whole;
     return note ? `- ${label}: ${note}` : `- ${label}`;
   });
@@ -297,20 +296,28 @@ function blockHistoryText(block: MessageBlock): string {
       block.detail && !isApprovalAskBlock(block) && !isSecretAskBlock(block)
         ? `\n<draft>\n${block.detail.replace(/<\s*\/\s*draft\s*>/gi, "&lt;/draft&gt;")}\n</draft>`
         : "";
-    const choiceAsk = Boolean(block.actions?.length) && !block.approvalEffectId;
-    // A pending question keeps its options, so a later reply naming one by number reads.
-    if (block.status !== "answered" || (!block.answer && !block.answers))
-      return choiceAsk
-        ? askChoicePlainText({ ...block, text: `${block.text}${detail}` })
-        : `${block.text}${detail}`;
-    if (!choiceAsk) {
-      const choice = block.actions?.find((action) => action.id === block.answer);
-      return `${block.text}${detail}\nAnswer: ${choice?.label ?? block.answer}`;
-    }
+    // The card shows its options lettered, and a typed reply like "A and C" refers to them.
+    // The import button opens a flow rather than answering, so it is not an option here. A
+    // label is kept to one line so it cannot pass for the answer.
+    const question = isQuestionAskBlock(block);
+    const options = question
+      ? (block.actions ?? [])
+          .filter((action) => action.id !== AGENT_IMPORT_ASK_ACTION_ID)
+          .map(
+            (action, index) => `\n${askOptionLetter(index)}. ${action.label.replace(/\s+/g, " ")}`,
+          )
+      : [];
+    // A draft the person edited is read from their edit, not from the preview it replaced.
     const { edited } = askChoiceSelection(block);
+    const preview = question && block.preview && edited === undefined ? `\n${block.preview}` : "";
+    const asked = `${block.text}${preview}${options.join("")}${detail}`;
+    if (block.status !== "answered" || (!block.answer && !block.answers)) return asked;
+    if (!question) {
+      const choice = block.actions?.find((action) => action.id === block.answer);
+      return `${asked}\nAnswer: ${choice?.label ?? block.answer}`;
+    }
     return [
-      `${block.text}${detail}`,
-      ...(block.preview && edited === undefined ? [block.preview] : []),
+      asked,
       `Answer: ${askChoiceAnswerText(block)}`,
       ...(edited !== undefined ? [`Edited draft:\n${edited}`] : []),
     ].join("\n");
@@ -362,6 +369,8 @@ const EXTENSION_MIME_TYPES: Record<string, AttachmentMimeType> = {
   ".csv": "text/csv",
   ".xls": "application/vnd.ms-excel",
   ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   ".html": "text/html",
   ".htm": "text/html",
   ".json": "application/json",
@@ -390,6 +399,8 @@ const MIME_TYPE_EXTENSIONS: Record<AttachmentMimeType, string> = {
   "text/csv": ".csv",
   "application/vnd.ms-excel": ".xls",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
   "text/html": ".html",
   "application/json": ".json",
   "application/zip": ".zip",
@@ -447,6 +458,26 @@ export function inferAttachmentMimeType(
 
 export function attachmentExtensionForMimeType(mimeType: string): string {
   return isAllowedAttachmentMimeType(mimeType) ? MIME_TYPE_EXTENSIONS[mimeType] : "";
+}
+
+const OFFICE_MIME_TYPES: ReadonlySet<string> = new Set([
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
+/**
+ * The name an Office file is stored and downloaded under ends in its type's own extension, so a file accepted as a
+ * Word document cannot be saved as "Invoice.docm" (a macro-enabled name) and opened by Office as one. Other types keep
+ * the name they were given.
+ */
+export function attachmentStoredName(name: string, mimeType: string): string {
+  if (!OFFICE_MIME_TYPES.has(mimeType)) return name;
+  const extension = attachmentExtensionForMimeType(mimeType);
+  if (name.toLowerCase().endsWith(extension)) return name;
+  const dot = name.lastIndexOf(".");
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  return `${stem}${extension}`;
 }
 
 /** Where a run copies an attached file in the bot's workspace; history tools report the same path. */

@@ -1,6 +1,6 @@
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import type { PlanLimits, UsageSummary } from "@rakazo/contracts";
+import type { BillingStatus, PlanLimits, UsageSummary } from "@rakazo/contracts";
 import { hasLab, modelCreditsUsd } from "@rakazo/contracts";
 import { accountDisplay, formatTimeUntil } from "@rakazo/core";
 import type { Href } from "expo-router";
@@ -23,7 +23,7 @@ import {
 } from "../../components/settings/settings-group";
 import { SpendingLimitRow, useSpendingStatus } from "../../components/settings/spending-limit-row";
 import { AppMark } from "../../components/ui/app-mark";
-import { rpc, selectedSpaceId } from "../../lib/api/api";
+import { rpc } from "../../lib/api/api";
 import type { MobileMe } from "../../lib/api/mobile-types";
 import { errorText } from "../../lib/api/user-error";
 import { passwordResetCapabilities } from "../../lib/auth/api-auth";
@@ -41,9 +41,11 @@ import { dateLocaleForUi, useUiLocale } from "../../lib/i18n/i18n";
 import { useSideInsets } from "../../lib/layout/side-insets";
 import { native, useMobileTokens, useThemedStyles } from "../../lib/native/native";
 import { formatUpdateLabel, getAppVersionInfo } from "../../lib/platform/app-version";
+import { openWriteReview, writeReviewUrl } from "../../lib/platform/store-review";
 import { openStoreListing, useStoreUpdateAvailable } from "../../lib/platform/store-update";
 import { ACCOUNT_SETTINGS } from "../../lib/query/settings-target";
 import { useApprovalSettings } from "../../lib/settings/approval-settings";
+import { openFromSettings, useRestoreSpaces } from "../../lib/settings/back-to-settings";
 import { createSettingsPageStyles } from "../../lib/settings/settings-page-styles";
 import { isSettingsLink, openFromSettingsSheet } from "../../lib/settings/settings-sheet";
 import { activeOrganization, useOrganizations } from "../../lib/spaces/organizations";
@@ -54,6 +56,7 @@ type SettingsLink = { title: string; href: Href; icon: Icon };
 
 /** The settings hub: the account, then shortcuts, settings and admin, each one row deep. */
 export default function Account() {
+  useRestoreSpaces();
   const sideInsets = useSideInsets();
   const { t } = useLingui();
   const locale = useUiLocale();
@@ -72,6 +75,7 @@ export default function Account() {
   // Subscription allowances and a credit balance show only for members who have them.
   const [plans, setPlans] = useState<PlanLimits[]>([]);
   const [creditsUsd, setCreditsUsd] = useState<number | null>(null);
+  const [media, setMedia] = useState<BillingStatus["media"]>();
   // Messaging appears only on servers that have a chat app connected, as on web.
   const [messagingEnabled, setMessagingEnabled] = useState(false);
   const stacked = useStackedSettings();
@@ -94,12 +98,15 @@ export default function Account() {
       chevron="right"
       disabled={signingOut}
       leading={icon(glyph)}
-      // Artifacts, Board and Members live on the root stack, so they close the sheet first.
-      onPress={() =>
-        typeof href === "string" && isSettingsLink(href)
-          ? router.push(href)
-          : openFromSettingsSheet(router, href)
-      }
+      onPress={() => {
+        if (href === "/artifacts" || href === "/board") {
+          openFromSettings(router, { pathname: href }, "/account");
+        } else if (typeof href === "string" && isSettingsLink(href)) {
+          router.push(href);
+        } else {
+          openFromSettingsSheet(router, href);
+        }
+      }}
       title={title}
     />
   );
@@ -144,7 +151,10 @@ export default function Account() {
       .then(setPlans)
       .catch(() => undefined);
     void rpc("billing/status")
-      .then((status) => setCreditsUsd(modelCreditsUsd(status)))
+      .then((status) => {
+        setCreditsUsd(modelCreditsUsd(status));
+        setMedia(status.media);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -198,6 +208,14 @@ export default function Account() {
         value={t`${ph({ amount: usd.format(creditsUsd) })} left`}
       />
     ) : null;
+  const mediaRow = media ? (
+    <SettingsRow
+      key="media"
+      accessible
+      title={t`Images and video`}
+      value={t`${ph({ left: usd.format(media.leftCents / 100) })} of ${ph({ limit: usd.format(media.limitCents / 100) })} left`}
+    />
+  ) : null;
   const period = { session: t`Session`, week: t`Weekly`, month: t`Monthly` };
   const planGroups = plans.map((plan) => (
     <SettingsGroup
@@ -282,6 +300,11 @@ export default function Account() {
       href: "/artifacts",
       icon: { ios: "folder", android: "folder-outline" },
     },
+    {
+      title: t`Pages shared with you`,
+      href: "/shared-pages",
+      icon: { ios: "doc.on.doc", android: "documents-outline" },
+    },
     ...(hasLab(me?.labs, "board")
       ? [
           {
@@ -305,6 +328,7 @@ export default function Account() {
             <SettingsGroup>
               {usageBlock}
               {creditsRow}
+              {mediaRow}
             </SettingsGroup>
             {planGroups}
             {usageModels}
@@ -474,17 +498,11 @@ export default function Account() {
               title={t`Team`}
             />
           ) : null}
-          {me
-            ? settingsLink({
-                title: t`Members`,
-                // The space header holds Members too, but a single space has no header.
-                href: {
-                  pathname: "/space-members",
-                  params: { spaceId: selectedSpaceId() ?? me.spaceId },
-                },
-                icon: { ios: "person.2", android: "people-outline" },
-              })
-            : null}
+          {settingsLink({
+            title: t`Spaces`,
+            href: "/spaces",
+            icon: { ios: "square.stack", android: "layers-outline" },
+          })}
           {me?.billingEnabled
             ? settingsLink({
                 title: t`Billing`,
@@ -493,6 +511,17 @@ export default function Account() {
               })
             : null}
         </SettingsGroup>
+
+        {writeReviewUrl() ? (
+          <SettingsGroup>
+            <SettingsRow
+              accessibilityRole="button"
+              leading={icon({ ios: "star", android: "star-outline" })}
+              title={t`Rate Rakazo`}
+              onPress={openWriteReview}
+            />
+          </SettingsGroup>
+        ) : null}
 
         <View style={styles.section}>
           <NativeActionButton

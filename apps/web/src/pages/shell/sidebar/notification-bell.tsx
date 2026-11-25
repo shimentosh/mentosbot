@@ -33,6 +33,7 @@ export function NotificationBell({
   onOpenChat,
   onShowAll,
   tooltipSide,
+  variant = "ghost",
   className = "",
 }: {
   /** The open Space's bots, whose live status shows a request arriving or being answered. */
@@ -42,6 +43,7 @@ export function NotificationBell({
   /** Opens approvals and activity. */
   onShowAll: () => void;
   tooltipSide?: ComponentProps<typeof IconTooltip>["side"];
+  variant?: "ghost" | "floating";
   className?: string;
 }) {
   const { t } = useLingui();
@@ -89,15 +91,15 @@ export function NotificationBell({
         <PopoverTrigger
           render={
             <Button
-              variant="ghost"
+              variant={variant}
               size="icon"
-              className={`app-no-drag relative text-muted-foreground ${className}`}
+              className={`app-no-drag relative ${variant === "ghost" ? "text-muted-foreground" : ""} ${className}`}
             />
           }
           aria-label={label}
           data-testid="notification-bell"
         >
-          <Bell className="size-4.5" strokeWidth={1.75} aria-hidden="true" />
+          <Bell className="size-4" strokeWidth={1.75} aria-hidden="true" />
           {/* The count of what waits on the person sits on Approvals; the bell only marks news. */}
           {needs || unread ? (
             <span

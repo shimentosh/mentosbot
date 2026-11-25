@@ -2,10 +2,13 @@ import { ORPCError } from "@orpc/server";
 import { SecretStoreUnavailableError } from "@rakazo/adapter-kit";
 import type { CodexLiveCatalog } from "@rakazo/adapters";
 import {
+  assertModelProviderAllowed,
   buildModelConnectPlaintext,
   CHATGPT_OAUTH_PROVIDER,
   codexLiveListsModel,
+  compatibleEndpointPreset,
   compatibleThinkingLevels,
+  dataRetentionForConnect,
   defaultCatalogModelId,
   enabledOpenAiCompatibleModelIds,
   keptModelSettings,
@@ -14,7 +17,9 @@ import {
   modelCredentialDto,
   parseModelSecret,
   prepareAllowedThinkingLevels as prepareModelThinkingLevels,
+  probeOpenAiCompatibleModelDetails,
   providerCatalogCache,
+  releaseRoutineBackoffs,
   resolveCodexOAuthDefaultModel,
   updateStoredModelSecret,
   validateModelAuthAvailability,
@@ -50,10 +55,12 @@ import {
   modelCredentialProviderFilter,
   modelRoleTarget,
   Prisma,
+  runAsSystem,
   saveModelPreference,
   withTransactionRetry,
   writeModelRole,
 } from "@rakazo/db";
+import { bestEffort } from "@rakazo/logging";
 import { assertNoDanglingModelPins } from "../bots/model-pins.js";
 import { mayUsePrivateEndpoint } from "../integrations/mcp-servers.js";
 import type { RouterDeps } from "../router.js";
@@ -140,6 +147,7 @@ export async function prepareModelCredential(
   codexCatalog: CodexLiveCatalog,
 ) {
   throwIfAborted(input.signal);
+  assertModelProviderAllowed(input.provider);
   const parsedSecret = parseModelSecret(input.plaintext);
   const requestedModelId = usableModelId(input.modelId);
   const resolvedCodexModelId =
@@ -330,6 +338,17 @@ export async function persistModelCredential(
     }),
   );
   (deps.providerCatalog ?? providerCatalogCache).invalidate(canonicalPiProviderId(input.provider));
+  // The connection is the account's, so the routines it held are released in every Space.
+  // Not awaited: the save is done, and an account with many held routines must not wait on them.
+  void bestEffort(
+    "release routines held for a refused model account",
+    runAsSystem("release routines held for a refused model account", () =>
+      releaseRoutineBackoffs(
+        { prisma: deps.prisma, jobs: deps.jobs, events: deps.events },
+        actor.userId,
+      ),
+    ),
+  );
   return modelCredentialDto(cred, input.plaintext);
 }
 
@@ -454,6 +473,11 @@ export function createModelConnector(deps: RouterDeps, codexCatalog: CodexLiveCa
     input: ModelConnectInput,
     signal: AbortSignal | undefined,
   ) => {
+    // Before the submitted endpoint is contacted, not after: a blocked provider is not
+    // probed, and its refusal is not replaced by whatever the probe would have said.
+    assertModelProviderAllowed(input.provider);
+    // Refused before the checks below, whose catch would turn it into a code-less error.
+    dataRetentionForConnect(input);
     const credential = await modelConnectionTarget(deps, actor, input.provider, input.credentialId);
     let plaintext: string;
     let expectedSecret: ModelCredentialInput["expectedSecret"];
@@ -483,14 +507,28 @@ export function createModelConnector(deps: RouterDeps, codexCatalog: CodexLiveCa
           }
         }
       }
-      plaintext = buildModelConnectPlaintext(input, previousPlaintext, {
-        omitVisionModelIds,
-        allowPrivateEndpoint: mayUsePrivateEndpoint(deps),
-      });
+      const options = { omitVisionModelIds, allowPrivateEndpoint: mayUsePrivateEndpoint(deps) };
+      plaintext = buildModelConnectPlaintext(input, previousPlaintext, options);
       if (input.provider === OPENAI_COMPATIBLE_PROVIDER_ID) {
         const saved = parseModelSecret(plaintext);
         if (saved.kind === "openai_compatible") {
           await verifyOpenAiCompatibleApiKey(saved, deps.modelConnectionFetch, signal);
+          const preset = compatibleEndpointPreset(saved.baseUrl);
+          // Without an answer, the connection keeps what the list said before.
+          const listedModels = await bestEffort(
+            "read the model list's details",
+            probeOpenAiCompatibleModelDetails(
+              saved,
+              preset ? deps.modelConnectionFetch : undefined,
+              signal,
+              { allowPrivate: options.allowPrivateEndpoint, catalogProbe: preset !== undefined },
+            ),
+          );
+          if (listedModels)
+            plaintext = buildModelConnectPlaintext(input, previousPlaintext, {
+              ...options,
+              listedModels,
+            });
         }
       }
       const saved = parseModelSecret(plaintext);

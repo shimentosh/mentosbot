@@ -9,19 +9,13 @@ import type {
 } from "@rakazo/adapter-kit";
 import { MeetingJoinRejected } from "@rakazo/adapter-kit";
 import type { Actor } from "@rakazo/contracts";
-import { MeetingPlatformSchema, MeetingStatusSchema, MeetingTurnSchema } from "@rakazo/contracts";
-import { ClientError, meetingTargetFromUrl } from "@rakazo/core";
+import { MeetingPlatformSchema, MeetingStatusSchema } from "@rakazo/contracts";
+import { ClientError } from "@rakazo/core";
 import type { Prisma, PrismaClient, ThreadEvents } from "@rakazo/db";
-import {
-  JsonColumnMismatchError,
-  LeaseHeldError,
-  readJsonColumn,
-  reportJsonColumnOnce,
-  runAsSystem,
-  runAsSystemInTransaction,
-  withLease,
-} from "@rakazo/db";
+import { LeaseHeldError, runAsSystem, runAsSystemInTransaction, withLease } from "@rakazo/db";
 import { bestEffort } from "@rakazo/logging";
+import { parseMeetingUrl } from "./meeting-link.js";
+import { meetingTranscriptArtifact, readMeetingTurns } from "./meeting-transcript.js";
 
 const MINUTE = 60_000;
 const DAY_MS = 24 * 60 * MINUTE;
@@ -41,12 +35,6 @@ const errors = {
   transcript: "The meeting transcript couldn’t be created.",
   join: "The bot couldn’t join the meeting.",
 };
-
-export function parseMeetingUrl(input: string) {
-  const meeting = meetingTargetFromUrl(input);
-  if (!meeting) throw new ClientError("BAD_REQUEST", "Enter a valid Zoom or Google Meet link.");
-  return meeting;
-}
 
 function workJob(sessionId: string, action: JobAction, availableAt = new Date()): Job {
   return {
@@ -126,7 +114,7 @@ export class MeetingService {
     };
   }
 
-  async join(actor: Actor, botId: string, input: string) {
+  async join(actor: Actor, botId: string, input: string, shareTranscript = false) {
     this.requireEnabled(actor.spaceId);
     const bot = await this.bot(actor, botId);
     const meeting = parseMeetingUrl(input);
@@ -169,6 +157,7 @@ export class MeetingService {
               platform: meeting.platform,
               provider: this.provider().describe().id,
               meetingUrl: meeting.url,
+              shareTranscript,
               status: "joining",
               activeKey,
               expiresAt,
@@ -226,24 +215,57 @@ export class MeetingService {
     if (row.status !== "ready" || row.transcript === null) {
       throw new ClientError("NOT_FOUND", "The meeting transcript is unavailable.");
     }
-    return { botId: row.botId, turns: readMeetingTurns(row.id, row.transcript) };
+    return {
+      botId: row.botId,
+      turns: readMeetingTurns(row.id, row.transcript),
+      artifactAvailable:
+        row.shareTranscript &&
+        Boolean(
+          await this.deps.prisma.artifact.findUnique({
+            where: { meetingSessionId: row.id },
+            select: { id: true },
+          }),
+        ),
+    };
+  }
+
+  async shareTranscript(actor: Actor, sessionId: string) {
+    const row = await this.session(actor, sessionId, true);
+    if (row.status !== "ready" || row.transcript === null)
+      throw new ClientError("NOT_FOUND", "The meeting transcript is unavailable.");
+    const artifact = meetingTranscriptArtifact(row, readMeetingTurns(row.id, row.transcript));
+    const artifactAdded = await this.deps.prisma.$transaction(async (tx) => {
+      const { count } = await tx.meetingSession.updateMany({
+        where: { id: row.id, userId: actor.userId, spaceId: actor.spaceId, status: "ready" },
+        data: { shareTranscript: true },
+      });
+      if (!count) return false;
+      const saved = await tx.artifact.createMany({ data: artifact, skipDuplicates: true });
+      return saved.count > 0;
+    });
+    await this.notify(row.spaceId, artifactAdded);
   }
 
   async deleteTranscript(actor: Actor, sessionId: string) {
     const row = await this.session(actor, sessionId);
     if (row.status !== "ready") return;
-    await this.deps.prisma.$transaction(async (tx) => {
+    const artifactDeleted = await this.deps.prisma.$transaction(async (tx) => {
       const { count } = await tx.meetingSession.updateMany({
         where: { id: sessionId, status: "ready" },
         data: { transcript: null, status: "ended" },
       });
-      if (count && row.recordingId)
+      if (!count) return false;
+      const deleted = await tx.artifact.deleteMany({
+        where: { spaceId: row.spaceId, meetingSessionId: row.id },
+      });
+      if (row.recordingId)
         await this.deps.jobs.enqueueIn(
           tx,
           workJob(sessionId, "cleanup", new Date(Date.now() + BACKUP_AFTER)),
         );
+      return deleted.count > 0;
     });
-    await this.notify(actor.spaceId);
+    await this.notify(actor.spaceId, artifactDeleted);
     if (row.recordingId && row.provider === this.providerId)
       await this.attempt(sessionId, "cleanup");
   }
@@ -313,6 +335,7 @@ export class MeetingService {
     tx: Prisma.TransactionClient,
     bot: { spaceId: string; id: string },
   ): Promise<Job[]> {
+    await keepDeletedBotMeetingsCounted(tx, bot);
     if (!this.providerId) return [];
     const sessions = await runAsSystemInTransaction(
       tx,
@@ -562,7 +585,7 @@ export class MeetingService {
     }
     const bot = await prisma.bot.findUnique({ where: { id: row.botId }, select: { name: true } });
     const turns = await provider.downloadTranscript(artifact.id, signal, { selfName: bot?.name });
-    await prisma.$transaction(async (tx) => {
+    const artifactAdded = await prisma.$transaction(async (tx) => {
       const { count } = await tx.meetingSession.updateMany({
         where: { id: row.id, status: "processing", recordingId: row.recordingId },
         data: {
@@ -573,12 +596,16 @@ export class MeetingService {
         },
       });
       if (count) {
+        if (row.shareTranscript) {
+          await tx.artifact.create({ data: meetingTranscriptArtifact(row, turns) });
+        }
         const cleanup = workJob(row.id, "cleanup", new Date(Date.now() + BACKUP_AFTER));
         cleanup.payload.detached = { provider: row.provider, recordingId: row.recordingId! };
         await jobs.enqueueIn(tx, cleanup);
       }
+      return Boolean(count && row.shareTranscript);
     });
-    await this.notify(row.spaceId);
+    await this.notify(row.spaceId, artifactAdded);
     await this.cleanupRecording({ ...row, recordingId: row.recordingId }, signal);
     await jobs.cancel(workKey(row.id, "cleanup"));
   }
@@ -688,8 +715,13 @@ export class MeetingService {
       throw new ClientError("FORBIDDEN", "Meetings are unavailable in this Space.");
   }
 
-  private notify(spaceId: string) {
-    return this.deps.events.publishSpaceChange?.(spaceId, "meetings");
+  private async notify(spaceId: string, artifactsChanged = false) {
+    const meetings = this.deps.events.publishSpaceChange?.(spaceId, "meetings");
+    if (artifactsChanged) {
+      await Promise.all([meetings, this.deps.events.publishSpaceChange?.(spaceId, "artifacts")]);
+      return;
+    }
+    await meetings;
   }
 }
 
@@ -739,25 +771,7 @@ function nextObservation(
   };
 }
 
-function readMeetingTurns(id: string, transcript: string) {
-  const row = { table: "meeting_sessions", column: "transcript", id };
-  try {
-    let value: unknown;
-    try {
-      value = JSON.parse(transcript);
-    } catch (error) {
-      if (error instanceof SyntaxError) throw new JsonColumnMismatchError(row);
-      throw error;
-    }
-    return readJsonColumn(MeetingTurnSchema.array(), value, row, "reject");
-  } catch (error) {
-    if (!(error instanceof JsonColumnMismatchError)) throw error;
-    reportJsonColumnOnce("Stored meeting transcript is invalid", error.row);
-    throw new ClientError("SERVICE_UNAVAILABLE", "This transcript couldn’t be read.");
-  }
-}
-
-type MeetingQuotaReader = Pick<Prisma.TransactionClient, "meetingSession">;
+type MeetingQuotaReader = Pick<Prisma.TransactionClient, "meetingSession" | "meetingAllowanceUse">;
 
 export function meetingUtcDayStart(timestamp: number) {
   return Math.floor(timestamp / DAY_MS) * DAY_MS;
@@ -784,21 +798,60 @@ export function countSpaceMeetingsInPastDay(
   });
 }
 
-function countSpaceMeetings(
-  prisma: MeetingQuotaReader,
-  spaceId: string,
-  time: { gte: Date; lt: Date } | { gt: Date; lte: Date },
-) {
-  return prisma.meetingSession.count({
-    where: {
-      spaceId,
-      OR: [
-        { scheduledFor: null, createdAt: time },
-        {
-          scheduledFor: time,
-          OR: [{ status: { not: "ended" } }, { receivedAt: { not: null } }],
-        },
-      ],
+type MeetingTime = { gte: Date; lt: Date } | { gt: Date; lte: Date } | { gte: Date; lte: Date };
+
+function countedMeetings(time: MeetingTime) {
+  return [
+    { scheduledFor: null, createdAt: time },
+    {
+      scheduledFor: time,
+      OR: [{ status: { not: "ended" } }, { receivedAt: { not: null } }],
     },
+  ] satisfies Prisma.MeetingSessionWhereInput[];
+}
+
+async function countSpaceMeetings(prisma: MeetingQuotaReader, spaceId: string, time: MeetingTime) {
+  const sessions = await prisma.meetingSession.count({
+    where: { spaceId, OR: countedMeetings(time) },
+  });
+  const deletedBotUses = await prisma.meetingAllowanceUse.count({
+    where: { spaceId, countedAt: time },
+  });
+  return sessions + deletedBotUses;
+}
+
+/**
+ * Deleting a bot deletes its meetings, so the ones the allowance still counts are kept as uses.
+ * Its upcoming reservations are not, unless the meeting already started early.
+ */
+export async function keepDeletedBotMeetingsCounted(
+  tx: Prisma.TransactionClient,
+  bot: { spaceId: string; id: string },
+  now = new Date(),
+) {
+  // Both counters look back at most to the start of the previous UTC day.
+  const since = new Date(meetingUtcDayStart(now.getTime()) - DAY_MS);
+  await runAsSystemInTransaction(tx, "keep deleted bot meetings counted", async () => {
+    const used = await tx.meetingSession.findMany({
+      where: {
+        botId: bot.id,
+        spaceId: bot.spaceId,
+        OR: [
+          ...countedMeetings({ gte: since, lte: now }),
+          { scheduledFor: { gt: now }, receivedAt: { not: null } },
+        ],
+      },
+      select: { createdAt: true, scheduledFor: true },
+    });
+    await tx.meetingAllowanceUse.deleteMany({
+      where: { spaceId: bot.spaceId, countedAt: { lt: since } },
+    });
+    if (used.length === 0) return;
+    await tx.meetingAllowanceUse.createMany({
+      data: used.map((row) => ({
+        spaceId: bot.spaceId,
+        countedAt: row.scheduledFor ?? row.createdAt,
+      })),
+    });
   });
 }

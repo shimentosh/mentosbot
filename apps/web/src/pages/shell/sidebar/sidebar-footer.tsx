@@ -2,6 +2,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import type { NavLink } from "@rakazo/contracts";
 import { AppMarkStack, Button, Popover, PopoverContent, PopoverTrigger } from "@rakazo/ui-web";
 import {
+  BookOpen,
   Building2,
   Check,
   ChevronRight,
@@ -40,6 +41,7 @@ type Props = {
   links?: NavLink[];
   onLink?: (link: NavLink) => void;
   onArtifacts: () => void;
+  onSharedPages?: () => void;
   onSettings: () => void;
   /** How much of the member's allowance is used; the Usage row shows only with one. */
   usage?: string | null;
@@ -78,6 +80,7 @@ export function SidebarFooter({
   links = [],
   onLink,
   onArtifacts,
+  onSharedPages,
   onSettings,
   usage,
   onUsage,
@@ -122,13 +125,13 @@ export function SidebarFooter({
   return (
     <div
       data-testid="sidebar-footer"
-      className={`flex shrink-0 items-center gap-2 bg-transparent ${mini ? "flex-col px-1 py-2" : "px-2.5 py-3"}`}
+      className={`flex shrink-0 items-center bg-transparent ${mini ? "flex-col gap-2 px-1 py-2" : "gap-3 ps-5 pe-2.5 py-3"}`}
     >
       <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger
           data-testid="user-menu-trigger"
           aria-label={t`Account menu for ${name}`}
-          className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-body font-semibold text-secondary-foreground outline-none hover:ring-2 hover:ring-foreground/15 focus-visible:ring-2 focus-visible:ring-ring"
+          className="grid size-9.5 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-body font-semibold text-secondary-foreground outline-none hover:ring-2 hover:ring-foreground/15 focus-visible:ring-2 focus-visible:ring-ring"
         >
           {image && failedImage !== image ? (
             <img
@@ -178,7 +181,8 @@ export function SidebarFooter({
             {onAddAccount ? (
               <Button
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
                 onClick={onAddAccount}
               >
                 <UserRoundPlus className="text-muted-foreground" strokeWidth={1.75} />
@@ -197,7 +201,8 @@ export function SidebarFooter({
             {mini ? (
               <Button
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
                 onClick={onIntegrations}
               >
                 <Plug className="text-muted-foreground" strokeWidth={1.75} />
@@ -207,7 +212,8 @@ export function SidebarFooter({
             {usage ? (
               <Button
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
                 onClick={onUsage}
               >
                 <Gauge className="text-muted-foreground" strokeWidth={1.75} />
@@ -219,7 +225,8 @@ export function SidebarFooter({
             ) : null}
             <Button
               variant="ghost"
-              className="h-9 w-full justify-start gap-2.5 font-normal"
+              size="lg"
+              className="w-full justify-start gap-2.5 font-normal"
               aria-label={t`Settings`}
               onClick={onSettings}
             >
@@ -228,7 +235,8 @@ export function SidebarFooter({
             </Button>
             <Button
               variant="ghost"
-              className="h-9 w-full justify-start gap-2.5 font-normal"
+              size="lg"
+              className="w-full justify-start gap-2.5 font-normal"
               onClick={onSkills}
             >
               <ScrollText className="text-muted-foreground" strokeWidth={1.75} />
@@ -236,16 +244,30 @@ export function SidebarFooter({
             </Button>
             <Button
               variant="ghost"
-              className="h-9 w-full justify-start gap-2.5 font-normal"
+              size="lg"
+              className="w-full justify-start gap-2.5 font-normal"
               onClick={onArtifacts}
             >
               <FolderOpen className="text-muted-foreground" strokeWidth={1.75} />
               <Trans>Artifacts</Trans>
             </Button>
+            {onSharedPages ? (
+              <Button
+                variant="ghost"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
+                onClick={onSharedPages}
+              >
+                <BookOpen className="text-muted-foreground" strokeWidth={1.75} />
+                <Trans>Pages shared with you</Trans>
+              </Button>
+            ) : null}
+            {/* From md up the rail opens the Board, so only the phone drawer lists it here. */}
             {onBoard ? (
               <Button
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal md:hidden"
                 onClick={onBoard}
               >
                 <SquareKanban className="text-muted-foreground" strokeWidth={1.75} />
@@ -256,7 +278,8 @@ export function SidebarFooter({
               <Button
                 key={link.id}
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
                 onClick={() => onLink?.(link)}
               >
                 <Link2 className="text-muted-foreground" strokeWidth={1.75} />
@@ -267,7 +290,8 @@ export function SidebarFooter({
             {onInvite ? (
               <Button
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
                 onClick={onInvite}
               >
                 <UserPlus className="text-muted-foreground" strokeWidth={1.75} />
@@ -277,7 +301,8 @@ export function SidebarFooter({
             <div className="my-1 border-t border-border" />
             <Button
               variant="ghost"
-              className="h-9 w-full justify-start gap-2.5 font-normal"
+              size="lg"
+              className="w-full justify-start gap-2.5 font-normal"
               disabled={signingOut}
               onClick={onLogOut}
             >
@@ -297,7 +322,8 @@ export function SidebarFooter({
           variant="secondary"
           ref={pillRef}
           onClick={onIntegrations}
-          className="h-9 min-w-0 flex-1 justify-between"
+          size="lg"
+          className="min-w-0 flex-1 justify-between"
         >
           <span ref={labelRef} className="flex min-w-0 items-center gap-2">
             <Plug className="text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
@@ -351,7 +377,11 @@ function OrganizationRow({
           delay={100}
           data-testid="organization-menu-trigger"
           render={
-            <Button variant="ghost" className="h-9 w-full justify-start gap-2.5 font-normal" />
+            <Button
+              variant="ghost"
+              size="lg"
+              className="w-full justify-start gap-2.5 font-normal"
+            />
           }
         >
           <Building2 className="text-muted-foreground" strokeWidth={1.75} />
@@ -371,7 +401,8 @@ function OrganizationRow({
                 key={organization.id}
                 variant="ghost"
                 aria-current={current ? "true" : undefined}
-                className="h-9 w-full justify-between gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-between gap-2.5 font-normal"
                 onClick={() => onSwitch?.(organization)}
               >
                 <span className="min-w-0 truncate">{organization.name}</span>
@@ -384,7 +415,8 @@ function OrganizationRow({
               <div className="my-1 border-t border-border" />
               <Button
                 variant="ghost"
-                className="h-9 w-full justify-start gap-2.5 font-normal"
+                size="lg"
+                className="w-full justify-start gap-2.5 font-normal"
                 onClick={onCreate}
               >
                 <Plus className="text-muted-foreground" strokeWidth={1.75} />

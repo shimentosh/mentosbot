@@ -5,7 +5,6 @@ import { createBrowserProvider } from "../../browser/browser-provider-factory.js
 import { browserSignInShares } from "../../browser-sign-ins.js";
 import { createMediaGenerationProvider } from "../../media/media-generation-factory.js";
 import { createPaidServiceProvider } from "../../payments/paid-services-factory.js";
-import { holdRoutineRunForConversation } from "../../routines/routine-conversation.js";
 import { createWebProvider } from "../../web/web-provider-factory.js";
 import { assembleRunTurn } from "../assembly/run-assembly.js";
 import {
@@ -13,6 +12,7 @@ import {
   retryRoutineRun,
   wakeRoutine,
 } from "../assembly/run-routines.js";
+import { holdRunForChat } from "../lifecycle/chat-wait.js";
 import type { RunExecutorServices } from "../lifecycle/run-attempt.js";
 import {
   claimRunAttempt,
@@ -88,7 +88,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
       if (!run) return;
       const claim = await claimRunAttempt(baseDeps, run, workerId);
       if (!claim) {
-        await holdRoutineRunForConversation(baseDeps, run);
+        await holdRunForChat(baseDeps, run);
         return;
       }
       const hold = holdRun(baseDeps, claim);

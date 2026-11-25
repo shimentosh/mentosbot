@@ -580,6 +580,18 @@ describe("render_plot", () => {
     ).toThrow(/no position channels/);
   });
 
+  it("renders sparse object rows without requiring every column in the first row", () => {
+    const spec = { marks: [{ type: "barY", options: { x: "quarter", y: "sales" } }] };
+    const data = [{ quarter: "Q1" }, { quarter: "Q2", sales: 185 }];
+
+    for (const rows of [data, [...data].reverse()]) {
+      expect(renderPlotSpecToSvg(spec, rows, dom())).toContain("<rect");
+    }
+    expect(() =>
+      renderPlotSpecToSvg(spec, [{ quarter: "Q1" }, { quarter: "Q2", returns: 4 }], dom()),
+    ).toThrow(/y refers to "sales" but the data columns are: quarter, returns/);
+  });
+
   it("coerces numeric strings so bar heights measure instead of stacking ordinally", () => {
     const svg = renderPlotSpecToSvg(
       { marks: [{ type: "barY", options: { x: "quarter", y: "sales" } }] },
@@ -676,6 +688,21 @@ describe("render_plot", () => {
     expect(hist.length).toBeLessThan(CHART_CATALOG.length);
     expect(searchChartCatalog("qzx-no-match")).toHaveLength(CHART_CATALOG.length);
     expect(searchChartCatalog(undefined)).toHaveLength(CHART_CATALOG.length);
+  });
+
+  it("rasterizes different ASCII plot titles as distinct glyphs", async () => {
+    const { default: sharp } = await import("sharp");
+    const document = dom();
+    const titleBlock = async (title: string) => {
+      const svg = renderPlotSpecToSvg({ title, marks: [{ type: "frame" }] }, undefined, document);
+      const png = await plotSvgToPng(svg);
+      return sharp(png).extract({ left: 0, top: 0, width: 64, height: 48 }).raw().toBuffer();
+    };
+    const one = await titleBlock("1");
+    const eight = await titleBlock("8");
+    expect(one.some((channel) => channel !== 255)).toBe(true);
+    expect(eight.some((channel) => channel !== 255)).toBe(true);
+    expect(one.equals(eight)).toBe(false);
   });
 
   it("rasterizes to a fully opaque PNG (no transparent background)", async () => {

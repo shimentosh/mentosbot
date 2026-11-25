@@ -96,14 +96,28 @@ describePostgres("user devices (PostgreSQL)", () => {
     await expect(gateway.connected(userId)).resolves.toMatchObject({ deviceId: device.id });
     await expect(gateway.pairedSince(userId)).resolves.toEqual(device.createdAt);
     await expect(gateway.list(userId)).resolves.toEqual([
-      { deviceId: device.id, name: "Laptop", connected: true, routeTraffic: false },
+      {
+        deviceId: device.id,
+        name: "Laptop",
+        platform: "linux",
+        connected: true,
+        routeTraffic: false,
+        bound: true,
+      },
     ]);
     await prisma.userDeviceConnection.update({
       where: { deviceId: device.id },
       data: { heartbeatAt: new Date(Date.now() - 10 * 60_000) },
     });
     await expect(gateway.list(userId)).resolves.toEqual([
-      { deviceId: device.id, name: "Laptop", connected: false, routeTraffic: false },
+      {
+        deviceId: device.id,
+        name: "Laptop",
+        platform: "linux",
+        connected: false,
+        routeTraffic: false,
+        bound: false,
+      },
     ]);
     await prisma.userDeviceConnection.update({
       where: { deviceId: device.id },
@@ -124,7 +138,7 @@ describePostgres("user devices (PostgreSQL)", () => {
     await expect(hub.authenticate(`Bearer ${token}`)).resolves.toBeNull();
   });
 
-  it("reaches the computer someone is using before one that connected later", async () => {
+  it("reaches the computer someone is using before one paired earlier", async () => {
     const owner = `${userId}-two`;
     await prisma.user.create({
       data: { id: owner, name: "Two computers", email: `${owner}@example.test` },
@@ -162,24 +176,56 @@ describePostgres("user devices (PostgreSQL)", () => {
         forwardSecret: userDeviceForwardSecret("k"),
         hub,
       });
-      // No app has reported use yet, so the one connected last comes first.
+      // No app has reported use yet, so the one paired first comes first.
       await expect(gateway.connected(owner)).resolves.toMatchObject({
-        deviceId: pc.device.id,
+        deviceId: mac.device.id,
         activeAt: null,
       });
-      mac.socket.emit("message", JSON.stringify({ type: "active" }));
+      pc.socket.emit("message", JSON.stringify({ type: "active" }));
       await vi.waitFor(async () =>
         expect(
-          (await prisma.userDevice.findUnique({ where: { id: mac.device.id } }))?.lastActiveAt,
+          (await prisma.userDevice.findUnique({ where: { id: pc.device.id } }))?.lastActiveAt,
         ).toBeInstanceOf(Date),
       );
       await expect(gateway.connected(owner)).resolves.toMatchObject({
-        deviceId: mac.device.id,
+        deviceId: pc.device.id,
         activeAt: expect.any(Date),
       });
     } finally {
       await prisma.user.deleteMany({ where: { id: owner } });
     }
+  });
+
+  it("keeps the earliest-paired connected computer as the default across reconnects", async () => {
+    const hub = new UserDeviceHub({ prisma: raw, address: "http://127.0.0.1:1" });
+    hubs.push(hub);
+    const pair = (name: string, createdAt: Date) =>
+      prisma.userDevice.create({
+        data: {
+          userId,
+          name,
+          platform: "linux",
+          tokenHash: hashUserDeviceToken(createUserDeviceToken()),
+          createdAt,
+        },
+      });
+    const laptop = await pair("Laptop", new Date(Date.now() - 2000));
+    const desk = await pair("Desk PC", new Date(Date.now() - 1000));
+    const gateway = new UserDevices({ prisma: raw, forwardSecret: "k", hub });
+    await hub.attach(laptop, new Socket());
+    await hub.attach(desk, new Socket());
+    for (const reconnecting of [desk, laptop, desk]) {
+      await hub.attach(reconnecting, new Socket());
+      await expect(gateway.connected(userId)).resolves.toMatchObject({ deviceId: laptop.id });
+    }
+    await prisma.userDeviceConnection.update({
+      where: { deviceId: laptop.id },
+      data: { heartbeatAt: new Date(Date.now() - 10 * 60_000) },
+    });
+    await expect(gateway.connected(userId)).resolves.toMatchObject({ deviceId: desk.id });
+    await hub.attach(laptop, new Socket());
+    await expect(gateway.connected(userId)).resolves.toMatchObject({ deviceId: laptop.id });
+    await prisma.userDevice.deleteMany({ where: { id: { in: [laptop.id, desk.id] } } });
   });
 
   it("revokes a connected device once the sign-in that paired it is gone", async () => {
