@@ -1,3 +1,5 @@
+import { ph, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import {
   MarkdownLongPressContext,
   withBlockMentions,
@@ -9,8 +11,10 @@ import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
 import {
   formatFileSize,
   isApprovalAskBlock,
+  isQuestionAskBlock,
   memberName,
   messagingProviderLabel,
+  resolveAskChoice,
   selectedAskActionLabel,
 } from "@rakazo/core";
 import { fontWeight, typeScale } from "@rakazo/ui-tokens";
@@ -23,7 +27,6 @@ import type { MobileArtifactTarget } from "../../lib/artifact-open";
 import { openMobileArtifact } from "../../lib/artifact-open";
 import { allowsSpace } from "../../lib/ask-action-label";
 import { plainAskTitle } from "../../lib/ask-title";
-import { peerExchangeLabel, t, useI18n } from "../../lib/i18n";
 import { isInlineImageBlock } from "../../lib/inline-image";
 import {
   mentionedBots,
@@ -61,6 +64,12 @@ import type { MessageRowActions } from "./message-row";
 import { isSpecialMessageBlock, SpecialMessageCard } from "./special-message-card";
 import { StatusCard } from "./status-card";
 
+/** "Messaged Ana", "Message from Ana", or "3 messages with Ana". */
+function peerExchangeLabel(count: number, direction: "sent" | "received", peer: string): string {
+  if (count === 1) return direction === "sent" ? t`Messaged ${peer}` : t`Message from ${peer}`;
+  return t`${count} messages with ${peer}`;
+}
+
 type AskAction = NonNullable<Extract<MessageBlock, { kind: "ask" }>["actions"]>[number];
 
 function formatApprovalAnswer(
@@ -68,16 +77,16 @@ function formatApprovalAnswer(
   actions: AskAction[] | undefined,
   approval: boolean,
 ): string {
-  if (!answer) return t("Answered");
+  if (!answer) return t`Answered`;
   const selectedAction = actions?.find((action) => action.id === answer);
   const outcome = selectedAction?.outcome;
-  if (approval && outcome === "created") return t("Created");
-  if (approval && outcome === "cancelled") return t("Cancelled");
+  if (approval && outcome === "created") return t`Created`;
+  if (approval && outcome === "cancelled") return t`Cancelled`;
   if (approval && answer === "allow")
-    return allowsSpace(actions) ? t("Allowed in this space") : t("Allowed once");
-  if (approval && answer === "always") return t("Always allowed");
-  if (approval && answer === "deny") return t("Denied");
-  return t("Answered: {answer}", { answer: selectedAskActionLabel(answer, actions) });
+    return allowsSpace(actions) ? t`Allowed in this space` : t`Allowed once`;
+  if (approval && answer === "always") return t`Always allowed`;
+  if (approval && answer === "deny") return t`Denied`;
+  return t`Answered: ${ph({ answer: selectedAskActionLabel(answer, actions) })}`;
 }
 
 export type MessageActionProps = Pick<
@@ -237,6 +246,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   message,
   members,
   canAnswer,
+  separateAnswers,
   canDismiss,
   onAnswer,
   onOpenComputer,
@@ -260,6 +270,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   message: MobileMessage;
   members?: MobileSnapshot["members"];
   canAnswer: boolean;
+  separateAnswers?: ReadonlySet<MessageBlock>;
   canDismiss: boolean;
   onAnswer: (
     message: MobileMessage,
@@ -282,7 +293,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
 }) {
   const colorScheme = useResolvedAppearance();
   const tokens = withUserBubble(mobileTokens(), userBubble);
-  const { t } = useI18n();
+  const { t } = useLingui();
   const outgoing = message.role === "user" && !authorName;
   const artifactTarget: MobileArtifactTarget = groupId ? { groupId } : { botId };
   const cardBotId = message.botId ?? botId;
@@ -306,6 +317,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
       <View style={{ gap: 8, width: "100%" }}>
         <AskBlock
           ask={ask}
+          answerIsSeparate={separateAnswers?.has(ask)}
           actionProps={actionProps}
           canAnswer={canAnswer}
           canDismiss={canDismiss}
@@ -340,8 +352,8 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
   }
   const handoff = message.blocks.find((block) => block.kind === "handoff");
   if (handoff) {
-    const from = memberName(members, handoff.fromBotId) ?? t("bot");
-    const to = memberName(members, handoff.toBotId) ?? t("bot");
+    const from = memberName(members, handoff.fromBotId) ?? t`bot`;
+    const to = memberName(members, handoff.toBotId) ?? t`bot`;
     const target = members?.find((member) => member.botId === handoff.toBotId);
     return (
       <PeerMessageCard
@@ -349,7 +361,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
         peerBotName={to}
         color={target?.color}
         avatarSet={target?.avatarSet}
-        label={t("{from} handed off to {to}", { from, to })}
+        label={t`${from} handed off to ${to}`}
         direction="handoff"
         text={handoff.text}
         actionProps={actionProps}
@@ -368,7 +380,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
     const peerBotId = sent ? peerMessage.toBotId : peerMessage.fromBotId;
     const peerBot = bots.find((bot) => bot.id === peerBotId);
     const peerMember = members?.find((member) => member.botId === peerBotId);
-    const peerName = peerExchange?.peerBotName ?? peer ?? t("Bot");
+    const peerName = peerExchange?.peerBotName ?? peer ?? t`Bot`;
     const count = peerExchange?.count ?? 1;
     const direction = sent ? "sent" : "received";
     return (
@@ -383,7 +395,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
         actionProps={actionProps}
         onOpen={
           !groupId && botId && peerBotId !== botId
-            ? () => onOpenPeerChat({ peerBotId, peerBotName: peer ?? t("Bot") })
+            ? () => onOpenPeerChat({ peerBotId, peerBotName: peer ?? t`Bot` })
             : undefined
         }
       />
@@ -440,6 +452,13 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
     (block) => block.kind === "ask" && Boolean(block.actions?.length),
   );
   if (askBlock?.kind === "ask" && askBlock.actions?.length) {
+    const richChoice = isRichChoiceAsk(askBlock) && !isApprovalAskBlock(askBlock);
+    const question = isQuestionAskBlock(askBlock);
+    const answered = askBlock.status === "answered";
+    const answeredQuestion = question && answered;
+    const selectedChoice = answeredQuestion
+      ? resolveAskChoice(askBlock.answer ?? "", askBlock.actions)
+      : undefined;
     return (
       <View style={{ gap: 8, width: "100%" }}>
         <View
@@ -457,9 +476,15 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
           ) : (
             <>
               {askBlock.text ? (
-                <Text {...actionProps} style={{ color: tokens.foreground, ...typeScale.cardTitle }}>
+                <Text
+                  {...actionProps}
+                  style={{
+                    color: answeredQuestion ? tokens.mutedForeground : tokens.foreground,
+                    ...typeScale.cardTitle,
+                  }}
+                >
                   {askBlock.instructionUpdate
-                    ? t("Update instructions?")
+                    ? t`Update instructions?`
                     : plainAskTitle(askBlock.text)}
                 </Text>
               ) : null}
@@ -470,7 +495,9 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                   {...(askBlock.text ? {} : actionProps)}
                   style={{
                     color:
-                      askBlock.detailFormat === "text" ? tokens.foreground : tokens.mutedForeground,
+                      askBlock.detailFormat === "text" && !answeredQuestion
+                        ? tokens.foreground
+                        : tokens.mutedForeground,
                     marginTop: askBlock.text ? 8 : 0,
                     // Commands and an approval's tool arguments read as code; a bot's own note
                     // under its question is text.
@@ -483,7 +510,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                   {askBlock.detail}
                 </Text>
               ) : null}
-              {isRichChoiceAsk(askBlock) && !isApprovalAskBlock(askBlock) ? (
+              {richChoice ? (
                 <ChoiceAskActions
                   block={askBlock}
                   canAnswer={canAnswer}
@@ -501,25 +528,41 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                     />
                   )}
                 />
-              ) : askBlock.status === "answered" ? (
+              ) : question && (answered || canAnswer) ? (
+                <AskActions
+                  actions={askBlock.actions}
+                  approval={false}
+                  disabled={answered}
+                  selectedAnswer={answered ? askBlock.answer : undefined}
+                  accessibilityActions={actionProps.accessibilityActions}
+                  onAccessibilityAction={actionProps.onAccessibilityAction}
+                  onAnswer={(answer) => onAnswer(message, answer)}
+                />
+              ) : null}
+              {richChoice || separateAnswers?.has(askBlock) || selectedChoice ? null : answered ? (
                 <Text
                   {...actionProps}
                   style={{
-                    color: askBlock.answer === "deny" ? tokens.mutedForeground : tokens.success,
+                    color:
+                      question || askBlock.answer === "deny"
+                        ? tokens.mutedForeground
+                        : tokens.success,
                     marginTop: 12,
                     ...typeScale.secondary,
                     fontWeight: fontWeight.medium,
                   }}
                 >
                   {askBlock.instructionUpdate
-                    ? t(askBlock.answer === "deny" ? "Dismissed" : "Allowed once")
+                    ? askBlock.answer === "deny"
+                      ? t`Dismissed`
+                      : t`Allowed once`
                     : formatApprovalAnswer(
                         askBlock.answer,
                         askBlock.actions,
                         isApprovalAskBlock(askBlock),
                       )}
                 </Text>
-              ) : canAnswer && onAnswer ? (
+              ) : question && canAnswer ? null : canAnswer && onAnswer ? (
                 <AskActions
                   actions={askBlock.actions}
                   site={askBlock.site}
@@ -534,7 +577,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                   {...actionProps}
                   style={{ color: tokens.mutedForeground, marginTop: 12, ...typeScale.caption }}
                 >
-                  {t("No longer active")}
+                  {t`No longer active`}
                 </Text>
               )}
             </>
@@ -624,14 +667,14 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                 <InlineImageAttachment
                   threadTarget={artifactTarget}
                   artifactId={attachment.artifactId}
-                  name={attachment.name ?? t("Image")}
+                  name={attachment.name ?? t`Image`}
                   mimeType={attachment.mimeType ?? "image/png"}
                   labelColor={outgoing ? tokens.chatUserForeground : tokens.foreground}
                   pressableProps={actionProps}
                   onOpen={() =>
                     onPreviewImage({
                       artifactId: attachment.artifactId!,
-                      name: attachment.name ?? t("Image"),
+                      name: attachment.name ?? t`Image`,
                       mimeType: attachment.mimeType ?? "image/png",
                     })
                   }
@@ -644,10 +687,10 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                       ? void openMobileArtifact(
                           artifactTarget,
                           attachment.artifactId,
-                          attachment.name ?? t("Image"),
+                          attachment.name ?? t`Image`,
                           attachment.mimeType ?? "image/png",
                         ).catch((err) =>
-                          Alert.alert(t("Could not open image"), errorText(err, t("Try again."))),
+                          Alert.alert(t`Could not open image`, errorText(err, t`Try again.`)),
                         )
                       : undefined
                   }
@@ -658,7 +701,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                       fontSize: 15,
                     }}
                   >
-                    🖼 {attachment.name ?? t("Image")}
+                    🖼 {attachment.name ?? t`Image`}
                   </Text>
                 </Pressable>
               )
@@ -667,7 +710,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                 pressableProps={actionProps}
                 target={artifactTarget}
                 artifactId={attachment.artifactId}
-                name={attachment.name ?? t("File")}
+                name={attachment.name ?? t`File`}
                 mimeType={attachment.mimeType!}
                 labelColor={outgoing ? tokens.chatUserForeground : undefined}
               />
@@ -681,10 +724,10 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                       : void openMobileArtifact(
                           artifactTarget,
                           attachment.artifactId,
-                          attachment.name ?? t("File"),
+                          attachment.name ?? t`File`,
                           attachment.mimeType ?? "text/plain",
                         ).catch((err) =>
-                          Alert.alert(t("Could not open file"), errorText(err, t("Try again."))),
+                          Alert.alert(t`Could not open file`, errorText(err, t`Try again.`)),
                         )
                     : undefined
                 }
@@ -695,7 +738,7 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
                     fontSize: 15,
                   }}
                 >
-                  📎 {attachment.name ?? t("File")}
+                  📎 {attachment.name ?? t`File`}
                 </Text>
                 {formatFileSize(attachment.size) ? (
                   <Text
@@ -781,8 +824,10 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
         <ComputerCard
           key={`computer-${index}`}
           block={block}
+          botId={computerBotId}
+          runId={message.runId}
           onOpen={
-            computerBotId ? () => onOpenComputer(computerBotId, speaker ?? t("Bot")) : undefined
+            computerBotId ? () => onOpenComputer(computerBotId, speaker ?? t`Bot`) : undefined
           }
           accessibilityActions={actionProps.accessibilityActions}
           onAccessibilityAction={actionProps.onAccessibilityAction}
@@ -835,7 +880,7 @@ function MessageTextCard({
   const colorScheme = useResolvedAppearance();
   const tokens = withUserBubble(mobileTokens(), userBubble);
   const contentText = blockText(message);
-  const { t } = useI18n();
+  const { t } = useLingui();
   const userMentions = useContext(UserMentionsContext);
   if (!contentText) return null;
   // The surface is one accessibility element, so the bots a message names are offered as its
@@ -849,7 +894,7 @@ function MessageTextCard({
         ...(actionProps.accessibilityActions ?? []),
         ...bots.map((bot) => ({
           name: `${OPEN_BOT_ACTION}${bot.id}`,
-          label: t("Open {name}", { name: bot.name }),
+          label: t`Open ${ph({ name: bot.name })}`,
         })),
       ]
     : actionProps.accessibilityActions;

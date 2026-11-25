@@ -1,9 +1,9 @@
+import { useLingui } from "@lingui/react/macro";
 import type { BillingStatus } from "@rakazo/contracts";
 import { computerHoursOut } from "@rakazo/contracts";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { rpc } from "../../lib/api";
-import { useI18n } from "../../lib/i18n";
 import type { MobileSnapshot } from "../../lib/mobile-types";
 import { openModelSettings } from "../../lib/model-settings";
 import { computerHoursOutCopy, runErrorActionLabel } from "../../lib/run-error-presentation";
@@ -16,7 +16,7 @@ export function useThreadRunError(
   /** The open chat, so a failure nothing else fixes can be tried again. */
   retry?: { target: { botId: string } | { groupId: string }; onQueued: () => void },
 ) {
-  const { t } = useI18n();
+  const { t } = useLingui();
   const router = useRouter();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const runError = run?.status === "failed" ? (run.error ?? null) : null;
@@ -37,7 +37,7 @@ export function useThreadRunError(
       active = false;
     };
   }, [needsPlan, failedRunId]);
-  const hoursOut = needsPlan && billing ? computerHoursOutCopy(t, computerHoursOut(billing)) : null;
+  const hoursOut = needsPlan && billing ? computerHoursOutCopy(computerHoursOut(billing)) : null;
   const normalizedRunError =
     classified && hoursOut ? { ...classified, summary: hoursOut.summary } : classified;
   const label = needsPlan
@@ -45,7 +45,7 @@ export function useThreadRunError(
       ? (hoursOut?.action ?? null)
       : null
     : normalizedRunError
-      ? runErrorActionLabel(t, normalizedRunError)
+      ? runErrorActionLabel(normalizedRunError)
       : null;
   const runBotId = run?.botId ?? botId;
   const runErrorAction = label
@@ -62,7 +62,7 @@ export function useThreadRunError(
       }
     : failedRunId && retry
       ? {
-          label: t("Try again"),
+          label: t`Try again`,
           onPress: () => {
             setDetailsOpen(false);
             void rpc("threads/retry", { ...retry.target, runId: failedRunId })

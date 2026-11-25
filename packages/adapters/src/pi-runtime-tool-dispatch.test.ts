@@ -1084,19 +1084,12 @@ describe("Pi connector tool dispatch", () => {
     );
   });
 
-  it("creates a bot with spawn_bot when computer_mode is omitted", async () => {
+  it("creates a bot when the model leaves out the optional computer_mode", async () => {
     const spawnBotTool = builtinAgentTools.find((tool) => tool.name === "spawn_bot");
     if (!spawnBotTool) throw new Error("missing spawn_bot");
     fakeAgentState.invoke = {
       name: "use_tool",
-      args: {
-        name: "spawn_bot",
-        arguments: {
-          name: "Scout",
-          description: "Finds venues.",
-          instructions: "Ask before booking anything.",
-        },
-      },
+      args: { name: "spawn_bot", arguments: { name: "Scout" } },
     };
     const executeTool = vi.fn(async () => ({ ok: true }));
     const runtime = new PiAgentRuntime();
@@ -1126,21 +1119,10 @@ describe("Pi connector tool dispatch", () => {
 
     expect(executeTool).toHaveBeenCalledWith(
       "spawn_bot",
-      expect.objectContaining({
-        name: "Scout",
-        description: "Finds venues.",
-        instructions: "Ask before booking anything.",
-      }),
+      { name: "Scout", description: "", instructions: "", prompt: "" },
       JSON.stringify(["pi-tool", "main", "call-1"]),
       undefined,
       { onShellStillRunning: expect.any(Function) },
-    );
-    expect(executeTool).not.toHaveBeenCalledWith(
-      "spawn_bot",
-      expect.objectContaining({ computer_mode: expect.anything() }),
-      expect.anything(),
-      undefined,
-      expect.anything(),
     );
   });
 

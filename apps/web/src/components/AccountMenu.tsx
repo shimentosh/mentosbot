@@ -1,4 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { canDeleteOrganization } from "@rakazo/core";
 import {
   Button,
   Dialog,
@@ -23,11 +24,12 @@ import { authClient } from "../lib/auth";
 import { switchOrganization, useOrganizations } from "../lib/organizations";
 import { useQueryUserId } from "../lib/query";
 import { switchAccount, useSignedInAccounts } from "../lib/signed-in-accounts";
+import { DeleteOrganizationDialog, removeOrganization } from "../pages/OrganizationSettingsPanel";
 import { DeleteAccountForm, hasDeleteRedirectError } from "./AccountAccess";
 
 /**
- * The way out before the app opens (plan choice, onboarding): switch or add an account, log out
- * or delete the account, without reaching settings.
+ * The way out before the app opens (plan choice, onboarding): switch or add an account, switch
+ * organization, delete an unwanted one, log out or delete the account, without reaching settings.
  */
 export function AccountMenu({
   disabled,
@@ -46,6 +48,13 @@ export function AccountMenu({
   const navigate = useNavigate();
   // An SSO sign-in to confirm deletion returns here; reopen so its error is seen.
   const [deleting, setDeleting] = useState(hasDeleteRedirectError);
+  const [deletingOrganization, setDeletingOrganization] = useState(false);
+  const active = organizations.find((organization) => organization.id === activeOrganizationId);
+  // Only an organization nobody else has joined can be deleted.
+  const deletableOrganization =
+    active && canDeleteOrganization(organizations, active) && active.memberCount === 1
+      ? active
+      : null;
   return (
     <>
       <DropdownMenu>
@@ -104,6 +113,11 @@ export function AccountMenu({
               <DropdownMenuSeparator />
             </>
           ) : null}
+          {deletableOrganization ? (
+            <DropdownMenuItem onClick={() => setDeletingOrganization(true)}>
+              <Trans>Delete organization</Trans>
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onClick={onLogOut}>
             <Trans>Log out</Trans>
           </DropdownMenuItem>
@@ -122,6 +136,13 @@ export function AccountMenu({
           <DeleteAccountForm open />
         </DialogContent>
       </Dialog>
+      {deletingOrganization && deletableOrganization ? (
+        <DeleteOrganizationDialog
+          organization={deletableOrganization}
+          onCancel={() => setDeletingOrganization(false)}
+          onConfirm={() => removeOrganization(deletableOrganization)}
+        />
+      ) : null}
     </>
   );
 }

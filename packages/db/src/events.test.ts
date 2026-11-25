@@ -2404,10 +2404,10 @@ describe("answerRunInput", () => {
 });
 
 describe("answerWaitingRunWithTextInTransaction", () => {
-  it.each(["latest", "older", "reaction"])(
-    "composer answers only the latest question; older cards still resume (case=%s)",
+  it.each(["latest", "older", "reaction", "reply", "unrelated-reply"])(
+    "composer answers only the latest question unless an older question is explicitly targeted (case=%s)",
     async (scenario) => {
-      const latest = scenario !== "older";
+      const latest = scenario !== "older" && scenario !== "reply";
       const tx = {
         $queryRaw: vi.fn().mockResolvedValue([{ id: "thread-1" }]),
         message: {
@@ -2455,8 +2455,15 @@ describe("answerWaitingRunWithTextInTransaction", () => {
         answeredByUserId: "user-1",
         answer: "Paris",
       };
-      const result = await answerWaitingRunWithTextInTransaction(tx as never, answerInput);
-      if (latest) {
+      const result = await answerWaitingRunWithTextInTransaction(tx as never, {
+        ...answerInput,
+        ...(scenario === "reply"
+          ? { replyToMessageId: "message-1" }
+          : scenario === "unrelated-reply"
+            ? { replyToMessageId: "unrelated-message" }
+            : {}),
+      });
+      if (latest || scenario === "reply") {
         expect(result).toMatchObject({ threadId: "thread-1" });
       } else {
         expect(result).toBeNull();

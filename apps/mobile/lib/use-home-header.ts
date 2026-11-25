@@ -1,9 +1,10 @@
+import { useLingui } from "@lingui/react/macro";
 import { useNavigation, useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { useLayoutEffect } from "react";
 import type { CreateAction } from "./create-chooser";
 import { createMenuItems } from "./create-chooser";
-import { useI18n } from "./i18n";
+import { useUiLocale } from "./i18n";
 
 /** Liquid Glass home header: account on the left; activity, search and create on the right. */
 export function useHomeHeader({
@@ -30,7 +31,8 @@ export function useHomeHeader({
 }) {
   const navigation = useNavigation();
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, i18n } = useLingui();
+  const locale = useUiLocale();
   useLayoutEffect(() => {
     if (!nativeHeader) return;
     const signedIn = ready && hasSession;
@@ -43,25 +45,25 @@ export function useHomeHeader({
       unstable_headerLeftItems: () => [
         {
           type: "button" as const,
-          label: t("Account"),
+          label: t`Account`,
           icon: { type: "sfSymbol" as const, name: "person.crop.circle" },
-          accessibilityLabel: t("Account"),
+          accessibilityLabel: t`Account`,
           onPress: () => router.push("/account"),
         },
       ],
       unstable_headerRightItems: () => [
         {
           type: "button" as const,
-          label: t("Notifications"),
-          accessibilityLabel: t("Notifications"),
+          label: t`Notifications`,
+          accessibilityLabel: t`Notifications`,
           identifier: "home-notifications-button",
           icon: { type: "sfSymbol" as const, name: needsYou ? "bell.badge" : "bell" },
           onPress: () => router.push("/notifications"),
         },
         {
           type: "button" as const,
-          label: t("Activity"),
-          accessibilityLabel: t("Activity"),
+          label: t`Activity`,
+          accessibilityLabel: t`Activity`,
           icon: {
             type: "sfSymbol" as const,
             name: activityMode ? "clock.arrow.circlepath" : "clock",
@@ -71,21 +73,21 @@ export function useHomeHeader({
         },
         {
           type: "button" as const,
-          label: t("Search"),
-          accessibilityLabel: t("Search"),
+          label: t`Search`,
+          accessibilityLabel: t`Search`,
           identifier: "home-search-button",
           icon: { type: "sfSymbol" as const, name: "magnifyingglass" },
           onPress: () => router.push("/search"),
         },
         {
           type: "menu" as const,
-          label: t("Create"),
-          accessibilityLabel: t("Create"),
+          label: t`Create`,
+          accessibilityLabel: t`Create`,
           icon: { type: "sfSymbol" as const, name: "plus" },
           menu: {
             items: createMenuItems.map(({ id, label, sfSymbol }) => ({
               type: "action" as const,
-              label: t(label),
+              label: i18n._(label),
               icon: { type: "sfSymbol" as const, name: sfSymbol },
               onPress: () => runCreateAction(id),
             })),

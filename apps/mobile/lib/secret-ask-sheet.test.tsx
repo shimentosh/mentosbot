@@ -94,8 +94,6 @@ vi.mock("react-native-safe-area-context", () => ({
 }));
 vi.mock("./appearance", () => ({ mobileTokens: () => ({}) }));
 vi.mock("./native", () => ({ useThemedStyles: (factory: () => unknown) => factory() }));
-const i18n = vi.hoisted(() => ({ t: (text: string) => text }));
-vi.mock("./i18n", () => ({ useI18n: () => ({ t: (text: string) => i18n.t(text) }) }));
 vi.mock("../components/native-action-button", () => ({
   NativeActionButton: ({
     label,
@@ -143,7 +141,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   native.commands = [];
   native.endEditing = {};
-  i18n.t = (text) => text;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
@@ -223,18 +220,16 @@ it("opens as a page sheet with the title, the default fields and the destination
   expect(hiddenSwitches().map((input) => input.checked)).toEqual([false, true]);
 });
 
-it("shows the default labels translated but saves them in English", async () => {
-  const translated: Record<string, string> = { Username: "Benutzername", Password: "Passwort" };
-  i18n.t = (text) => translated[text] ?? text;
+it("shows and saves the default labels", async () => {
   onSave.mockResolvedValue();
   await render();
   expect(valueFields().map((input) => input.getAttribute("aria-label"))).toEqual([
-    "Benutzername",
-    "Passwort",
+    "Username",
+    "Password",
   ]);
 
-  await type("Benutzername", "ada");
-  await type("Passwort", "example-password");
+  await type("Username", "ada");
+  await type("Password", "example-password");
   await act(async () => button("Save").click());
 
   expect(onSave.mock.lastCall![0].map((answer) => answer.label)).toEqual(["Username", "Password"]);

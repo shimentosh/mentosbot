@@ -44,6 +44,7 @@ import { createAgentSkillsService } from "../agent-skills.js";
 import { createBotRemoval } from "../bot-removal.js";
 import { createMcpServers } from "../mcp-servers.js";
 import { createModelConnector, prepareAllowedThinkingLevels } from "../model-credentials.js";
+import { rosterChangeFor } from "../roster-procedures.js";
 import type { RouterDeps } from "../router.js";
 import { createRoutineAnnouncer } from "../routines.js";
 import { procedureSecurityEvent } from "../security-audit.js";
@@ -437,6 +438,13 @@ export function createRouterContext(deps: RouterDeps) {
       return asTenant(owner, () =>
         next({ context: { ...context, actor: owner, sharedBy: context.actor } }),
       );
+    })
+    // After sharing, so the roster change goes to the actor the procedure ran as.
+    .use(async ({ context, next, path }, input) => {
+      const result = await next();
+      const rosterChange = rosterChangeFor(path, context.actor, input, result.output);
+      if (rosterChange) void deps.events?.publishRosterChange?.(rosterChange);
+      return result;
     });
 
   const callsEnabled = authed.use(async ({ next }) => {

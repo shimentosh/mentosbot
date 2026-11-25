@@ -1,7 +1,14 @@
+import { i18n } from "@lingui/core";
 import { translate } from "@rakazo/core";
+import { messages as en } from "@rakazo/i18n/locales/en/messages.po";
+import { installPluralRules } from "./plural-rules";
 
 /** The app is English only. */
 export type UiLocale = "en";
+
+installPluralRules();
+i18n.load({ en });
+i18n.activate("en");
 
 const NO_TRANSLATIONS: Record<string, string> = {};
 
@@ -14,7 +21,12 @@ export function dateLocaleForUi(_locale?: UiLocale): string {
   return "en-US";
 }
 
-/** English text with `{name}` placeholders filled in. */
+/** The app language. Strings come from Lingui's `useLingui`. */
+export function useUiLocale(): UiLocale {
+  return "en";
+}
+
+/** English text with `{name}` placeholders filled in, for screens not on Lingui yet. */
 export function t(message: string, values?: Record<string, string | number>): string {
   return translate(NO_TRANSLATIONS, message, values);
 }
@@ -55,17 +67,4 @@ export async function deviceLanguage(): Promise<string | null> {
 export async function bootstrapI18n(): Promise<UiLocale> {
   await applyDirection();
   return "en";
-}
-
-/** "Messaged Ana", "Message from Ana", or "3 messages with Ana". */
-export function peerExchangeLabel(
-  count: number,
-  direction: "sent" | "received",
-  peer: string,
-): string {
-  if (count === 1)
-    return direction === "sent"
-      ? t("Messaged {peer}", { peer })
-      : t("Message from {peer}", { peer });
-  return t("{count} messages with {peer}", { count, peer });
 }

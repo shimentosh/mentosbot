@@ -28,10 +28,11 @@ vi.mock("react-native", () => ({
 }));
 
 import type { AiRecipient } from "@rakazo/contracts";
-import { AI_DATA_DISCLOSURES } from "@rakazo/contracts";
 import { Alert } from "react-native";
 import { FOREGROUND_FALLBACK_MS, promptAiConsent } from "./ai-consent";
-import { t } from "./i18n";
+
+const MODEL_DISCLOSURE =
+  "Messages, chat history, bot instructions, memories, attachments, screenshots and connected-app content are sent to run your bots, including routines.";
 
 type AlertButton = { text?: string; onPress?: () => void };
 type AlertOptions = { onDismiss?: () => void };
@@ -66,32 +67,29 @@ describe("mobile AI consent prompt", () => {
     native.listeners.clear();
   });
 
-  it.each(["en"] as const)(
-    "shows the consent copy in %s without changing recipient detail",
-    async () => {
-      const pending = promptAiConsent(recipient);
-      expect(native.alert.mock.calls[0]?.slice(0, 2)).toEqual([
-        t("Share data with {name}?", { name: recipient.name }),
-        [
-          recipient.detail,
-          t(AI_DATA_DISCLOSURES.model),
-          t("You can turn this off in Account → AI data sharing."),
-        ].join("\n\n"),
-      ]);
-      expect(currentAlert().buttons.map((button) => button.text)).toEqual([
-        t("Not now"),
-        t("Privacy policy"),
-        t("Allow"),
-      ]);
-      currentAlert().buttons[0]?.onPress?.();
-      await expect(pending).resolves.toBe(false);
-    },
-  );
+  it("shows the consent copy without changing recipient detail", async () => {
+    const pending = promptAiConsent(recipient);
+    expect(native.alert.mock.calls[0]?.slice(0, 2)).toEqual([
+      `Share data with ${recipient.name}?`,
+      [
+        recipient.detail,
+        MODEL_DISCLOSURE,
+        "You can turn this off in Account → AI data sharing.",
+      ].join("\n\n"),
+    ]);
+    expect(currentAlert().buttons.map((button) => button.text)).toEqual([
+      "Not now",
+      "Privacy policy",
+      "Allow",
+    ]);
+    currentAlert().buttons[0]?.onPress?.();
+    await expect(pending).resolves.toBe(false);
+  });
 
   it("omits empty details from the consent message", async () => {
     const pending = promptAiConsent({ ...recipient, detail: "" });
     expect(native.alert.mock.calls[0]?.[1]).toBe(
-      `${AI_DATA_DISCLOSURES.model}\n\nYou can turn this off in Account → AI data sharing.`,
+      `${MODEL_DISCLOSURE}\n\nYou can turn this off in Account → AI data sharing.`,
     );
     currentAlert().buttons[0]?.onPress?.();
     await expect(pending).resolves.toBe(false);

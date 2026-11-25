@@ -45,6 +45,7 @@ const IDLE: DictationSnapshot = { status: "idle", transcript: "" };
 const ENDPOINT_SILENCE_MS = 1200;
 const ENDPOINT_TICK_MS = 80;
 const SILENCE_RMS = 0.035;
+export const MAX_ENDPOINT_RECORDING_MS = 30_000;
 /** How often the waveform reads the microphone's loudness. */
 const LEVEL_TICK_MS = 70;
 /** Room noise sits under the floor; loud speech reaches the ceiling. */
@@ -90,6 +91,16 @@ export function prefersServerDictation(): boolean {
   // iPadOS 13+ reports a desktop Safari user agent, so fall back to touch support.
   const touchPoints = typeof navigator.maxTouchPoints === "number" ? navigator.maxTouchPoints : 0;
   return touchPoints > 1 && /macintosh/i.test(agent);
+}
+
+/**
+ * The connected voice provider listens whenever it can transcribe; the browser's or desktop's
+ * own recognizer covers a provider that only speaks. An unknown capability is not a refusal: a
+ * device whose browser cannot hold the microphone open goes to the server even before the voice
+ * status has loaded.
+ */
+export function usesServerDictation(transcribe: boolean | undefined): boolean {
+  return transcribe === true || (prefersServerDictation() && transcribe !== false);
 }
 
 /**
@@ -232,6 +243,10 @@ export class Dictation {
     return this.snapshot;
   }
 
+  get recording(): boolean {
+    return this.media?.state === "recording";
+  }
+
   private set(next: DictationSnapshot) {
     // Some failures go idle without stop(), and the waveform must not keep the microphone.
     if (next.status === "idle") this.stopMeter();
@@ -292,11 +307,7 @@ export class Dictation {
     this.mode = opts.mode;
     this.set({ status: "listening", transcript: "" });
     const endpointMs = opts.endpointMs ?? ENDPOINT_SILENCE_MS;
-    // The connected voice provider listens whenever it can transcribe; the browser's or
-    // desktop's own recognizer covers a provider that only speaks. An unknown capability is
-    // not a refusal: a device whose browser cannot hold the microphone open goes to the
-    // server even before the voice status has loaded.
-    if (opts.transcribe === true || (prefersServerDictation() && opts.transcribe !== false)) {
+    if (usesServerDictation(opts.transcribe)) {
       await this.listenRecorder(mine, opts.mode, endpointMs, spaceId);
       return;
     }
@@ -480,6 +491,7 @@ export class Dictation {
         void this.transcribeChunks(mine, spaceId);
       };
       media.start(mode === "endpoint" ? 250 : undefined);
+      this.set({ ...this.snapshot });
       if (mode === "hold") this.startMeter(stream, mine, false);
     } catch (error) {
       if (media) {
@@ -526,16 +538,26 @@ export class Dictation {
         return speech;
       };
       let silentFor = 0;
+      const startedAt = Date.now();
       this.vadTimer = setInterval(() => {
         const media = this.media;
         if (this.token !== mine || !media || media.state === "inactive") return;
-        if (this.sampleInput?.()) {
-          silentFor = 0;
+        const speaking = this.sampleInput?.();
+        const full =
+          endpointMs !== undefined && Date.now() - startedAt >= MAX_ENDPOINT_RECORDING_MS;
+        if (full && !this.heardSpeech) {
+          this.finish(this.snapshot.transcript, mine);
           return;
         }
-        if (endpointMs === undefined || !this.heardSpeech) return;
-        silentFor += ENDPOINT_TICK_MS;
-        if (silentFor < endpointMs) return;
+        if (!full) {
+          if (speaking) {
+            silentFor = 0;
+            return;
+          }
+          if (endpointMs === undefined || !this.heardSpeech) return;
+          silentFor += ENDPOINT_TICK_MS;
+          if (silentFor < endpointMs) return;
+        }
         this.stopVad();
         try {
           media.stop();

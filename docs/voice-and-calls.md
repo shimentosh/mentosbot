@@ -6,7 +6,9 @@ Talk to your bots instead of typing, have them read replies aloud, or call them.
 
 Open **Settings → Voice**, pick a **Provider** and add its **API key**:
 
-- **ElevenLabs**, **OpenAI**, **Cartesia** and **Fish Audio** can speak and transcribe.
+- **ElevenLabs**, **OpenAI**, **Cartesia**, **Fish Audio** and **xAI** can speak and transcribe. If
+  xAI is connected in **Models**, with a SuperGrok or X Premium sign-in or a key, leave the
+  **API key** empty to use that connection.
 - **Self-hosted** uses your own OpenAI-compatible speech server, such as Kokoro or Whisper. Enter its
   **Server URL**.
 - **macOS** uses the voices installed on the Mac running your server, with no key. It appears only

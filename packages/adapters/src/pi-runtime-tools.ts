@@ -487,7 +487,7 @@ function toAgentTool(
           description: raw.description ? String(raw.description) : "",
           instructions: raw.instructions ? String(raw.instructions) : "",
           prompt: raw.prompt ? String(raw.prompt) : "",
-          // Omitted stays absent: a blank would fail the computer_mode enum.
+          // Left out means Team; a blank would fail the mode's enum.
           ...(argumentGiven(raw.computer_mode) ? { computer_mode: String(raw.computer_mode) } : {}),
         };
       }

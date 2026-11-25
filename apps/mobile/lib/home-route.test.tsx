@@ -12,7 +12,6 @@ const home = vi.hoisted(() => ({
   options: {} as Record<string, any>,
   setOptions: vi.fn(),
   push: vi.fn(),
-  t: vi.fn((text: string) => text),
   insets: { top: 20, bottom: 30, left: 0, right: 12 },
 }));
 const { styled } = vi.hoisted(() => ({
@@ -33,10 +32,6 @@ vi.mock("expo-router", () => {
   return { useNavigation: () => navigation, useRouter: () => router };
 });
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => home.insets }));
-vi.mock("./i18n", () => {
-  const i18n = { t: home.t, locale: "en" };
-  return { useI18n: () => i18n };
-});
 vi.mock("./material-icons", () => ({ materialIcons: {} }));
 vi.mock("./appearance", () => ({ mobileTokens: () => ({}) }));
 vi.mock("./native", () => ({
@@ -71,7 +66,6 @@ beforeEach(() => {
     home.options = { ...home.options, ...next };
   });
   home.push.mockReset();
-  home.t.mockImplementation((text: string) => text);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -138,11 +132,9 @@ it("wires the compact header items to their actions", () => {
   expect(runCreateAction.mock.calls).toEqual([["bot"], ["group"], ["space"]]);
 });
 
-it("shows a translated, safe-area-centred placeholder only in the split pane", () => {
-  home.t.mockImplementation(() => "Kies een chat");
+it("shows a safe-area-centred placeholder only in the split pane", () => {
   act(() => root.render(<PickChatPane />));
-  expect(home.t).toHaveBeenCalledWith("Pick a chat");
-  expect(container.textContent).toBe("Kies een chat");
+  expect(container.textContent).toBe("Pick a chat");
   const pane = container.firstElementChild as HTMLElement;
   expect(pane.style.alignItems).toBe("center");
   expect(pane.style.justifyContent).toBe("center");

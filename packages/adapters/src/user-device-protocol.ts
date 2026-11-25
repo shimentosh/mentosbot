@@ -48,6 +48,8 @@ export interface UserDevice {
   platform: string;
   /** When its app last reported someone using it; null when it never has (older apps). */
   activeAt: Date | null;
+  /** Only its screen is offered: commands there already run as the bot's own computer. */
+  screenOnly?: boolean;
 }
 
 /** How runs reach the requesting user's connected device, from any API or worker process. */

@@ -1,5 +1,7 @@
 import type { MenuAction } from "@expo/ui/community/menu";
 import { MenuView } from "@expo/ui/community/menu";
+import { ph, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import type { SpaceBot, SpaceGroup } from "@rakazo/contracts";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
@@ -8,7 +10,6 @@ import type { PressableProps } from "react-native";
 import { Platform, Pressable, Text, View } from "react-native";
 import type { ResolvedAppearance } from "../lib/appearance";
 import { AvatarRow } from "../lib/avatar-life";
-import { useI18n } from "../lib/i18n";
 import type { InboxItem, InboxSpace } from "../lib/inbox-spaces";
 import { canDeleteInboxSpace, inboxItemKey } from "../lib/inbox-spaces";
 import type { MobileBot, MobileBotSection, MobileGroup } from "../lib/mobile-types";
@@ -30,16 +31,12 @@ type ChatActions = ReturnType<typeof useInboxChatActions>;
 const NO_SECTIONS: MobileBotSection[] = [];
 
 /** Move up and Move down for a section of the selected space, where it has a neighbour. */
-function sectionMoves(
-  sections: readonly MobileBotSection[],
-  sectionId: string,
-  t: (text: string) => string,
-) {
+function sectionMoves(sections: readonly MobileBotSection[], sectionId: string) {
   const index = sections.findIndex((section) => section.id === sectionId);
   return [
-    ...(index > 0 ? [{ id: "up", title: t("Move up"), image: "arrow.up" as const }] : []),
+    ...(index > 0 ? [{ id: "up", title: t`Move up`, image: "arrow.up" as const }] : []),
     ...(index >= 0 && index < sections.length - 1
-      ? [{ id: "down", title: t("Move down"), image: "arrow.down" as const }]
+      ? [{ id: "down", title: t`Move down`, image: "arrow.down" as const }]
       : []),
   ];
 }
@@ -53,11 +50,11 @@ export function InboxListFooter({
   archivedCount: number;
 }) {
   const styles = useThemedStyles(createHomeStyles);
-  const { t } = useI18n();
+  const { t } = useLingui();
   const router = useRouter();
   return (
     <>
-      {createHint ? <Text style={styles.empty}>{t("Tap + to create a bot")}</Text> : null}
+      {createHint ? <Text style={styles.empty}>{t`Tap + to create a bot`}</Text> : null}
       <ArchivedChatsRow count={archivedCount} onPress={() => router.push("/archived-bots")} />
     </>
   );
@@ -204,7 +201,7 @@ function SectionHeading({
   onMove?: (id: string) => void;
   appearance: ResolvedAppearance;
 }) {
-  const { t } = useI18n();
+  const { t } = useLingui();
   return (
     <HeadingWithMenu
       menu={
@@ -212,9 +209,9 @@ function SectionHeading({
           ? {
               actions: [
                 ...moves,
-                { id: "delete", title: t("Delete section"), image: "trash", destructive: true },
+                { id: "delete", title: t`Delete section`, image: "trash", destructive: true },
               ],
-              label: t("Section actions for {name}", { name: title }),
+              label: t`Section actions for ${ph({ name: title })}`,
               onAction: (id) => (id === "delete" ? onDelete() : onMove?.(id)),
             }
           : undefined
@@ -291,7 +288,7 @@ export function useInboxRenderItem({
   toggleCollapsed: (key: string) => void;
 }) {
   const styles = useThemedStyles(createHomeStyles);
-  const { t } = useI18n();
+  const { t } = useLingui();
   const router = useRouter();
   return useCallback(
     ({ item }: { item: InboxItem }) => {
@@ -326,17 +323,17 @@ export function useInboxRenderItem({
                     actions: [
                       {
                         id: "new-bot",
-                        title: t("New bot"),
+                        title: t`New bot`,
                         image: "person.crop.circle.badge.plus",
                         disabled: spaceBusy || !!spaceRecoveryId,
                       },
-                      { id: "members", title: t("Members"), image: "person.2" },
-                      { id: "settings", title: t("Settings"), image: "gearshape" },
+                      { id: "members", title: t`Members`, image: "person.2" },
+                      { id: "settings", title: t`Settings`, image: "gearshape" },
                       ...(canDeleteInboxSpace(item.space)
                         ? [
                             {
                               id: "delete",
-                              title: t("Delete space"),
+                              title: t`Delete space`,
                               image: "trash" as const,
                               destructive: true,
                               disabled: spaceBusy || !!spaceRecoveryId,
@@ -344,7 +341,7 @@ export function useInboxRenderItem({
                           ]
                         : []),
                     ],
-                    label: t("Space actions for {name}", { name: item.title }),
+                    label: t`Space actions for ${ph({ name: item.title })}`,
                     onAction: (id) => {
                       if (!item.space) return;
                       if (id === "new-bot") createBotInSpace(item.space.id);
@@ -372,7 +369,7 @@ export function useInboxRenderItem({
                     if (item.sectionId) deleteSection({ id: item.sectionId, name: item.title });
                   }
             }
-            moves={item.sectionId ? sectionMoves(sectionsOf(undefined), item.sectionId, t) : []}
+            moves={item.sectionId ? sectionMoves(sectionsOf(undefined), item.sectionId) : []}
             onMove={(id) => {
               if (item.sectionId)
                 moveSection(item.sectionId, id === "up" ? -1 : 1, sectionsOf(undefined));

@@ -36,6 +36,7 @@ export const DOCS_NAV = [
     title: "Settings",
     pages: [
       { slug: "models", label: "Models" },
+      { slug: "model-subscriptions", label: "Model subscriptions" },
       { slug: "spaces", label: "Spaces" },
       { slug: "teams", label: "Teams" },
       { slug: "bot-secrets", label: "Reusable credentials" },

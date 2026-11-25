@@ -93,6 +93,7 @@ function renderView(
         callHoldsSpeaker={false}
         onSpeak={vi.fn()}
         onOpenComputer={vi.fn()}
+        onReleaseComputer={vi.fn()}
         showToolActivity={false}
         onReply={vi.fn()}
         onMarkUnread={vi.fn()}
@@ -262,6 +263,7 @@ it("keeps an edit made after a save when the saved status arrives late", async (
         callHoldsSpeaker={false}
         onSpeak={vi.fn()}
         onOpenComputer={vi.fn()}
+        onReleaseComputer={vi.fn()}
         showToolActivity={false}
         onReply={vi.fn()}
         onMarkUnread={vi.fn()}
@@ -542,6 +544,7 @@ function renderWithPreviews(load: LinkPreviews["load"], blocks: ThreadMessage["b
           callHoldsSpeaker={false}
           onSpeak={vi.fn()}
           onOpenComputer={vi.fn()}
+          onReleaseComputer={vi.fn()}
           showToolActivity={false}
           onReply={vi.fn()}
           onMarkUnread={vi.fn()}

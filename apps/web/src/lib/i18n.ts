@@ -10,7 +10,7 @@ export async function bootstrapI18n(): Promise<void> {
   if (i18n.locale === "en") return;
   try {
     const { messages } = await importChunk(
-      () => import("../locales/en/messages.po") as Promise<CatalogModule>,
+      () => import("@rakazo/i18n/locales/en/messages.po") as Promise<CatalogModule>,
     );
     i18n.load("en", messages);
   } catch {

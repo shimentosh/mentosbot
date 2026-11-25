@@ -1289,6 +1289,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
             ? undefined
             : ownComputerOwnerId;
         let userComputer: UserComputerState;
+        let userComputerShell = false;
         let userComputerScreen = false;
         let userComputerFolder: UserComputerFolder | undefined;
         if (
@@ -1308,6 +1309,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           );
           if (device) {
             userComputer = "connected";
+            userComputerShell = !device.screenOnly;
             // The macOS and Windows desktops fetch a screen driver; Linux has none yet.
             userComputerScreen = device.platform === "darwin" || device.platform === "win32";
             if (folder)
@@ -1345,7 +1347,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
               : bot.disabledBuiltinTools,
             fleetManagement: bot.fleetManagement,
             followUpFromUser: sourceMessage?.role === "user",
-            userComputer: userComputer === "connected",
+            userComputer: userComputerShell,
             userComputerScreen,
             userComputerFolder: Boolean(userComputerFolder && !userComputerFolder.otherComputer),
             emailInbox,
@@ -1418,6 +1420,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
         const dockerToolInstruction = dockerComputerToolInstruction(
           computerKind,
           disabledBuiltinTools,
+          new Set(tools.map((tool) => tool.name)),
         );
         const hostEnvironment =
           computerKind && usesNativeShell(computerKind)

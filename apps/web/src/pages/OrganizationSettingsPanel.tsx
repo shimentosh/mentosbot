@@ -1,4 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
+import { canDeleteOrganization } from "@rakazo/core";
 import { Button, Field, FieldLabel, Input } from "@rakazo/ui-web";
 import { Plus } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -25,10 +26,9 @@ export function OrganizationSettingsPanel({
     <OrganizationSettings
       key={organization.id}
       organization={organization}
+      // Only an organization nobody else has joined can be deleted.
       canDelete={
-        organization.canManage &&
-        organization.memberCount === 1 &&
-        organizations.filter((each) => each.canManage).length > 1
+        canDeleteOrganization(organizations, organization) && organization.memberCount === 1
       }
       onBusyChange={onBusyChange}
     />
@@ -145,17 +145,18 @@ function OrganizationSettings({
         <DeleteOrganizationDialog
           organization={organization}
           onCancel={() => setConfirmingDelete(false)}
-          onConfirm={async () => {
-            const { activeSpaceId } = await rpc.organizations.remove({
-              organizationId: organization.id,
-            });
-            if (!selectSpace(activeSpaceId)) clearSpaceSelection();
-            window.location.assign("/");
-          }}
+          onConfirm={() => removeOrganization(organization)}
         />
       ) : null}
     </div>
   );
+}
+
+/** Deletes it, then reloads into the Space the server chose. */
+export async function removeOrganization(organization: Organization): Promise<void> {
+  const { activeSpaceId } = await rpc.organizations.remove({ organizationId: organization.id });
+  if (!selectSpace(activeSpaceId)) clearSpaceSelection();
+  window.location.assign("/");
 }
 
 export function DeleteOrganizationDialog({

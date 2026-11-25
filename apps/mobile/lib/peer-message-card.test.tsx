@@ -89,6 +89,7 @@ vi.mock("../components/change-undo", () => ({
   isUndoableChange: () => false,
 }));
 vi.mock("../components/McpApprovalCard", () => ({ McpApprovalCard: () => null }));
+vi.mock("../components/ImportSetupCard", () => ({ ImportSetupCard: () => null }));
 vi.mock("../components/thread/mcp-app-card", () => ({ McpAppCard: () => null }));
 vi.mock("../components/native-symbol", () => ({ NativeSymbol: () => null }));
 

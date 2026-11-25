@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { t } from "./i18n";
 import { secretDestinationLabel, siteHost } from "./secret-destination";
 
 describe("mobile credential destination label", () => {
@@ -9,7 +8,7 @@ describe("mobile credential destination label", () => {
       origin: "",
       auth: { type: "command" },
     });
-    expect(label).toBe(`${t("Command variable")} $NETBIRD_SETUP_KEY`);
+    expect(label).toBe("Command variable $NETBIRD_SETUP_KEY");
     expect(label).not.toBe("");
   });
 

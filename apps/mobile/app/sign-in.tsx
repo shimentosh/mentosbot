@@ -1,3 +1,5 @@
+import { ph } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react/macro";
 import {
   credentialIssue,
   MAX_PASSWORD_LENGTH,
@@ -35,7 +37,6 @@ import {
 import type { AuthMode } from "../lib/auth-routing";
 import { initialAuthMode } from "../lib/auth-routing";
 import { displayApiHost, usesCustomApiBase } from "../lib/endpoint";
-import { useI18n } from "../lib/i18n";
 import { hasIncomingShare } from "../lib/incoming-share";
 import { useMobileTokens } from "../lib/native";
 import { passkeysAvailable, signInWithPasskey } from "../lib/passkey";
@@ -48,7 +49,7 @@ import { credentialIssueText, errorText } from "../lib/user-error";
 const CODE_LENGTH = 6;
 
 export default function SignIn() {
-  const { t } = useI18n();
+  const { t } = useLingui();
   const tokens = useMobileTokens();
   const router = useRouter();
   const { mode: requestedMode } = useLocalSearchParams<{ mode?: string | string[] }>();
@@ -136,7 +137,7 @@ export default function SignIn() {
   }, [reset]);
 
   useEffect(() => {
-    if (resetSent || codeSent) AccessibilityInfo.announceForAccessibility(t("Check your email"));
+    if (resetSent || codeSent) AccessibilityInfo.announceForAccessibility(t`Check your email`);
   }, [resetSent, codeSent, t]);
 
   if (!ready) {
@@ -149,7 +150,7 @@ export default function SignIn() {
           padding: 24,
         }}
       >
-        <ActivityIndicator color={tokens.mutedForeground} accessibilityLabel={t("Loading…")} />
+        <ActivityIndicator color={tokens.mutedForeground} accessibilityLabel={t`Loading…`} />
       </View>
     );
   }
@@ -174,7 +175,7 @@ export default function SignIn() {
       setWarnedEmail(email);
       setEmailBlurred(true);
       AccessibilityInfo.announceForAccessibility(
-        t("Did you mean {email}?", { email: emailSuggestion }),
+        t`Did you mean ${ph({ email: emailSuggestion })}?`,
       );
       return;
     }
@@ -185,7 +186,7 @@ export default function SignIn() {
     try {
       if (mode === "forgot") {
         if (!reset?.passwordReset || !reset.resetUrl) {
-          throw new Error(t("Password recovery is not configured for this server"));
+          throw new Error(t`Password recovery is not configured for this server`);
         }
         await requestPasswordReset(email.trim(), reset.resetUrl);
         setResetSent(true);
@@ -223,7 +224,7 @@ export default function SignIn() {
       }
       await openApp();
     } catch (err) {
-      setError(errorText(err, t("Could not continue")));
+      setError(errorText(err, t`Could not continue`));
     } finally {
       setPending(false);
     }
@@ -242,7 +243,7 @@ export default function SignIn() {
     try {
       if (await run()) await openApp();
     } catch (err) {
-      setError(errorText(err, t("Could not continue")));
+      setError(errorText(err, t`Could not continue`));
     } finally {
       setPending(false);
     }
@@ -281,12 +282,12 @@ export default function SignIn() {
                 }}
               >
                 {resetSent || codeStep
-                  ? t("Check your email")
+                  ? t`Check your email`
                   : mode === "in"
-                    ? t("Sign in to Rakazo")
+                    ? t`Sign in to Rakazo`
                     : mode === "up"
-                      ? t("Sign up for Rakazo")
-                      : t("Reset your password")}
+                      ? t`Sign up for Rakazo`
+                      : t`Reset your password`}
               </Text>
               {waiting.length && !resetSent && !codeStep ? (
                 <View style={{ gap: 10, marginTop: 28 }}>
@@ -295,7 +296,7 @@ export default function SignIn() {
                       key={account.userId}
                       disabled={pending}
                       fill
-                      label={t("Continue as {email}", { email: account.email })}
+                      label={t`Continue as ${ph({ email: account.email })}`}
                       prominence="secondary"
                       onPress={() =>
                         void externalSignIn(async () => {
@@ -318,7 +319,7 @@ export default function SignIn() {
                     }}
                   >
                     <Text style={{ color: tokens.foreground, fontSize: 15, fontWeight: "600" }}>
-                      {t("Back to sign in")}
+                      {t`Back to sign in`}
                     </Text>
                   </Pressable>
                 </View>
@@ -327,23 +328,23 @@ export default function SignIn() {
                   {capabilityError ? (
                     <View accessibilityRole="alert">
                       <Text style={{ color: tokens.destructive }}>
-                        {t("Could not load sign-in options")}
+                        {t`Could not load sign-in options`}
                       </Text>
                       <NativeActionButton
-                        label={t("Retry")}
+                        label={t`Retry`}
                         onPress={() => setCapabilityAttempt((value) => value + 1)}
                       />
                     </View>
                   ) : !reset ? (
                     <ActivityIndicator
                       color={tokens.mutedForeground}
-                      accessibilityLabel={t("Loading…")}
+                      accessibilityLabel={t`Loading…`}
                       style={{ marginTop: 16 }}
                     />
                   ) : null}
                   {reset?.sso && !reset.passwordAuth && mode !== "forgot" ? (
                     <NativeActionButton
-                      label={t("Continue with {name}", { name: reset.sso.name })}
+                      label={t`Continue with ${ph({ name: reset.sso.name })}`}
                       disabled={pending}
                       onPress={() => void externalSignIn(continueWithSso)}
                       style={{ marginTop: 16 }}
@@ -360,12 +361,12 @@ export default function SignIn() {
                   {reset?.passwordAuth && codeStep ? (
                     <>
                       <TextInput
-                        accessibilityLabel={t("Code")}
+                        accessibilityLabel={t`Code`}
                         autoComplete="one-time-code"
                         autoFocus
                         keyboardType="number-pad"
                         maxLength={CODE_LENGTH}
-                        placeholder={t("Code")}
+                        placeholder={t`Code`}
                         placeholderTextColor={tokens.mutedForeground}
                         textContentType="oneTimeCode"
                         value={code}
@@ -389,12 +390,12 @@ export default function SignIn() {
                       ) : null}
                       <NativeActionButton
                         disabled={pending || code.length < CODE_LENGTH}
-                        label={pending ? t("Working…") : t("Continue")}
+                        label={pending ? t`Working…` : t`Continue`}
                         onPress={() => void submit()}
                         style={{ marginTop: 16 }}
                       />
                       <NativeActionButton
-                        label={t("Back")}
+                        label={t`Back`}
                         prominence="quiet"
                         disabled={pending}
                         onPress={() => {
@@ -410,7 +411,7 @@ export default function SignIn() {
                       {mode === "up" ? (
                         <TextInput
                           autoComplete="name"
-                          placeholder={t("Name")}
+                          placeholder={t`Name`}
                           placeholderTextColor={tokens.mutedForeground}
                           value={name}
                           onChangeText={setName}
@@ -427,7 +428,7 @@ export default function SignIn() {
                         autoCapitalize="none"
                         autoComplete="email"
                         keyboardType="email-address"
-                        placeholder={t("Email")}
+                        placeholder={t`Email`}
                         placeholderTextColor={tokens.mutedForeground}
                         value={email}
                         onChangeText={(value) => {
@@ -451,7 +452,7 @@ export default function SignIn() {
                           style={{ marginTop: 8, paddingHorizontal: 4 }}
                         >
                           <Text style={{ color: tokens.warning, fontSize: 14 }}>
-                            {t("Did you mean {email}?", { email: emailSuggestion })}
+                            {t`Did you mean ${ph({ email: emailSuggestion })}?`}
                           </Text>
                         </Pressable>
                       ) : null}
@@ -470,7 +471,7 @@ export default function SignIn() {
                             textContentType={mode === "in" ? "password" : "newPassword"}
                             passwordRules={mode === "in" ? undefined : PASSWORD_RULES}
                             maxLength={MAX_PASSWORD_LENGTH}
-                            placeholder={t("Password")}
+                            placeholder={t`Password`}
                             placeholderTextColor={tokens.mutedForeground}
                             returnKeyType="go"
                             autoCapitalize="none"
@@ -488,7 +489,7 @@ export default function SignIn() {
                           />
                           <NativeActionButton
                             accessibilityLabel={
-                              passwordVisible ? t("Hide password") : t("Show password")
+                              passwordVisible ? t`Hide password` : t`Show password`
                             }
                             icon={{
                               ios: passwordVisible ? "eye.slash" : "eye",
@@ -512,21 +513,21 @@ export default function SignIn() {
                         disabled={pending}
                         label={
                           pending
-                            ? t("Working…")
+                            ? t`Working…`
                             : usingCode
-                              ? t("Continue")
+                              ? t`Continue`
                               : mode === "in"
-                                ? t("Sign in")
+                                ? t`Sign in`
                                 : mode === "up"
-                                  ? t("Sign up")
-                                  : t("Send reset link")
+                                  ? t`Sign up`
+                                  : t`Send reset link`
                         }
                         onPress={() => void submit()}
                         style={{ marginTop: 16 }}
                       />
                       {passkeys && mode === "in" ? (
                         <NativeActionButton
-                          label={t("Sign in with passkey")}
+                          label={t`Sign in with passkey`}
                           icon={{ ios: "key.fill", android: "key-outline" }}
                           prominence="secondary"
                           fill
@@ -537,7 +538,7 @@ export default function SignIn() {
                       ) : null}
                       {reset.sso && mode !== "forgot" ? (
                         <NativeActionButton
-                          label={t("Continue with {name}", { name: reset.sso.name })}
+                          label={t`Continue with ${ph({ name: reset.sso.name })}`}
                           prominence="quiet"
                           disabled={pending}
                           onPress={() => void externalSignIn(continueWithSso)}
@@ -557,7 +558,7 @@ export default function SignIn() {
                           <Text
                             style={{ color: tokens.foreground, fontSize: 14, fontWeight: "600" }}
                           >
-                            {t("Forgot password?")}
+                            {t`Forgot password?`}
                           </Text>
                         </Pressable>
                       ) : null}
@@ -571,9 +572,9 @@ export default function SignIn() {
                       >
                         <Text style={{ color: tokens.mutedForeground, fontSize: 15 }}>
                           {mode === "in"
-                            ? t("Don’t have an account?")
+                            ? t`Don’t have an account?`
                             : mode === "up"
-                              ? t("Already have an account?")
+                              ? t`Already have an account?`
                               : ""}
                         </Text>
                         <Pressable
@@ -589,10 +590,10 @@ export default function SignIn() {
                             style={{ color: tokens.foreground, fontSize: 15, fontWeight: "600" }}
                           >
                             {mode === "in"
-                              ? t("Sign up")
+                              ? t`Sign up`
                               : mode === "up"
-                                ? t("Sign in")
-                                : t("Back to sign in")}
+                                ? t`Sign in`
+                                : t`Back to sign in`}
                           </Text>
                         </Pressable>
                       </View>
@@ -605,8 +606,8 @@ export default function SignIn() {
               accessibilityRole="button"
               accessibilityLabel={
                 custom
-                  ? t("Custom server {host}", { host: displayApiHost(apiBase) })
-                  : t("Use a custom server")
+                  ? t`Custom server ${ph({ host: displayApiHost(apiBase) })}`
+                  : t`Use a custom server`
               }
               hitSlop={12}
               onPress={() => router.push("/server")}
@@ -620,7 +621,7 @@ export default function SignIn() {
               {custom ? (
                 <>
                   <Text style={{ color: tokens.mutedForeground, fontSize: 12 }}>
-                    {t("Custom server")}
+                    {t`Custom server`}
                   </Text>
                   <Text style={{ color: tokens.mutedForeground, fontSize: 13, marginTop: 2 }}>
                     {displayApiHost(apiBase)}
@@ -628,7 +629,7 @@ export default function SignIn() {
                 </>
               ) : (
                 <Text style={{ color: tokens.mutedForeground, fontSize: 13 }}>
-                  {t("Use a custom server")}
+                  {t`Use a custom server`}
                 </Text>
               )}
             </Pressable>

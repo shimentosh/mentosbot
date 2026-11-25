@@ -4,9 +4,9 @@ import {
   BACKGROUND_HELPER_TRIGGER,
   BACKGROUND_RUN_TRIGGERS,
   cardPreviewText,
+  isDeliveryMessage,
   plainTextFromMarkdown,
 } from "@rakazo/core";
-
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 
@@ -77,6 +77,8 @@ export async function withLatestBotRuns<T extends { thread: { id: string } | nul
 
 export function previewFromBlocks(blocks: unknown): string {
   const rows = Array.isArray(blocks) ? blocks : [];
+  // A delivery's text is the bot's prompt, hidden in chat.
+  if (isDeliveryMessage(rows)) return "";
   for (const block of rows) {
     const card = CardBlock.safeParse(block);
     if (card.success) return cardPreviewText(card.data);
