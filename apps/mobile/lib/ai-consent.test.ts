@@ -1,3 +1,5 @@
+import type { Deferred } from "@rakazo/core/test-async";
+import { deferred, flush } from "@rakazo/core/test-async";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const native = vi.hoisted(() => {
@@ -52,10 +54,6 @@ function currentAlert() {
     buttons: (call[2] ?? []) as AlertButton[],
     options: (call[3] ?? {}) as AlertOptions,
   };
-}
-
-function flushTimers() {
-  return new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
 describe("mobile AI consent prompt", () => {
@@ -124,7 +122,7 @@ describe("mobile AI consent prompt", () => {
     native.emit("background");
     native.emit("active");
     first.options.onDismiss?.();
-    await flushTimers();
+    await flush();
 
     expect(settled).toBe(false);
     expect(native.alert).toHaveBeenCalledTimes(2);
@@ -149,7 +147,7 @@ describe("mobile AI consent prompt", () => {
     // iOS calls the button callback but does not invoke AlertOptions.onDismiss.
     native.emit("background");
     native.emit("active");
-    await flushTimers();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(2);
     currentAlert().buttons[2]?.onPress?.();
@@ -168,27 +166,25 @@ describe("mobile AI consent prompt", () => {
     first.buttons[1]?.onPress?.();
     native.emit("background");
     native.emit("active");
-    await flushTimers();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(2);
     const second = currentAlert();
     first.options.onDismiss?.();
     second.options.onDismiss?.();
-    await flushTimers();
+    await flush();
 
     expect(settled).toBe(true);
     await expect(pending).resolves.toBe(false);
   });
 
   it("ignores a stale privacy open after a later policy attempt starts", async () => {
-    let resolveFirst: (() => void) | undefined;
+    let resolveFirst: Deferred | undefined;
     native.openURL
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolveFirst = resolve;
-          }),
-      )
+      .mockImplementationOnce(() => {
+        resolveFirst = deferred();
+        return resolveFirst.promise;
+      })
       .mockImplementationOnce(() => new Promise(() => undefined));
     let settled = false;
     const pending = promptAiConsent(recipient, "https://example.com/privacy").then((value) => {
@@ -200,22 +196,22 @@ describe("mobile AI consent prompt", () => {
     first.buttons[1]?.onPress?.();
     native.emit("background");
     native.emit("active");
-    await flushTimers();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(2);
     currentAlert().buttons[1]?.onPress?.();
     expect(native.openURL).toHaveBeenCalledTimes(2);
 
-    resolveFirst?.();
-    await flushTimers();
-    await flushTimers();
+    resolveFirst?.resolve();
+    await flush();
+    await flush();
 
     expect(settled).toBe(false);
     expect(native.alert).toHaveBeenCalledTimes(2);
     expect(native.openURL).toHaveBeenCalledTimes(2);
     native.emit("background");
     native.emit("active");
-    await flushTimers();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(3);
     currentAlert().buttons[2]?.onPress?.();
@@ -259,25 +255,23 @@ describe("mobile AI consent prompt", () => {
   });
 
   it("keeps waiting when the policy opens after the app leaves the foreground", async () => {
-    let resolveOpen: (() => void) | undefined;
-    native.openURL.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveOpen = resolve;
-        }),
-    );
+    let resolveOpen: Deferred | undefined;
+    native.openURL.mockImplementationOnce(() => {
+      resolveOpen = deferred();
+      return resolveOpen.promise;
+    });
     const pending = promptAiConsent(recipient, "https://example.com/privacy");
     const first = currentAlert();
 
     first.buttons[1]?.onPress?.();
     native.emit("inactive");
-    resolveOpen?.();
-    await flushTimers();
-    await flushTimers();
+    resolveOpen?.resolve();
+    await flush();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(1);
     native.emit("active");
-    await flushTimers();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(2);
     currentAlert().buttons[2]?.onPress?.();
@@ -291,8 +285,8 @@ describe("mobile AI consent prompt", () => {
 
     first.buttons[1]?.onPress?.();
     first.options.onDismiss?.();
-    await flushTimers();
-    await flushTimers();
+    await flush();
+    await flush();
 
     expect(native.alert).toHaveBeenCalledTimes(2);
     const second = currentAlert();

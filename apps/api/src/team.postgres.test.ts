@@ -71,11 +71,7 @@ describePostgres("team membership (PostgreSQL)", () => {
         emailVerified: options.verified ?? true,
       },
     });
-    const { spaceId } = await bootstrapUserSpace(
-      system,
-      { id: userId },
-      { signupsEnabled: undefined, signupAllowlist: undefined },
-    );
+    const { spaceId } = await bootstrapUserSpace(system, { id: userId });
     return { userId, spaceId, email: address, isDeploymentOwner: false };
   }
 
@@ -135,7 +131,9 @@ describePostgres("team membership (PostgreSQL)", () => {
       defaultSpaceId: owner.spaceId,
     });
 
-    await expect(requireMembership(system, ada.userId, owner.spaceId)).resolves.toMatchObject({
+    await expect(
+      requireMembership(system, { id: ada.userId, email: ada.email }, owner.spaceId),
+    ).resolves.toMatchObject({
       spaceId: owner.spaceId,
     });
     const team = await client(owner).team.get({ organizationId: owner.spaceId });
@@ -326,7 +324,9 @@ describePostgres("team membership (PostgreSQL)", () => {
     await expect(system.bot.findUniqueOrThrow({ where: { id: bot.id } })).resolves.toMatchObject({
       archivedAt: expect.any(Date),
     });
-    await expect(requireMembership(system, member.userId, owner.spaceId)).rejects.toThrow();
+    await expect(
+      requireMembership(system, { id: member.userId, email: member.email }, owner.spaceId),
+    ).rejects.toThrow();
     await expect(
       system.spaceMember.findUniqueOrThrow({
         where: { spaceId_userId: { spaceId: side.id, userId: owner.userId } },

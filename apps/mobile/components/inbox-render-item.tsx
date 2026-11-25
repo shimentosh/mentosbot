@@ -186,6 +186,7 @@ function SectionHeading({
   count,
   collapsed,
   onPress,
+  onRename,
   onDelete,
   moves = [],
   onMove,
@@ -195,6 +196,8 @@ function SectionHeading({
   count?: number;
   collapsed: boolean;
   onPress: () => void;
+  /** The name prompt is iOS-only, so other platforms leave this out. */
+  onRename?: () => void;
   onDelete?: () => void;
   /** Move up and Move down, where the section has a neighbour. */
   moves?: HeadingMenu["actions"];
@@ -208,11 +211,15 @@ function SectionHeading({
         onDelete
           ? {
               actions: [
+                ...(onRename
+                  ? [{ id: "rename", title: t`Rename section`, image: "pencil" as const }]
+                  : []),
                 ...moves,
                 { id: "delete", title: t`Delete section`, image: "trash", destructive: true },
               ],
               label: t`Section actions for ${ph({ name: title })}`,
-              onAction: (id) => (id === "delete" ? onDelete() : onMove?.(id)),
+              onAction: (id) =>
+                id === "rename" ? onRename?.() : id === "delete" ? onDelete() : onMove?.(id),
             }
           : undefined
       }
@@ -244,6 +251,7 @@ export function useInboxRenderItem({
   editSectionFromMenu,
   groupAction,
   moveSection,
+  promptRenameSection,
   spaceId,
   openBot,
   openGroup,
@@ -264,6 +272,7 @@ export function useInboxRenderItem({
   | "editSectionFromMenu"
   | "deleteSection"
   | "moveSection"
+  | "promptRenameSection"
   | "snoozeChat"
 > & {
   appearance: ResolvedAppearance;
@@ -362,6 +371,14 @@ export function useInboxRenderItem({
             count={item.collapsed ? (item.count ?? 0) : undefined}
             collapsed={item.collapsed === true}
             onPress={() => toggleCollapsed(item.key)}
+            onRename={
+              Platform.OS === "ios" && item.sectionId
+                ? () => {
+                    if (item.sectionId)
+                      promptRenameSection({ id: item.sectionId, name: item.title }, spaceId);
+                  }
+                : undefined
+            }
             onDelete={
               sharing || !item.sectionId
                 ? undefined
@@ -412,6 +429,7 @@ export function useInboxRenderItem({
       confirmDeleteSpace,
       createBotInSpace,
       deleteSection,
+      promptRenameSection,
       day,
       now,
       editSectionFromMenu,

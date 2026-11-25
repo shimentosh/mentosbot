@@ -4,7 +4,7 @@ import {
   activeBotId,
   captureScreenshot,
   completeOnboarding,
-  openBotPanelTab,
+  openBotPanel,
   openUserSettings,
   rpc,
   signup,
@@ -112,11 +112,11 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
 
     // The owner shares their own bot with the teammate, from its settings.
     const ownerBotId = activeBotId(page);
-    await openBotPanelTab(page, "Advanced");
+    await openBotPanel(page);
     const shareSection = page.getByTestId("bot-share");
     await shareSection.getByRole("button", { name: "Share" }).click();
     await page.getByRole("menuitem", { name: "Team Member" }).click();
-    await expect(shareSection.getByLabel("Access for Team Member")).toHaveValue("chat");
+    await expect(shareSection.getByLabel("Access for Team Member")).toHaveText("Can chat");
     await captureScreenshot(page, testInfo, "bot-share-section");
 
     // The teammate finds it in their sidebar and talks to it; it runs as the owner's bot.

@@ -25,11 +25,7 @@ describePostgres("the bell (PostgreSQL)", () => {
     await system.user.create({
       data: { id: userId, name: userId, email: `${userId}@rakazo.test`, emailVerified: true },
     });
-    const { spaceId } = await bootstrapUserSpace(
-      system,
-      { id: userId },
-      { signupsEnabled: undefined, signupAllowlist: undefined },
-    );
+    const { spaceId } = await bootstrapUserSpace(system, { id: userId });
     const organizationId = (
       await system.space.findUniqueOrThrow({
         where: { id: spaceId },

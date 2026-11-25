@@ -1,8 +1,9 @@
 import type { FinalReplyToolRecord } from "@rakazo/adapter-kit";
 import { escapePromptData } from "@rakazo/core";
 import { z } from "zod";
-import { sanitizeAutoReviewReason, truncateReviewText } from "./auto-review.js";
-import { automated } from "./automated-messages.js";
+import { sanitizeAutoReviewReason } from "./auto-review.js";
+import { truncateReviewText } from "./auto-review.prompt.js";
+import { automated } from "./automated-messages.prompt.js";
 import { parseModelJson } from "./model-json.js";
 import { NO_RESPONSE } from "./silent-reply.js";
 

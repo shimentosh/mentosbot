@@ -4,7 +4,7 @@ import {
   activeBotId,
   captureScreenshot,
   completeOnboarding,
-  openBotPanelTab,
+  openBotPanel,
   rpc,
   signup,
 } from "./helpers";
@@ -15,9 +15,9 @@ test("routine test-run completes and survives reload", async ({ page }, testInfo
   await completeOnboarding(page);
   const botId = activeBotId(page);
 
-  await openBotPanelTab(page, "Routines");
+  await openBotPanel(page);
   await expect(page.getByRole("button", { name: "Run now" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Create Routine" }).click();
+  await page.getByTestId("routine-create-button").click();
   await page.locator("label:has-text('Name') input").fill("Daily verification");
   await page
     .locator("label:has-text('Instruction') textarea")
@@ -25,7 +25,7 @@ test("routine test-run completes and survives reload", async ({ page }, testInfo
   await page.getByRole("button", { name: "Add trigger" }).click();
   await page.getByRole("menuitem", { name: "On a schedule" }).hover();
   await page.getByRole("menuitem", { name: "Weekdays", exact: true }).click();
-  await expect(page.getByLabel("How often")).toHaveValue("Weekdays");
+  await expect(page.getByLabel("How often")).toHaveText("Weekdays");
   await captureScreenshot(page, testInfo, "32-routine-configured");
 
   const saved = page.waitForResponse(
@@ -64,7 +64,7 @@ test("routine test-run completes and survives reload", async ({ page }, testInfo
   await page.reload();
   await expect(reply).toBeVisible();
   await expect(reply).toContainText(/routine-run-now-ok/i);
-  await openBotPanelTab(page, "Routines");
+  await openBotPanel(page);
   await expect(page.getByRole("button", { name: /Daily verification/ })).toContainText(
     "Weekdays at 9:00 AM",
   );
@@ -129,7 +129,7 @@ test("a routine run that failed to start shows the error in Details", async ({
   // Details then opens without the slide transition, so the capture shows the whole error.
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
-  await openBotPanelTab(page, "Routines");
+  await openBotPanel(page);
   await page.getByRole("button", { name: /Nightly check/ }).click();
   const history = page.getByTestId("routine-run-history");
   await history.getByText("Details", { exact: true }).click();
@@ -189,7 +189,7 @@ test("run history links runs that replied and marks silent ones", async ({ page 
   );
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.reload();
-  await openBotPanelTab(page, "Routines");
+  await openBotPanel(page);
   await page.getByRole("button", { name: /Price watch/ }).click();
   const history = page.getByTestId("routine-run-history");
   await expect(history.getByRole("heading", { name: "Run history" })).toBeVisible();

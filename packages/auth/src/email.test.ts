@@ -9,6 +9,7 @@ import {
   verificationEmail,
 } from "./email.js";
 import { homeDeletionEmail } from "./home-deletion-email.js";
+import { organizationInvitationEmail } from "./organization-invitation-email.js";
 import {
   integrationClaimConfirmEmail,
   pluginSubmissionAdminEmail,
@@ -60,6 +61,11 @@ it("shares the layout across account, product and marketplace emails", async () 
     homeDeletionEmail(user, new Date(), "plan-ended", url),
     homeDeletionEmail(user, new Date(), "unused", url),
     referralEmail(user, url, url),
+    organizationInvitationEmail(user.email, {
+      organizationName: "Acme",
+      inviterName: "Sam",
+      url,
+    }),
     pluginSubmissionReceivedEmail(user.email),
     integrationClaimConfirmEmail(user.email, url),
     pluginSubmissionAdminEmail(
@@ -96,5 +102,9 @@ describe("email language", () => {
     const user = { id: "user-1", email: "user@example.test", name: "Ana" };
     const reset = await passwordResetEmail(user, "https://example.test/r", emailLocale("es"));
     expect(reset.text).toContain("Hi Ana,");
+    const english = await welcomeEmail(user, "https://example.test/u");
+    expect(english.subject).toBe("Welcome to Rakazo");
+    expect(english.text).toContain("Hi Ana,");
+    expect(english.text).toContain("Rakazo runs on iPhone");
   });
 });

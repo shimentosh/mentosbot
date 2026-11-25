@@ -1,4 +1,3 @@
-import { messagingProgressJob } from "@rakazo/adapter-kit";
 import type { MessageBlock } from "@rakazo/contracts";
 import type { ToolStepOutcome } from "@rakazo/core";
 import {
@@ -15,7 +14,7 @@ import {
   withToolStepOutcomes,
 } from "@rakazo/core";
 import type { Run } from "@rakazo/db";
-import { getLogger } from "@rakazo/logging";
+import { storedMessageBlocks } from "@rakazo/db";
 import type { ExecutorDeps } from "./executor-deps.js";
 import { IMAGE_RETURNING_COMPUTER_TOOLS } from "./model-vision.js";
 import type { ReplyState, RunContext } from "./run-context.js";
@@ -24,7 +23,7 @@ import {
   messageBlocksText,
   runAllowsSilentEmpty,
   runPromotesMidTurnNarration,
-} from "./run-replies.js";
+} from "./run-replies.prompt.js";
 import { PAGE_BROWSER_TOOL_NAMES } from "./run-tool-selection.js";
 import { couldBecomeNoResponse, isExactNoResponse, isPlaceholderText } from "./silent-reply.js";
 import { USER_COMPUTER_SCREEN_TOOLS } from "./user-computer-tools.js";
@@ -69,6 +68,8 @@ export async function createReplyState(
     pendingToolNames: [],
     toolCalls: [],
     toolOutcomes: new Map(),
+    toolStepCalls: new Map(),
+    keptResultChars: 0,
     pendingProgress: "",
     lastProgressAt: 0,
     hasStreamedText: false,
@@ -79,10 +80,10 @@ export async function createReplyState(
   const priorProgress = await deps.prisma.message.findMany({
     where: { runId: run.id, role: "bot" },
     orderBy: { seq: "asc" },
-    select: { blocks: true, clientNonce: true },
+    select: { id: true, blocks: true, clientNonce: true },
   });
   for (const message of priorProgress) {
-    const blocks = Array.isArray(message.blocks) ? (message.blocks as MessageBlock[]) : [];
+    const blocks = storedMessageBlocks(message);
     const card = blocks.findLast((block) => block.kind === "card");
     if (card) reply.cardPreview = cardPreviewText(card);
     if (!isUserProgressClientNonce(message.clientNonce)) continue;
@@ -160,8 +161,10 @@ export async function publishInterimMessage(ctx: RunContext, text: string, markU
   reply.midTurnUserTexts.push(text);
   reply.publishedMidTurnUserMessage = true;
   if (run.trigger === "messaging" && !ctx.source.channelId) {
-    await deps.jobs.enqueue(messagingProgressJob(run.id)).catch((error) => {
-      getLogger().error("messaging progress enqueue error", error);
+    // Sent from here while the turn carries on; its rows' backup jobs cover a failed send.
+    const delivery = deps.messagingDelivery;
+    void delivery?.deliverRun(run.id, { progress: true }).catch((error) => {
+      delivery.reportFailure("messaging progress delivery error", error);
     });
   }
 }
@@ -196,9 +199,11 @@ export function withReplyToolOutcomes(
 ): MessageBlock[] {
   return withToolStepOutcomes(
     reply.messageSegments,
-    reply.toolCalls.map(({ label, executionId }) => ({
+    reply.toolCalls.map(({ label, executionId, tool }) => ({
       label,
       outcome: reply.toolOutcomes.get(executionId) ?? unfinished,
+      tool,
+      call: reply.toolStepCalls.get(executionId),
     })),
   );
 }

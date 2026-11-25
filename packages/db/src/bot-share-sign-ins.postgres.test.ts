@@ -40,11 +40,7 @@ describePostgres("new bots and shared sign-ins (PostgreSQL)", () => {
       await db.pool.end();
     };
     owner = await runAsSystem("test fixture", () =>
-      provisionMessagingIdentity(
-        prisma,
-        { provider, address },
-        { signupsEnabled: undefined, signupAllowlist: undefined },
-      ),
+      provisionMessagingIdentity(prisma, { provider, address }),
     );
   });
 

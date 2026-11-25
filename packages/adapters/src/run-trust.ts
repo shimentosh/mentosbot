@@ -1,20 +1,28 @@
 import type { MessageBlock } from "@rakazo/contracts";
 import type { ActionApprovalRule } from "@rakazo/core";
 import {
+  BACKGROUND_HELPER_TRIGGER,
   botMessageContext,
   connectorKindFromToolName,
+  HELPER_RESULT_TRIGGER,
   inboundRoutinePrompts,
   SITE_SENDING_TOOLS,
   siteAlwaysAllowed,
 } from "@rakazo/core";
 import { sitesInText, urlSite } from "@rakazo/core/egress";
-import { findAutoReviewPreference, listApprovalRules, storedBatchActions } from "@rakazo/db";
+import {
+  findAutoReviewPreference,
+  listApprovalRules,
+  storedBatchActions,
+  storedMessageBlocks,
+} from "@rakazo/db";
 import { boundDirectApprovalDetails, catalogApprovalDetails } from "./approval-effect.js";
 import type { ExecutorDeps } from "./executor-deps.js";
 import type { EffectiveModelRole } from "./model-roles.js";
 import { effectiveModelRole } from "./model-roles.js";
 import { routineTaskInstructions } from "./routine-watch.js";
 import { CATALOG_APPROVAL_TOOL, PASSED_EFFECT_STATUSES } from "./run-effects.js";
+import { loadRunOrigin } from "./run-origin.js";
 import { BUILTIN_AGENT_TOOL_NAMES } from "./run-tool-selection.js";
 import { ticketNumberFromWakePrompt } from "./ticket-wake.js";
 
@@ -134,13 +142,15 @@ async function ticketOwnerWords(
 export function createRunTrustLoaders(
   deps: ExecutorDeps,
   input: {
-    run: { userId: string; spaceId: string; trigger: string };
+    run: { userId: string; spaceId: string; trigger: string; delegatedFromRunId?: string | null };
     runId: string;
     botId: string;
     taskPrompt: string;
     ownerStartedRun: boolean;
     messagingChannelRun: boolean;
-    sourceMessage: { role: string; blocks: unknown } | null;
+    sourceMessage: { id: string; role: string; blocks: unknown } | null;
+    /** The owner's own chat-app message that started a messaging run; absent for anyone else. */
+    ownerChatMessageBlocks?: MessageBlock[];
     connectedPlugins: readonly { provider: string }[];
   },
 ) {
@@ -152,6 +162,7 @@ export function createRunTrustLoaders(
     ownerStartedRun,
     messagingChannelRun,
     sourceMessage,
+    ownerChatMessageBlocks,
     connectedPlugins,
   } = input;
   let approvalRulesPromise: Promise<ActionApprovalRule[]> | undefined;
@@ -183,15 +194,41 @@ export function createRunTrustLoaders(
     }));
     return autoReviewPreferencePromise;
   };
-  // The owner's own words for this run: the message they sent, or the instructions of the
-  // routine that started it, carried along when a bot delegates that work to another (see
-  // messageBot). Never a bot, channel or webhook message, or a tool result.
-  // These name the sites a run is given, and are all Auto Review sees of a new site's run.
+  // The owner's own words for this run: the message they sent (in Rakazo or their own chat app),
+  // or the instructions of the routine that started it, carried along when a bot delegates that
+  // work to another (see messageBot). Never a bot, channel or webhook message, or a tool result.
+  // These name the sites a run is given, and are all Auto Review sees of a new site's run and of
+  // a memory save after outside content.
   let baseOwnerWordsPromise: Promise<string> | undefined;
   const loadBaseOwnerWords = () => {
     baseOwnerWordsPromise ??= (async () => {
-      if (ownerStartedRun && !messagingChannelRun && sourceMessage?.role === "user") {
-        return messageText(sourceMessage.blocks);
+      if (run.trigger === BACKGROUND_HELPER_TRIGGER || run.trigger === HELPER_RESULT_TRIGGER) {
+        // Delegation inherits privacy; outside speakers cannot authorize owner actions.
+        if (messagingChannelRun) return "";
+        const origin = await loadRunOrigin(deps.prisma, {
+          ...run,
+          id: runId,
+          botId,
+          delegatedFromRunId: run.delegatedFromRunId ?? null,
+        });
+        const message = origin?.sourceMessage;
+        if (
+          message?.role !== "user" ||
+          message.authorUserId !== run.userId ||
+          message.threadId !== origin?.threadId
+        )
+          return "";
+        return messageText(storedMessageBlocks(message));
+      }
+      // The executor passes chat-app blocks only for the owner's own message.
+      const ownerBlocks =
+        ownerStartedRun && !messagingChannelRun && sourceMessage?.role === "user"
+          ? storedMessageBlocks(sourceMessage)
+          : run.trigger === "messaging"
+            ? ownerChatMessageBlocks
+            : undefined;
+      if (ownerBlocks) {
+        return messageText(ownerBlocks);
       }
       // Saved when the routine fired, so a later edit cannot change what this run judges.
       if (run.trigger === "routine") return routineTaskInstructions(taskPrompt);

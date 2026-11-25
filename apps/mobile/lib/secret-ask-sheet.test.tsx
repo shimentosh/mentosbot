@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { BLOCKED_ITEM_ANSWER, UNCHOSEN_ITEM_ANSWER } from "@rakazo/contracts";
 import type { ReactNode, Ref } from "react";
 import { act } from "react";
 import type { Root } from "react-dom/client";
@@ -131,6 +132,7 @@ vi.mock("../components/native-switch", () => ({
 
 import type { LoginFieldInput } from "@rakazo/contracts";
 import { SecretAskSheet } from "../components/secret-ask-sheet";
+import { resetI18nForTests } from "./i18n";
 
 const onClose = vi.fn();
 const onSave = vi.fn<(fields: LoginFieldInput[], remember: boolean) => Promise<void>>();
@@ -141,6 +143,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   native.commands = [];
   native.endEditing = {};
+  resetI18nForTests();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
@@ -401,6 +404,25 @@ it("clears both fields and shows a generic error when saving fails", async () =>
   expect(button("Save").disabled).toBe(true);
   expect(container.textContent).toContain("Could not send answer");
   expect(container.textContent).not.toContain("example-password");
+});
+
+it.each([
+  [
+    BLOCKED_ITEM_ANSWER,
+    "This item is blocked for bots. Allow it in the Vault, or dismiss the request.",
+  ],
+  [
+    UNCHOSEN_ITEM_ANSWER,
+    "This bot can't use this item. Change it in the Vault, or dismiss the request.",
+  ],
+])("says why only when bots can't use the item it waited for (%s)", async (answer, shown) => {
+  onSave.mockRejectedValue(new Error(answer));
+  await render();
+  await type("Username", "ada");
+  await type("Password", "example-password");
+  await act(async () => button("Save").click());
+  expect(container.textContent).toContain(shown);
+  expect(container.textContent).not.toContain("Could not send answer");
 });
 
 // iOS offers to save the password when the sheet goes away while a field still holds text, so

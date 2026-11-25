@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { isMessagingEmail } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
+import { MAX_PENDING_INVITATIONS } from "./organization-members.js";
 import { IsolationError } from "./scope.js";
 import { withTransactionRetry } from "./transaction-retry.js";
 
@@ -9,7 +10,6 @@ export type TeamRole = "owner" | "admin" | "member";
 export type InvitableRole = Exclude<TeamRole, "owner">;
 
 export const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const MAX_PENDING_INVITATIONS = 50;
 /** Invitations a team may send a day, so a compromised admin can't use it to send spam. */
 export const MAX_DAILY_INVITATIONS = 100;
 

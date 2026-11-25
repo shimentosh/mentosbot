@@ -9,16 +9,17 @@ import type {
   VoiceTranscribeRequest,
   VoiceVerifyResult,
 } from "@rakazo/adapter-kit";
+import { deadlineSignal } from "@rakazo/core";
 import {
   readVoiceAudio,
   readVoiceJson,
   requireOk,
   speechUploadName,
   verifyVoiceHttpGet,
-  voiceDeadline,
   voiceLanguageHint,
   voiceRequestError,
 } from "./voice-http.js";
+import type { VoiceProviderDefinition } from "./voice-provider-descriptor.js";
 
 const API = "https://api.cartesia.ai";
 // From 2026-03-01 errors are JSON with a `message`; `/voices` pages with `limit`.
@@ -50,7 +51,7 @@ export class CartesiaVoiceProvider implements VoiceProvider {
   }
 
   async listVoices(apiKey: string, context: AdapterContext): Promise<VoiceInfo[]> {
-    const signal = voiceDeadline(context.signal, 20_000);
+    const signal = deadlineSignal(20_000, context.signal);
     const voices: Array<Record<string, unknown>> = [];
     let startingAfter: string | undefined;
     // `limit` is per page, so walk the cursor to keep voices past the first page in the picker
@@ -80,7 +81,7 @@ export class CartesiaVoiceProvider implements VoiceProvider {
   }
 
   async synthesize(request: VoiceSynthesizeRequest, context: AdapterContext): Promise<SpeechClip> {
-    const signal = voiceDeadline(request.signal ?? context.signal, 60_000);
+    const signal = deadlineSignal(60_000, request.signal ?? context.signal);
     const res = await fetch(`${API}/tts/bytes`, {
       method: "POST",
       headers: {
@@ -118,7 +119,7 @@ export class CartesiaVoiceProvider implements VoiceProvider {
       method: "POST",
       headers: cartesiaHeaders(request.apiKey),
       body: form,
-      signal: voiceDeadline(request.signal ?? context.signal, 60_000),
+      signal: deadlineSignal(60_000, request.signal ?? context.signal),
     });
     const body = await readVoiceJson(res, { requireValid: res.ok });
     if (!res.ok) throw voiceRequestError(res.status, "Cartesia", "transcribing", body);
@@ -155,3 +156,12 @@ function voicesFrom(body: unknown): Array<Record<string, unknown>> {
   }
   return [];
 }
+
+export const cartesiaVoice: VoiceProviderDefinition = {
+  catalog: {
+    name: "Cartesia",
+    description: "Lowest-latency Sonic voices for interruptible calls.",
+    transcribe: true,
+  },
+  create: () => new CartesiaVoiceProvider(),
+};

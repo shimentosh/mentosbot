@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ExecutorDeps } from "./executor-deps.js";
 import { connectorTrustKeys, createRunTrustLoaders } from "./run-trust.js";
 
@@ -70,7 +70,7 @@ describe("owner words", () => {
         taskPrompt: later.taskPrompt ?? "prompt",
         ownerStartedRun: trigger === "user",
         messagingChannelRun: false,
-        sourceMessage: { role, blocks },
+        sourceMessage: { id: "message-1", role, blocks },
         connectedPlugins: [],
       },
     ).loadOwnerWords();
@@ -195,5 +195,77 @@ describe("owner words", () => {
     await expect(
       ownerWords("tickets", [], "user", { taskPrompt: "Work on something else", ticket }),
     ).resolves.toBe("");
+  });
+});
+
+describe("delegated authorization provenance", () => {
+  const request = {
+    trigger: "user",
+    threadId: "chat",
+    delegatedFromRunId: null,
+    sourceMessage: {
+      role: "user",
+      authorUserId: "user",
+      threadId: "chat",
+      blocks: [{ kind: "text", text: "Compare the documents." }],
+    },
+  };
+  function loaders(trigger: string, origin: string | null, rows: unknown[]) {
+    const findFirst = vi.fn();
+    for (const row of rows) findFirst.mockResolvedValueOnce(row);
+    const trust = createRunTrustLoaders(
+      {
+        prisma: {
+          run: { findFirst },
+          message: { findMany: vi.fn(async () => []) },
+          steeringMessage: { findMany: vi.fn(async () => []) },
+        },
+      } as unknown as ExecutorDeps,
+      {
+        run: { userId: "user", spaceId: "space", trigger, delegatedFromRunId: origin },
+        runId: "run",
+        botId: "bot",
+        taskPrompt: "Model-generated brief and instructions",
+        ownerStartedRun: true,
+        messagingChannelRun: false,
+        sourceMessage: null,
+        connectedPlugins: [],
+      },
+    );
+    return { trust, findFirst };
+  }
+  it("recovers the initiating user's words for a helper result across restart", async () => {
+    const { trust, findFirst } = loaders("helper_result", "helper", [
+      { trigger: "helper", delegatedFromRunId: "parent" },
+      request,
+    ]);
+    expect(await trust.loadOwnerWords()).toBe("Compare the documents.");
+    expect(findFirst).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { id: "parent", userId: "user", spaceId: "space", botId: "bot" },
+      }),
+    );
+  });
+  it.each([
+    null,
+    { ...request, status: "cancelled" },
+    {
+      ...request,
+      thread: { groupId: "group", group: { archivedAt: new Date(), members: [{ botId: "bot" }] } },
+    },
+    { ...request, thread: { groupId: "group", group: { archivedAt: null, members: [] } } },
+    { ...request, sourceMessage: null },
+    { ...request, sourceMessage: { ...request.sourceMessage, authorUserId: "another-user" } },
+    { ...request, sourceMessage: { ...request.sourceMessage, role: "bot" } },
+    { ...request, sourceMessage: { ...request.sourceMessage, threadId: "another-chat" } },
+  ])("does not treat missing, foreign, or generated messages as permission", async (row) => {
+    const { trust } = loaders("helper", "parent", [row]);
+    expect(await trust.loadOwnerWords()).toBe("");
+  });
+  it("does not substitute the brief for helpers created by the previous release", async () => {
+    const { trust, findFirst } = loaders("helper", null, []);
+    expect(await trust.loadOwnerWords()).toBe("");
+    expect(findFirst).not.toHaveBeenCalled();
   });
 });

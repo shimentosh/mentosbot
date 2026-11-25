@@ -6,16 +6,17 @@ import type { Actor, ConnectionCatalogItem, MessageBlock } from "@rakazo/contrac
 import {
   ACTIVE_RUN_STATUSES,
   appConnectCard,
-  connectedAppBlocks,
+  connectedAppBlock,
   isOwnerStartedRun,
   matchAppCatalog,
-  matchesAppConnection,
 } from "@rakazo/core";
 import type { Prisma, PrismaClient, ThreadEvents } from "@rakazo/db";
 import {
   appendEventInTransaction,
+  changeMessageBlocks,
   createThreadMessageInTransaction,
   IsolationError,
+  storedMessageBlocks,
   THREAD_LOCK_TRANSACTION_OPTIONS,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
@@ -176,12 +177,11 @@ export async function promptFocus(
     await tx.$executeRaw`SELECT id FROM threads WHERE id = ${thread.id} FOR UPDATE`;
     const recent = await tx.message.findMany({
       where: { threadId: thread.id },
-      select: { role: true, blocks: true },
+      select: { id: true, role: true, blocks: true },
       orderBy: { createdAt: "asc" },
     });
     if (recent.some((message) => message.role === "user")) return null;
-    if (recent.some((message) => messageHasChoiceOrAsk(message.blocks as MessageBlock[])))
-      return null;
+    if (recent.some((message) => messageHasChoiceOrAsk(storedMessageBlocks(message)))) return null;
     // A bot whose creation intro is running asks what it is for itself (see enqueueBotIntroRun).
     const intro = await tx.run.findFirst({
       where: {
@@ -211,29 +211,24 @@ export async function promptFocus(
   await deps.events.notify(target.threadId, committed.event.seq);
 }
 
-export async function dismissFocus(
+/** Answer the first pending choice and notify after the transaction commits. */
+async function answerPendingChoice(
   deps: OnboardingDeps,
-  actor: Actor,
-  botId: string,
-): Promise<void> {
-  const { bot, thread } = await requireBotThread(deps, actor, botId);
-  const target = { spaceId: actor.spaceId, botId: bot.id, threadId: thread.id };
+  target: { spaceId: string; botId: string; threadId: string },
+  mapBlock: (block: MessageBlock) => MessageBlock,
+): Promise<boolean> {
   const claimed = await deps.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.$executeRaw`SELECT id FROM threads WHERE id = ${thread.id} FOR UPDATE`;
+    await tx.$executeRaw`SELECT id FROM threads WHERE id = ${target.threadId} FOR UPDATE`;
     const recent = await tx.message.findMany({
-      where: { threadId: thread.id },
+      where: { threadId: target.threadId },
       orderBy: { createdAt: "asc" },
     });
-    const pending = recent.find((message) =>
-      messageHasPendingChoice(message.blocks as MessageBlock[]),
-    );
+    const pending = recent.find((message) => messageHasPendingChoice(storedMessageBlocks(message)));
     if (!pending) return null;
-    const blocks = (pending.blocks as MessageBlock[]).map((block) =>
-      block.kind === "choice" && !block.answerId
-        ? { ...block, answerId: FOCUS_DISMISSED_ANSWER_ID }
-        : block,
-    );
-    await tx.message.update({ where: { id: pending.id }, data: { blocks } });
+    const next = changeMessageBlocks(pending, mapBlock);
+    if (!next) return null;
+    const { blocks } = next;
+    await tx.message.update({ where: { id: pending.id }, data: { blocks: next.stored } });
     const event = await appendEventInTransaction(tx, {
       spaceId: target.spaceId,
       threadId: target.threadId,
@@ -241,10 +236,25 @@ export async function dismissFocus(
       type: "thread.message.updated",
       payload: { messageId: pending.id, role: "bot", blocks },
     });
-    return { messageId: pending.id, blocks, event };
+    return event;
   }, THREAD_LOCK_TRANSACTION_OPTIONS);
-  if (!claimed) return;
-  await deps.events.notify(target.threadId, claimed.event.seq);
+  if (!claimed) return false;
+  await deps.events.notify(target.threadId, claimed.seq);
+  return true;
+}
+
+export async function dismissFocus(
+  deps: OnboardingDeps,
+  actor: Actor,
+  botId: string,
+): Promise<void> {
+  const { bot, thread } = await requireBotThread(deps, actor, botId);
+  const target = { spaceId: actor.spaceId, botId: bot.id, threadId: thread.id };
+  await answerPendingChoice(deps, target, (block) =>
+    block.kind === "choice" && !block.answerId
+      ? { ...block, answerId: FOCUS_DISMISSED_ANSWER_ID }
+      : block,
+  );
 }
 
 export async function chooseFocus(
@@ -258,31 +268,10 @@ export async function chooseFocus(
   const { bot, thread } = await requireBotThread(deps, actor, botId);
   const target = { spaceId: actor.spaceId, botId: bot.id, threadId: thread.id };
 
-  const claimed = await deps.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    await tx.$executeRaw`SELECT id FROM threads WHERE id = ${thread.id} FOR UPDATE`;
-    const recent = await tx.message.findMany({
-      where: { threadId: thread.id },
-      orderBy: { createdAt: "asc" },
-    });
-    const pending = recent.find((message) =>
-      messageHasPendingChoice(message.blocks as MessageBlock[]),
-    );
-    if (!pending) return null;
-    const blocks = (pending.blocks as MessageBlock[]).map((block) =>
-      block.kind === "choice" ? { ...block, answerId: option.id } : block,
-    );
-    await tx.message.update({ where: { id: pending.id }, data: { blocks } });
-    const event = await appendEventInTransaction(tx, {
-      spaceId: target.spaceId,
-      threadId: target.threadId,
-      botId: target.botId,
-      type: "thread.message.updated",
-      payload: { messageId: pending.id, role: "bot", blocks },
-    });
-    return { messageId: pending.id, blocks, event };
-  }, THREAD_LOCK_TRANSACTION_OPTIONS);
+  const claimed = await answerPendingChoice(deps, target, (block) =>
+    block.kind === "choice" ? { ...block, answerId: option.id } : block,
+  );
   if (!claimed) return;
-  await deps.events.notify(target.threadId, claimed.event.seq);
 
   // Keep the name and title the user chose when creating the bot; the focus
   // step only suggests apps, it must not rename the bot.
@@ -331,7 +320,7 @@ export async function markAppConnected(
   actor: Actor,
   botId: string,
   provider: string,
-  connectorId = "composio",
+  connectorId = deps.connectors.defaultConnectorId,
   threadId?: string,
   messageId?: string,
 ): Promise<void> {
@@ -391,22 +380,17 @@ export async function markAppConnected(
     // The newest card a run showed for this app: that run's task picks back up.
     let card: (typeof messages)[number] | undefined;
     for (const message of messages) {
-      const blocks = message.blocks as MessageBlock[];
-      if (
-        !blocks.some(
-          (block) =>
-            matchesAppConnection(block, connectorId, entry.slug) && block.status !== "connected",
-        )
-      )
-        continue;
-      const next = connectedAppBlocks(blocks, connectorId, entry.slug);
+      const next = changeMessageBlocks(message, (block) =>
+        connectedAppBlock(block, connectorId, entry.slug, deps.connectors.defaultConnectorId),
+      );
+      if (!next) continue;
       if (message.runId && (!card || message.createdAt > card.createdAt)) card = message;
-      await tx.message.update({ where: { id: message.id }, data: { blocks: next } });
+      await tx.message.update({ where: { id: message.id }, data: { blocks: next.stored } });
       events.push(
         await appendEventInTransaction(tx, {
           ...target,
           type: "thread.message.updated",
-          payload: { messageId: message.id, role: "bot", blocks: next },
+          payload: { messageId: message.id, role: "bot", blocks: next.blocks },
         }),
       );
     }

@@ -88,6 +88,6 @@ Right-click a bot in the sidebar to **Pin** it, **Move to** a section, **Mark as
 - The **bell** at the top of the sidebar (at the top of the chat list on mobile) shows what needs you now, such as an approval or a
   question, and what your bots recently finished or failed, across the spaces of your organization.
   A request leaves it once you answer.
-- **Activity** in the sidebar lists every run, with filters for status and date. Use it to find a
-  run that failed or is waiting on you.
+- **Activity** in the sidebar lists every run, with search by bot name and filters for status
+  and date. Use it to find a run that failed or is waiting on you.
 - **Artifacts** in the account menu lists every file bots have made, with search and a date filter.

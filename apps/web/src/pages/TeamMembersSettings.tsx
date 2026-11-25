@@ -20,8 +20,7 @@ import {
   Field,
   FieldLabel,
   Input,
-  NativeSelect,
-  NativeSelectOption,
+  OptionSelect,
 } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Check, Copy, Ellipsis, UserPlus } from "lucide-react";
@@ -372,15 +371,16 @@ function InviteDialog({
                 <FieldLabel htmlFor={roleId}>
                   <Trans>Role</Trans>
                 </FieldLabel>
-                <NativeSelect
+                <OptionSelect<InvitableTeamRole>
                   id={roleId}
                   value={role}
                   disabled={pending}
-                  onChange={(event) => setRole(event.target.value as InvitableTeamRole)}
-                >
-                  <NativeSelectOption value="member">{t`Member`}</NativeSelectOption>
-                  <NativeSelectOption value="admin">{t`Admin`}</NativeSelectOption>
-                </NativeSelect>
+                  onValueChange={setRole}
+                  options={[
+                    { value: "member", label: t`Member` },
+                    { value: "admin", label: t`Admin` },
+                  ]}
+                />
               </Field>
             ) : null}
             {error ? (

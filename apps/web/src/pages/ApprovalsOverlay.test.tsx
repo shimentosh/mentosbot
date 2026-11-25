@@ -49,8 +49,7 @@ vi.mock("@rakazo/ui-web", () => {
     DialogHeader: Container,
     DialogTitle: Container,
     ListSearchInput: () => null,
-    NativeSelect: Container,
-    NativeSelectOption: Container,
+    OptionSelect: () => null,
     SectionHeading: Container,
     Spinner: () => null,
     Tabs: ({

@@ -35,6 +35,11 @@ export function useI18n(): { locale: UiLocale; t: typeof t } {
   return { locale: "en", t };
 }
 
+/** Puts English back for a test; the app has no other language to switch to. */
+export function resetI18nForTests(): void {
+  i18n.activate("en");
+}
+
 async function applyDirection(): Promise<void> {
   try {
     // English lays out left to right; never follow the device's direction, which would fight

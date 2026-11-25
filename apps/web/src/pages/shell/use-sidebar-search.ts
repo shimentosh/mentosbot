@@ -1,5 +1,6 @@
+import { useTimeout } from "@rakazo/chat-ui/hooks";
 import type { SearchHit } from "@rakazo/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { createSpaceRpc } from "../../lib/rpc";
 import { errorText } from "../../lib/user-error";
 import type { useShellNavigation } from "./use-shell-navigation";
@@ -21,6 +22,8 @@ export function useSidebarSearch({
   const spaceQuery = query.trim();
   const showSpaceSearch = spaceQuery.length > 0;
 
+  // Each query and retry gets its own signal, aborted once a newer one replaces it.
+  const searchAbort = useRef<AbortController | null>(null);
   useEffect(() => {
     if (!showSpaceSearch) {
       setSearchHits([]);
@@ -29,11 +32,17 @@ export function useSidebarSearch({
       return;
     }
     const abort = new AbortController();
-    const timer = window.setTimeout(() => {
+    searchAbort.current = abort;
+    return () => abort.abort();
+  }, [showSpaceSearch, spaceQuery, searchAttempt]);
+  useTimeout(
+    () => {
+      const abort = searchAbort.current;
+      if (!abort) return;
       setSearchLoading(true);
       setSearchError(null);
       void rpc.search
-        .query({ q: spaceQuery })
+        .query({ q: spaceQuery }, { signal: abort.signal })
         .then((result) => {
           if (!abort.signal.aborted) setSearchHits(result.hits);
         })
@@ -43,12 +52,10 @@ export function useSidebarSearch({
         .finally(() => {
           if (!abort.signal.aborted) setSearchLoading(false);
         });
-    }, 200);
-    return () => {
-      abort.abort();
-      window.clearTimeout(timer);
-    };
-  }, [showSpaceSearch, spaceQuery, searchAttempt]);
+    },
+    showSpaceSearch ? 200 : null,
+    `${spaceQuery}\n${searchAttempt}`,
+  );
 
   function jumpToSearchHit(hit: SearchHit) {
     setQuery("");

@@ -25,8 +25,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
-import { Suspense } from "react";
+import type { RefObject } from "react";
 import { IconTooltip } from "../../components/IconTooltip";
 import type { BotsSidebarDensity } from "../../lib/bots-sidebar-density-pref";
 import {
@@ -34,6 +33,8 @@ import {
   rosterHasUndismissedRunError,
   rosterWorkStatusLabel,
 } from "../../lib/roster-status";
+import type { ChatMenuState } from "./chat-context-menu";
+import { ChatMenu } from "./chat-context-menu";
 import type { RosterDropAction, RosterDropTarget } from "./roster-drop";
 import type { sidebarGroupsForSpaces } from "./space-sidebar";
 import { useRedrawAtMidnight } from "./use-redraw-at-midnight";
@@ -65,11 +66,9 @@ export function SidebarRoster({
   draggedSectionId,
   setDraggedSectionId,
   moveBotSection,
-  botMenu,
-  setBotMenu,
+  chatMenu,
   reorderRosterBot,
   activeSnapshot,
-  botMenuContent,
   mini = false,
 }: {
   sidebarGroups: ReturnType<
@@ -100,11 +99,9 @@ export function SidebarRoster({
   draggedSectionId: string | null;
   setDraggedSectionId: (id: string | null) => void;
   moveBotSection: (sourceId: string, targetId: string) => void;
-  botMenu: { kind: "bot" | "group"; id: string } | null;
-  setBotMenu: Dispatch<SetStateAction<{ kind: "bot" | "group"; id: string } | null>>;
+  chatMenu: ChatMenuState;
   reorderRosterBot: (sourceId: string, targetId: string, groupBotIds: string[]) => void;
   activeSnapshot: ThreadSnapshot | null;
-  botMenuContent: ReactNode;
   mini?: boolean;
 }) {
   useRedrawAtMidnight();
@@ -640,19 +637,10 @@ export function SidebarRoster({
                       opacity: item.kind === "bot" && draggedBotId === item.chat.id ? 0.55 : 1,
                     }}
                   >
-                    <ContextMenu
+                    <ChatMenu
+                      target={{ kind: item.kind, id: item.chat.id }}
+                      state={chatMenu}
                       disabled={item.chat.spaceId !== bootstrapMe?.spaceId}
-                      open={botMenu?.kind === item.kind && botMenu.id === item.chat.id}
-                      // A sibling row's menu may already own the state; only clear our own.
-                      onOpenChange={(open) =>
-                        setBotMenu((current) =>
-                          open
-                            ? { kind: item.kind, id: item.chat.id }
-                            : current?.kind === item.kind && current.id === item.chat.id
-                              ? null
-                              : current,
-                        )
-                      }
                     >
                       {mini ? (
                         <IconTooltip
@@ -668,10 +656,7 @@ export function SidebarRoster({
                       ) : (
                         chatTrigger
                       )}
-                      {botMenu?.kind === item.kind && botMenu.id === item.chat.id ? (
-                        <Suspense fallback={null}>{botMenuContent}</Suspense>
-                      ) : null}
-                    </ContextMenu>
+                    </ChatMenu>
                   </div>
                 );
               })}

@@ -6,8 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  NativeSelect,
-  NativeSelectOption,
+  OptionSelect,
   SectionHeading,
 } from "@rakazo/ui-web";
 import { useQuery } from "@tanstack/react-query";
@@ -108,14 +107,15 @@ export function BotShareSection({ bot }: { bot: Bot }) {
           {access.map((entry) => (
             <li key={entry.userId} className="flex items-center gap-3 px-4 py-2.5">
               <span className="min-w-0 flex-1 truncate text-body">{display(entry)}</span>
-              <NativeSelect
+              <OptionSelect<BotAccessLevel>
                 aria-label={t`Access for ${display(entry)}`}
                 value={entry.level}
-                onChange={(event) => void share(entry.userId, event.target.value as BotAccessLevel)}
-              >
-                <NativeSelectOption value="chat">{t`Can chat`}</NativeSelectOption>
-                <NativeSelectOption value="manage">{t`Can manage`}</NativeSelectOption>
-              </NativeSelect>
+                onValueChange={(level) => void share(entry.userId, level)}
+                options={[
+                  { value: "chat", label: t`Can chat` },
+                  { value: "manage", label: t`Can manage` },
+                ]}
+              />
               <Button
                 variant="ghost"
                 size="icon-sm"

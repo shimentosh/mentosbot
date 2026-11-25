@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { captureScreenshot, completeOnboarding, createNamedBot, rpc, signup } from "./helpers";
+import {
+  captureScreenshot,
+  chooseOption,
+  completeOnboarding,
+  createNamedBot,
+  refocus,
+  rpc,
+  signup,
+} from "./helpers";
 
 function approvals(page: Page) {
   return page.getByTestId("approvals");
@@ -55,7 +63,7 @@ test("approvals show active and finished runs beside what waits on the person", 
   await expect(filtersButton).toHaveAttribute("aria-expanded", "false");
   await filtersButton.click();
   await expect(filtersButton).toHaveAttribute("aria-expanded", "true");
-  await page.getByTestId("activity-status-filter").selectOption("failed");
+  await chooseOption(page.getByTestId("activity-status-filter"), "Failed");
   await expect(activity.getByTestId("activity-filter-indicator")).toBeVisible();
   await expect(activityRow(page, "Chief")).toHaveCount(0);
   await page.getByTestId("activity-reset-filters").click();
@@ -141,7 +149,7 @@ test("activity filters keep retry when a refresh fails", async ({ page }, testIn
     });
   });
 
-  // The list refreshes every 15s; drive that poll with a controlled clock.
+  // A fixed clock keeps relative times stable; returning to the window reads the list again.
   await page.clock.install();
   await page.clock.setFixedTime(now);
   await page.reload();
@@ -160,13 +168,13 @@ test("activity filters keep retry when a refresh fails", async ({ page }, testIn
   await activitySearch.fill("Chief");
 
   phase = "empty";
-  await page.clock.fastForward(15_000);
+  await refocus(page);
   await expect(activityRow(page, "Chief")).toHaveCount(0);
   await expect(aside.getByText("No runs match these filters.")).toHaveCount(0);
   await expect(activitySearch).toHaveValue("Chief");
 
   phase = "fail";
-  await page.clock.fastForward(15_000);
+  await refocus(page);
   const retry = page.getByRole("button", { name: "Try again" });
   await expect(retry).toBeVisible();
   await expect(aside.getByText("No runs match these filters.")).toHaveCount(0);

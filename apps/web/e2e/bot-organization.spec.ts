@@ -312,7 +312,7 @@ test("a scrolled sidebar pins the current section and jumps to another", async (
   await expect(jumpBar).toHaveAttribute("aria-hidden", "true");
 
   // Scroll partway into the second section: its name stays pinned above the list.
-  await group(1).evaluate((element) => {
+  await group(1).evaluate((element: HTMLElement) => {
     const list = element.parentElement as HTMLElement;
     list.scrollTop = element.offsetTop - list.offsetTop + 24;
   });

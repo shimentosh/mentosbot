@@ -204,7 +204,10 @@ describe("BuiltinMemoryProvider", () => {
     expect(await recall(provider, "pricing copy", { historyGeneration: 2 })).toEqual([
       "Summary 2: agreed the pricing page copy",
     ]);
-    await provider.purgeHistory({ botId: "bot-a", generations: [1, 2] }, context());
+    await provider.purgeHistory(
+      { botId: "bot-a", threadId: "thread-a", generations: [1, 2] },
+      context(),
+    );
     expect(rows).toEqual([]);
   });
 

@@ -47,9 +47,9 @@ import { forgetAppBadge, syncInboxAppBadge, unreadChatCount } from "../lib/app-b
 import { mobileTokens, resolveMobileAppearance } from "../lib/appearance";
 import { explicitSignInRoute } from "../lib/auth-routing";
 import { AvatarViewportScope, createAvatarViewport } from "../lib/avatar-life";
+import { useContentBottomInset } from "../lib/content-bottom-inset";
 import type { CreateAction } from "../lib/create-chooser";
 import { useHeaderHeightIfAny } from "../lib/floating-header";
-import { useForegroundPoll } from "../lib/foreground-poll";
 import { hapticImpact, hapticSelection } from "../lib/haptics";
 import { useUiLocale } from "../lib/i18n";
 import { onInboxChanged, onOpenChatFromInbox } from "../lib/inbox-changes";
@@ -81,7 +81,6 @@ import {
 import type { OrganizeTarget } from "../lib/organize-target";
 import { findOrganizeTarget } from "../lib/organize-target";
 import { offerPasskeyOnce } from "../lib/passkey";
-import { INBOX_POLL_INTERVAL_MS, INBOX_SIGNALLED_POLL_INTERVAL_MS } from "../lib/poll-cadence";
 import { registerPushToken } from "../lib/push";
 import { queryClient, rpcQuery } from "../lib/query";
 import { hasSignedInBefore, rememberSignedIn } from "../lib/returning-user";
@@ -270,15 +269,10 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     };
   }, [hasSession]);
 
-  // The embedded pane is visible beside the chat, so it keeps polling even when
+  // The embedded pane is visible beside the chat, so it keeps following changes even when
   // the chat route owns focus.
   const inboxShown = hasSession && (embedded || isFocused);
-  const rosterSignalsLive = useRosterSignals(loadBots, inboxShown);
-  useForegroundPoll(
-    loadBots,
-    rosterSignalsLive ? INBOX_SIGNALLED_POLL_INTERVAL_MS : INBOX_POLL_INTERVAL_MS,
-    inboxShown,
-  );
+  useRosterSignals(loadBots, inboxShown);
   useEffect(() => onInboxChanged(() => void refreshBots().catch(() => undefined)), [refreshBots]);
 
   const archivedCount = useArchivedCount(me?.spaceId, hasSession);
@@ -294,8 +288,15 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     editSectionFromMenu,
     deleteSection,
     moveSection,
+    promptRenameSection,
     snoozeChat,
-  } = useInboxChatActions({ loadBots, setBots, setGroups, setSpaces });
+  } = useInboxChatActions({
+    confirmationActive: inboxShown,
+    loadBots,
+    setBots,
+    setGroups,
+    setSpaces,
+  });
 
   const { activity, activityStatus, clearActivity, activityRequestId, loadActivity } =
     useSpaceActivity({
@@ -428,6 +429,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
         organizeTarget.chat)
     : null;
   const insets = useSafeAreaInsets();
+  const contentBottomInset = useContentBottomInset();
   // An unfolded or tablet window keeps the inbox in a centred column.
   const windowWidth = useWindowDimensions().width;
   const { inboxWidth } = useSplitView();
@@ -467,7 +469,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     listRef,
     // The Liquid Glass header floats over the list; the older header sits above it.
     topInset: nativeHeader ? headerHeight : 0,
-    bottomInset: insets.bottom,
+    bottomInset: contentBottomInset,
   });
   const router = useRouter();
   const pathname = usePathname();
@@ -739,6 +741,7 @@ function Home({ embedded, onSelectSpace, onShareSelect }: InboxPaneProps & { emb
     day,
     now: snoozeNow,
     deleteSection,
+    promptRenameSection,
     editSectionFromMenu,
     groupAction,
     moveSection,

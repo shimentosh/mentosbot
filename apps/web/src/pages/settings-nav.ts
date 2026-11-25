@@ -5,6 +5,7 @@ import {
   CloudDownload,
   Cpu,
   CreditCard,
+  FlaskConical,
   Gauge,
   HardDrive,
   KeyRound,
@@ -34,6 +35,7 @@ export function useSettingsNavItems(available: {
   storage: boolean;
   billing: boolean;
   updates: boolean;
+  labs: boolean;
 }): SettingsNavItem[] {
   const { t } = useLingui();
   return [
@@ -96,6 +98,7 @@ export function useSettingsNavItems(available: {
         ]
       : []),
     ...(available.storage ? [{ id: "storage" as const, label: t`Storage`, icon: HardDrive }] : []),
+    ...(available.labs ? [{ id: "labs" as const, label: t`Labs`, icon: FlaskConical }] : []),
     { id: "usage", label: t`Usage`, icon: Gauge },
     ...(available.billing ? [{ id: "billing" as const, label: t`Billing`, icon: CreditCard }] : []),
     { id: "organization", label: t`Organization`, icon: Building2 },

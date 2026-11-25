@@ -1,4 +1,5 @@
 import { MAX_TRANSCRIPTION_RESPONSE_BYTES, VOICE_RESPONSE_TIMEOUT_MS } from "@rakazo/core";
+import { deferred } from "@rakazo/core/test-async";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   combineTranscript,
@@ -45,12 +46,9 @@ function stubRecorderFallback(fetchMock: ReturnType<typeof vi.fn>) {
 describe("Dictation recorder fallback", () => {
   it("stops tracks if hold-to-talk is cancelled while the mic prompt is open", async () => {
     const track = { stop: vi.fn() };
-    let grant!: (stream: { getTracks: () => Array<{ stop: () => void }> }) => void;
-    const pending = new Promise<{ getTracks: () => Array<{ stop: () => void }> }>((resolve) => {
-      grant = resolve;
-    });
+    const grant = deferred<{ getTracks: () => Array<{ stop: () => void }> }>();
     vi.stubGlobal("navigator", {
-      mediaDevices: { getUserMedia: vi.fn(() => pending) },
+      mediaDevices: { getUserMedia: vi.fn(() => grant.promise) },
       language: "en-US",
     });
     const started = vi.fn();
@@ -75,7 +73,7 @@ describe("Dictation recorder fallback", () => {
       onFinal: () => undefined,
     });
     dictation.stop("cancel");
-    grant({ getTracks: () => [track] });
+    grant.resolve({ getTracks: () => [track] });
     await listening;
 
     expect(track.stop).toHaveBeenCalledOnce();

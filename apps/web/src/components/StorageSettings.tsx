@@ -19,8 +19,7 @@ import {
   FieldLabel,
   Input,
   Label,
-  NativeSelect,
-  NativeSelectOption,
+  OptionSelect,
   Switch,
 } from "@rakazo/ui-web";
 import {
@@ -298,22 +297,17 @@ function StorageCleanup({ onCleaned }: { onCleaned: () => void }) {
         <label htmlFor={ageId} className="text-body text-foreground">
           <Trans>Files older than</Trans>
         </label>
-        <NativeSelect
+        <OptionSelect
           id={ageId}
           value={String(days)}
           disabled={busy}
-          onChange={(event) => {
+          onValueChange={(next) => {
             setCleaned(false);
             setError(null);
-            setDays(Number(event.target.value));
+            setDays(Number(next));
           }}
-        >
-          {CLEANUP_AGES.map((age) => (
-            <NativeSelectOption key={age} value={String(age)}>
-              {ageLabel(age)}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
+          options={CLEANUP_AGES.map((age) => ({ value: String(age), label: ageLabel(age) }))}
+        />
       </div>
       <div className="mt-3 flex min-h-8 items-center justify-between gap-3">
         <span className="text-body-sm tabular-nums text-muted-foreground">

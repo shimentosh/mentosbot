@@ -22,6 +22,7 @@ import {
   COMPUTER_UID,
   COMPUTER_USER,
   computerBridgeNameFor,
+  computerComputeGpusMatch,
   computerDnsMatches,
   computerHomeStorage,
   computerMountsMatch,
@@ -38,6 +39,7 @@ import {
   xdotoolCommand,
 } from "./computer-spec.js";
 import {
+  computerComputeGpus,
   computerDns,
   computerMounts,
   controlViaLoopback,
@@ -137,13 +139,23 @@ function identityHeaders(c: Context) {
   };
 }
 
-app.get("/health", (c) => c.json({ ok: true, image: COMPUTER_IMAGE }));
+/** The only paths that answer without the service token. */
+export const SUPERVISOR_PUBLIC_PATHS: ReadonlySet<string> = new Set(["/health"]);
 
-// How busy this server is, for the deployment's Servers settings. The computers' token guards it.
-app.get("/usage", async (c) => {
-  if (!hasValidBearerToken(c.req.header("authorization"), supervisorToken)) {
+app.use("*", async (c, next) => {
+  if (
+    !SUPERVISOR_PUBLIC_PATHS.has(c.req.path) &&
+    !hasValidBearerToken(c.req.header("authorization"), supervisorToken)
+  ) {
     return c.json({ error: "unauthorized" }, 401);
   }
+  await next();
+});
+
+app.get("/health", (c) => c.json({ ok: true, image: COMPUTER_IMAGE }));
+
+// How busy this server is, for the deployment's Servers settings.
+app.get("/usage", async (c) => {
   const listed = await docker.listContainers({
     all: true,
     filters: { label: ["rakazo.managed=true"] },
@@ -167,18 +179,6 @@ app.get("/usage", async (c) => {
   );
 });
 
-app.use("/computers", async (c, next) => {
-  if (!hasValidBearerToken(c.req.header("authorization"), supervisorToken)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-  await next();
-});
-app.use("/computers/*", async (c, next) => {
-  if (!hasValidBearerToken(c.req.header("authorization"), supervisorToken)) {
-    return c.json({ error: "unauthorized" }, 401);
-  }
-  await next();
-});
 app.use("/computers", limitSupervisorRequestBody);
 app.use("/computers/*", limitSupervisorRequestBody);
 
@@ -311,6 +311,8 @@ app.post("/computers", async (c) => {
           computerDnsMatches(info.HostConfig.Dns, computerDns) &&
           // So are host mounts: an added, changed or removed one replaces the computer.
           computerMountsMatch(info, computerMounts) &&
+          // And GPUs: turning them on or off, or changing the count, replaces it too.
+          computerComputeGpusMatch(info.HostConfig.DeviceRequests, computerComputeGpus) &&
           // So are the owner's time zone and language.
           computerLocaleMatches(info.Config.Env, locale) &&
           // So is the owner's network: the browser's proxy is part of its environment.
@@ -380,6 +382,7 @@ app.post("/computers", async (c) => {
           publishControlPort: controlViaLoopback,
           dns: computerDns,
           mounts: computerMounts,
+          computeGpus: computerComputeGpus,
           locale,
           env: exitSettings.env,
           labels: exitSettings.labels,
@@ -698,8 +701,7 @@ app.post("/computers/:id/browser", async (c) => {
     ])
     .safeParse(await c.req.json());
   // Refused here, before anything reaches the computer: the caller learns by this code alone that
-  // nothing ran, and may keep a one-time code for another try. Keep in step with the adapters'
-  // INVALID_BROWSER_REQUEST.
+  // nothing ran, and may keep a one-time code for another try.
   if (!parsed.success) {
     return c.json(
       { ok: false, code: "invalid_browser_request", error: "Invalid page browser request" },

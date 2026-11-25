@@ -18,8 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   ListSearchInput,
-  NativeSelect,
-  NativeSelectOption,
+  OptionSelect,
   SectionHeading,
   Spinner,
   Tabs,
@@ -149,19 +148,16 @@ export function ApprovalsOverlay({
           )}
           {view === "approvals" && askers.length > 1 ? (
             <div className="w-44">
-              <NativeSelect
+              <OptionSelect
                 size="sm"
                 aria-label={t`Bot`}
                 value={botFilter}
-                onChange={(event) => setBotFilter(event.target.value)}
-              >
-                <NativeSelectOption value="all">{t`All bots`}</NativeSelectOption>
-                {askers.map((bot) => (
-                  <NativeSelectOption key={bot.id} value={bot.id}>
-                    {bot.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                onValueChange={setBotFilter}
+                options={[
+                  { value: "all", label: t`All bots` },
+                  ...askers.map((bot) => ({ value: bot.id, label: bot.name })),
+                ]}
+              />
             </div>
           ) : null}
           {view === "approvals" && bulk.length > 1 ? (

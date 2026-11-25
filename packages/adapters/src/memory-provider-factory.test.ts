@@ -19,6 +19,8 @@ function resolverFor(
   const prisma = {
     spaceMemoryConfig: {
       findUnique: vi.fn(async () => ({
+        id: "config-1",
+        secretId: "secret-1",
         userId: "config-author",
         provider: options.provider ?? "supermemory",
         settings: {
@@ -62,7 +64,37 @@ describe("SpaceMemoryProviderResolver", () => {
     expect(resolved?.provider.describe().id).toBe(BUILTIN_MEMORY_PROVIDER_ID);
   });
 
-  it.each(["honcho", "supermemory"])(
+  it("versions cleanup by stored records, without invalidating it for learning options", async () => {
+    const { resolver, prisma } = resolverFor(JSON.stringify({ apiKey: "fake-key" }), {
+      provider: "hindsight",
+    });
+    const config = await prisma.spaceMemoryConfig.findUnique();
+    const original = (await resolver.resolve("space-1", "config-author"))!.provider
+      .connectionIdentity;
+    expect(original).toBeTruthy();
+    expect((await resolver.resolve("space-1", "config-author"))!.provider.connectionIdentity).toBe(
+      original,
+    );
+    prisma.spaceMemoryConfig.findUnique.mockResolvedValue({
+      ...config,
+      settings: { ...config.settings, retainConversations: "false" },
+    } as typeof config);
+    expect((await resolver.resolve("space-1", "config-author"))!.provider.connectionIdentity).toBe(
+      original,
+    );
+    prisma.spaceMemoryConfig.findUnique.mockResolvedValue({
+      ...config,
+      secretId: "replacement-secret",
+    });
+    expect(
+      (await resolver.resolve("space-1", "config-author"))!.provider.connectionIdentity,
+    ).not.toBe(original);
+    prisma.spaceMemoryConfig.findUnique.mockResolvedValue({ ...config, id: "different-config" });
+    expect(
+      (await resolver.resolve("space-2", "config-author"))!.provider.connectionIdentity,
+    ).not.toBe(original);
+  });
+  it.each(["honcho", "supermemory", "hindsight"])(
     "disables %s without loading credentials when local DNS revalidation fails",
     async (provider) => {
       vi.mocked(lookup).mockRejectedValue(new Error("DNS unavailable"));

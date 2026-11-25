@@ -16,8 +16,9 @@ import {
 } from "@rakazo/db";
 import type { ArtifactKeys } from "./artifacts.js";
 import { LocalArtifactStore } from "./artifacts.js";
+import { createObjectStorage } from "./create-object-storage.js";
 import type { S3ObjectStorageConfig } from "./s3-object-storage.js";
-import { objectStorageConfigFromEnv, S3ObjectStorage } from "./s3-object-storage.js";
+import { S3ObjectStorage } from "./s3-object-storage.js";
 
 const OBJECT_ID = /^object:([0-9a-f-]{36})$/;
 
@@ -106,14 +107,13 @@ export function createArtifactStore(
   dataDir: string,
   prisma: PrismaClient,
   env: NodeJS.ProcessEnv = process.env,
-  config: S3ObjectStorageConfig | undefined = objectStorageConfigFromEnv(env),
+  /** Object storage saved in Settings, used when the environment configures none. */
+  config?: S3ObjectStorageConfig,
 ): ArtifactStore {
   const keys = contentEncryptionOf(prisma)?.ring;
   const local = new LocalArtifactStore(dataDir, keys);
-  if (!config) return new DeploymentArtifactStore(local);
+  const storage = createObjectStorage(env) ?? (config && new S3ObjectStorage(config));
+  if (!storage) return new DeploymentArtifactStore(local);
   if (!keys) throw new Error("Storing artifacts in object storage needs content encryption keys");
-  return new DeploymentArtifactStore(
-    local,
-    new ObjectArtifactStore(new S3ObjectStorage(config), keys),
-  );
+  return new DeploymentArtifactStore(local, new ObjectArtifactStore(storage, keys));
 }

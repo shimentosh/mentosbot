@@ -30,8 +30,7 @@ vi.mock("@rakazo/ui-web", () => ({
     <label htmlFor={htmlFor}>{children}</label>
   ),
   Input: (props: ComponentProps<"input">) => <input {...props} />,
-  NativeSelect: (props: ComponentProps<"select">) => <select {...props} />,
-  NativeSelectOption: (props: ComponentProps<"option">) => <option {...props} />,
+  OptionSelect: ({ id }: { id?: string }) => <div id={id} />,
   AlertDialog: ({ children }: { children?: ReactNode }) => <div role="alertdialog">{children}</div>,
   AlertDialogContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   AlertDialogHeader: ({ children }: { children?: ReactNode }) => <div>{children}</div>,

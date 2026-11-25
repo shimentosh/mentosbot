@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canDeleteOrganization,
+  canManageOrganizationMembers,
   organizationLandingSpaceId,
   organizationOfSpace,
 } from "./organizations.js";
@@ -42,9 +43,23 @@ describe("organizationOfSpace", () => {
 
 describe("canDeleteOrganization", () => {
   it("lets an owner delete one while they own another", () => {
-    const shared = { ...home, id: "org-shared", canManage: false };
+    const joined = { ...home, id: "org-joined", canManage: false, role: "member" as const };
     expect(canDeleteOrganization([work, home], home)).toBe(true);
-    expect(canDeleteOrganization([work, shared], work)).toBe(false);
-    expect(canDeleteOrganization([work, home, shared], shared)).toBe(false);
+    expect(canDeleteOrganization([work, joined], work)).toBe(false);
+    expect(canDeleteOrganization([work, home, joined], joined)).toBe(false);
+  });
+
+  it("keeps one other people belong to", () => {
+    const team = { ...home, memberCount: 3 };
+    expect(canDeleteOrganization([work, team], team)).toBe(false);
+    expect(canDeleteOrganization([work, team], work)).toBe(true);
+  });
+});
+
+describe("canManageOrganizationMembers", () => {
+  it("is for the owner and admins", () => {
+    expect(canManageOrganizationMembers(home)).toBe(true);
+    expect(canManageOrganizationMembers({ ...home, role: "admin" })).toBe(true);
+    expect(canManageOrganizationMembers({ ...home, role: "member" })).toBe(false);
   });
 });

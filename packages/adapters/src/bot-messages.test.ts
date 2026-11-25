@@ -5,8 +5,8 @@ import {
   currentBotMessageHop,
   loadBotMessageContext,
   messageBot,
+  reportBotMessageWait,
   returnBotMessageOutcome,
-  tellRequesterAwaitingApproval,
 } from "./bot-messages.js";
 import type { ExecutorDeps } from "./executor-deps.js";
 
@@ -127,6 +127,26 @@ describe("messaging another bot", () => {
     expect(sent).toMatchObject({ ok: false });
     expect(harness.tx.run.create).not.toHaveBeenCalled();
     expect(harness.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("does not deliver when multiple bots have the same exact name", async () => {
+    const harness = deps({
+      bots: [
+        { id: "bot-first", name: "Reviewer", thread: { id: "thread-first" } },
+        { id: "bot-second", name: "Reviewer", thread: { id: "thread-second" } },
+      ],
+    });
+    const sent = await messageBot(harness.deps, run, sender, {
+      confirm_name: "Reviewer",
+      message: "review this",
+    });
+
+    expect(sent).toMatchObject({ ok: false });
+    expect(harness.tx.message.create).not.toHaveBeenCalled();
+    expect(harness.tx.task.create).not.toHaveBeenCalled();
+    expect(harness.tx.run.create).not.toHaveBeenCalled();
+    expect(harness.enqueue).not.toHaveBeenCalled();
+    expect(harness.notify).not.toHaveBeenCalled();
   });
 
   it("delivers into the target's own chat without marking either thread unread", async () => {
@@ -414,7 +434,7 @@ describe("messaging another bot", () => {
       { ...run, sourceMessageId: "message-source" },
       sender,
       { bot_id: "bot-target", message: "finished", intent: "result" },
-      { allowTerminalSource: true },
+      { returnFrom: "ended" },
     );
     expect(sent.ok).toBe(true);
     // The Space's lock, then both thread rows.
@@ -507,7 +527,7 @@ describe("messaging another bot", () => {
       { ...run, sourceMessageId: "message-source" },
       sender,
       { bot_id: "bot-target", message: "acknowledged", intent: "result" },
-      { allowTerminalSource: true },
+      { returnFrom: "ended" },
     );
     expect(sent.ok).toBe(false);
     expect(harness.tx.run.create).not.toHaveBeenCalled();
@@ -940,66 +960,63 @@ describe("automatic outcome return", () => {
   });
 });
 
-describe("waiting on the person's approval", () => {
-  const delegated = { ...run, trigger: "bot_message", sourceMessageId: "message-source" };
-  const request = (fields: Record<string, unknown> = {}) => [
-    {
-      kind: "bot_message_received",
-      fromBotId: "bot-target",
-      fromBotName: "Manager",
-      text: "publish it",
-      hop: 1,
-      intent: "request",
-      returnToMessageId: "message-request",
-      userRequest: "publish the post",
-      ...fields,
-    },
-  ];
+describe("waiting on the user", () => {
+  const delegated = {
+    ...run,
+    sourceMessageId: "message-source",
+    trigger: "bot_message",
+  };
+  const request = {
+    kind: "bot_message_received",
+    fromBotId: "bot-target",
+    fromBotName: "Coordinator",
+    text: "research this",
+    hop: 6,
+    intent: "request",
+    returnToMessageId: "message-request",
+    userRequest: "research the city",
+  };
 
-  it("tells the bot that asked, once per approval", async () => {
-    const harness = deps({ hopBlocks: request() });
-    await tellRequesterAwaitingApproval(harness.deps as never, delegated, sender, {
-      key: "effect-1",
-      summary: "Post on X",
-    });
+  it("tells the requesting bot right away, even at the hop limit, with the user's words", async () => {
+    const harness = deps({ hopBlocks: [request] });
 
+    await reportBotMessageWait(harness.deps, delegated, sender, "Which city?", "attempt-1");
+
+    expect(harness.tx.run.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "waiting_input" }),
+      }),
+    );
     expect(harness.tx.message.create).toHaveBeenLastCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           threadId: "thread-target",
-          clientNonce: "bot-message:approval-wait:effect-1",
-          blocks: [
+          clientNonce: "bot-message:waiting:attempt-1",
+          blocks: expect.arrayContaining([
             expect.objectContaining({
-              kind: "bot_message_received",
               intent: "status",
-              text: expect.stringContaining("Waiting for the user's answer in my chat: Post on X"),
-              userRequest: "publish the post",
+              text: expect.stringContaining("Which city?"),
+              userRequest: "research the city",
             }),
-          ],
+          ]),
         }),
       }),
     );
-    expect(harness.enqueue).toHaveBeenCalledTimes(1);
+    expect(harness.enqueue).toHaveBeenCalledOnce();
   });
 
-  it("stays quiet when no bot is waiting on this run", async () => {
-    for (const [trigger, blocks] of [
-      ["user", request()],
-      ["bot_message", request({ intent: "result" })],
-      ["bot_message", request({ intent: "fyi" })],
-      ["bot_message", []],
-    ] as const) {
-      const harness = deps({ hopBlocks: [...blocks] });
-      await tellRequesterAwaitingApproval(
-        harness.deps as never,
-        { ...delegated, trigger },
-        sender,
-        {
-          key: "effect-1",
-          summary: "Post on X",
-        },
-      );
-      expect(harness.tx.message.create).not.toHaveBeenCalled();
-    }
+  it("says nothing when no bot is waiting on the run", async () => {
+    const harness = deps({ hopBlocks: [{ ...request, intent: "fyi" }] });
+
+    await reportBotMessageWait(
+      harness.deps,
+      { ...delegated, trigger: "user" },
+      sender,
+      "Which city?",
+      "attempt-1",
+    );
+    await reportBotMessageWait(harness.deps, delegated, sender, "Which city?", "attempt-2");
+
+    expect(harness.tx.run.create).not.toHaveBeenCalled();
   });
 });
