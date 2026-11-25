@@ -173,6 +173,8 @@ export const MessageBlock = z.discriminatedUnion("kind", [
     editedPreview: z.string().optional(),
     /** The run's own user gave this answer, so it counts as their words when the work is handed on. */
     answeredByOwner: z.literal(true).optional(),
+    /** The owner's decision model chose this answer for them; it never counts as their words. */
+    decidedAutomatically: z.literal(true).optional(),
     actions: z
       .array(
         z.object({

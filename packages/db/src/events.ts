@@ -363,6 +363,8 @@ export interface AnswerRunInput {
   remember?: false;
   /** Turns down a pending secret request; only the run's user can, and nothing is stored. */
   dismiss?: boolean;
+  /** The owner's decision model picked one option of a plain choice question for them. */
+  decidedAutomatically?: true;
 }
 
 /** What request_secret returns to the bot once the user dismissed its card. */
@@ -958,6 +960,8 @@ async function commitAnswerRunInput(
   const cardAnswer = choiceAsk ? parseAskChoiceAnswer(input.answer) : undefined;
   const cardSelection = cardAnswer ? choiceCardSelection(pendingAsk, cardAnswer) : undefined;
   if (cardAnswer && !cardSelection) return null;
+  // A decision model answers only a plain choice question, with one of its offered options.
+  if (input.decidedAutomatically && (!choiceAsk || cardAnswer || !selectedChoice)) return null;
   // The bot publishes an edited draft exactly as written, so only the run's user can send one.
   if (cardSelection?.edited !== undefined && run.userId !== input.answeredByUserId) return null;
   const dismissed = Boolean(input.dismiss);
@@ -1188,7 +1192,9 @@ async function commitAnswerRunInput(
           cardSelection
             ? cardSelectionPrompt(cardSelection, run.checkpoint)
             : selectedChoice
-              ? `Selected choice ${selectedChoice.id}: ${resumeLabel}`
+              ? input.decidedAutomatically
+                ? `The owner's decision model chose ${selectedChoice.id}: ${resumeLabel}. Say so when you report what you did, since the owner did not pick it.`
+                : `Selected choice ${selectedChoice.id}: ${resumeLabel}`
               : input.answer,
         ),
       },
@@ -1202,7 +1208,11 @@ async function commitAnswerRunInput(
           ...block,
           status: "answered" as const,
           answer: recordedAnswer,
-          ...(run.userId === input.answeredByUserId ? { answeredByOwner: true as const } : {}),
+          ...(input.decidedAutomatically
+            ? { decidedAutomatically: true as const }
+            : run.userId === input.answeredByUserId
+              ? { answeredByOwner: true as const }
+              : {}),
           ...(dismissed ? { dismissed: true as const } : {}),
           ...(input.remember === false ? { remembered: false as const } : {}),
           ...(cardSelection

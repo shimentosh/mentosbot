@@ -4,7 +4,7 @@ import type { AutoReviewChecker, LlmAutoReviewOptions } from "./auto-review.js";
 import { autoReviewTimeoutMs, resolveAutoReviewProviderKind } from "./auto-review.js";
 import { createAutoReviewProvider } from "./auto-review-factory.js";
 import { DecisionAutoReviewProvider } from "./decision-auto-review.js";
-import { decisionModel } from "./decision-models.js";
+import { decisionModel, decisionProviderOf } from "./decision-models.js";
 import type { ExecutorDeps } from "./executor-deps.js";
 import { HttpDecisionProvider } from "./http-decisions.js";
 import { findConnectedModelCredential, hasHostedModelCredits } from "./model-selection.js";
@@ -33,7 +33,7 @@ export async function autoReviewCheckerProvider(
   const { judgeKey, onUsage } = await checkerModelAccess(deps, scope, options, checker);
   return decisionModel(checker.provider, checker.model)
     ? new DecisionAutoReviewProvider({
-        provider: new HttpDecisionProvider("openrouter", {
+        provider: new HttpDecisionProvider(decisionProviderOf(checker.provider), {
           apiKey: judgeKey.apiKey ?? "",
           callObserver: judgeKey.callObserver,
           onUsage,

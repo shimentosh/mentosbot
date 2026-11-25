@@ -9,6 +9,7 @@ import type {
 } from "@rakazo/adapter-kit";
 import { DecisionProviderError } from "@rakazo/adapter-kit";
 import { z } from "zod";
+import type { DecisionModelProvider } from "./decision-models.js";
 import { decisionModel } from "./decision-models.js";
 import { readBodyCapped } from "./web-ssrf.js";
 
@@ -16,6 +17,7 @@ const answerSchema = z.object({
   type: z.literal("choice"),
   choice: z.string(),
   confidence: z.number().min(0).max(1).optional(),
+  probabilities: z.record(z.string(), z.number().min(0).max(1)).optional(),
 });
 const responseSchema = z.object({
   id: z.string().optional(),
@@ -33,7 +35,7 @@ const responseSchema = z.object({
 /** Two implementations of the same decision protocol; endpoint and auth never come from model output. */
 export class HttpDecisionProvider implements DecisionProvider {
   constructor(
-    private readonly provider: "openrouter" | "typesafe",
+    private readonly provider: DecisionModelProvider,
     private readonly options: DecisionProviderOptions,
   ) {
     if (!options.apiKey.trim()) throw new DecisionProviderError("authentication");

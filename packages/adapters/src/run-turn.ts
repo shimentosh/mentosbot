@@ -40,6 +40,7 @@ import {
   clearRoutineBackoff,
   modelAccountRefusal,
 } from "./routine-backoff.js";
+import { decideAskForRunOwner } from "./run-ask-decision.js";
 import type { RunContext, RunState } from "./run-context.js";
 import { persistTurnCheckpoint } from "./run-context.js";
 import { renewRunLease, requeueComputerRun } from "./run-lifecycle.js";
@@ -388,6 +389,39 @@ async function onSteered(ctx: RunContext, event: RuntimeEvent<"steered">) {
   reply.narrationStatusShowing = false;
 }
 
+/** Answers the question this run just paused on with its owner's decision model's pick. */
+async function answerDecidedAsk(ctx: RunContext, answer: string): Promise<boolean> {
+  const { deps, run, runId } = ctx;
+  try {
+    const message = await deps.prisma.message.findFirst({
+      where: { threadId: run.threadId, runId, role: "bot" },
+      orderBy: { seq: "desc" },
+      select: { id: true },
+    });
+    if (!message) return false;
+    const answered = await deps.events.answerRunInput({
+      spaceId: run.spaceId,
+      threadId: run.threadId,
+      runId,
+      messageId: message.id,
+      answeredByUserId: run.userId,
+      answer,
+      decidedAutomatically: true,
+    });
+    if (!answered) return false;
+    // The queued run is durable; a missed wake is repaired by the reconciler.
+    await deps.jobs
+      .enqueue(runContinueJob(runId))
+      .catch((error) => getLogger().error("decided answer enqueue", error));
+    return true;
+  } catch (error) {
+    getLogger().warn("decided answer", {
+      failure: error instanceof Error ? error.name : "unknown",
+    });
+    return false;
+  }
+}
+
 async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
   const { deps, run, runId, bot, thread, workerId, fence } = ctx;
   if (!(await renewRunLease(deps, runId, workerId, fence))) return;
@@ -399,17 +433,27 @@ async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
     label: redactSecrets(action.label, ctx.secrets),
   }));
   const previewImages = await askPreviewImages(deps, run, event.previewImages);
+  // The owner's decision model may settle the question; the card is still shown, answered.
+  const decided = await decideAskForRunOwner(ctx, {
+    text: safeText,
+    detail: safeDetail,
+    actions: safeActions,
+    preview: event.preview,
+    previewImages: event.previewImages,
+    multiple: event.multiple,
+  });
   // Sent while this run still holds its lease; a failed notice never blocks the card.
-  await tellRequesterAwaitingApproval(
-    deps,
-    { ...run, id: runId },
-    { id: bot.id, name: bot.name },
-    {
-      // A retried turn repeats the same call; without its id the question itself names the card.
-      key: `${runId}:${event.executionId ?? createHash("sha256").update(safeText).digest("hex").slice(0, 16)}`,
-      summary: safeText,
-    },
-  ).catch((error) => getLogger().warn("ask wait notice", error));
+  if (!decided)
+    await tellRequesterAwaitingApproval(
+      deps,
+      { ...run, id: runId },
+      { id: bot.id, name: bot.name },
+      {
+        // A retried turn repeats the same call; without its id the question itself names the card.
+        key: `${runId}:${event.executionId ?? createHash("sha256").update(safeText).digest("hex").slice(0, 16)}`,
+        summary: safeText,
+      },
+    ).catch((error) => getLogger().warn("ask wait notice", error));
   await ctx.computer.checkpoint.flush();
   await persistTurnCheckpoint(ctx, event.executionId);
   await ctx.settleRunningHelpers();
@@ -453,6 +497,8 @@ async function pauseForAnswer(ctx: RunContext, event: RuntimeEvent<"ask">) {
     await deps.jobs
       .enqueue(runContinueJob(paused.continuationRunId))
       .catch((error) => getLogger().error("steering continuation enqueue", error));
+  } else if (decided && (await answerDecidedAsk(ctx, decided))) {
+    return;
   }
   await notifyRun(deps, run, {
     kind: "help",

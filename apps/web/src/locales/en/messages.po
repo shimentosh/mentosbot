@@ -1556,6 +1556,10 @@ msgstr "Choose folder"
 msgid "Choose how to use Rakazo"
 msgstr "Choose how to use Rakazo"
 
+#: src/components/AskCard.tsx
+msgid "Chosen automatically"
+msgstr "Chosen automatically"
+
 #: src/components/vault/VaultItemEditor.tsx
 msgid "City"
 msgstr "City"
@@ -2758,6 +2762,10 @@ msgstr "Day-to-day work"
 #: src/lib/cron.ts
 msgid "days"
 msgstr "days"
+
+#: src/pages/ModelSettingsOverlay.tsx
+msgid "Decision model"
+msgstr "Decision model"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -4762,6 +4770,7 @@ msgid "No trigger"
 msgstr "No trigger"
 
 #: src/components/vault/VaultItemEditor.tsx
+#: src/pages/ModelSettingsOverlay.tsx
 msgid "None"
 msgstr "None"
 
@@ -7216,10 +7225,6 @@ msgstr "Type without recording"
 #: src/components/ChoiceAsk.tsx
 msgid "Type your answer"
 msgstr "Type your answer"
-
-#: src/pages/IntegrationsOverlay.tsx
-msgid "Typed decisions from the Jev model"
-msgstr "Typed decisions from the Jev model"
 
 #: src/pages/BotContextMenu.tsx
 #: src/pages/Shell.tsx

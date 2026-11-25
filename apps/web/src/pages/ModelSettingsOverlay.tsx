@@ -118,6 +118,14 @@ export function ModelSettingsOverlay({
       ? !isOllamaCloudBaseUrl(credentialByProvider.get(OPENAI_COMPATIBLE_PROVIDER_ID)?.baseUrl)
       : !credentialByProvider.has(entry.id),
   );
+  // A provider that only answers decisions serves only the purposes that ask for a choice.
+  const answersDecisions = (id: string, only: boolean) => {
+    const entries = groups.find((group) => group.id === id)?.entries ?? [];
+    const decides = (entry: (typeof entries)[number]) => entry.protocol === "decisions";
+    return entries.length > 0 && (only ? entries.every(decides) : entries.some(decides));
+  };
+  const chatProviders = providers.filter((entry) => !answersDecisions(entry.id, true));
+  const decisionProviders = providers.filter((entry) => answersDecisions(entry.id, false));
   const connectionName = (entry: ModelCredential) => {
     const group = groups.find((item) => item.id === entry.provider);
     return connectionDisplayName(
@@ -297,7 +305,7 @@ export function ModelSettingsOverlay({
             credentials={credentials}
             title={t`Main model`}
             defaultLabel={t`Choose a model`}
-            providers={providers}
+            providers={chatProviders}
             providerLabel={providerLabel}
             onConnect={(next, intent) => openConnection(next, intent, null, "main")}
             onManage={(id, credentialId) =>
@@ -320,7 +328,7 @@ export function ModelSettingsOverlay({
             modelRole="approval"
             title={t`Approval model`}
             defaultLabel={t`Choose a model`}
-            providers={providers}
+            providers={chatProviders}
             providerLabel={providerLabel}
             onConnect={(next, intent) => openConnection(next, intent, null, "approval")}
             onManage={(id, credentialId) =>
@@ -336,13 +344,29 @@ export function ModelSettingsOverlay({
             modelRole="computer"
             title={t`Computer-use model`}
             defaultLabel={t`Same as main model`}
-            providers={providers}
+            providers={chatProviders}
             providerLabel={providerLabel}
             onConnect={(next, intent) => openConnection(next, intent, null, "computer")}
             onManage={(id, credentialId) =>
               openConnection({ id, name: id }, null, credentialId, "computer")
             }
             panel={connectionAt === "computer" ? panelFor(true) : null}
+          />
+          <ModelRoleSettings
+            userId={me.userId}
+            spaceId={me.spaceId}
+            scope={scope}
+            credentials={credentials}
+            modelRole="decision"
+            title={t`Decision model`}
+            defaultLabel={t`None`}
+            providers={decisionProviders}
+            providerLabel={providerLabel}
+            onConnect={(next, intent) => openConnection(next, intent, null, "decision")}
+            onManage={(id, credentialId) =>
+              openConnection({ id, name: id }, null, credentialId, "decision")
+            }
+            panel={connectionAt === "decision" ? panelFor(true) : null}
           />
           {scope === "space" ? null : (
             <ProvidersSection

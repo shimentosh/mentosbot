@@ -300,6 +300,12 @@ export default function Models() {
               title={t("Computer-use model")}
               defaultLabel={t("Same as main model")}
             />
+            <ModelRoleSettings
+              {...shared}
+              modelRole="decision"
+              title={t("Decision model")}
+              defaultLabel={t("None")}
+            />
             {/* Connections are the account's in every Space, so a Space's override lists only its models. */}
             {target.scope === "account" ? (
               <ModelProviders

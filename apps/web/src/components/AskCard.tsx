@@ -228,14 +228,21 @@ function PromptAskCard({
           </Button>
         </form>
       ) : optionQuestion ? (
-        <ChoiceAsk
-          block={block}
-          canAnswer={canAnswer}
-          acceptedAnswer={acceptedAnswer}
-          pendingAnswer={pendingAction}
-          onAnswer={(value) => void submitAnswer(value)}
-          renderImage={renderImage}
-        />
+        <>
+          <ChoiceAsk
+            block={block}
+            canAnswer={canAnswer}
+            acceptedAnswer={acceptedAnswer}
+            pendingAnswer={pendingAction}
+            onAnswer={(value) => void submitAnswer(value)}
+            renderImage={renderImage}
+          />
+          {block.decidedAutomatically ? (
+            <p className="mt-2.5 text-[13px] text-muted-foreground" data-testid="ask-decided">
+              <Trans>Chosen automatically</Trans>
+            </p>
+          ) : null}
+        </>
       ) : typedAnswer ? (
         <blockquote
           data-testid="ask-answer"

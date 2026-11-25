@@ -131,6 +131,7 @@ const KEY_CHECK_URLS = new Map([
   ["openrouter", "https://openrouter.ai/api/v1/key"],
   ["deepseek", "https://api.deepseek.com/models"],
   ["google", "https://generativelanguage.googleapis.com/v1beta/models"],
+  ["typesafe", "https://api.typesafe.ai/v1/models"],
 ]);
 
 const KEY_CHECK_CANCELLED = "Could not verify the API key. Try again.";

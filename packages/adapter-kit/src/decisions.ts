@@ -15,6 +15,8 @@ export interface DecisionAnswer {
   type: "choice";
   choice: string;
   confidence?: number;
+  /** Each option's probability, when the provider reports them. */
+  probabilities?: Record<string, number>;
 }
 export interface DecisionResult {
   model: string;
