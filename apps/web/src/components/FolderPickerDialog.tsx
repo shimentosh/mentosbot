@@ -83,7 +83,7 @@ export function FolderPickerDialog({
             <Trans>Choose a project folder</Trans>
           </DialogTitle>
         </DialogHeader>
-        <div className="flex min-h-9 items-center gap-1 text-sm">
+        <div className="flex min-h-9 items-center gap-1 text-body">
           <Button
             variant="ghost"
             size="icon-sm"
@@ -93,7 +93,7 @@ export function FolderPickerDialog({
           >
             <ChevronLeft aria-hidden size={16} />
           </Button>
-          <span className="min-w-0 truncate font-mono text-[13px] text-muted-foreground">
+          <span className="min-w-0 truncate font-mono text-body-sm text-muted-foreground">
             {listing ? homeRelative(listing) : "~"}
           </span>
         </div>
@@ -103,7 +103,7 @@ export function FolderPickerDialog({
               <Spinner />
             </div>
           ) : listing && listing.folders.length === 0 ? (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+            <p className="px-2 py-6 text-center text-body text-muted-foreground">
               <Trans>No folders here</Trans>
             </p>
           ) : (
@@ -114,7 +114,7 @@ export function FolderPickerDialog({
               >
                 <button
                   type="button"
-                  className="flex min-w-0 flex-1 items-center gap-2 py-2 text-start text-sm"
+                  className="flex min-w-0 flex-1 items-center gap-2 py-2 text-start text-body"
                   onClick={() => void open(join(folder.name))}
                 >
                   {folder.project ? (
@@ -141,7 +141,7 @@ export function FolderPickerDialog({
           )}
         </div>
         {error ? (
-          <p role="alert" className="text-[13px] text-destructive">
+          <p role="alert" className="text-body-sm text-destructive">
             {error}
           </p>
         ) : null}

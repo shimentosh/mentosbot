@@ -178,7 +178,7 @@ profile_browser_pid() {
 # The profile scan above is capped at 0.4s. The spawn poll is those two bounds plus
 # a little shell, so a forward that fails after the scan is still reported.
 open_live_browser_url() {
-  timeout 1.6 python3 - "$@" <<'PY'
+  timeout 1.6 /usr/bin/python3 -I - "$@" <<'PY'
 import json
 import sys
 import time
@@ -432,24 +432,41 @@ if [ -n "${LD_PRELOAD:-}" ]; then
   unset _kept _rest _entry
 fi
 
-# This container has no GPU. --disable-gpu keeps Chromium from probing one.
-# WebGL still needs SwiftShader: --disable-software-rasterizer blocks it, and
-# current Chromium allows that fallback only with --enable-unsafe-swiftshader.
-FLAGS="--test-type --no-sandbox --disable-dev-shm-usage --disable-gpu --enable-unsafe-swiftshader --no-first-run --no-default-browser-check --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic --restore-last-session --start-maximized --remote-debugging-address=127.0.0.1 --remote-debugging-port=$DEBUG_PORT"
-# The owner's own network, when they chose one: the supervisor sets only the proxy address.
-# WebRTC may then use UDP only through the proxy, so it cannot reveal the computer's address.
-if [ -n "${RAKAZO_BROWSER_PROXY:-}" ]; then
-  FLAGS="$FLAGS --proxy-server=$RAKAZO_BROWSER_PROXY --force-webrtc-ip-handling-policy=disable_non_proxied_udp"
-fi
-# With it, the owner's time zone and language, so the browser agrees with the address sites see.
-# The supervisor passes only a plain zone name and language tag.
+# With the owner's own network, the owner's time zone and language, so the browser
+# agrees with the address sites see. The supervisor passes only a plain zone name
+# and language tag; the language then replaces the account's LANGUAGE below.
 if [ -n "${RAKAZO_BROWSER_TZ:-}" ]; then
   export TZ="$RAKAZO_BROWSER_TZ"
 fi
 if [ -n "${RAKAZO_BROWSER_LANG:-}" ]; then
   LANGUAGE=$(printf %s "$RAKAZO_BROWSER_LANG" | tr - _)
   export LANGUAGE
-  FLAGS="$FLAGS --lang=$RAKAZO_BROWSER_LANG"
+fi
+# The account's language arrives as LANGUAGE, which Chrome on Linux reads for its
+# own language (it ignores --lang). For the languages pages see, it reads LANGUAGE
+# only when it creates a profile and keeps that profile's list afterwards, so a
+# saved profile gets the account's language through --accept-lang on each start.
+LANGUAGE_FLAGS=""
+language="${LANGUAGE:-}"
+language="$(printf '%s' "${language%%:*}" | tr _ -)"
+case "$language" in
+  ''|-*|*[!A-Za-z0-9-]*) ;;
+  *)
+    base="${language%%-*}"
+    languages="$language"
+    [ "$base" = "$language" ] || languages="$languages,$base"
+    [ "$base" = en ] || languages="$languages,en-US,en"
+    LANGUAGE_FLAGS="--accept-lang=$languages"
+    ;;
+esac
+# This container has no GPU. --disable-gpu keeps Chromium from probing one.
+# WebGL still needs SwiftShader: --disable-software-rasterizer blocks it, and
+# current Chromium allows that fallback only with --enable-unsafe-swiftshader.
+FLAGS="--test-type --no-sandbox --disable-dev-shm-usage --disable-gpu --enable-unsafe-swiftshader $LANGUAGE_FLAGS --no-first-run --no-default-browser-check --disable-session-crashed-bubble --hide-crash-restore-bubble --password-store=basic --restore-last-session --start-maximized --remote-debugging-address=127.0.0.1 --remote-debugging-port=$DEBUG_PORT"
+# The owner's own network, when they chose one: the supervisor sets only the proxy address.
+# WebRTC may then use UDP only through the proxy, so it cannot reveal the computer's address.
+if [ -n "${RAKAZO_BROWSER_PROXY:-}" ]; then
+  FLAGS="$FLAGS --proxy-server=$RAKAZO_BROWSER_PROXY --force-webrtc-ip-handling-policy=disable_non_proxied_udp"
 fi
 if [ "$USER_DATA_DIR_SET" -eq 0 ]; then
   exec "$BIN" $FLAGS --user-data-dir="$PROFILE" "$@"

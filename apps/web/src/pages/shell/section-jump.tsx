@@ -114,7 +114,7 @@ export function SectionJump({
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger
           aria-label={t`Jump to section, ${title}`}
-          className="flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring data-popup-open:bg-sidebar-accent"
+          className="flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring data-popup-open:bg-sidebar-accent"
         >
           <span className="truncate">{title}</span>
           <ChevronsUpDown size={13} strokeWidth={1.8} aria-hidden="true" />

@@ -48,6 +48,11 @@ vi.mock("./i18n", () => {
   return { t, useI18n: () => ({ t }) };
 });
 vi.mock("./user-error", () => ({ errorText: (_: unknown, fallback: string) => fallback }));
+// The bots' addresses read on their own; this screen's tests cover the vault's items.
+vi.mock("../components/bot-email", () => ({ BotEmailAddressesGroup: () => null }));
+vi.mock("./api-server", () => ({}));
+vi.mock("./api-auth", () => ({}));
+vi.mock("./api-live", () => ({}));
 vi.mock("./api", () => ({
   rpc: state.rpc,
   captureApiRequestContext: async (spaceId: string) => ({ headers: { space: spaceId } }),
@@ -63,6 +68,7 @@ vi.mock("expo-router", () => ({
 vi.mock("./native-controls", () => ({ iosAtLeast: () => false }));
 vi.mock("react-native", () => ({
   Alert: { alert: state.alert },
+  Platform: { OS: "ios" },
   Pressable: element("span"),
   ScrollView: element("div"),
   StyleSheet: { create: <T,>(styles: T) => styles },
@@ -116,6 +122,9 @@ vi.mock("@expo/ui/community/menu", () => ({
 vi.mock("../components/load-failure", () => ({
   LoadFailure: ({ message, onRetry }: { message: string; onRetry: () => void }) =>
     createElement("button", { type: "button", onClick: onRetry }, `${message} Retry`),
+}));
+vi.mock("../components/vault-tile", () => ({
+  VaultTile: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("../components/native-symbol", () => ({
   NativeSymbol: ({ ios, android, color }: { ios: string; android: string; color: string }) =>

@@ -8,6 +8,7 @@ import type {
   BrowserPurchaseCheckRequest,
   BrowserPurchaseCheckResult,
   BrowserPurchaseEvidence,
+  BrowserPurchaseItem,
   BrowserSnapshotNode,
   BrowserSnapshotRequest,
   BrowserSnapshotResult,
@@ -41,6 +42,10 @@ function evidenceOf(reason: unknown): BrowserPurchaseEvidence {
     ? reason
     : "unverified";
 }
+
+const isPurchaseItem = (item: unknown): item is BrowserPurchaseItem =>
+  typeof (item as BrowserPurchaseItem | null)?.name === "string" &&
+  typeof (item as BrowserPurchaseItem).amount === "string";
 
 /**
  * Whether a failed purchase check means this computer cannot check at all, rather than that the check
@@ -296,6 +301,8 @@ export class ComputerBrowserProvider implements BrowserProvider {
           amount?: unknown;
           amountFrom?: unknown;
           reason?: unknown;
+          total?: unknown;
+          items?: unknown;
         }
       | null
       | undefined;
@@ -312,6 +319,8 @@ export class ComputerBrowserProvider implements BrowserProvider {
         amountSource: found.amountFrom === "button" ? "button" : "page",
         evidence: evidenceOf(found.reason),
         ...(typeof live.url === "string" && live.url ? { url: live.url } : {}),
+        ...(typeof found.total === "string" && found.total ? { total: found.total } : {}),
+        ...(Array.isArray(found.items) ? { items: found.items.filter(isPurchaseItem) } : {}),
       },
     };
   }

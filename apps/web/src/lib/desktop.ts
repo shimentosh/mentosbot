@@ -69,3 +69,10 @@ export async function thisComputer(): Promise<{
   if (!device || !state?.deviceId || !state.allowed) return null;
   return { deviceId: state.deviceId, chooseFolder: device.chooseFolder };
 }
+
+/**
+ * Horizontal space Electron's native macOS traffic lights occupy from the window's leading edge.
+ * Apply it with a style (`width` or `left`). Tailwind only emits a utility from a complete class
+ * literal, so `w-[${DARWIN_WINDOW_CONTROLS_WIDTH_PX}px]` would not ship.
+ */
+export const DARWIN_WINDOW_CONTROLS_WIDTH_PX = 72;

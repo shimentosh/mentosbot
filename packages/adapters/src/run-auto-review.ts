@@ -135,6 +135,7 @@ export function checkerLlmOptions(
       ? {
           credential: judgeKey.oauth,
           persist: judgeKey.persistOAuth,
+          refresh: judgeKey.refreshOAuth,
           retire: judgeKey.retireOAuth,
         }
       : undefined,

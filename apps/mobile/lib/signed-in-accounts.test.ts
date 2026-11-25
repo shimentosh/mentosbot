@@ -14,11 +14,11 @@ vi.mock("expo-secure-store", () => ({
   deleteItemAsync: vi.fn(async (key: string) => void store.delete(key)),
 }));
 vi.mock("./api", () => ({
-  clearSpace: vi.fn(async () => true),
   currentApiBase: () => api.apiBase,
   fetchMobileJson: api.getSession,
-  signOut: api.signOut,
 }));
+vi.mock("./api-auth", () => ({ signOut: api.signOut }));
+vi.mock("./api-server", () => ({ clearSpace: vi.fn(async () => true) }));
 vi.mock("./push", () => ({
   registerPushToken: vi.fn(async () => undefined),
   unregisterPushToken: vi.fn(async () => undefined),

@@ -100,7 +100,7 @@ export function ComputerServersSettings() {
         </SettingsGroup>
       ) : null}
       {error ? (
-        <p role="alert" className="px-1 text-[12.5px] text-destructive">
+        <p role="alert" className="px-1 text-body-sm text-destructive">
           {error}
         </p>
       ) : null}
@@ -144,7 +144,7 @@ export function ComputerServersSettings() {
 }
 
 function ServerState({ server }: { server: ComputerServer }) {
-  const detail = "truncate text-[12.5px] text-muted-foreground";
+  const detail = "truncate text-body-sm text-muted-foreground";
   if (server.setup === "installing")
     return (
       <span className={detail}>
@@ -155,7 +155,7 @@ function ServerState({ server }: { server: ComputerServer }) {
     );
   if (server.setup === "failed")
     return (
-      <span className="text-[12.5px] text-destructive">
+      <span className="text-body-sm text-destructive">
         {server.setupError ?? <Trans>Setup failed</Trans>}
       </span>
     );
@@ -349,7 +349,7 @@ function ServerDialog({
             </Field>
           )}
           {error ? (
-            <p role="alert" className="text-[12.5px] text-destructive">
+            <p role="alert" className="text-body-sm text-destructive">
               {error}
             </p>
           ) : null}

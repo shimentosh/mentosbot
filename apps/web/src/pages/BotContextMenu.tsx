@@ -1,5 +1,7 @@
 import { useLingui } from "@lingui/react/macro";
 import type { Bot, BotSection } from "@rakazo/contracts";
+import type { SnoozePreset } from "@rakazo/core";
+import { SNOOZE_PRESETS, snoozePresetTime } from "@rakazo/core";
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -13,6 +15,7 @@ import {
   Bell,
   BellDot,
   Check,
+  Clock,
   Copy,
   Eraser,
   Folder,
@@ -28,6 +31,8 @@ import { rpc } from "../lib/rpc";
 type ChatMenuTarget = Pick<Bot, "name" | "pinned" | "sectionId" | "unread"> &
   Partial<Pick<Bot, "id" | "share">>;
 
+const PRESET_DAYS: ReadonlySet<SnoozePreset> = new Set(["tomorrow", "nextWeek"]);
+
 /** A roster row's context menu content; `onClose` serves the lazy-load error fallback. */
 export function BotContextMenu({
   bot,
@@ -37,6 +42,8 @@ export function BotContextMenu({
   onCreateSection,
   onRenameSection,
   onToggleUnread,
+  snoozed,
+  onSnooze,
   onEdit,
   onDuplicate,
   onClear,
@@ -51,13 +58,17 @@ export function BotContextMenu({
   onCreateSection: () => void;
   onRenameSection?: (sectionId: string) => void;
   onToggleUnread: () => void;
+  /** Snoozed until a time still ahead. */
+  snoozed: boolean;
+  /** An ISO wake time, or null to unsnooze. */
+  onSnooze: (until: string | null) => void;
   onEdit: () => void;
   onDuplicate: () => void;
   onClear: () => void;
   onArchive: () => void;
   onDelete: () => void;
 }) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const userId = useQueryUserId();
 
   // A teammate's bot: its sidebar place, profile and lifecycle stay its owner's.
@@ -89,6 +100,13 @@ export function BotContextMenu({
       </ContextMenuContent>
     );
   }
+  const presetLabels: Record<SnoozePreset, string> = {
+    hour: t`1 hour`,
+    threeHours: t`3 hours`,
+    tomorrow: t`Tomorrow`,
+    nextWeek: t`Next week`,
+  };
+  const now = new Date();
 
   return (
     <ContextMenuContent
@@ -134,6 +152,38 @@ export function BotContextMenu({
         {bot.unread ? <BellDot /> : <Bell />}
         {bot.unread ? t`Mark as Read` : t`Mark as Unread`}
       </ContextMenuItem>
+      {snoozed ? (
+        <ContextMenuItem onClick={() => onSnooze(null)}>
+          <Clock />
+          {t`Unsnooze`}
+        </ContextMenuItem>
+      ) : (
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Clock />
+            {t`Snooze`}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="min-w-[200px]">
+            {SNOOZE_PRESETS.map((preset) => {
+              const wake = snoozePresetTime(preset, now);
+              return (
+                <ContextMenuItem
+                  key={preset}
+                  // From the click, so a menu left open still snoozes from now.
+                  onClick={() => onSnooze(snoozePresetTime(preset, new Date()).toISOString())}
+                >
+                  {presetLabels[preset]}
+                  {PRESET_DAYS.has(preset) ? (
+                    <span className="ms-auto text-label text-muted-foreground">
+                      {i18n.date(wake, { weekday: "short", hour: "numeric", minute: "2-digit" })}
+                    </span>
+                  ) : null}
+                </ContextMenuItem>
+              );
+            })}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+      )}
       <ContextMenuSeparator />
       <ContextMenuItem onClick={onEdit}>
         <Pencil />

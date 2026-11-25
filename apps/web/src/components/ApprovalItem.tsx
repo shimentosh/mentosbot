@@ -72,8 +72,8 @@ export function ApprovalItem({
       <BotAvatar identity={bot.id} color={bot.color} avatarSet={bot.avatarSet} size={32} />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-[14px] font-medium text-foreground">{bot.name}</span>
-          <span className="shrink-0 text-[12.5px] text-muted-foreground">
+          <span className="truncate text-body font-medium text-foreground">{bot.name}</span>
+          <span className="shrink-0 text-body-sm text-muted-foreground">
             {showSpace
               ? `${approval.spaceName} · ${formatRelativeTime(approval.at)}`
               : formatRelativeTime(approval.at)}
@@ -115,7 +115,7 @@ export function ApprovalItem({
             }
           />
         ) : (
-          <div className="flex items-center gap-3 rounded-[20px] bg-muted px-5 py-4 text-[14px] text-foreground">
+          <div className="flex items-center gap-3 rounded-[20px] bg-muted px-5 py-4 text-body text-foreground">
             <span className="flex-1">{t`Needs you in the chat`}</span>
             <Button size="sm" onClick={onOpen}>
               <Trans>Open</Trans>

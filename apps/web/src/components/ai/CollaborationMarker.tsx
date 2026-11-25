@@ -52,7 +52,7 @@ export function PeerMessageCard({
   return (
     <div
       data-testid="peer-message-card"
-      className="mx-auto w-full max-w-md rounded-xl border border-border px-3 py-2 text-[13px]"
+      className="mx-auto w-full max-w-md rounded-xl border border-border px-3 py-2 text-body-sm"
     >
       <div className="flex min-w-0 items-center gap-2">
         <button
@@ -100,7 +100,7 @@ export function PeerMessageCard({
         ) : null}
       </div>
       {expanded ? (
-        <div dir="auto" className="mt-1.5 text-[14px] leading-normal text-foreground/90">
+        <div dir="auto" className="mt-1.5 text-body leading-normal text-foreground/90">
           <ChatMarkdown>{text}</ChatMarkdown>
         </div>
       ) : null}
@@ -113,7 +113,7 @@ export function ActiveBotGlyph({ bots, label }: { bots: GroupAvatarMember[]; lab
   return (
     <div role="status" className="flex min-h-10 min-w-0 items-center gap-2.5 px-1">
       <GroupAvatar members={bots} size={28} />
-      <span dir="auto" className="min-w-0 truncate text-[15px] text-muted-foreground text-shimmer">
+      <span dir="auto" className="min-w-0 truncate text-body-lg text-muted-foreground text-shimmer">
         {label}
       </span>
     </div>

@@ -92,7 +92,7 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
             label={
               <span className="flex min-w-0 flex-col">
                 <span className="truncate">{invitation.email}</span>
-                <span className="text-[12.5px] text-muted-foreground">
+                <span className="text-body-sm text-muted-foreground">
                   <Trans>Invited</Trans> · <RoleName role={invitation.role} />
                 </span>
               </span>
@@ -112,7 +112,7 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
         ))}
       </SettingsGroup>
       {error ? (
-        <p role="alert" className="px-1 text-[12.5px] text-destructive">
+        <p role="alert" className="px-1 text-body-sm text-destructive">
           {error}
         </p>
       ) : null}
@@ -170,13 +170,13 @@ function MemberRow({
         <span className="flex min-w-0 flex-col">
           <span className="truncate">{shown}</span>
           {shown !== member.email ? (
-            <span className="truncate text-[12.5px] text-muted-foreground">{member.email}</span>
+            <span className="truncate text-body-sm text-muted-foreground">{member.email}</span>
           ) : null}
         </span>
       }
       control={
         <>
-          <span className="text-[13px] text-muted-foreground">
+          <span className="text-body-sm text-muted-foreground">
             <RoleName role={member.role} />
           </span>
           {manageable || canLeave ? (
@@ -245,7 +245,7 @@ function RemoveDialog({
           </AlertDialogTitle>
         </AlertDialogHeader>
         {error ? (
-          <p role="alert" className="text-[13.5px] text-destructive">
+          <p role="alert" className="text-body text-destructive">
             {error}
           </p>
         ) : null}
@@ -308,7 +308,9 @@ function InviteDialog({
         onClose();
         return;
       }
-      setLink(new URL(`/invite/${encodeURIComponent(invited.id)}`, window.location.origin).href);
+      setLink(
+        new URL(`/team-invite/${encodeURIComponent(invited.id)}`, window.location.origin).href,
+      );
     } catch (reason) {
       setError(errorText(reason));
     } finally {
@@ -382,7 +384,7 @@ function InviteDialog({
               </Field>
             ) : null}
             {error ? (
-              <p role="alert" className="text-[13.5px] text-destructive">
+              <p role="alert" className="text-body text-destructive">
                 {error}
               </p>
             ) : null}

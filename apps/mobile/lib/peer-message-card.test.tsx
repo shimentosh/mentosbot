@@ -4,8 +4,13 @@ import { act, createContext } from "react";
 import type { Root } from "react-dom/client";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { MobileBot, MobileSnapshot } from "./api";
+import type { MobileBot, MobileSnapshot } from "./mobile-types";
 
+vi.mock("./haptics", () => ({
+  hapticImpact: vi.fn(),
+  hapticSelection: vi.fn(),
+  hapticSuccess: vi.fn(),
+}));
 vi.mock("react-native", () => ({
   Alert: { alert: vi.fn() },
   Appearance: { getColorScheme: () => "dark", addChangeListener: () => ({ remove() {} }) },
@@ -84,6 +89,7 @@ vi.mock("../components/change-undo", () => ({
   isUndoableChange: () => false,
 }));
 vi.mock("../components/McpApprovalCard", () => ({ McpApprovalCard: () => null }));
+vi.mock("../components/thread/mcp-app-card", () => ({ McpAppCard: () => null }));
 vi.mock("../components/native-symbol", () => ({ NativeSymbol: () => null }));
 
 import { MessageBubble } from "../components/thread/message-bubble";

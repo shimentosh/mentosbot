@@ -43,11 +43,13 @@ import {
   setPaywallShown,
   subscribedPlan,
 } from "../lib/billing";
+import { endCallBeforeSessionEnd } from "../lib/call-session";
 import { translucentColor } from "../lib/color";
 import { dateLocaleForUi, useI18n } from "../lib/i18n";
 import { useMobileTokens } from "../lib/native";
 import { organizationSwitchActions, useOrganizations } from "../lib/organizations";
 import { signOutAndContinue } from "../lib/signed-in-accounts";
+import { confirmUnsentSendLoss } from "../lib/unsent-send-warning";
 import { errorText } from "../lib/user-error";
 
 type Amount = (typeof MODEL_CREDIT_AMOUNTS)[number];
@@ -79,6 +81,7 @@ export default function Paywall() {
   const [amount, setAmount] = useState<Amount>(DEFAULT_MONTHLY_CREDIT_AMOUNT);
   const [interval, setByokInterval] = useState<ByokInterval>("month");
   const [pending, setPending] = useState(false);
+  const leaving = useRef(false);
   const deletion = useAccountDeletion();
   const organizations = useOrganizations(!dismissible).data;
   const organizationAction = useOrganizationMenuAction(organizations);
@@ -159,11 +162,19 @@ export default function Paywall() {
   }
 
   async function leave() {
+    // Held from the tap, so a second tap while the unsent-message check runs starts nothing.
+    if (leaving.current) return;
+    leaving.current = true;
     try {
+      if (!(await confirmUnsentSendLoss("sign-out"))) return;
+      // Hang up while the session still exists, so the server records the call's end.
+      await endCallBeforeSessionEnd();
       if (await signOutAndContinue()) replaceWithHome();
       else replaceWithSignIn();
     } catch (err) {
       Alert.alert(errorText(err, t("Could not sign out")));
+    } finally {
+      leaving.current = false;
     }
   }
 
@@ -428,7 +439,7 @@ export default function Paywall() {
             <PlanCard
               selected={plan === "credits"}
               onPress={() => setPlan("credits")}
-              title={t("Rakazo credits")}
+              title={t("Credits")}
               badge={subscribed === "credits" ? t("Current plan") : undefined}
               price={{
                 label: t("{price} / month", { price: creditPrice }),

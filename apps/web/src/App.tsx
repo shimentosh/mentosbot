@@ -11,7 +11,15 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { LoadingState } from "./components/ai/primitives";
 import { CallLayout } from "./components/call/CallLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -30,7 +38,7 @@ import { pendingInvitePath, SignedOutInvite } from "./lib/pending-invite";
 import { markAfterPaint, markOnce } from "./lib/performance";
 import { lazyComponent } from "./lib/preload-recovery";
 import { QueryUserProvider, setQueryUser } from "./lib/query";
-import { getRemoteImagesEnabled, subscribeRemoteImages } from "./lib/remote-images-preference";
+import { remoteImagesPreference } from "./lib/remote-images-preference";
 import { hasSignedInBefore, rememberSignedIn } from "./lib/returning-user";
 import { rpc } from "./lib/rpc";
 import {
@@ -40,6 +48,12 @@ import {
   sessionRetryDelayMs,
   showSessionUnavailable,
 } from "./lib/session-gate";
+import {
+  MCP_OAUTH_CALLBACK_PATH,
+  newAccountDestination,
+  SLACK_INSTALL_CALLBACK_PATH,
+  signInNext,
+} from "./lib/sign-in-next";
 import { syncLogOutFailure } from "./lib/sign-out";
 import { completeSsoCallback, SSO_CALLBACK_PATH } from "./lib/sso-flow";
 import { GoogleWorkspaceCallbackPage } from "./pages/GoogleWorkspaceCallback";
@@ -67,7 +81,7 @@ const BoardPage = lazyComponent(() => import("./pages/Board").then((module) => m
 const AdminPluginsPage = lazyComponent(() =>
   import("./pages/AdminPluginsPage").then((module) => module.AdminPluginsPage),
 );
-const InvitePage = lazyComponent(() =>
+const TeamInvitePage = lazyComponent(() =>
   import("./pages/InvitePage").then((module) => module.InvitePage),
 );
 const AdminAccessPage = lazyComponent(() =>
@@ -75,6 +89,9 @@ const AdminAccessPage = lazyComponent(() =>
 );
 const NavLinkPage = lazyComponent(() =>
   import("./pages/NavLinkPage").then((module) => module.NavLinkPage),
+);
+const InvitePage = lazyComponent(() =>
+  import("./pages/Invite").then((module) => module.InvitePage),
 );
 
 function SsoCallbackPage() {
@@ -95,11 +112,7 @@ const linkPreviews: LinkPreviews = {
 };
 
 export function App() {
-  const loadRemoteImages = useSyncExternalStore(
-    subscribeRemoteImages,
-    getRemoteImagesEnabled,
-    () => false,
-  );
+  const loadRemoteImages = remoteImagesPreference.use();
   return (
     <RemoteImagesContext.Provider value={loadRemoteImages}>
       <LinkFaviconsContext.Provider value={linkFavicons}>
@@ -119,22 +132,9 @@ export function App() {
   );
 }
 
-const MCP_OAUTH_CALLBACK_PATH = "/mcp/oauth/callback";
-const SLACK_INSTALL_CALLBACK_PATH = "/messaging/slack/callback";
-
 function SessionApp() {
   const [searchParams] = useSearchParams();
-  const next = searchParams.get("next") ?? "";
-  // A connector sign-in started on another device lands here signed out; finish it after sign-in.
-  const signInDestination =
-    next === "/integrations/setup" ||
-    next === "/admin/plugins" ||
-    next === "/admin/access" ||
-    next.startsWith(`${MCP_OAUTH_CALLBACK_PATH}?`) ||
-    next.startsWith(`${GOOGLE_WORKSPACE_CALLBACK_PATH}?`) ||
-    next.startsWith(`${SLACK_INSTALL_CALLBACK_PATH}?`)
-      ? next
-      : (pendingInvitePath() ?? "/app");
+  const next = signInNext(searchParams.get("next"));
   const ticketBoardEnabled = useSyncExternalStore(
     subscribeTicketBoardEnabled,
     getTicketBoardEnabled,
@@ -218,7 +218,7 @@ function SessionApp() {
                 path="/sign-in"
                 element={
                   user && !addingAccount ? (
-                    <Navigate to={signInDestination} replace />
+                    <Navigate to={next ?? pendingInvitePath() ?? "/app"} replace />
                   ) : (
                     <AuthPage key="in" mode="in" adding={addingAccount} />
                   )
@@ -228,7 +228,12 @@ function SessionApp() {
                 path="/sign-up"
                 element={
                   user && !addingAccount ? (
-                    <Navigate to={pendingInvitePath() ?? "/onboarding"} replace />
+                    <Navigate
+                      to={
+                        next ? newAccountDestination(next) : (pendingInvitePath() ?? "/onboarding")
+                      }
+                      replace
+                    />
                   ) : (
                     <AuthPage key="up" mode="up" adding={addingAccount} />
                   )
@@ -246,8 +251,8 @@ function SessionApp() {
               />
               <Route path="/reset-password" element={<PasswordResetPage />} />
               <Route
-                path="/invite/:invitationId"
-                element={user ? <InvitePage /> : <SignedOutInvite />}
+                path="/team-invite/:invitationId"
+                element={user ? <TeamInvitePage /> : <SignedOutInvite />}
               />
               <Route path="/p/:slugToken" element={<SharedPagePage />} />
               <Route
@@ -308,6 +313,10 @@ function SessionApp() {
                     <Navigate to="/sign-in?next=/admin/plugins" replace />
                   )
                 }
+              />
+              <Route
+                path="/invite/:token"
+                element={<InviteRoute signedIn={Boolean(user)} pathname={pathname} />}
               />
               <Route
                 path="/admin/access"
@@ -378,7 +387,7 @@ function SessionUnavailable({ refetch }: { refetch: () => Promise<void> }) {
     <div className="grid h-full place-items-center bg-background px-6 text-center">
       <div className="flex flex-col items-center">
         <LoadingState label={t`Reconnecting`} />
-        <p className="mt-3 text-[13.5px] text-muted-foreground/80">
+        <p className="mt-3 text-body text-muted-foreground/80">
           <Trans>Can&apos;t reach the server.</Trans>
         </p>
         <div className="mt-4">
@@ -406,7 +415,7 @@ function AppFailed() {
       data-rakazo-app-state="failed"
     >
       <div className="flex flex-col items-center">
-        <p className="text-[13.5px] text-muted-foreground/80">
+        <p className="text-body text-muted-foreground/80">
           <Trans>Something went wrong. Try again.</Trans>
         </p>
         <div className="mt-4">
@@ -417,4 +426,12 @@ function AppFailed() {
       </div>
     </div>
   );
+}
+
+/** A space invite token is 32 random bytes (43 characters); team invites sent earlier used /invite/<id>. */
+function InviteRoute({ signedIn, pathname }: { signedIn: boolean; pathname: string }) {
+  const { token = "" } = useParams();
+  if (token.length !== 43) return <Navigate to={`/team-invite/${token}`} replace />;
+  if (!signedIn) return <Navigate to={`/sign-in?next=${encodeURIComponent(pathname)}`} replace />;
+  return <InvitePage />;
 }

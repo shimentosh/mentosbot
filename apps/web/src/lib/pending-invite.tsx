@@ -16,7 +16,7 @@ export function rememberPendingInvite(invitationId: string) {
 export function pendingInvitePath(): string | null {
   try {
     const id = window.sessionStorage.getItem(PENDING_INVITE_KEY);
-    return id ? `/invite/${encodeURIComponent(id)}` : null;
+    return id ? `/team-invite/${encodeURIComponent(id)}` : null;
   } catch {
     return null;
   }

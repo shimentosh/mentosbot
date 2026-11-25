@@ -142,7 +142,7 @@ export function NetworkExitDialog({
             />
           ))}
           {error ? (
-            <p role="alert" className="text-[13px] text-destructive">
+            <p role="alert" className="text-body-sm text-destructive">
               {error}
             </p>
           ) : null}

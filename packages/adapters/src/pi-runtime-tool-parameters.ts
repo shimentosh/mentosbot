@@ -1,4 +1,3 @@
-import { Type } from "@earendil-works/pi-ai";
 import type { ConnectorTool } from "@rakazo/adapter-kit";
 import {
   ASK_USER_LIMIT_LABEL_MAX_LENGTH,
@@ -13,6 +12,8 @@ import {
   ThinkingLevelSchema,
 } from "@rakazo/contracts";
 import { getLogger } from "@rakazo/logging";
+import { Type } from "typebox";
+import { MAX_APPROVAL_DETAIL_LENGTH } from "./approval-ask.js";
 import {
   normalizeOpenAiToolParameters,
   openAiToolParametersNeedNormalization,
@@ -78,6 +79,7 @@ function builtinParameters(tool: ConnectorTool) {
   if (tool.name === "ask_user") {
     return Type.Object({
       question: Type.String({ maxLength: ASK_USER_QUESTION_MAX_LENGTH }),
+      detail: Type.Optional(Type.String({ maxLength: MAX_APPROVAL_DETAIL_LENGTH })),
       options: Type.Array(Type.String({ minLength: 1, maxLength: ASK_USER_OPTION_MAX_LENGTH }), {
         minItems: ASK_USER_MIN_OPTIONS,
         maxItems: ASK_USER_MAX_MULTIPLE_OPTIONS,
@@ -121,6 +123,7 @@ function builtinParameters(tool: ConnectorTool) {
       instructions: Type.Optional(Type.String()),
       model_provider: Type.Optional(Type.String()),
       model_id: Type.Optional(Type.String()),
+      background: Type.Optional(Type.Boolean()),
     });
   }
   if (tool.name === "spawn_bot") {

@@ -127,7 +127,10 @@ export async function botMessageFromOwnersWork(
       messagingChannelRun: false,
       runUserId: sender.userId,
       botUserId: sender.bot.userId,
-      sharedWithTeammates: Boolean(sender.sourceMessage?.authorUserId),
+      // Every person's message names its writer; only a teammate's differs from the run's user.
+      sharedWithTeammates: Boolean(
+        sender.sourceMessage?.authorUserId && sender.sourceMessage.authorUserId !== sender.userId,
+      ),
     }) !== undefined
   );
 }
@@ -136,7 +139,7 @@ export async function botMessageFromOwnersWork(
 export type UserComputerState = "connected" | "offline" | undefined;
 
 const USER_COMPUTER_UNAVAILABLE =
-  "The user's computer is not connected. Ask them to open the Rakazo desktop app.";
+  'The user\'s computer is not connected. If the task needs it, ask them to open the Rakazo desktop app and turn on "Let bots use this computer" in its settings.';
 
 /**
  * Whose own computer this run may reach: the person whose message or routine started it, when

@@ -2,19 +2,19 @@ import { linkPreviewUrls, markdownCodeBlocks } from "@rakazo/chat-ui/native";
 import type { BotAvatarSet, LoginFieldInput, MessageReaction } from "@rakazo/contracts";
 import { canReactToThreadMessage, MESSAGE_REACTIONS } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
-import { canMarkMessageUnread, isPeerReceiptBlocks, liveMessageComposing } from "@rakazo/core";
+import {
+  canMarkMessageUnread,
+  copyableMessageText,
+  isPeerReceiptBlocks,
+  liveMessageComposing,
+  selectableMessageText,
+} from "@rakazo/core";
 import * as Clipboard from "expo-clipboard";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import { Platform, View } from "react-native";
 import Animated, { useReducedMotion, ZoomIn } from "react-native-reanimated";
-import type { MobileBot, MobileMessage, MobileSnapshot } from "../../lib/api";
-import {
-  blockText,
-  copyableMobileMessageText,
-  currentApiBase,
-  selectableMobileMessageText,
-} from "../../lib/api";
+import { currentApiBase } from "../../lib/api";
 import type { MobileArtifactTarget } from "../../lib/artifact-open";
 import { canDoubleTapReact } from "../../lib/double-tap";
 import { useI18n } from "../../lib/i18n";
@@ -22,6 +22,8 @@ import { presentMessageActionSheet } from "../../lib/message-action-sheet";
 import { buildMessageContextMenu, messageMenuReaction } from "../../lib/message-context-menu";
 import { messageHasInlineControls, quotableMessageSegments } from "../../lib/message-presentation";
 import { messageRowLayout } from "../../lib/message-row-layout";
+import type { MobileBot, MobileMessage, MobileSnapshot } from "../../lib/mobile-types";
+import { blockText } from "../../lib/mobile-types";
 import { useMobileTokens, useResolvedAppearance } from "../../lib/native";
 import { selectableTextFromMarkdown } from "../../lib/selectable-text";
 import { ThreadReadOnlyContext } from "../../lib/thread-read-only";
@@ -85,6 +87,8 @@ type MessageRowProps = {
   headerAdjacent: boolean;
   unreadDivider: boolean;
   markedUnread: boolean;
+  /** Someone else in a shared space wrote this message. */
+  authorName?: string;
   replyAuthor: string;
   replyFallbackText?: string;
   waitingForUser: boolean;
@@ -122,6 +126,7 @@ export const MessageRow = memo(function MessageRow({
   headerAdjacent,
   unreadDivider,
   markedUnread,
+  authorName,
   replyAuthor,
   replyFallbackText,
   messageReactions,
@@ -172,7 +177,7 @@ export const MessageRow = memo(function MessageRow({
     onMenuAction: (id: string) => void;
     likeMessage?: () => void;
   }>(() => {
-    const messageText = selectableMobileMessageText(message);
+    const messageText = selectableMessageText(message);
     const includeQuote =
       !readOnly &&
       !message.id.startsWith("progress:") &&
@@ -191,7 +196,7 @@ export const MessageRow = memo(function MessageRow({
         message.role === "user" ? messageText : selectableTextFromMarkdown(messageText),
       );
     const copy = () => {
-      const text = copyableMobileMessageText(message);
+      const text = copyableMessageText(message);
       if (text) void Clipboard.setStringAsync(text).catch(() => undefined);
     };
     const react = (reaction: MessageReaction) => actions.react(message, reaction);
@@ -450,6 +455,7 @@ export const MessageRow = memo(function MessageRow({
                 botId={bubbleBotId}
                 groupId={groupId}
                 message={message}
+                authorName={authorName}
                 botName={botName}
                 showBotSenderName={showBotSenderName}
                 bots={bots}

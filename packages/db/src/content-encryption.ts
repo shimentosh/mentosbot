@@ -14,7 +14,7 @@ import type { ContentKeyRing, RowContext, SpaceSource } from "./content-keys.js"
 import { ROW_OWNER } from "./content-keys.js";
 import type { PrismaClient } from "./generated/prisma/client.js";
 import { Prisma } from "./generated/prisma/client.js";
-import { historyMessageText } from "./history-text.js";
+import { historySearchText } from "./history-text.js";
 import { createRowId } from "./row-id.js";
 
 /**
@@ -87,6 +87,14 @@ export const ENCRYPTED_MODELS: Record<string, ModelSpec> = {
     space: { column: "spaceId" },
     ownerRelation: "user",
   },
+  /** A bot's inbox. Recipients and file names stay plaintext; `key` and `messageId` are lookups. */
+  BotEmailMessage: {
+    table: "bot_email_messages",
+    fields: { fromAddress: {}, fromName: {}, subject: {}, text: {} },
+    space: { column: "spaceId" },
+    ownerRelation: "bot",
+    searchTokens: true,
+  },
 };
 
 /** Rows whose id → space mapping the ring learns from results, for child writes. */
@@ -145,6 +153,11 @@ export interface ContentEncryption {
    * (`threadId` for messages and events, `documentId` for revisions, `userId` otherwise).
    */
   openRows<T extends { id: string }>(model: keyof typeof ENCRYPTED_MODELS, rows: T[]): Promise<T[]>;
+  /**
+   * Seals a row for a raw SQL insert, as `create` would. The row needs its final `id`
+   * and the columns that name its owner and space.
+   */
+  sealRow<T extends { id: string }>(model: keyof typeof ENCRYPTED_MODELS, row: T): Promise<T>;
   /**
    * One token list per key version of the space; a match must contain every token
    * of one list. Empty when the space has no keys, so it has no encrypted rows.
@@ -347,6 +360,8 @@ export function withContentEncryption(prisma: PrismaClient, ring: ContentKeyRing
     if (!fields.length) return data;
     const key: DataKey = await ring.current(context.spaceId);
     const next = { ...data };
+    const words: string[] = [];
+    const strings: string[] = [];
     for (const field of fields) {
       const location: ContentLocation = {
         table: spec.table,
@@ -360,15 +375,18 @@ export function withContentEncryption(prisma: PrismaClient, ring: ContentKeyRing
       if (!plainKeys && isRecord(value) && "set" in value) value = value.set;
       if (value === null) next[field] = null;
       else if (plainKeys) {
-        if (spec.searchTokens)
-          next.searchTokens = searchTokens(key, {
-            words: historyMessageText(value as Prisma.JsonValue),
-            strings: stringsIn(value),
-          });
+        words.push(historySearchText(value as Prisma.JsonValue));
+        strings.push(...stringsIn(value));
         next[field] = sealJson(value, plainKeys, encrypt);
-      } else if (typeof value === "string") next[field] = encrypt(value);
-      else throw new Error(`Unsupported write to encrypted ${spec.table}.${field}`);
+      } else if (typeof value === "string") {
+        words.push(value);
+        strings.push(value);
+        next[field] = encrypt(value);
+      } else throw new Error(`Unsupported write to encrypted ${spec.table}.${field}`);
     }
+    // Tokens cover the fields written here: indexed models write all of them together.
+    if (spec.searchTokens)
+      next.searchTokens = searchTokens(key, { words: words.join("\n"), strings });
     ring.remember(spec.table, rowId, context);
     return next;
   }
@@ -433,6 +451,7 @@ export function withContentEncryption(prisma: PrismaClient, ring: ContentKeyRing
    * a list), so search matches its text instead of tokens of what it used to say.
    */
   function plainWrite(spec: ModelSpec, operation: string, args: RecordValue): RecordValue {
+    args = inertPlaintext(spec, args);
     if (
       spec.searchTokens &&
       ["update", "updateMany", "updateManyAndReturn"].includes(operation) &&
@@ -440,6 +459,24 @@ export function withContentEncryption(prisma: PrismaClient, ring: ContentKeyRing
     )
       return { ...args, data: { ...(args.data as RecordValue), searchTokens: { set: [] } } };
     return args;
+  }
+
+  /**
+   * Encryption off: text that merely looks like ciphertext (an email subject, say) would
+   * later be read as a value under a key that does not exist and fail every read of its
+   * row, so a zero-width space keeps it plaintext.
+   */
+  function inertPlaintext(spec: ModelSpec, args: RecordValue): RecordValue {
+    const inert = (row: unknown): unknown => {
+      if (!isRecord(row)) return row;
+      let out = row;
+      for (const [field, fieldSpec] of Object.entries(spec.fields))
+        if (!fieldSpec.plainKeys && ciphertextKeyId(row[field]))
+          out = { ...out, [field]: `\u200b${row[field]}` };
+      return out;
+    };
+    const data = Array.isArray(args.data) ? args.data.map(inert) : inert(args.data);
+    return data === args.data ? args : { ...args, data };
   }
 
   async function sealWrites(
@@ -497,6 +534,10 @@ export function withContentEncryption(prisma: PrismaClient, ring: ContentKeyRing
     async openRows(model, rows) {
       await openAll(rows, { model, strip: [], relations: new Map() });
       return rows;
+    },
+    async sealRow(model, row) {
+      if (!ring.encryptWrites) return row;
+      return (await sealCreate(ENCRYPTED_MODELS[model]!, row)) as typeof row;
     },
     async messageSearchTokens(spaceId, query, domain) {
       const keys = await ring.allFresh(spaceId);

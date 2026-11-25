@@ -301,10 +301,10 @@ function IntegrationRow({
       >
         <PluginLogo name={integration.title} site={integration.site} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium text-foreground">
+          <span className="block truncate text-body-lg font-medium text-foreground">
             {integration.title}
           </span>
-          <span className="block truncate text-[13px] text-muted-foreground">
+          <span className="block truncate text-body-sm text-muted-foreground">
             {status ?? integration.description}
           </span>
         </span>
@@ -340,8 +340,10 @@ function IntegrationDetail({
         </Button>
         <PluginLogo name={integration.title} site={integration.site} large />
         <div className="min-w-0">
-          <h3 className="truncate text-[17px] font-medium text-foreground">{integration.title}</h3>
-          <p className="truncate text-[13px] text-muted-foreground">{integration.description}</p>
+          <h3 className="truncate text-heading3 font-medium text-foreground">
+            {integration.title}
+          </h3>
+          <p className="truncate text-body-sm text-muted-foreground">{integration.description}</p>
         </div>
       </div>
       <div className="mt-6 max-w-[560px]">{children}</div>
@@ -360,7 +362,7 @@ function Connected({ children }: { children: ReactNode }) {
 
 function ErrorLine({ error }: { error: string | null | undefined }) {
   return error ? (
-    <p role="alert" className="mt-3 text-[13px] text-destructive">
+    <p role="alert" className="mt-3 text-body-sm text-destructive">
       {error}
     </p>
   ) : null;
@@ -406,7 +408,7 @@ function GoogleWorkspaceDetail() {
         >
           {data.accounts.map((account) => (
             <li key={account.id} className="flex items-center justify-between gap-4 px-4 py-3">
-              <span className="min-w-0 text-[14px]">
+              <span className="min-w-0 text-body">
                 <Connected>{account.email}</Connected>
               </span>
               <Button
@@ -439,7 +441,7 @@ function GoogleWorkspaceDetail() {
         <Button
           variant="link"
           size="sm"
-          className="h-auto p-0 text-[13px] text-muted-foreground"
+          className="h-auto p-0 text-body-sm text-muted-foreground"
           onClick={() => setEditing(true)}
         >
           <Trans>Change OAuth client</Trans>
@@ -486,7 +488,7 @@ function GoogleClientForm({
             readOnly
             value={state.redirectUri}
             onFocus={(event) => event.target.select()}
-            className="min-w-0 font-mono text-[12.5px]"
+            className="min-w-0 font-mono text-body-sm"
           />
           <Button
             type="button"
@@ -579,7 +581,7 @@ function KeyIntegrationDetail({ integration }: { integration: Integration }) {
     return (
       <>
         <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-4 py-3">
-          <span className="min-w-0 font-mono text-[12.5px] text-muted-foreground">
+          <span className="min-w-0 font-mono text-body-sm text-muted-foreground">
             <Connected>
               {fields.map((field) => `$${commandVariableName(field.name)}`).join(" ")}
             </Connected>

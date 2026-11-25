@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fakeAgentState = vi.hoisted(() => ({
   options: ["Berlin", "Seoul", "Toronto"],
   extra: {} as Record<string, unknown>,
+  detail: undefined as string | undefined,
   tools: [] as Array<{
     name: string;
+    prepareArguments?: (args: unknown) => Record<string, unknown>;
     execute: (toolCallId: string, params: Record<string, unknown>) => Promise<unknown>;
   }>,
 }));
@@ -25,11 +27,15 @@ vi.mock("@earendil-works/pi-agent-core", () => ({
     async prompt() {
       const askUser = this.tools.find((tool) => tool.name === "ask_user");
       if (!askUser) throw new Error("ask_user tool missing");
-      await askUser.execute("call-choice-1", {
+      // The real agent prepares the model's arguments before executing them.
+      const raw = {
         question: "Which city should I use?",
         options: fakeAgentState.options,
         ...fakeAgentState.extra,
-      });
+        ...(fakeAgentState.detail === undefined ? {} : { detail: fakeAgentState.detail }),
+      };
+      const args = askUser.prepareArguments?.(raw) ?? raw;
+      await askUser.execute("call-choice-1", args);
     }
 
     async waitForIdle() {}
@@ -97,6 +103,7 @@ describe("Pi choice asks", () => {
     fakeAgentState.tools = [];
     fakeAgentState.options = ["Berlin", "Seoul", "Toronto"];
     fakeAgentState.extra = {};
+    fakeAgentState.detail = undefined;
   });
 
   it("puts a draft for approval on the ask, leaving out the nulls a model sends", async () => {
@@ -138,6 +145,25 @@ describe("Pi choice asks", () => {
     expect(
       events.some((event) => event.type === "text" && event.text.includes("I finished the work.")),
     ).toBe(false);
+  });
+
+  it("carries the content the user is deciding on as the ask's detail", async () => {
+    fakeAgentState.detail = "To: person@example.test\nSubject: Hello\n\nThe draft body.";
+    const runtime = new PiAgentRuntime();
+    const events: AgentRuntimeEvent[] = [];
+
+    for await (const event of runtime.run(runRequest, runContext)) events.push(event);
+
+    expect(events).toContainEqual({
+      type: "ask",
+      text: "Which city should I use?",
+      detail: "To: person@example.test\nSubject: Hello\n\nThe draft body.",
+      actions: [
+        { id: "choice-1", label: "Berlin" },
+        { id: "choice-2", label: "Seoul" },
+        { id: "choice-3", label: "Toronto" },
+      ],
+    });
   });
 
   it("rejects an empty choice set before emitting an ask", async () => {

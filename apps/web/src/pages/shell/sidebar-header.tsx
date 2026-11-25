@@ -89,6 +89,7 @@ export function SidebarHeader({
             {waiting ? (
               <span
                 aria-hidden="true"
+                // off-scale: a count badge inside a 16px dot.
                 className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium leading-none text-primary-foreground"
               >
                 {waiting > 9 ? "9+" : waiting}

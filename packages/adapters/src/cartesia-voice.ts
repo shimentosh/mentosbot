@@ -10,13 +10,13 @@ import type {
   VoiceVerifyResult,
 } from "@rakazo/adapter-kit";
 import {
-  asrLanguageHint,
   readVoiceAudio,
   readVoiceJson,
   requireOk,
   speechUploadName,
   verifyVoiceHttpGet,
   voiceDeadline,
+  voiceLanguageHint,
   voiceRequestError,
 } from "./voice-http.js";
 
@@ -112,7 +112,7 @@ export class CartesiaVoiceProvider implements VoiceProvider {
       speechUploadName(request.mimeType),
     );
     // Without a language Cartesia assumes English.
-    const language = asrLanguageHint(request.language);
+    const language = voiceLanguageHint(request.language);
     if (language) form.set("language", language);
     const res = await fetch(`${API}/stt`, {
       method: "POST",

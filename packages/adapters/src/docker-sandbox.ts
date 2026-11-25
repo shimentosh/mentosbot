@@ -1,4 +1,3 @@
-import path from "node:path";
 import type {
   AdapterContext,
   CommandRequest,
@@ -31,8 +30,10 @@ import {
   clampRounded,
   computerObservation,
   normalizeWorkspacePath,
+  workspaceCwd,
 } from "./computer-support.js";
 import { sandboxCommandArgv } from "./sandbox-command-environment.js";
+import { sandboxNotFoundError } from "./sandbox-errors.js";
 import { readBodyCapped, withAbort } from "./web-ssrf.js";
 import { shouldSkipPortableWorkspaceFile } from "./workspace-save-policy.js";
 
@@ -95,9 +96,7 @@ function encodedFileResponseLimit(maxBytes: number | undefined): number {
 
 /** Named so the API's isSandboxGoneError recognizes it and clears the dead computer row. */
 function sandboxGoneError(computer: ComputerRef): Error {
-  return Object.assign(new Error(`sandbox ${computer.id} is not running`), {
-    name: "SandboxNotFoundError",
-  });
+  return sandboxNotFoundError(`sandbox ${computer.id} is not running`);
 }
 
 export class DockerSandboxProvider implements SandboxProvider {
@@ -145,7 +144,7 @@ export class DockerSandboxProvider implements SandboxProvider {
   }
 
   async provision(
-    request: { botId: string; homePath: string },
+    request: { botId: string; homePath: string; timezone?: string; language?: string },
     context: AdapterContext,
   ): Promise<ComputerRef> {
     // The supervisor runs the network beside the computer, so its credentials never enter it.
@@ -158,6 +157,8 @@ export class DockerSandboxProvider implements SandboxProvider {
         homePath: request.homePath,
         spaceId: context.spaceId,
         ...(networkExit ? { networkExit } : {}),
+        timezone: request.timezone,
+        language: request.language,
       }),
       signal: context.signal,
     });
@@ -203,7 +204,7 @@ export class DockerSandboxProvider implements SandboxProvider {
       body: JSON.stringify({
         ...request,
         argv: sandboxCommandArgv(request),
-        cwd: dockerCwd(request.cwd),
+        cwd: workspaceCwd("/home/rakazo", request.cwd),
         timeoutMs,
       }),
       signal: context.signal,
@@ -707,12 +708,4 @@ function parseProcessLine(line: string): ProcessEvent | undefined {
     return { type: "exit", code: record.code };
   }
   return undefined;
-}
-
-function dockerCwd(cwd: string | undefined) {
-  if (!cwd || cwd === "." || cwd === "/" || cwd === "/home/rakazo") return "/home/rakazo";
-  const relative = cwd.startsWith("/home/rakazo/")
-    ? cwd.slice("/home/rakazo/".length)
-    : normalizeWorkspacePath(cwd);
-  return path.posix.join("/home/rakazo", relative);
 }

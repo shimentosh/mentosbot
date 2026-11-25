@@ -33,6 +33,11 @@ const SkillsDialog = lazyOverlay(() =>
 const ApprovalsOverlay = lazyOverlay(() =>
   import("../ApprovalsOverlay").then((module) => module.ApprovalsOverlay),
 );
+const BotTemplatesDialog = lazyOverlay(() =>
+  import("../../components/bot-templates/bot-templates-dialog").then(
+    (module) => module.BotTemplatesDialog,
+  ),
+);
 const McpServersOverlay = lazyOverlay(() =>
   import("../McpServersOverlay").then((module) => module.McpServersOverlay),
 );
@@ -48,7 +53,7 @@ function voiceStatusRefreshTimeout(): Promise<never> {
   });
 }
 
-/** The integrations, skills, approvals and MCP overlays the URL opens. */
+/** The integrations, skills, approvals, bot templates and MCP overlays the URL opens. */
 export function AppOverlays({
   overlay,
   setOverlay,
@@ -56,6 +61,7 @@ export function AppOverlays({
   bots,
   groups,
   onOpenChat,
+  onOpenBot,
 }: {
   overlay: ShellOverlay;
   setOverlay: (next: ShellOverlay) => void;
@@ -64,7 +70,9 @@ export function AppOverlays({
   groups: Group[];
   /** Opens a chat (`null` is the open Space); leaving the route closes the overlay. */
   onOpenChat: (spaceId: string | null, path: string) => void;
+  onOpenBot: (bot: Bot) => void;
 }) {
+  const openTemplates = () => setOverlay({ kind: "templates" });
   return (
     <>
       {overlay?.kind === "approvals" ? (
@@ -81,7 +89,18 @@ export function AppOverlays({
           onOpenMcp={() => setOverlay({ kind: "mcp" })}
         />
       ) : null}
-      {overlay?.kind === "skills" ? <SkillsDialog onClose={() => setOverlay(null)} /> : null}
+      {overlay?.kind === "skills" ? (
+        <SkillsDialog onClose={() => setOverlay(null)} onOpenTemplates={openTemplates} />
+      ) : null}
+      {overlay?.kind === "templates" ? (
+        <BotTemplatesDialog
+          onClose={() => setOverlay(null)}
+          onOpenBot={(bot) => {
+            setOverlay(null);
+            onOpenBot(bot);
+          }}
+        />
+      ) : null}
       {overlay?.kind === "mcp" ? (
         <McpServersOverlay
           editServerId={overlay.serverId}
@@ -104,6 +123,7 @@ export function SettingsOverlays({
   spaces,
   renameSpace,
   removeSpace,
+  leftSpace,
   refreshSpaces,
   openAgentImport,
   alive,
@@ -127,6 +147,7 @@ export function SettingsOverlays({
   spaces: Space[];
   renameSpace: (spaceId: string, name: string) => Promise<void>;
   removeSpace: (spaceId: string) => Promise<void>;
+  leftSpace: (spaceId: string, activeSpaceId: string) => Promise<void>;
   refreshSpaces: () => Promise<void>;
   openAgentImport: () => void;
   alive: RefObject<boolean>;
@@ -151,12 +172,17 @@ export function SettingsOverlays({
     <>
       {overlay?.kind === "settings" && showSettings ? (
         <SettingsOverlay
+          shellRpc={rpc}
           space={settingsSpace}
           spaces={spaces}
           onRenameSpace={renameSpace}
           onDeleteSpace={async (spaceId) => {
             await removeSpace(spaceId);
             if (alive.current) setOverlay(null);
+          }}
+          onLeftSpace={(spaceId, activeSpaceId) => {
+            setOverlay(null);
+            void leftSpace(spaceId, activeSpaceId);
           }}
           onOpenSpace={(spaceId) => setOverlay({ ...overlay, section: "space", spaceId })}
           name={user?.name ?? ""}
@@ -170,6 +196,7 @@ export function SettingsOverlays({
           onSectionChange={(section) => setOverlay({ ...overlay, section })}
           billingEnabled={bootstrapMe?.billingEnabled === true}
           sandboxProvider={bootstrapMe?.sandboxProvider}
+          computerSettingsEnabled={bootstrapMe?.computerSettingsEnabled === true}
           canConfigureComputers={bootstrapMe?.isAdmin === true}
           canConfigureStorage={bootstrapMe?.isAdmin === true}
           onSandboxProviderChange={(sandboxProvider) =>

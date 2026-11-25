@@ -71,8 +71,8 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
           <div className="flex min-h-10 items-center gap-2">
             <FolderCode aria-hidden size={16} className="shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{folder.name}</div>
-              <div className="truncate font-mono text-[12px] text-muted-foreground">
+              <div className="truncate text-body font-medium">{folder.name}</div>
+              <div className="truncate font-mono text-label text-muted-foreground">
                 {folder.otherComputer ? t`On ${folder.otherComputer}` : folder.path}
               </div>
             </div>
@@ -110,7 +110,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
           <div
             key={process.name}
             data-testid="kept-command"
-            className="flex min-h-10 items-center gap-2 border-t border-border/60 pt-1 text-sm"
+            className="flex min-h-10 items-center gap-2 border-t border-border/60 pt-1 text-body"
           >
             <span
               aria-hidden
@@ -118,7 +118,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
             />
             <div className="min-w-0 flex-1">
               <div className="truncate">{process.name}</div>
-              <div className="truncate font-mono text-[12px] text-muted-foreground">
+              <div className="truncate font-mono text-label text-muted-foreground">
                 {process.command}
               </div>
             </div>
@@ -130,7 +130,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
                     target="_blank"
                     rel="noreferrer"
                     aria-label={t`Open localhost:${port}`}
-                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-[12px] hover:bg-muted"
+                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-label hover:bg-muted"
                   >
                     {`:${port}`}
                     <ExternalLink aria-hidden size={13} />
@@ -155,7 +155,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
                 <Trans>Stop</Trans>
               </Button>
             ) : (
-              <span className="text-[12px] text-muted-foreground">
+              <span className="text-label text-muted-foreground">
                 <Trans>Stopped</Trans>
               </span>
             )}
@@ -163,7 +163,7 @@ export function ProjectFolderSection({ botId }: { botId: string }) {
         ))}
       </div>
       {error ? (
-        <p role="alert" className="mt-2 text-[13px] text-destructive">
+        <p role="alert" className="mt-2 text-body-sm text-destructive">
           {error}
         </p>
       ) : null}

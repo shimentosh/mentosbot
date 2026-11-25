@@ -1,6 +1,8 @@
 import { MAX_SIGNED_IN_ACCOUNTS } from "@rakazo/contracts";
 import * as SecureStore from "expo-secure-store";
-import { clearSpace, currentApiBase, fetchMobileJson, signOut } from "./api";
+import { currentApiBase, fetchMobileJson } from "./api";
+import { signOut } from "./api-auth";
+import { clearSpace } from "./api-server";
 import { t } from "./i18n";
 import { registerPushToken, unregisterPushToken } from "./push";
 import { clearSessionToken, saveSessionToken, snapshotSessionToken } from "./session";

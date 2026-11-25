@@ -5,12 +5,12 @@ branch. Every push to that branch builds, switches, health-checks, and rolls bac
 
 ## What you need
 
-| Item | Example | Notes |
-|---|---|---|
-| VPS IP | `203.0.113.10` | Debian 13 x64, amd64. 4 GB RAM / 2 vCPU / 80 GB works (setup adds 4 GB swap); 8 GB is comfortable. |
-| Domain | `rakazo.example.com` | A record → IP. If the DNS host proxies traffic, turn that off (DNS only) or HTTPS certificates fail. |
-| GitHub repo + branch | `https://github.com/OWNER/REPO`, `main` | Deploy-on-push follows this branch. |
-| Admin email | the email you sign up with | Unlocks Settings → Computer, Storage and Servers. |
+| Item                 | Example                                 | Notes                                                                                                |
+| -------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| VPS IP               | `203.0.113.10`                          | Debian 13 x64, amd64. 4 GB RAM / 2 vCPU / 80 GB works (setup adds 4 GB swap); 8 GB is comfortable.   |
+| Domain               | `rakazo.example.com`                    | A record → IP. If the DNS host proxies traffic, turn that off (DNS only) or HTTPS certificates fail. |
+| GitHub repo + branch | `https://github.com/OWNER/REPO`, `main` | Deploy-on-push follows this branch.                                                                  |
+| Admin email          | the email you sign up with              | Unlocks Settings → Computer, Storage and Servers.                                                    |
 
 SSH key: create the server with your `rakazo_vps` key (private part at `~/.ssh/rakazo_vps` on the
 Mac). If the server was created with a password, run `ssh-copy-id -i ~/.ssh/rakazo_vps.pub root@<IP>`.
@@ -65,6 +65,7 @@ Follow a deploy with `journalctl -fu rakazo-autodeploy`; see where it stands wit
    `ssh -i ~/.ssh/rakazo_vps root@<IP> 'bash setup.sh --lock-signups'`
 2. **Verify the admin email.** Without email delivery the account stays unverified and admin pages
    stay hidden. Run this yourself so the password stays on the server:
+
    ```sh
    ssh -t -i ~/.ssh/rakazo_vps root@<IP> 'cd /srv/rakazo && read -rp "Email: " OWNER_EMAIL; read -rsp "Rakazo password: " OWNER_PASSWORD; echo; export OWNER_EMAIL OWNER_PASSWORD; docker compose --env-file .env -f docker-compose.images.yml exec -e OWNER_EMAIL -e OWNER_PASSWORD api node dist/cli/bootstrap-owner.js'
    ```
@@ -91,33 +92,33 @@ Follow a deploy with `journalctl -fu rakazo-autodeploy`; see where it stands wit
 
 ## Day-to-day
 
-| Task | How |
-|---|---|
-| Deploy | Push to the branch, or wait up to 2 minutes. A push during a deploy deploys right after. |
-| Status | `rakazo-autodeploy status`, `journalctl -u rakazo-autodeploy -n 50` |
-| A commit failed | It is skipped until a newer commit arrives; the previous release keeps running. |
-| New computer image | Bots switch after **Update computer**, which waits while a bot waits for input. |
-| Back up | `/srv/rakazo/.env` (`ENCRYPTION_KEY`) and the Postgres volume |
-| Restart | `cd /srv/rakazo && docker compose -f docker-compose.images.yml --env-file .env up -d --pull never` |
-| Update without autodeploy | `bash update.sh` |
+| Task                      | How                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| Deploy                    | Push to the branch, or wait up to 2 minutes. A push during a deploy deploys right after.           |
+| Status                    | `rakazo-autodeploy status`, `journalctl -u rakazo-autodeploy -n 50`                                |
+| A commit failed           | It is skipped until a newer commit arrives; the previous release keeps running.                    |
+| New computer image        | Bots switch after **Update computer**, which waits while a bot waits for input.                    |
+| Back up                   | `/srv/rakazo/.env` (`ENCRYPTION_KEY`) and the Postgres volume                                      |
+| Restart                   | `cd /srv/rakazo && docker compose -f docker-compose.images.yml --env-file .env up -d --pull never` |
+| Update without autodeploy | `bash update.sh`                                                                                   |
 
 Once custom images are in use, do not run `install-images.sh`: it tries to pull `rakazo-custom/*`
 from a registry and fails.
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `new-vps.sh` | Mac-side one-command setup |
-| `setup.sh` | Server base setup; `--lock-signups` closes signups |
-| `autodeploy.sh` | Deploys the newest commit: build, switch, health check, roll back |
-| `autodeploy-webhook.py` | GitHub webhook listener (HMAC-checked, unprivileged, writes a trigger file) |
-| `enable-autodeploy.sh` | Installs the deploy key, timer, path unit, webhook service and Caddy route |
-| `bot-desktop.patch` | Debian 13 + Google Chrome + Xfce desktop for the bot computer image |
-| `custom-computer.sh` | Builds the computer image with the patch by hand (autodeploy does this itself) |
-| `test-desktop.sh` | 31 checks of the bot desktop under the real container restrictions |
-| `update.sh` | Manual update without autodeploy |
-| `use-r2.sh` | Connects an S3-compatible bucket through `.env` |
+| File                    | Purpose                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `new-vps.sh`            | Mac-side one-command setup                                                     |
+| `setup.sh`              | Server base setup; `--lock-signups` closes signups                             |
+| `autodeploy.sh`         | Deploys the newest commit: build, switch, health check, roll back              |
+| `autodeploy-webhook.py` | GitHub webhook listener (HMAC-checked, unprivileged, writes a trigger file)    |
+| `enable-autodeploy.sh`  | Installs the deploy key, timer, path unit, webhook service and Caddy route     |
+| `bot-desktop.patch`     | Debian 13 + Google Chrome + Xfce desktop for the bot computer image            |
+| `custom-computer.sh`    | Builds the computer image with the patch by hand (autodeploy does this itself) |
+| `test-desktop.sh`       | 31 checks of the bot desktop under the real container restrictions             |
+| `update.sh`             | Manual update without autodeploy                                               |
+| `use-r2.sh`             | Connects an S3-compatible bucket through `.env`                                |
 
 ## Notes
 

@@ -29,7 +29,12 @@ export default function TeamBotScreen() {
   const styles = useThemedStyles(createStyles);
   const tokens = mobileTokens();
   const colorScheme = useResolvedAppearance();
-  const params = useLocalSearchParams<{ botId: string; name?: string; ownerName?: string }>();
+  const params = useLocalSearchParams<{
+    botId: string;
+    name?: string;
+    ownerName?: string;
+    ownerId?: string;
+  }>();
   const botId = params.botId;
   const pages = useInfiniteQuery(
     {
@@ -97,7 +102,9 @@ export default function TeamBotScreen() {
                 >
                   <View style={[styles.bubble, fromPerson && styles.sentBubble]}>
                     {/* A teammate it is shared with wrote it; only the bot's owner is named here. */}
-                    {fromPerson && message.authorUserId ? null : (
+                    {fromPerson &&
+                    message.authorUserId &&
+                    message.authorUserId !== params.ownerId ? null : (
                       <Text style={styles.speaker} numberOfLines={1}>
                         {fromPerson ? params.ownerName : params.name}
                       </Text>

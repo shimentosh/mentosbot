@@ -43,7 +43,7 @@ function ServerUsageDetail({ server }: { server: ComputerServerUsage }) {
   const usage = server.usage;
   if (!usage)
     return (
-      <p className="mt-1 text-[12.5px] text-muted-foreground">
+      <p className="mt-1 text-body-sm text-muted-foreground">
         <Trans>Not answering</Trans>
       </p>
     );
@@ -87,11 +87,11 @@ function ServerUsageDetail({ server }: { server: ComputerServerUsage }) {
         />
       ) : null}
       {shares.some((share) => share >= NEARLY_FULL) ? (
-        <p className="text-[12.5px] text-destructive">
+        <p className="text-body-sm text-destructive">
           <Trans>Almost full. Add a server before adding more bots.</Trans>
         </p>
       ) : null}
-      <div className="text-[12.5px] text-muted-foreground">
+      <div className="text-body-sm text-muted-foreground">
         <Plural value={running.length} one="# computer running" other="# computers running" />
         {running.length ? (
           <ul className="mt-1 space-y-0.5">
@@ -121,7 +121,7 @@ function Meter({ label, share, value }: { label: ReactNode; share: number; value
   const percent = Math.max(0, Math.min(100, Math.round(share * 100)));
   return (
     <div>
-      <div className="flex justify-between gap-3 text-[12.5px]">
+      <div className="flex justify-between gap-3 text-body-sm">
         <span className="text-muted-foreground">{label}</span>
         <span className="tabular-nums">{value}</span>
       </div>

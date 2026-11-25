@@ -69,8 +69,8 @@ export function TeamBotsSection() {
                 size={22}
               />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] text-foreground">{bot.name}</span>
-                <span className="block truncate text-[11.5px] text-muted-foreground">
+                <span className="block truncate text-body-sm text-foreground">{bot.name}</span>
+                <span className="block truncate text-label text-muted-foreground">
                   {teamPersonName(bot.owner)}
                 </span>
               </span>
@@ -96,7 +96,7 @@ function TeamBotsHeader({
   const chosen = members.find((each) => each.userId === member);
   return (
     <div className="flex items-center justify-between gap-2 px-2">
-      <h3 className="text-[11.5px] font-medium tracking-wide text-muted-foreground uppercase">
+      <h3 className="text-label font-medium tracking-wide text-muted-foreground uppercase">
         <Trans>Team</Trans>
       </h3>
       {members.length > 1 ? (
@@ -161,9 +161,9 @@ function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
       >
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <BotAvatar identity={bot.id} color={bot.color} avatarSet={bot.avatarSet} size={24} />
-          <DialogTitle className="min-w-0 flex-1 truncate text-[14px] font-medium">
+          <DialogTitle className="min-w-0 flex-1 truncate text-body font-medium">
             {bot.name}
-            <span className="ml-2 text-[12.5px] font-normal text-muted-foreground">
+            <span className="ml-2 text-body-sm font-normal text-muted-foreground">
               {teamPersonName(bot.owner)}
             </span>
           </DialogTitle>
@@ -190,11 +190,11 @@ function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
               <Spinner aria-label={t`Loading…`} />
             </div>
           ) : pages.isError ? (
-            <p role="alert" className="m-auto text-[13px] text-destructive">
+            <p role="alert" className="m-auto text-body-sm text-destructive">
               <Trans>Could not load this chat.</Trans>
             </p>
           ) : messages.length === 0 ? (
-            <p className="m-auto text-[13px] text-muted-foreground">
+            <p className="m-auto text-body-sm text-muted-foreground">
               <Trans>No messages yet.</Trans>
             </p>
           ) : (
@@ -249,7 +249,7 @@ function TeamBotScreen({ botId }: { botId: string }) {
     );
   if (!running || !url)
     return (
-      <p className="m-auto text-[13px] text-muted-foreground">
+      <p className="m-auto text-body-sm text-muted-foreground">
         <Trans>The computer isn't running.</Trans>
       </p>
     );
@@ -297,10 +297,10 @@ function ReadOnlyMessage({ message, bot }: { message: ThreadMessage; bot: TeamBo
       <div
         className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${fromPerson ? "bg-accent" : "bg-muted"}`}
       >
-        <div className="mb-1 text-[12px] font-medium text-muted-foreground" dir="auto">
+        <div className="mb-1 text-label font-medium text-muted-foreground" dir="auto">
           {fromPerson ? teamPersonName(bot.owner) : bot.name}
         </div>
-        <div className="text-[14px] leading-[1.5] text-foreground/90" dir="auto">
+        <div className="text-body leading-[1.5] text-foreground/90" dir="auto">
           {parts}
         </div>
       </div>

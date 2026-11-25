@@ -94,7 +94,7 @@ export function teamRoutes(ctx: RouterContext) {
                   teamName: invitation.organizationName,
                 },
                 new URL(
-                  `/invite/${encodeURIComponent(invitation.id)}`,
+                  `/team-invite/${encodeURIComponent(invitation.id)}`,
                   deps.env.webOrigin,
                 ).toString(),
                 emailLocale(invitee?.locale),

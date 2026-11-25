@@ -2,6 +2,9 @@ import type { RunActivityRow } from "@rakazo/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { activityPreview, formatActivityRelativeTime, routineRunLateLabel } from "./activity";
 
+vi.mock("./api-server", () => ({}));
+vi.mock("./api-auth", () => ({}));
+vi.mock("./api-live", () => ({}));
 vi.mock("./api", () => ({ rpc: vi.fn() }));
 
 describe("formatActivityRelativeTime", () => {

@@ -146,12 +146,12 @@ export function ChoiceAsk({
               value={draft}
               disabled={disabled}
               onChange={(event) => setDraft(event.target.value)}
-              className="min-h-0 rounded-none border-0 bg-transparent p-0 text-[15px] leading-[1.5] focus-visible:ring-0 md:text-[15px] dark:bg-transparent"
+              className="min-h-0 rounded-none border-0 bg-transparent p-0 text-body-lg leading-[1.5] focus-visible:ring-0 md:text-body-lg dark:bg-transparent"
             />
           ) : (
             <p
               data-testid="ask-preview"
-              className="whitespace-pre-wrap break-words text-[15px] leading-[1.5] text-foreground"
+              className="whitespace-pre-wrap break-words text-body-lg leading-[1.5] text-foreground"
             >
               {shownText}
             </p>
@@ -159,7 +159,7 @@ export function ChoiceAsk({
           {block.previewLimits?.length ? (
             <p
               data-testid="ask-preview-count"
-              className="mt-1 flex flex-wrap justify-end gap-x-3 text-xs tabular-nums text-muted-foreground"
+              className="mt-1 flex flex-wrap justify-end gap-x-3 text-label tabular-nums text-muted-foreground"
             >
               {block.previewLimits.map((entry) => (
                 <span
@@ -174,7 +174,7 @@ export function ChoiceAsk({
             <p
               data-testid="ask-preview-count"
               className={cn(
-                "mt-1 text-end text-xs tabular-nums text-muted-foreground",
+                "mt-1 text-end text-label tabular-nums text-muted-foreground",
                 overLimit && "text-destructive",
               )}
             >
@@ -184,7 +184,7 @@ export function ChoiceAsk({
         </div>
       ) : null}
       {buttonRow && answered ? (
-        <div className="mt-3 flex items-center gap-1.5 text-[13.5px] font-medium text-muted-foreground">
+        <div className="mt-3 flex items-center gap-1.5 text-body font-medium text-muted-foreground">
           <Check aria-hidden className="size-4" />
           {[...selection.chosen.map((action) => action.label), selection.other]
             .filter(Boolean)

@@ -74,6 +74,7 @@ export default function TeamScreen() {
                 botId: item.id,
                 name: item.name,
                 ownerName: teamPersonName(item.owner),
+                ownerId: item.owner.userId,
               },
             })
           }

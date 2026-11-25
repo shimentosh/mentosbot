@@ -31,18 +31,15 @@ import {
   SettingsSwitch,
   useStackedSettings,
 } from "../../components/settings-group";
+import { SpendingLimitRow, useSpendingStatus } from "../../components/spending-limit-row";
 import { createAccountNameEditor } from "../../lib/account-name-editor";
-import type { MobileMe } from "../../lib/api";
+import { currentApiBase, rpc, selectedSpaceId } from "../../lib/api";
 import {
   changeAccountEmail,
-  currentApiBase,
   fetchAccountSecurity,
-  loadSessionToken,
   passwordResetCapabilities,
-  rpc,
-  selectedSpaceId,
   updateAccountName,
-} from "../../lib/api";
+} from "../../lib/api-auth";
 import { formatUpdateLabel, getAppVersionInfo } from "../../lib/app-version";
 import {
   getCachedAppearancePreference,
@@ -52,6 +49,13 @@ import {
 import { useApprovalSettings } from "../../lib/approval-settings";
 import { archivedChatCounts, loadArchivedChats } from "../../lib/archived-chats";
 import { replaceWithHome, replaceWithSignIn } from "../../lib/auth-routing";
+import { endCallBeforeSessionEnd } from "../../lib/call-session";
+import {
+  getHapticsEnabled,
+  loadHapticsPreference,
+  setHapticsEnabled,
+  subscribeHaptics,
+} from "../../lib/haptics";
 import { dateLocaleForUi, useI18n } from "../../lib/i18n";
 import type { LiveNotificationSettings } from "../../lib/live-notifications";
 import {
@@ -63,6 +67,7 @@ import {
   openPromotedNotificationSettings,
   setLiveNotificationSettings,
 } from "../../lib/live-notifications";
+import type { MobileMe } from "../../lib/mobile-types";
 import { native, useResolvedAppearance, useThemedStyles } from "../../lib/native";
 import { activeOrganization, useOrganizations } from "../../lib/organizations";
 import type { MobilePasskey } from "../../lib/passkey";
@@ -86,6 +91,7 @@ import {
   subscribeResponseStreaming,
 } from "../../lib/response-streaming";
 import { promptSectionName } from "../../lib/section-name-prompt";
+import { loadSessionToken } from "../../lib/session";
 import { isSettingsLink, openFromSettingsSheet } from "../../lib/settings-sheet";
 import { ACCOUNT_SETTINGS } from "../../lib/settings-target";
 import { useSideInsets } from "../../lib/side-insets";
@@ -98,12 +104,16 @@ import {
   signOutAndContinue,
 } from "../../lib/signed-in-accounts";
 import { continueWithSso } from "../../lib/sso";
+import { openStoreListing, useStoreUpdateAvailable } from "../../lib/store-update";
 import {
   loadTrustedLinkSites,
   removeTrustedLinkSite,
   useTrustedLinkSites,
 } from "../../lib/trusted-link-sites";
+import { confirmUnsentSendLoss } from "../../lib/unsent-send-warning";
 import { errorText } from "../../lib/user-error";
+
+let hapticsSaveVersion = 0;
 
 export default function Account() {
   const sideInsets = useSideInsets();
@@ -220,6 +230,8 @@ export default function Account() {
       };
     }, []),
   );
+  // Held from the tap, so a second tap while the unsent-message check runs starts nothing.
+  const signOutStarted = useRef(false);
   const pending = deletion.pending || signingOut;
   const [notifications, setNotifications] = useState<LiveNotificationSettings>(
     DEFAULT_LIVE_NOTIFICATION_SETTINGS,
@@ -264,6 +276,28 @@ export default function Account() {
     getCachedRemoteImagesEnabled,
     () => false,
   );
+  const hapticsEnabled = useSyncExternalStore(
+    subscribeHaptics,
+    getHapticsEnabled,
+    getHapticsEnabled,
+  );
+  function updateHaptics(value: boolean) {
+    const version = ++hapticsSaveVersion;
+    const isCurrent = () => version === hapticsSaveVersion && getHapticsEnabled() === value;
+    void setHapticsEnabled(value).catch(() => {
+      if (!isCurrent()) return;
+      Alert.alert(t("Haptics"), t("Could not save"), [
+        { text: t("Cancel"), style: "cancel" },
+        {
+          text: t("Retry"),
+          onPress: () => {
+            if (isCurrent()) updateHaptics(value);
+          },
+        },
+      ]);
+    });
+  }
+
   const loadRemoteImagesLabel = t("Load web images automatically");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const stackOptions = useStackedSettings();
@@ -271,7 +305,9 @@ export default function Account() {
   const versionInfo = getAppVersionInfo();
   const updateLabel = formatUpdateLabel(versionInfo.update, t);
   const versionAccessibility = [versionInfo.nativeLabel, updateLabel].filter(Boolean).join(". ");
+  const storeUpdateAvailable = useStoreUpdateAvailable();
   const approvals = useApprovalSettings(ACCOUNT_SETTINGS);
+  const spending = useSpendingStatus();
   const organizations = useOrganizations().data;
   const settingsLink = ({ title, href }: { title: string; href: Extract<Href, string> }) => (
     <SettingsRow
@@ -362,6 +398,7 @@ export default function Account() {
 
   useFocusEffect(
     useCallback(() => {
+      void loadHapticsPreference();
       void loadTrustedLinkSites().catch(() => undefined);
     }, []),
   );
@@ -406,14 +443,23 @@ export default function Account() {
   );
 
   async function handleSignOut() {
+    if (signOutStarted.current) return;
+    signOutStarted.current = true;
+    if (!(await confirmUnsentSendLoss("sign-out"))) {
+      signOutStarted.current = false;
+      return;
+    }
     setSigningOut(true);
     setSignOutError(null);
     try {
+      // Hang up while the session still exists, so the server records the call's end.
+      await endCallBeforeSessionEnd();
       if (await signOutAndContinue()) replaceWithHome();
       else replaceWithSignIn();
     } catch (err) {
       setSignOutError(errorText(err, t("Could not sign out")));
       setSigningOut(false);
+      signOutStarted.current = false;
     }
   }
 
@@ -765,6 +811,10 @@ export default function Account() {
           </View>
         ) : null}
 
+        <SettingsGroup>
+          <SettingsSwitch label={t("Haptics")} value={hapticsEnabled} onChange={updateHaptics} />
+        </SettingsGroup>
+
         {Platform.OS === "android" ? (
           <SettingsGroup accessibilityLabel={t("Notifications")} label={t("Notifications")}>
             {notificationPermission === "denied" ? (
@@ -831,6 +881,21 @@ export default function Account() {
               onPress={() => router.push("/billing")}
             />
           ) : null}
+          {me ? (
+            <SettingsRow
+              accessibilityRole="button"
+              chevron="right"
+              disabled={pending}
+              // The space header holds Members too, but a single space has no header.
+              onPress={() =>
+                openFromSettingsSheet(router, {
+                  pathname: "/space-members",
+                  params: { spaceId: selectedSpaceId() ?? me.spaceId },
+                })
+              }
+              title={t("Members")}
+            />
+          ) : null}
           {(
             [
               ...(me?.ticketBoardEnabled ? [{ title: t("Board"), href: "/board" } as const] : []),
@@ -848,6 +913,9 @@ export default function Account() {
               onPress={() => router.push("/approvals")}
             />
           ) : null}
+          {spending?.shown ? (
+            <SpendingLimitRow key="spending-limit" status={spending} disabled={pending} />
+          ) : null}
           {(
             [
               { title: t("Vault"), href: "/vault" },
@@ -856,6 +924,7 @@ export default function Account() {
                 : []),
               { title: t("Integrations"), href: "/integrations" },
               { title: t("Skills"), href: "/skills" },
+              { title: t("Memory"), href: "/memory" },
               ...(messagingEnabled ? [{ title: t("Messaging"), href: "/messaging" } as const] : []),
               { title: t("AI data sharing"), href: "/ai-data-sharing" },
             ] as const
@@ -929,6 +998,15 @@ export default function Account() {
               ) : null}
               {updateLabel ? <Text style={styles.versionLine}>{updateLabel}</Text> : null}
             </View>
+          ) : null}
+          {storeUpdateAvailable ? (
+            <NativeActionButton
+              label={t("Update")}
+              onPress={openStoreListing}
+              prominence="secondary"
+              size="compact"
+              style={styles.updateButton}
+            />
           ) : null}
         </View>
 
@@ -1022,6 +1100,9 @@ function createAccountStyles() {
     },
     versionFooter: {
       alignItems: "center",
+    },
+    updateButton: {
+      alignSelf: "center",
     },
     versionLine: {
       color: native.secondaryLabel,

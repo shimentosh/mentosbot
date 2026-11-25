@@ -192,20 +192,20 @@ export function ApprovalsOverlay({
               >
                 <Trans>Waiting for you</Trans>
                 {shown.length ? (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[12px] tabular-nums text-muted-foreground">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-label tabular-nums text-muted-foreground">
                     {shown.length}
                   </span>
                 ) : null}
               </SectionHeading>
               {allError ? (
-                <p role="alert" className="mb-4 text-[13px] text-destructive">
+                <p role="alert" className="mb-4 text-body-sm text-destructive">
                   {allError}
                 </p>
               ) : null}
               {approvalsQuery.isPending ? (
                 <Spinner aria-label={t`Loading approvals…`} />
               ) : approvalsQuery.error && !approvalsQuery.data ? (
-                <div role="alert" className="text-[13px] text-destructive">
+                <div role="alert" className="text-body-sm text-destructive">
                   {errorText(approvalsQuery.error)}
                   <Button
                     variant="secondary"
@@ -221,7 +221,7 @@ export function ApprovalsOverlay({
                   <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <CheckCheck size={22} aria-hidden="true" />
                   </span>
-                  <p className="text-[15px] font-medium text-foreground">
+                  <p className="text-body-lg font-medium text-foreground">
                     <Trans>All caught up</Trans>
                   </p>
                 </div>
@@ -317,7 +317,7 @@ export function ApprovalsOverlay({
                   />
                 </AlertDialogTitle>
               </AlertDialogHeader>
-              <ul className="flex max-h-60 flex-col gap-2 overflow-y-auto text-[13.5px]">
+              <ul className="flex max-h-60 flex-col gap-2 overflow-y-auto text-body">
                 {bulk.map((approval) => (
                   <li key={approval.runId} className="flex min-w-0 items-center gap-2">
                     <BotAvatar
@@ -369,7 +369,7 @@ function Trackers({ bots }: { bots: Bot[] }) {
             type="button"
             aria-current={bot.id === selected.id ? "page" : undefined}
             onClick={() => setSelectedId(bot.id)}
-            className="flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-start text-sm hover:bg-accent aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+            className="flex shrink-0 items-center gap-2.5 rounded-xl px-2.5 py-2 text-start text-body hover:bg-accent aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
           >
             <BotAvatar identity={bot.id} color={bot.color} avatarSet={bot.avatarSet} size={24} />
             <span className="truncate">{bot.name}</span>
@@ -378,7 +378,7 @@ function Trackers({ bots }: { bots: Bot[] }) {
       </nav>
       <div className="flex min-h-0 min-w-0 flex-col">
         <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-          <span className="min-w-0 flex-1 truncate text-[13px] text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate text-body-sm text-muted-foreground">
             {selected.trackerUrl}
           </span>
           <a

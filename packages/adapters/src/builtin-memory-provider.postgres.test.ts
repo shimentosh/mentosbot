@@ -12,8 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BuiltinMemoryProvider } from "./builtin-memory-provider.js";
 
 const databaseUrl = process.env.DATABASE_URL;
-const describePostgres =
-  process.env.VERIFY_DATABASE && databaseUrl ? describe.sequential : describe.skip;
+const describePostgres = process.env.VERIFY_DATABASE && databaseUrl ? describe : describe.skip;
 // Row-level security binds only a runtime login separate from the migration (owner) role.
 const migrationUrl = process.env.DATABASE_MIGRATION_URL;
 const itWithRowSecurity = migrationUrl && migrationUrl !== databaseUrl ? it : it.skip;

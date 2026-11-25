@@ -13,11 +13,11 @@ team**. Inviting the same address again replaces the earlier link, and **Revoke*
 
 ## Roles
 
-| Role | Can |
-| --- | --- |
-| Owner | Everything, including making and removing admins |
-| Admin | Invite and remove members |
-| Member | Use the organization and see who is on the team |
+| Role   | Can                                              |
+| ------ | ------------------------------------------------ |
+| Owner  | Everything, including making and removing admins |
+| Admin  | Invite and remove members                        |
+| Member | Use the organization and see who is on the team  |
 
 Each person has their own bots and chats, and teammates don't see each other's. The team's owner
 sees every teammate's bot under **Team** in the sidebar, can filter it by person, and can open a

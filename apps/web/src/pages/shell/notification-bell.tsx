@@ -138,7 +138,7 @@ export function InboxList({
     <div className="flex max-h-[min(32rem,70vh)] flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         {!inbox ? null : needs.length === 0 && recent.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[13px] text-muted-foreground">
+          <p className="px-4 py-6 text-center text-body-sm text-muted-foreground">
             <Trans>You're all caught up</Trans>
           </p>
         ) : (
@@ -177,7 +177,7 @@ export function InboxList({
       <button
         type="button"
         onClick={onShowActivity}
-        className="border-t border-border px-4 py-2.5 text-left text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="border-t border-border px-4 py-2.5 text-left text-body-sm text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         <Trans>All activity</Trans>
       </button>
@@ -188,7 +188,7 @@ export function InboxList({
 function Section({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
     <section className="py-1">
-      <h3 className="px-4 pt-1.5 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+      <h3 className="px-4 pt-1.5 pb-1 text-caption font-medium tracking-wide text-muted-foreground uppercase">
         {title}
       </h3>
       <ul>{children}</ul>
@@ -224,18 +224,18 @@ function Row({
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-1.5">
-            <span className="truncate text-[13px] font-medium text-foreground">
+            <span className="truncate text-body-sm font-medium text-foreground">
               {entry.bot.name}
             </span>
             {showSpace ? (
-              <span className="truncate text-[12px] text-muted-foreground">{entry.spaceName}</span>
+              <span className="truncate text-label text-muted-foreground">{entry.spaceName}</span>
             ) : null}
           </span>
-          <span className="block truncate text-[12.5px] text-muted-foreground">
+          <span className="block truncate text-body-sm text-muted-foreground">
             <KindText kind={entry.kind} count={count} />
           </span>
         </span>
-        <span className="flex shrink-0 items-center gap-1.5 text-[11.5px] text-muted-foreground">
+        <span className="flex shrink-0 items-center gap-1.5 text-label text-muted-foreground">
           {formatRelativeTime(entry.at)}
           {highlight ? (
             <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />

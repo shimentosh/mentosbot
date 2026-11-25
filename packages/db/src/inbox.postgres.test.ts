@@ -9,8 +9,7 @@ import { createRepos } from "./repos.js";
 import { asSystem, runAsTenant } from "./row-security.js";
 
 const databaseUrl = process.env.DATABASE_URL;
-const describePostgres =
-  process.env.VERIFY_DATABASE && databaseUrl ? describe.sequential : describe.skip;
+const describePostgres = process.env.VERIFY_DATABASE && databaseUrl ? describe : describe.skip;
 
 describePostgres("the bell (PostgreSQL)", () => {
   const suffix = `${process.pid}-${Date.now()}-${randomBytes(3).toString("hex")}`;

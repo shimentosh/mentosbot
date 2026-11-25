@@ -1,9 +1,14 @@
 import { t } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { ChatMarkdown } from "@rakazo/chat-ui/web";
-import type { LoginFieldInput, ThreadMessage } from "@rakazo/contracts";
+import type { AskReceipt, LoginFieldInput, ThreadMessage } from "@rakazo/contracts";
 import { BOT_INSTRUCTIONS_MAX_LENGTH } from "@rakazo/contracts";
-import { isApprovalAskBlock, isSecretAskBlock, selectedAskActionLabel } from "@rakazo/core";
+import {
+  isApprovalAskBlock,
+  isSecretAskBlock,
+  receiptItems,
+  selectedAskActionLabel,
+} from "@rakazo/core";
 import { Button, Input, Textarea } from "@rakazo/ui-web";
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
@@ -16,6 +21,59 @@ import { ChoiceAsk } from "./ChoiceAsk";
 import { SecretAskCard } from "./SecretAskCard";
 
 export type AskBlock = Extract<ThreadMessage["blocks"][number], { kind: "ask" }>;
+
+function ReceiptRow({
+  name,
+  amount,
+  className,
+}: {
+  name: string;
+  amount: string;
+  className?: string;
+}) {
+  return (
+    <li className={`flex items-baseline justify-between gap-4 ${className ?? ""}`}>
+      <span className="min-w-0 break-words">{name}</span>
+      <span className="shrink-0 tabular-nums">{amount}</span>
+    </li>
+  );
+}
+
+/** A payment's order as the page shows it: its lines, then what is paid, then where it came from. */
+function AskReceiptView({ receipt }: { receipt: AskReceipt }) {
+  const { button, more, amount, total } = receipt;
+  const items = receiptItems(receipt.items, [t`Total`, t`On the button`]);
+  const count = more ? `${more.count}${more.atLeast ? "+" : ""}` : "";
+  const lines = items.length > 0 || more || total;
+  return (
+    <div data-testid="ask-receipt" className="mt-3 text-body-lg leading-[1.5] text-foreground">
+      {lines ? (
+        <ul className="space-y-1 border-b border-border pb-2.5">
+          {items.map((item, index) => (
+            // Page lines can repeat, so their place is their key.
+            <ReceiptRow key={index} name={item.name} amount={item.amount} />
+          ))}
+          {more ? <li className="text-muted-foreground">{t`${count} more`}</li> : null}
+          {total ? <ReceiptRow name={t`Total`} amount={total} /> : null}
+        </ul>
+      ) : null}
+      {amount ? (
+        <ul className={lines ? "pt-2.5" : undefined}>
+          <ReceiptRow
+            className="font-medium"
+            name={receipt.amountSource === "button" ? t`On the button` : t`Total`}
+            amount={amount}
+          />
+        </ul>
+      ) : null}
+      <p className="mt-2.5 text-body-sm leading-[1.45] text-muted-foreground">
+        {button
+          ? t`Button “${button}” · read from the page, not checked`
+          : t`Read from the page, not checked`}
+      </p>
+    </div>
+  );
+}
 
 function formatAnsweredState(
   answer: string | undefined,
@@ -157,7 +215,7 @@ function PromptAskCard({
   if (undo)
     return (
       <BuiCard className="px-5 py-4">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-body">
           {undo.label}
           <Button
             variant="link"
@@ -187,20 +245,22 @@ function PromptAskCard({
       data-testid={block.instructionUpdate ? "instruction-approval-card" : undefined}
       className="w-full min-w-0 max-w-xl px-5 py-4"
     >
-      <div className="text-[15.5px] leading-[1.5] text-foreground">
+      <div className="text-body-lg leading-[1.5] text-foreground">
         {block.instructionUpdate ? (
           <Trans>Update instructions?</Trans>
         ) : (
           <ChatMarkdown>{block.text}</ChatMarkdown>
         )}
       </div>
-      {block.detail ? (
+      {block.receipt ? (
+        <AskReceiptView receipt={block.receipt} />
+      ) : block.detail ? (
         <pre
           data-testid="ask-detail"
           className={
             block.detailFormat === "text"
-              ? "mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words font-sans text-[15.5px] leading-[1.5] text-foreground"
-              : "mt-2.5 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background px-3 py-2 font-mono text-[13px] leading-[1.6] text-foreground"
+              ? "mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words font-sans text-body-lg leading-[1.5] text-foreground"
+              : "mt-2.5 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background px-3 py-2 font-mono text-body-sm leading-[1.6] text-foreground"
           }
         >
           {block.detail}
@@ -239,12 +299,12 @@ function PromptAskCard({
       ) : typedAnswer ? (
         <blockquote
           data-testid="ask-answer"
-          className="mt-3 whitespace-pre-wrap break-words border-s-2 border-border ps-3 text-[15px] leading-[1.5] text-muted-foreground"
+          className="mt-3 whitespace-pre-wrap break-words border-s-2 border-border ps-3 text-body-lg leading-[1.5] text-muted-foreground"
         >
           {typedAnswer}
         </blockquote>
       ) : answered ? (
-        <div className="mt-3.5 flex items-center gap-1.5 text-[13.5px] font-medium text-muted-foreground">
+        <div className="mt-3.5 flex items-center gap-1.5 text-body font-medium text-muted-foreground">
           {displayedAnswer === "deny" ||
           approvalActions?.find((action) => action.id === displayedAnswer)?.outcome ===
             "cancelled" ? null : (
@@ -262,7 +322,7 @@ function PromptAskCard({
               )}
         </div>
       ) : !canAnswer ? (
-        <div className="mt-3.5 text-[13.5px] font-medium text-muted-foreground">
+        <div className="mt-3.5 text-body font-medium text-muted-foreground">
           <Trans>No longer active</Trans>
         </div>
       ) : displayActions?.length ? (
@@ -336,7 +396,7 @@ function PromptAskCard({
           </Button>
         </div>
       )}
-      {error ? <p className="mt-3 text-[13px] text-destructive">{error}</p> : null}
+      {error ? <p className="mt-3 text-body-sm text-destructive">{error}</p> : null}
     </BuiCard>
   );
 }

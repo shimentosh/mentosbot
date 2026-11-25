@@ -21,11 +21,10 @@ import type {
   ObjectStorageUsage,
 } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
-import { Prisma, runAsSystem } from "@rakazo/db";
+import { Prisma, runAsSystem, withTransactionRetry } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { requireAdmin } from "./admins.js";
 import type { RouterDeps } from "./router.js";
-import { withSerializableRetry } from "./serializable-retry.js";
 
 export interface ObjectStorageConfigDeps {
   prisma: PrismaClient;
@@ -159,7 +158,7 @@ export async function updateObjectStorageSettings(
     deps.secrets.delete(ciphertext, DEPLOYMENT_OBJECT_STORAGE_RECORD).catch(() => undefined);
   let replaced: string | null | undefined;
   try {
-    replaced = await withSerializableRetry(() =>
+    replaced = await withTransactionRetry(() =>
       runAsSystem("an admin configures object storage", () =>
         deps.prisma.$transaction(
           async (tx) => {

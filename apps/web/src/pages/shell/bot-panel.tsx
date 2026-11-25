@@ -1,4 +1,3 @@
-import { i18n } from "@lingui/core";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type {
   AgentSkillCatalogEntry,
@@ -6,16 +5,10 @@ import type {
   BotAvatarSet,
   ComputerMode,
   ModelCatalogEntry,
+  ReplyMode,
   ThinkingLevel,
 } from "@rakazo/contracts";
-import {
-  BOT_COMPUTER_MODES,
-  BOT_DESCRIPTION_MAX_LENGTH,
-  BOT_NAME_MAX_LENGTH,
-  BUILTIN_TOOL_NAMES,
-  isBuiltinToolName,
-  resolveBotAvatarSet,
-} from "@rakazo/contracts";
+import { BOT_NAME_MAX_LENGTH, isBuiltinToolName, resolveBotAvatarSet } from "@rakazo/contracts";
 import {
   chatModelChoices,
   connectedModelChoices,
@@ -24,35 +17,34 @@ import {
   parseModelOptionKey,
   resolveSelectableModelId,
 } from "@rakazo/core";
-import {
-  Button,
-  Input,
-  NativeSelect,
-  NativeSelectOption,
-  SectionHeading,
-  Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Textarea,
-  Toggle,
-} from "@rakazo/ui-web";
+import { Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from "@rakazo/ui-web";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Settings, X } from "lucide-react";
+import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
+import { BotEmailAddressField } from "../../components/BotEmailAddressField";
 import { ErrorBoundary, SectionLoadFailed } from "../../components/ErrorBoundary";
 import { InstructionSettings } from "../../components/InstructionSettings";
 import { PagesList } from "../../components/pages/PagesList";
 import { botProfilePatch } from "../../lib/bot-profile-patch";
-import { thinkingLevelLabel } from "../../lib/model-catalog";
 import { lazyComponent } from "../../lib/preload-recovery";
 import { useSpaceQueries } from "../../lib/query";
 import { errorText } from "../../lib/user-error";
 import { AvatarStudioPopover } from "./avatar-studio-popover";
+import {
+  BrowserChoice,
+  ComputerGroup,
+  DescriptionGroup,
+  ExportAndClear,
+  ModelSection,
+  NotificationsSection,
+  PermissionsGroup,
+  RepliesGroup,
+  ToolsGroup,
+  TrackerGroup,
+  VoiceGroup,
+} from "./bot-settings-sections";
 import { BotShareSection } from "./bot-share-section";
-import { ChatModelPicker } from "./chat-model-picker";
 
 const ScratchpadSection = lazyComponent(() =>
   import("../ScratchpadSection").then((module) => module.ScratchpadSection),
@@ -61,13 +53,6 @@ const ScratchpadSection = lazyComponent(() =>
 const KnowledgeSection = lazyComponent(() =>
   import("../KnowledgeSection").then((module) => module.KnowledgeSection),
 );
-
-const rowLabelClass = "text-sm text-foreground";
-
-/** "A, B and C" in the reader's language. */
-function formatList(names: string[]): string {
-  return new Intl.ListFormat(i18n.locale || "en", { type: "conjunction" }).format(names);
-}
 
 /** The advanced fields one Save sends, in the order their saved snapshot keeps them. */
 function advancedValues(bot: Bot) {
@@ -79,32 +64,6 @@ function advancedValues(bot: Bot) {
     bot.autoSpeak,
     bot.voiceId ?? "",
   ] as const;
-}
-
-export function ComputerModePicker({
-  value,
-  onChange,
-}: {
-  value: ComputerMode;
-  onChange: (value: ComputerMode) => void;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {BOT_COMPUTER_MODES.map((mode) => (
-        <Toggle
-          key={mode}
-          variant="outline"
-          pressed={value === mode}
-          onPressedChange={(pressed) => {
-            if (pressed) onChange(mode);
-          }}
-          className="capitalize aria-pressed:border-foreground/40 aria-pressed:text-foreground"
-        >
-          {mode === "team" ? <Trans>Team</Trans> : <Trans>Private</Trans>}
-        </Toggle>
-      ))}
-    </div>
-  );
 }
 
 export type BotPanelTab = "computer" | "routines" | "pages" | "settings";
@@ -149,6 +108,7 @@ export function BotSettings({
     fleetManagement?: boolean;
     shareSignIns?: boolean;
     trackerUrl?: string | null;
+    replyMode?: ReplyMode;
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     voiceId?: string | null;
@@ -202,6 +162,8 @@ export function BotSettings({
   useEffect(() => setFleetManagement(bot.fleetManagement), [bot.fleetManagement]);
   const [shareSignIns, setShareSignIns] = useState(bot.shareSignIns ?? false);
   useEffect(() => setShareSignIns(bot.shareSignIns ?? false), [bot.shareSignIns]);
+  const [replyMode, setReplyMode] = useState(bot.replyMode);
+  useEffect(() => setReplyMode(bot.replyMode), [bot.replyMode]);
   const [voiceId, setVoiceId] = useState(bot.voiceId ?? "");
   const [modelKey, setModelKey] = useState(
     bot.modelProvider && bot.modelId ? modelOptionKey(bot.modelProvider, bot.modelId) : "",
@@ -267,6 +229,7 @@ export function BotSettings({
         notifyOnFinish?: boolean;
         fleetManagement?: boolean;
         shareSignIns?: boolean;
+        replyMode?: ReplyMode;
         crossSpaceCommunication?: boolean;
         dailyCheckIns?: boolean;
         disabledBuiltinTools?: string[];
@@ -358,6 +321,7 @@ export function BotSettings({
       fleetManagement?: boolean;
       shareSignIns?: boolean;
       trackerUrl?: string | null;
+      replyMode?: ReplyMode;
       crossSpaceCommunication?: boolean;
       dailyCheckIns?: boolean;
       disabledBuiltinTools?: string[];
@@ -387,6 +351,10 @@ export function BotSettings({
       if (patchOverrides?.trackerUrl !== undefined) {
         await onSave({ trackerUrl: patchOverrides.trackerUrl });
         savedTrackerRef.current = patchOverrides.trackerUrl ?? "";
+        return;
+      }
+      if (patchOverrides?.replyMode !== undefined) {
+        await onSave({ replyMode: patchOverrides.replyMode });
         return;
       }
       const selected = selectedModel;
@@ -495,6 +463,7 @@ export function BotSettings({
         setDailyCheckIns(!patchOverrides.dailyCheckIns);
       if (patchOverrides?.fleetManagement !== undefined)
         setFleetManagement(!patchOverrides.fleetManagement);
+      if (patchOverrides?.replyMode !== undefined) setReplyMode(bot.replyMode);
       if (patchOverrides?.shareSignIns !== undefined) {
         setShareSignIns(!patchOverrides.shareSignIns);
         // Shown beside the switch: the panel's own error line sits far below it.
@@ -532,6 +501,7 @@ export function BotSettings({
     fleetManagement?: boolean;
     shareSignIns?: boolean;
     trackerUrl?: string | null;
+    replyMode?: ReplyMode;
     crossSpaceCommunication?: boolean;
     dailyCheckIns?: boolean;
     disabledBuiltinTools?: string[];
@@ -582,13 +552,14 @@ export function BotSettings({
           editLabel={t`Edit name`}
           value={name}
           maxLength={BOT_NAME_MAX_LENGTH}
-          className="text-xl font-semibold"
+          className="text-heading2 font-semibold"
           onCommit={(value) => {
             if (!value.trim()) return;
             setName(value.trim());
             void enqueueSave({ name: value });
           }}
         />
+        <BotEmail bot={{ id: bot.id, name }} />
       </div>
       <Tabs value={tab} onValueChange={(next) => onTabChange?.(next as BotPanelTab)}>
         <TabsList className="w-full">
@@ -616,31 +587,14 @@ export function BotSettings({
         </TabsContent>
         {/* Stays mounted so scratchpad and knowledge drafts survive a tab switch. */}
         <TabsContent value="settings" keepMounted data-testid="bot-settings-advanced">
-          <section className="mt-6">
-            <SectionHeading variant="label" className="mb-2">
-              <Trans>Notifications</Trans>
-            </SectionHeading>
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 p-4">
-              <div>
-                <label
-                  htmlFor={`${ids}-notify-finish`}
-                  id={`${ids}-notify-finish-label`}
-                  className="text-sm"
-                >
-                  <Trans>When it finishes or needs input</Trans>
-                </label>
-              </div>
-              <Switch
-                id={`${ids}-notify-finish`}
-                checked={notifyOnFinish}
-                aria-labelledby={`${ids}-notify-finish-label`}
-                onCheckedChange={(checked) => {
-                  setNotifyOnFinish(checked);
-                  void enqueueSave({ notifyOnFinish: checked });
-                }}
-              />
-            </div>
-          </section>
+          <NotificationsSection
+            ids={ids}
+            notifyOnFinish={notifyOnFinish}
+            onNotifyOnFinishChange={(checked) => {
+              setNotifyOnFinish(checked);
+              void enqueueSave({ notifyOnFinish: checked });
+            }}
+          />
           <BotShareSection bot={bot} />
           <ErrorBoundary fallback={<SectionLoadFailed />}>
             <Suspense fallback={null}>
@@ -653,327 +607,121 @@ export function BotSettings({
             </Suspense>
           </ErrorBoundary>
           <div className="space-y-6 pt-6">
-            <div ref={modelRef}>
-              <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground pe-1">
-                <Trans>Model</Trans>
-                {onOpenConnections ? (
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={t`Model connections`}
-                    onClick={onOpenConnections}
-                  >
-                    <Settings className="size-4" />
-                  </Button>
-                ) : null}
-              </div>
-              <div className="rounded-xl bg-muted/50 p-4 space-y-3">
-                <div className="flex min-h-11 items-center justify-between gap-3">
-                  <label htmlFor={`${ids}-model`} className="sr-only">
-                    <Trans>Model</Trans>
-                  </label>
-                  <div className="min-w-0 w-full [&>div]:mt-0 [&>button]:mt-0">
-                    <ChatModelPicker
-                      id={`${ids}-model`}
-                      choices={modelChoices}
-                      value={selectedModelKey}
-                      onChange={(key) => {
-                        setModelKey(key);
-                        setThinkingLevel("");
-                      }}
-                    />
-                  </div>
-                </div>
-                {thinkingOptions.length ? (
-                  <label
-                    htmlFor={`${ids}-thinking`}
-                    className="flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
-                  >
-                    <Trans>Thinking</Trans>
-                    <NativeSelect
-                      id={`${ids}-thinking`}
-                      className="max-w-2/3"
-                      value={thinkingLevel}
-                      onChange={(event) => setThinkingLevel(event.target.value)}
-                    >
-                      <NativeSelectOption value="">
-                        {t`Default (${thinkingLevelLabel(defaultThinkingLevel)})`}
-                      </NativeSelectOption>
-                      {thinkingOptions.map((level) => (
-                        <NativeSelectOption key={level} value={level}>
-                          {thinkingLevelLabel(level)}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </label>
-                ) : null}
-              </div>
-            </div>
-            <SettingsGroup label={t`Computer`} plain>
-              <ComputerModePicker value={computerMode} onChange={setComputerMode} />
+            <ModelSection
+              ids={ids}
+              containerRef={modelRef}
+              onOpenConnections={onOpenConnections}
+              choices={modelChoices}
+              value={selectedModelKey}
+              onModelChange={(key) => {
+                setModelKey(key);
+                setThinkingLevel("");
+              }}
+              thinkingOptions={thinkingOptions}
+              thinkingLevel={thinkingLevel}
+              defaultThinkingLevel={defaultThinkingLevel}
+              onThinkingLevelChange={setThinkingLevel}
+            />
+            <ComputerGroup
+              computerMode={computerMode}
+              onComputerModeChange={setComputerMode}
+              memoryProviderConfigured={memoryProviderConfigured}
+              memoryScope={memoryScope}
+              onMemoryScopeChange={setMemoryScope}
+            >
               {bot.computerMode === "team" ? (
-                <fieldset className="mt-4 min-w-0" aria-describedby={`${ids}-browser-detail`}>
-                  <legend className="mb-2 text-xs font-medium text-muted-foreground">
-                    <Trans>Browser</Trans>
-                  </legend>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([true, false] as const).map((global) => (
-                      <Toggle
-                        key={String(global)}
-                        variant="outline"
-                        pressed={shareSignIns === global}
-                        disabled={saving}
-                        onPressedChange={(pressed) => {
-                          if (!pressed || shareSignIns === global) return;
-                          setShareSignIns(global);
-                          setShareSignInsError(null);
-                          void enqueueSave({ shareSignIns: global });
-                        }}
-                        className="aria-pressed:border-foreground/40 aria-pressed:text-foreground"
-                      >
-                        {global ? <Trans>Global</Trans> : <Trans>Independent</Trans>}
-                      </Toggle>
-                    ))}
-                  </div>
-                  <div id={`${ids}-browser-detail`}>
-                    {shareSignInsError ? (
-                      <p role="alert" className="mt-2 text-[13px] text-destructive">
-                        {shareSignInsError}
-                      </p>
-                    ) : shareSignIns && signInPeers.length ? (
-                      <p
-                        className="mt-2 truncate text-[13px] text-muted-foreground"
-                        title={signInPeers.join(", ")}
-                      >
-                        {t`Shared with ${formatList(signInPeers)}`}
-                      </p>
-                    ) : null}
-                  </div>
-                </fieldset>
-              ) : null}
-              {memoryProviderConfigured ? (
-                <div className="mt-4 text-sm text-foreground">
-                  <Trans>Memory scope</Trans>
-                  <div className="mt-2 flex gap-2">
-                    {(
-                      [
-                        { value: null, label: t`Inherit default` },
-                        { value: "isolated" as const, label: t`Isolated` },
-                        { value: "shared" as const, label: t`Shared` },
-                      ] satisfies Array<{ value: "isolated" | "shared" | null; label: string }>
-                    ).map((option) => (
-                      <Toggle
-                        key={option.label}
-                        variant="outline"
-                        size="sm"
-                        pressed={memoryScope === option.value}
-                        onPressedChange={(pressed) => {
-                          if (pressed) setMemoryScope(option.value);
-                        }}
-                        className="flex-1 aria-pressed:border-foreground/40 aria-pressed:text-foreground"
-                      >
-                        {option.label}
-                      </Toggle>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </SettingsGroup>
-            <SettingsGroup label={t`Voice`}>
-              <label
-                htmlFor={`${ids}-auto-speak`}
-                className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm text-foreground"
-              >
-                <span className={rowLabelClass}>
-                  <Trans>Read replies aloud</Trans>
-                </span>
-                <Switch
-                  id={`${ids}-auto-speak`}
-                  checked={autoSpeak}
-                  onCheckedChange={(checked) => setAutoSpeak(checked)}
-                />
-              </label>
-              {voices?.length ? (
-                <label
-                  htmlFor={`${ids}-voice`}
-                  className="flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
-                >
-                  <Trans>Voice</Trans>
-                  <NativeSelect
-                    id={`${ids}-voice`}
-                    className="max-w-2/3"
-                    value={voiceId}
-                    onChange={(event) => setVoiceId(event.target.value)}
-                  >
-                    <NativeSelectOption value="">{t`Account default`}</NativeSelectOption>
-                    {voices.map((voice) => (
-                      <NativeSelectOption key={voice.id} value={voice.id}>
-                        {voice.label}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                </label>
-              ) : null}
-            </SettingsGroup>
-            <SettingsGroup label={t`Permissions`}>
-              <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
-                <label htmlFor={`${ids}-daily-check-ins`} className={rowLabelClass}>
-                  <Trans>Daily check-ins on unfinished work</Trans>
-                </label>
-                <Switch
-                  id={`${ids}-daily-check-ins`}
-                  checked={dailyCheckIns}
-                  disabled={saving}
-                  onCheckedChange={(checked) => {
-                    setDailyCheckIns(checked);
-                    void enqueueSave({ dailyCheckIns: checked });
+                <BrowserChoice
+                  ids={ids}
+                  global={shareSignIns}
+                  saving={saving}
+                  error={shareSignInsError}
+                  peers={signInPeers}
+                  onChange={(global) => {
+                    setShareSignIns(global);
+                    setShareSignInsError(null);
+                    void enqueueSave({ shareSignIns: global });
                   }}
                 />
-              </div>
-              <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
-                <label htmlFor={`${ids}-cross-space`} className={rowLabelClass}>
-                  <Trans>Allow cross-space bot communication</Trans>
-                </label>
-                <Switch
-                  id={`${ids}-cross-space`}
-                  checked={crossSpaceCommunication}
-                  disabled={saving}
-                  onCheckedChange={(checked) => {
-                    setCrossSpaceCommunication(checked);
-                    void enqueueSave({ crossSpaceCommunication: checked });
-                  }}
-                />
-              </div>
-              <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
-                <label htmlFor={`${ids}-fleet-management`} className={rowLabelClass}>
-                  <Trans>Manage other bots</Trans>
-                </label>
-                <Switch
-                  id={`${ids}-fleet-management`}
-                  checked={fleetManagement}
-                  disabled={saving}
-                  onCheckedChange={(checked) => {
-                    setFleetManagement(checked);
-                    void enqueueSave({ fleetManagement: checked });
-                  }}
-                />
-              </div>
-            </SettingsGroup>
+              ) : null}
+            </ComputerGroup>
+            <VoiceGroup
+              ids={ids}
+              autoSpeak={autoSpeak}
+              onAutoSpeakChange={setAutoSpeak}
+              voices={voices}
+              voiceId={voiceId}
+              onVoiceIdChange={setVoiceId}
+            />
+            <PermissionsGroup
+              ids={ids}
+              saving={saving}
+              dailyCheckIns={dailyCheckIns}
+              onDailyCheckInsChange={(checked) => {
+                setDailyCheckIns(checked);
+                void enqueueSave({ dailyCheckIns: checked });
+              }}
+              crossSpaceCommunication={crossSpaceCommunication}
+              onCrossSpaceCommunicationChange={(checked) => {
+                setCrossSpaceCommunication(checked);
+                void enqueueSave({ crossSpaceCommunication: checked });
+              }}
+              fleetManagement={fleetManagement}
+              onFleetManagementChange={(checked) => {
+                setFleetManagement(checked);
+                void enqueueSave({ fleetManagement: checked });
+              }}
+            />
+            <RepliesGroup
+              ids={ids}
+              saving={saving}
+              replyMode={replyMode}
+              onReplyModeChange={(next) => {
+                setReplyMode(next);
+                void enqueueSave({ replyMode: next });
+              }}
+            />
             <InstructionSettings key={bot.id} bot={bot} />
-            <SettingsGroup label={t`How other bots see it`} plain>
-              <Textarea
-                id={`${ids}-description`}
-                aria-label={t`How other bots see it`}
-                value={description}
-                maxLength={BOT_DESCRIPTION_MAX_LENGTH}
-                onChange={(e) => setDescription(e.target.value)}
-                onBlur={() => void enqueueSave()}
-                placeholder={t`What this bot is for`}
-                rows={2}
-                className="min-h-16 max-h-96 resize-none field-sizing-content"
-              />
-            </SettingsGroup>
-            <SettingsGroup label={t`Tracker`} plain>
-              <Input
-                id={`${ids}-tracker`}
-                type="url"
-                inputMode="url"
-                aria-label={t`Tracker`}
-                aria-invalid={trackerError ? true : undefined}
-                aria-describedby={trackerError ? `${ids}-tracker-error` : undefined}
-                value={tracker}
-                maxLength={2048}
-                placeholder="https://"
-                onChange={(event) => {
-                  setTracker(event.target.value);
-                  setTrackerError(null);
-                }}
-                onBlur={() => {
-                  const next = tracker.trim();
-                  if (next === savedTrackerRef.current) return;
-                  if (next && !isHttpsUrl(next)) {
-                    setTrackerError(t`Enter an https link`);
-                    return;
-                  }
-                  void enqueueSave({ trackerUrl: next || null });
-                }}
-              />
-              {trackerError ? (
-                <p
-                  id={`${ids}-tracker-error`}
-                  role="alert"
-                  className="mt-1.5 text-[13px] text-destructive"
-                >
-                  {trackerError}
-                </p>
-              ) : null}
-            </SettingsGroup>
-            <SettingsGroup label={t`Tools`} plain>
-              <section data-testid="bot-settings-tools">
-                <div className="space-y-2 [&>*]:mt-0">
-                  <div>
-                    <NativeSelect
-                      id={`${ids}-disabled-tools`}
-                      aria-label={t`Disable a tool`}
-                      value=""
-                      onChange={(event) => disableBuiltinTool(event.target.value)}
-                      className="w-full"
-                    >
-                      <NativeSelectOption value="">{t`Disable a tool`}</NativeSelectOption>
-                      {BUILTIN_TOOL_NAMES.filter(
-                        (name) => !disabledBuiltinTools.includes(name),
-                      ).map((name) => (
-                        <NativeSelectOption key={name} value={name}>
-                          {humanizeTool(name)}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </div>
-                  {disabledBuiltinTools.map((toolName) => (
-                    <div
-                      key={toolName}
-                      className="flex min-h-11 items-center justify-between gap-3 text-sm"
-                    >
-                      <span>{humanizeTool(toolName)}</span>
-                      <Button
-                        id={`${ids}-disabled-${toolName}`}
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label={t`Enable ${humanizeTool(toolName)}`}
-                        title={t`Enable ${humanizeTool(toolName)}`}
-                        onClick={() => {
-                          const next = disabledBuiltinTools.filter((entry) => entry !== toolName);
-                          setDisabledBuiltinTools(next);
-                          void enqueueSave({ disabledBuiltinTools: next });
-                        }}
-                      >
-                        <X className="size-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </SettingsGroup>
-            <div className="overflow-hidden rounded-xl bg-muted/50 px-4">
-              <button
-                type="button"
-                className="flex min-h-12 w-full items-center justify-between text-sm"
-                onClick={() => {
-                  setError(null);
-                  onExport().catch((err: unknown) => setError(errorText(err)));
-                }}
-              >
-                <Trans>Export</Trans>
-                <Download className="size-4 text-muted-foreground" />
-              </button>
-              <button
-                type="button"
-                className="min-h-12 w-full border-t border-border text-start text-sm text-destructive"
-                onClick={onClear}
-              >
-                <Trans>Clear conversation</Trans>
-              </button>
-            </div>
+            <DescriptionGroup
+              ids={ids}
+              description={description}
+              onDescriptionChange={setDescription}
+              onCommit={() => void enqueueSave()}
+            />
+            <TrackerGroup
+              ids={ids}
+              value={tracker}
+              error={trackerError}
+              onChange={(value) => {
+                setTracker(value);
+                setTrackerError(null);
+              }}
+              onCommit={() => {
+                const next = tracker.trim();
+                if (next === savedTrackerRef.current) return;
+                if (next && !isHttpsUrl(next)) {
+                  setTrackerError(t`Enter an https link`);
+                  return;
+                }
+                void enqueueSave({ trackerUrl: next || null });
+              }}
+            />
+            <ToolsGroup
+              ids={ids}
+              disabledBuiltinTools={disabledBuiltinTools}
+              onDisable={disableBuiltinTool}
+              onEnable={(toolName) => {
+                const next = disabledBuiltinTools.filter((entry) => entry !== toolName);
+                setDisabledBuiltinTools(next);
+                void enqueueSave({ disabledBuiltinTools: next });
+              }}
+            />
+            <ExportAndClear
+              onExport={() => {
+                setError(null);
+                onExport().catch((err: unknown) => setError(errorText(err)));
+              }}
+              onClear={onClear}
+            />
           </div>
           {dirty ? (
             <Button
@@ -993,7 +741,7 @@ export function BotSettings({
           ) : null}
         </TabsContent>
       </Tabs>
-      {error ? <p className="mt-2 text-[13px] text-destructive">{error}</p> : null}
+      {error ? <p className="mt-2 text-body-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -1077,30 +825,30 @@ function InlineProfileField({
   );
 }
 
-/** `plain` drops the card for a section whose single control already draws its own frame. */
-function SettingsGroup({
-  label,
-  plain = false,
-  children,
-}: {
-  label: string;
-  plain?: boolean;
-  children: ReactNode;
-}) {
+/** The bot's address under its name; on a server that receives email, offered until claimed. */
+function BotEmail({ bot }: { bot: { id: string; name: string } }) {
+  const queries = useSpaceQueries();
+  const email = useQuery(queries.bots.emailAddress.queryOptions({ input: { botId: bot.id } })).data;
+  const [claiming, setClaiming] = useState(false);
+  if (!email) return null;
+  if (!email.address && !claiming) {
+    return (
+      <Button
+        variant="ghost"
+        size="xs"
+        className="mt-1 text-muted-foreground"
+        onClick={() => setClaiming(true)}
+      >
+        <Mail />
+        <Trans>Get an email address</Trans>
+      </Button>
+    );
+  }
   return (
-    <section>
-      <SectionHeading variant="label" className="mb-2">
-        {label}
-      </SectionHeading>
-      <div className={`space-y-3 [&>*]:mt-0 ${plain ? "" : "rounded-xl bg-muted/50 p-4"}`}>
-        {children}
-      </div>
-    </section>
+    <div data-testid="bot-email" className="mt-2 w-full max-w-sm text-left">
+      <BotEmailAddressField bot={bot} domain={email.domain} address={email.address} />
+    </div>
   );
-}
-function humanizeTool(name: string) {
-  const words = name.replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 function isHttpsUrl(value: string): boolean {

@@ -10,8 +10,7 @@ import type { RouterDeps } from "./router.js";
 import { createRouter } from "./router.js";
 
 const databaseUrl = process.env.DATABASE_URL;
-const describePostgres =
-  process.env.VERIFY_DATABASE && databaseUrl ? describe.sequential : describe.skip;
+const describePostgres = process.env.VERIFY_DATABASE && databaseUrl ? describe : describe.skip;
 
 const KEY = "tskey-auth-kTest1CNTRL-0123456789abcdef";
 

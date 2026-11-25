@@ -28,8 +28,7 @@ import type { RouterDeps } from "./router.js";
 import { createRouter } from "./router.js";
 
 const databaseUrl = process.env.DATABASE_URL;
-const describePostgres =
-  process.env.VERIFY_DATABASE && databaseUrl ? describe.sequential : describe.skip;
+const describePostgres = process.env.VERIFY_DATABASE && databaseUrl ? describe : describe.skip;
 
 describePostgres("team membership (PostgreSQL)", () => {
   const suffix = `${process.pid}-${Date.now()}-${randomBytes(3).toString("hex")}`;
@@ -89,7 +88,7 @@ describePostgres("team membership (PostgreSQL)", () => {
     });
     expect(emailSent).toBe(true);
     expect(sent.at(-1)?.to).toBe(to.toLowerCase());
-    expect(sent.at(-1)?.html).toContain(`https://app.example.test/invite/${id}`);
+    expect(sent.at(-1)?.html).toContain(`https://app.example.test/team-invite/${id}`);
     return id;
   }
 

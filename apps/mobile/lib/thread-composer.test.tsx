@@ -15,11 +15,15 @@ import { useThreadMentionCatalog } from "./thread-mention-catalog";
 const dimensions = vi.hoisted(() => ({ fontScale: 1 }));
 
 const input = vi.hoisted(() => ({
+  clear: vi.fn(),
   change: (_value: string) => {},
   key: (_event: { nativeEvent: { key: string } }) => {},
   select: (_event: { nativeEvent: { selection: { start: number; end: number } } }) => {},
 }));
 const mentionApi = vi.hoisted(() => ({ rpc: vi.fn(), capture: vi.fn(), generation: 1 }));
+vi.mock("./api-server", () => ({}));
+vi.mock("./api-auth", () => ({}));
+vi.mock("./api-live", () => ({}));
 vi.mock("./api", () => ({
   rpc: mentionApi.rpc,
   captureApiRequestContext: mentionApi.capture,
@@ -52,7 +56,7 @@ vi.mock("expo-file-system", () => {
     create() {
       files.set(this.uri, "");
     }
-    write(text: string) {
+    writeSync(text: string) {
       disk.writes += 1;
       // A full disk leaves the file empty, as a failed native write would.
       if (disk.full) throw new Error("No space left on device");
@@ -160,7 +164,12 @@ vi.mock("react-native", () => {
       input.select = onSelectionChange ?? (() => {});
       const segments = Children.toArray(children).filter(isValidElement);
       return createElement("input", {
-        ref,
+        // The native input's own clear(), which empties the field it shows.
+        ref: (element: HTMLInputElement | null) => {
+          if (element) Object.assign(element, { clear: input.clear });
+          if (typeof ref === "function") ref(element);
+          else if (ref) ref.current = element;
+        },
         value: segments.map(nativeText).join(""),
         "data-mentions": JSON.stringify(
           segments.filter((segment) => (segment.props as { style?: object }).style).map(nativeText),
@@ -212,6 +221,18 @@ vi.mock("./native", () => ({
   useResolvedAppearance: () => "light",
 }));
 vi.mock("./i18n", () => ({ useI18n: () => ({ t: (text: string) => text }) }));
+const dictation = vi.hoisted(() => ({
+  status: "idle",
+  toggle: vi.fn(),
+  cancel: vi.fn(),
+  onWords: (_text: string, _final?: boolean) => {},
+}));
+vi.mock("./composer-dictation", () => ({
+  useComposerDictation: (opts: { onWords: (text: string, final?: boolean) => void }) => {
+    dictation.onWords = opts.onWords;
+    return dictation;
+  },
+}));
 
 const skill = {
   id: "skill-1",
@@ -229,13 +250,11 @@ const props: Omit<ComponentProps<typeof ThreadComposer>, "ref"> = {
   attachmentIds: [],
   botId: "bot-1",
   onCall: false,
-  working: false,
   sending: false,
   styles: { circleButton: {}, composerFill: {} },
   attachActions: [],
   attachFrom: vi.fn(),
   send: vi.fn(async () => {}),
-  stop: vi.fn(async () => {}),
   startVoiceCall: vi.fn(async () => {}),
   onSlashAction: vi.fn(),
 };
@@ -1127,6 +1146,14 @@ describe("thread composer isolation", () => {
     }
   });
 
+  it("empties the native field when a send resets the composer, so a tall draft shrinks back", () => {
+    type("First line\nSecond line\nThird line\nFourth line");
+    expect(input.clear).not.toHaveBeenCalled();
+    act(() => composer.current!.reset());
+    expect(input.clear).toHaveBeenCalledOnce();
+    expect(field().value).toBe("");
+  });
+
   it("keeps edits during send and clears an unchanged composition, including popovers", () => {
     type("Submitted");
     const submitted = composer.current!.snapshot();
@@ -1166,6 +1193,31 @@ describe("thread composer isolation", () => {
     expect(container.querySelector('[data-testid="slash-picker"]')).toBeNull();
     press("Call");
     expect(props.startVoiceCall).toHaveBeenCalledOnce();
+  });
+
+  it("adds dictated words after the draft, and drops them once the draft is edited", () => {
+    type("Remind me");
+    press("Dictate");
+    expect(dictation.toggle).toHaveBeenCalledOnce();
+    act(() => dictation.onWords("to buy"));
+    act(() => dictation.onWords("to buy milk"));
+    expect(container.querySelector("input")!.value).toBe("Remind me to buy milk");
+    type("Remind me to buy milk!");
+    act(() => dictation.onWords("to buy milk and eggs"));
+    expect(container.querySelector("input")!.value).toBe("Remind me to buy milk!");
+  });
+
+  it("adds a provider's transcript after text typed while it recorded", () => {
+    type("Note");
+    press("Dictate");
+    type("Note:");
+    act(() => dictation.onWords("call the bank", true));
+    expect(container.querySelector("input")!.value).toBe("Note: call the bank");
+  });
+
+  it("hides the mic while a call has the microphone", () => {
+    render({ onCall: true });
+    expect(container.querySelector('button[aria-label="Dictate"]')).toBeNull();
   });
 
   it("focuses the input when its padding wrapper is pressed without adding an accessibility stop", () => {

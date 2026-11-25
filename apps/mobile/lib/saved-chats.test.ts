@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import type { MobileMe, MobileSnapshot, MobileSpaceNavigation } from "./api";
+import type { MobileMe, MobileSnapshot, MobileSpaceNavigation } from "./mobile-types";
 import type { SavedChatsScope } from "./saved-chats";
 import {
   clearSavedChats,
@@ -24,6 +24,9 @@ const state = vi.hoisted(() => ({
   namespace: "ns-1",
 }));
 vi.mock("./artifact-cache-session", () => ({ artifactCacheSession: async () => state.namespace }));
+vi.mock("./api-server", () => ({}));
+vi.mock("./api-auth", () => ({}));
+vi.mock("./api-live", () => ({}));
 vi.mock("./api", () => ({
   currentApiBase: () => "https://api.example.test",
   selectedSpaceId: () => state.selection,
@@ -86,7 +89,7 @@ vi.mock("expo-file-system", () => {
     textSync() {
       return state.files.get(this.uri);
     }
-    write(value: string) {
+    writeSync(value: string) {
       state.files.set(this.uri, value);
       state.written.set(this.uri, state.written.size + 1);
     }
@@ -116,6 +119,8 @@ const bot = {
   updatedAt: "2026-10-10T12:30:00.000Z",
   sectionId: "section-a",
   parentBotId: "parent-a",
+  // Kept, so an offline inbox still leaves a snoozed chat out of the list.
+  snoozedUntil: "2026-10-11T09:00:00.000Z",
 };
 const group = {
   id: "group-a",
@@ -123,6 +128,7 @@ const group = {
   members: [],
   preview: "",
   updatedAt: "2026-10-10T12:30:00.000Z",
+  snoozedUntil: "2026-10-11T09:00:00.000Z",
 };
 const navigation = {
   current: {

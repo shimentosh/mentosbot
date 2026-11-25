@@ -1,8 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import { networkExitDescriptors, networkExitProvider } from "@rakazo/adapters";
 import type { Actor, NetworkExitStatus } from "@rakazo/contracts";
-import { Prisma, recordAuditEvent } from "@rakazo/db";
-import { withSerializableRetry } from "../serializable-retry.js";
+import { Prisma, recordAuditEvent, withTransactionRetry } from "@rakazo/db";
 import type { RouterContext } from "./context.js";
 
 export function networkExitRoutes(ctx: RouterContext) {
@@ -65,7 +64,7 @@ export function networkExitRoutes(ctx: RouterContext) {
           userId: actor.userId,
           signal: context.signal ?? new AbortController().signal,
         });
-        await withSerializableRetry(() =>
+        await withTransactionRetry(() =>
           deps.prisma.$transaction(
             async (tx) => {
               const existing = await tx.computerNetworkExit.findUnique({

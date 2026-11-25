@@ -94,7 +94,7 @@ export function StorageSettingsPanel() {
 
   if (!draft || !settings) {
     return error ? (
-      <p role="alert" className="mt-3 text-[13px] text-destructive">
+      <p role="alert" className="mt-3 text-body-sm text-destructive">
         {error}
       </p>
     ) : null;
@@ -132,7 +132,7 @@ export function StorageSettingsPanel() {
             <Trans>Storage</Trans>
           </h3>
           {connected ? (
-            <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-body-sm text-muted-foreground">
               <span aria-hidden className="size-1.5 rounded-full bg-success" />
               <Trans>Connected</Trans>
             </span>
@@ -140,7 +140,7 @@ export function StorageSettingsPanel() {
         </div>
         {connected ? <StorageUsage key={usageRevision} /> : null}
         {fromEnvironment ? (
-          <p className="mt-2 text-[13px] text-muted-foreground">
+          <p className="mt-2 text-body-sm text-muted-foreground">
             <Trans>Set by the server environment.</Trans>
           </p>
         ) : null}
@@ -183,7 +183,7 @@ export function StorageSettingsPanel() {
               required={!settings.hasSecret}
             />
             <Collapsible>
-              <CollapsibleTrigger className="text-[13px] text-muted-foreground">
+              <CollapsibleTrigger className="text-body-sm text-muted-foreground">
                 <Trans>Advanced</Trans>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 grid gap-3">
@@ -199,7 +199,7 @@ export function StorageSettingsPanel() {
                   disabled={locked}
                 />
                 <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor={pathStyleId} className="text-[14px] font-normal text-foreground">
+                  <Label htmlFor={pathStyleId} className="text-body font-normal text-foreground">
                     <Trans>Bucket name in path</Trans>
                   </Label>
                   <Switch
@@ -212,7 +212,7 @@ export function StorageSettingsPanel() {
             </Collapsible>
           </fieldset>
           {error ? (
-            <p role="alert" className="text-[13px] text-destructive">
+            <p role="alert" className="text-body-sm text-destructive">
               {error}
             </p>
           ) : null}
@@ -222,7 +222,7 @@ export function StorageSettingsPanel() {
                 <Trans>Save</Trans>
               </Button>
               {applying ? (
-                <span className="text-[13px] text-muted-foreground">
+                <span className="text-body-sm text-muted-foreground">
                   <Shimmer>
                     <Trans>Switching storage…</Trans>
                   </Shimmer>
@@ -295,7 +295,7 @@ function StorageCleanup({ onCleaned }: { onCleaned: () => void }) {
         <Trans>Clean up</Trans>
       </h3>
       <div className="mt-4 flex items-center justify-between gap-3">
-        <label htmlFor={ageId} className="text-[14px] text-foreground">
+        <label htmlFor={ageId} className="text-body text-foreground">
           <Trans>Files older than</Trans>
         </label>
         <NativeSelect
@@ -316,7 +316,7 @@ function StorageCleanup({ onCleaned }: { onCleaned: () => void }) {
         </NativeSelect>
       </div>
       <div className="mt-3 flex min-h-8 items-center justify-between gap-3">
-        <span className="text-[13px] tabular-nums text-muted-foreground">
+        <span className="text-body-sm tabular-nums text-muted-foreground">
           {!preview ? (
             error ? null : (
               <Shimmer>
@@ -348,7 +348,7 @@ function StorageCleanup({ onCleaned }: { onCleaned: () => void }) {
         ) : null}
       </div>
       {error && !confirming ? (
-        <p role="alert" className="mt-2 text-[13px] text-destructive">
+        <p role="alert" className="mt-2 text-body-sm text-destructive">
           {error}
         </p>
       ) : null}
@@ -372,7 +372,7 @@ function StorageCleanup({ onCleaned }: { onCleaned: () => void }) {
                 <Trans>They are removed from every chat. This can't be undone.</Trans>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {error ? <p className="text-[13.5px] text-destructive">{error}</p> : null}
+            {error ? <p className="text-body text-destructive">{error}</p> : null}
             <AlertDialogFooter>
               <AlertDialogCancel disabled={busy}>
                 <Trans>Cancel</Trans>
@@ -411,13 +411,13 @@ function StorageUsage() {
 
   if (error)
     return (
-      <p role="alert" className="mt-3 text-[13px] text-destructive">
+      <p role="alert" className="mt-3 text-body-sm text-destructive">
         {error}
       </p>
     );
   if (!usage)
     return (
-      <p className="mt-3 text-[13px] text-muted-foreground">
+      <p className="mt-3 text-body-sm text-muted-foreground">
         <Shimmer>
           <Trans>Measuring…</Trans>
         </Shimmer>
@@ -436,8 +436,8 @@ function StorageUsage() {
   return (
     <div data-testid="storage-usage" className="mt-4 grid gap-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[22px] font-medium tabular-nums text-foreground">{total}</span>
-        <span className="text-[13px] tabular-nums text-muted-foreground">
+        <span className="text-heading2 font-medium tabular-nums text-foreground">{total}</span>
+        <span className="text-body-sm tabular-nums text-muted-foreground">
           <Plural value={files} one="# file" other="# files" />
         </span>
       </div>
@@ -452,7 +452,7 @@ function StorageUsage() {
               />
             ))}
           </div>
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted-foreground">
             {parts.map((part) => (
               <li key={part.label} className="flex items-center gap-1.5">
                 <span aria-hidden className={`size-1.5 rounded-full ${part.className}`} />

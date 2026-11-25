@@ -66,15 +66,15 @@ function LoadedLinkPreviewCard({ url, preview }: { url: string; preview: LinkPre
             />
           ) : null}
           <CardHeader className="gap-0.5 py-3">
-            <CardTitle className="line-clamp-2 text-[14.5px] font-semibold" dir="auto">
+            <CardTitle className="line-clamp-2 text-body-lg font-semibold" dir="auto">
               {preview.title}
             </CardTitle>
             {preview.description ? (
-              <CardDescription className="line-clamp-2 text-[13px] leading-snug" dir="auto">
+              <CardDescription className="line-clamp-2 text-body-sm leading-snug" dir="auto">
                 {preview.description}
               </CardDescription>
             ) : null}
-            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-[12px] text-muted-foreground">
+            <span className="mt-1 flex min-w-0 items-center gap-1.5 text-label text-muted-foreground">
               {icon ? (
                 <img
                   src={icon}

@@ -88,6 +88,8 @@ sed -i \
   -e "s#^RAKAZO_HOST=.*#RAKAZO_HOST=$DOMAIN#" .env
 # Room for several bots on one Team Computer (each runs its own browser).
 grep -q '^RAKAZO_COMPUTER_MEMORY=' .env || echo 'RAKAZO_COMPUTER_MEMORY=4g' >> .env
+# Settings → Computer (servers, usage) shows only with this on.
+grep -q '^COMPUTER_SETTINGS_ENABLED=' .env || echo 'COMPUTER_SETTINGS_ENABLED=true' >> .env
 # Settings → Computer and Settings → Storage are for these accounts (once their email is verified).
 if [ -n "${ADMIN_EMAIL:-}" ]; then
   if grep -q '^RAKAZO_ADMIN_EMAILS=' .env; then sed -i "s#^RAKAZO_ADMIN_EMAILS=.*#RAKAZO_ADMIN_EMAILS=$ADMIN_EMAIL#" .env; else echo "RAKAZO_ADMIN_EMAILS=$ADMIN_EMAIL" >> .env; fi

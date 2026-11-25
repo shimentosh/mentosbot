@@ -41,10 +41,10 @@ export function GoogleWorkspaceCallbackPage() {
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6 text-center">
       <div>
-        <div className="text-lg text-foreground">
+        <div className="text-heading3 text-foreground">
           {error ? <Trans>Google sign-in failed</Trans> : <Trans>Connecting Google…</Trans>}
         </div>
-        {error ? <p className="mt-2 max-w-md text-sm text-muted-foreground">{error}</p> : null}
+        {error ? <p className="mt-2 max-w-md text-body text-muted-foreground">{error}</p> : null}
         {error && !popup ? (
           <Button type="button" className="mt-5" onClick={() => navigate("/app")}>
             <Trans>Return to Rakazo</Trans>

@@ -107,7 +107,7 @@ export function BotShareSection({ bot }: { bot: Bot }) {
         <ul className="divide-y divide-border rounded-xl bg-muted/50">
           {access.map((entry) => (
             <li key={entry.userId} className="flex items-center gap-3 px-4 py-2.5">
-              <span className="min-w-0 flex-1 truncate text-sm">{display(entry)}</span>
+              <span className="min-w-0 flex-1 truncate text-body">{display(entry)}</span>
               <NativeSelect
                 aria-label={t`Access for ${display(entry)}`}
                 value={entry.level}
@@ -129,12 +129,12 @@ export function BotShareSection({ bot }: { bot: Bot }) {
         </ul>
       ) : null}
       {access.length && !bot.share ? (
-        <p className="mt-2 px-1 text-[12.5px] text-muted-foreground">
+        <p className="mt-2 px-1 text-body-sm text-muted-foreground">
           <Trans>They use it with your apps, memory and saved sign-ins.</Trans>
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="mt-2 px-1 text-[12.5px] text-destructive">
+        <p role="alert" className="mt-2 px-1 text-body-sm text-destructive">
           {error}
         </p>
       ) : null}

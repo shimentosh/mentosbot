@@ -1,11 +1,14 @@
 import { MenuView } from "@expo/ui/community/menu";
-import type { BillingStatus } from "@rakazo/contracts";
+import type { BillingStatus, HeldCreditAmount } from "@rakazo/contracts";
 import {
   ByokTierSchema,
   byokTierChangeOffered,
   byokYearlySwitchSavings,
   COMPUTER_SIZE_SPECS,
+  creditAmountChoices,
   DEFAULT_MONTHLY_CREDIT_AMOUNT,
+  HeldCreditAmountSchema,
+  isCancelledTrial,
   MODEL_CREDIT_AMOUNTS,
   ModelCreditAmountSchema,
 } from "@rakazo/contracts";
@@ -25,8 +28,6 @@ import { rememberReferral } from "../../lib/referral";
 import { openFromSettingsSheet } from "../../lib/settings-sheet";
 import { useSideInsets } from "../../lib/side-insets";
 
-type Amount = (typeof MODEL_CREDIT_AMOUNTS)[number];
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(dateLocaleForUi(), {
     year: "numeric",
@@ -41,7 +42,7 @@ export default function BillingScreen() {
   const { t } = useI18n();
   const router = useRouter();
   const [status, setStatus] = useState<BillingStatus | null>(null);
-  const [amount, setAmount] = useState<Amount>(DEFAULT_MONTHLY_CREDIT_AMOUNT);
+  const [amount, setAmount] = useState<HeldCreditAmount>(DEFAULT_MONTHLY_CREDIT_AMOUNT);
   const [pending, setPending] = useState(false);
   // This screen shows the Space it opened in; every answer it gets, including a late one after a
   // Space switch, is filed under that Space.
@@ -51,7 +52,7 @@ export default function BillingScreen() {
       setStatus(next);
       rememberReferral(space, next.referral);
       setAmount(
-        ModelCreditAmountSchema.catch(DEFAULT_MONTHLY_CREDIT_AMOUNT).parse(next.monthlyAmountCents),
+        HeldCreditAmountSchema.catch(DEFAULT_MONTHLY_CREDIT_AMOUNT).parse(next.monthlyAmountCents),
       );
     },
     [space],
@@ -101,6 +102,7 @@ export default function BillingScreen() {
   const credits = status.funding === "credits" || (status.balanceUsd ?? 0) > 0 || status.canManage;
   const referral = status.referral;
   const endTrial = status.canManage && status.state === "trialing" && !status.cancelAtPeriodEnd;
+  const cancelledTrial = isCancelledTrial(status);
   const yearlySavings = byokYearlySwitchSavings(status);
   const annualCents = status.byokAnnualPriceCents;
   const tiers = status.byokTiers ?? [];
@@ -252,7 +254,13 @@ export default function BillingScreen() {
       </SettingsGroup>
       {status.computerHoursLeft != null ? (
         <SettingsGroup
-          footer={endTrial ? t("Trials get fewer hours to prevent abuse.") : undefined}
+          footer={
+            endTrial
+              ? t("Trials get fewer hours to prevent abuse.")
+              : cancelledTrial
+                ? t("Cancelled trials have no computer hours.")
+                : undefined
+          }
         >
           <SettingsRow title={t("Computer hours left")} value={String(status.computerHoursLeft)} />
           {endTrial ? (
@@ -278,6 +286,18 @@ export default function BillingScreen() {
                     },
                   ],
                 )
+              }
+            />
+          ) : null}
+          {cancelledTrial && status.canManage && status.hasCustomer ? (
+            <SettingsRow
+              title={t("Renew plan")}
+              disabled={pending}
+              onPress={() =>
+                void action(async () => {
+                  const result = await rpc("billing/portal", { client: "mobile" });
+                  show(await openBillingPage(result.url));
+                })
               }
             />
           ) : null}
@@ -313,13 +333,13 @@ export default function BillingScreen() {
           {status.canManage && recurring ? (
             <>
               <MenuView
-                actions={MODEL_CREDIT_AMOUNTS.map((value) => ({
+                actions={creditAmountChoices(amount).map((value) => ({
                   id: String(value),
                   title: `$${value / 100} / month`,
                   state: amount === value ? ("on" as const) : ("off" as const),
                 }))}
                 onPressAction={({ nativeEvent }) =>
-                  setAmount(ModelCreditAmountSchema.parse(Number(nativeEvent.event)))
+                  setAmount(HeldCreditAmountSchema.parse(Number(nativeEvent.event)))
                 }
               >
                 <SettingsRow
@@ -339,7 +359,9 @@ export default function BillingScreen() {
                   disabled={pending}
                   onPress={() =>
                     void action(async () => {
-                      await rpc("billing/setMonthlyCredits", { amountCents: amount });
+                      await rpc("billing/setMonthlyCredits", {
+                        amountCents: ModelCreditAmountSchema.parse(amount),
+                      });
                       show(await rpc("billing/refresh"));
                     })
                   }

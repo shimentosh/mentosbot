@@ -559,6 +559,7 @@ function linkLookup<Source extends { endpoint?: string }, T>(
   };
 
   /** The answer once the API has one, and a way to drop a value that turns out unusable. */
+  // biome-ignore lint/correctness/noComponentHookFactories: called once at module scope per lookup kind, never inside a component.
   return function useLookup(
     source: Source | null,
     subject: string | undefined,

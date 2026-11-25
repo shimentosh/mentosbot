@@ -50,20 +50,20 @@ export function InvitePage() {
         {invitation.data ? (
           <>
             <div className="space-y-2">
-              <h1 className="text-2xl font-medium break-words text-foreground">
+              <h1 className="text-heading1 font-medium break-words text-foreground">
                 <Trans>Join {invitation.data.organizationName}</Trans>
               </h1>
               {invitation.data.inviterName ? (
-                <p className="text-[14px] text-muted-foreground">
+                <p className="text-body text-muted-foreground">
                   <Trans>{invitation.data.inviterName} invited you.</Trans>
                 </p>
               ) : null}
-              <p className="text-[14px] text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 <Trans>The team's owner can see its chats and activity.</Trans>
               </p>
             </div>
             {error ? (
-              <p role="alert" className="text-[13.5px] text-destructive">
+              <p role="alert" className="text-body text-destructive">
                 {error}
               </p>
             ) : null}
@@ -79,10 +79,10 @@ export function InvitePage() {
         ) : (
           <>
             <div className="space-y-2">
-              <h1 className="text-2xl font-medium text-foreground">
+              <h1 className="text-heading1 font-medium text-foreground">
                 <Trans>This invitation is no longer available</Trans>
               </h1>
-              <p className="text-[14px] text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 <Trans>
                   It may have expired, or it was sent to another email address. Ask for a new one.
                 </Trans>

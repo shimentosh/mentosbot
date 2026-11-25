@@ -14,25 +14,34 @@ import { ADD_ACCOUNT_PARAM } from "../lib/add-account";
 import { authClient } from "../lib/auth";
 import type { AuthCapabilities } from "../lib/auth-capabilities";
 import { fetchAuthCapabilities } from "../lib/auth-capabilities";
+import { desktopBridge } from "../lib/desktop";
 import { clearSpaceSelection } from "../lib/rpc";
+import { newAccountDestination, signInNext } from "../lib/sign-in-next";
 import { runSsoFlow } from "../lib/sso-flow";
 import { authErrorText, credentialIssueText } from "../lib/user-error";
 import { WindowChrome } from "./WindowChrome";
 
 type AuthMode = "in" | "up" | "forgot";
 
-const fieldClass = "mt-2 h-12 rounded-xl px-4 text-base md:text-base";
+// off-scale: 16px below md stops iOS Safari zooming into a focused field.
+const fieldClass = "mt-2 h-12 rounded-xl px-4 text-[16px]/6 md:text-body-lg";
 const CODE_LENGTH = 6;
-export const submitClass = "mt-3 h-12 w-full rounded-xl text-base";
+export const submitClass = "mt-3 h-12 w-full rounded-xl text-body-lg";
 
 /** `adding`: another account is signed in and stays signed in next to this one. */
 export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: boolean }) {
   const { t } = useLingui();
   const [searchParams, setSearchParams] = useSearchParams();
   const addingFor = adding ? searchParams.get(ADD_ACCOUNT_PARAM) : null;
-  /** Moving between sign-in, sign-up and reset keeps adding an account. */
-  const authPath = (pathname: string) =>
-    addingFor ? `${pathname}?${new URLSearchParams({ [ADD_ACCOUNT_PARAM]: addingFor })}` : pathname;
+  const next = signInNext(searchParams.get("next"));
+  /** Moving between sign-in, sign-up and reset keeps adding an account and where the person was going. */
+  const authPath = (pathname: string) => {
+    const params = new URLSearchParams();
+    if (addingFor) params.set(ADD_ACCOUNT_PARAM, addingFor);
+    if (next) params.set("next", next);
+    const query = params.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -157,9 +166,11 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
         return;
       }
       if (mode === "up" && signupRequiresEmailVerification(result.data)) {
-        setSearchParams(
-          addingFor ? { verify: "email", [ADD_ACCOUNT_PARAM]: addingFor } : { verify: "email" },
-        );
+        setSearchParams({
+          verify: "email",
+          ...(addingFor ? { [ADD_ACCOUNT_PARAM]: addingFor } : {}),
+          ...(next ? { next } : {}),
+        });
         return;
       }
       enterApp();
@@ -219,13 +230,11 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
           authClient.signIn.social({
             disableRedirect,
             provider: "oidc",
-            newUserCallbackURL: callbackURL("/onboarding"),
-            callbackURL: callbackURL(
-              searchParams.get("next") === "/integrations/setup" ? "/integrations/setup" : "/app",
-            ),
+            newUserCallbackURL: callbackURL(newAccountDestination(next)),
+            callbackURL: callbackURL(next ?? "/app"),
             errorCallbackURL: callbackURL("/sign-in"),
           }),
-        ["/app", "/onboarding", "/integrations/setup", "/sign-in"],
+        ["/app", "/onboarding", "/integrations/setup", "/sign-in", ...(next ? [next] : [])],
       );
       if (result.error) setError(authErrorText(result.error, t`Could not continue`));
     } catch {
@@ -272,7 +281,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
             </Button>
           ) : null}
           {error && !reset?.passwordAuth ? (
-            <p role="alert" className="mt-3 text-sm text-destructive">
+            <p role="alert" className="mt-3 text-body text-destructive">
               {error}
             </p>
           ) : null}
@@ -312,7 +321,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                         <InputOTPSlot
                           key={index}
                           index={index}
-                          className="size-12 text-lg first:rounded-l-xl last:rounded-r-xl"
+                          className="size-12 text-heading3 first:rounded-l-xl last:rounded-r-xl"
                         />
                       ))}
                     </InputOTPGroup>
@@ -339,7 +348,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                     className={fieldClass}
                   />
                   {emailSuggestion && emailBlurred ? (
-                    <p role="status" className="mt-2 text-sm text-warning">
+                    <p role="status" className="mt-2 text-body text-warning">
                       <Trans>
                         Did you mean{" "}
                         <button
@@ -374,7 +383,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                     className={fieldClass}
                   />
                   {mode === "in" && reset?.passwordReset ? (
-                    <div className="mt-2 text-right text-sm">
+                    <div className="mt-2 text-right text-body">
                       <Link
                         to={authPath("/forgot-password")}
                         className="font-medium text-foreground"
@@ -386,7 +395,7 @@ export function AuthPage({ mode, adding = false }: { mode: AuthMode; adding?: bo
                 </div>
               ) : null}
               {error ? (
-                <p role="alert" className="mt-3 w-full text-sm text-destructive">
+                <p role="alert" className="mt-3 w-full text-body text-destructive">
                   {error}
                 </p>
               ) : null}
@@ -515,7 +524,7 @@ export function PasswordResetPage() {
     <AuthFrame onSubmit={submit} title={<Trans>Choose a new password</Trans>}>
       {complete ? (
         <div role="status" className="w-full text-center">
-          <p className="text-lg">
+          <p className="text-heading3">
             <Trans>Password updated</Trans>
           </p>
           <Link to="/sign-in" className="mt-6 inline-block font-medium">
@@ -538,7 +547,7 @@ export function PasswordResetPage() {
             className="mt-4"
           />
           {error ? (
-            <p role="alert" className="mt-3 w-full text-sm text-destructive">
+            <p role="alert" className="mt-3 w-full text-body text-destructive">
               {error}
             </p>
           ) : null}
@@ -568,12 +577,13 @@ export function AuthFrame({
   onSubmit: (event: React.FormEvent) => void;
   children: React.ReactNode;
 }) {
+  const server = desktopBridge()?.server;
   return (
     <div
       className="flex min-h-full flex-col bg-background text-foreground"
       data-rakazo-surface="auth"
     >
-      <div className="app-drag flex gap-2 px-5 py-[18px]">
+      <div className="app-drag flex items-center gap-2 px-5 py-[18px]">
         <WindowChrome />
       </div>
       <div className="flex flex-1 items-center justify-center px-6 pb-16">
@@ -582,12 +592,22 @@ export function AuthFrame({
             <span className="h-5 w-[9px] rounded-full bg-primary" />
             <span className="h-5 w-[9px] rounded-full bg-primary" />
           </div>
-          <h1 aria-live="polite" className="mb-9 mt-7 text-4xl font-medium tracking-tight">
+          <h1
+            aria-live="polite"
+            className="mb-9 mt-7 text-balance text-center text-display font-medium tracking-tight"
+          >
             {title}
           </h1>
           {children}
         </form>
       </div>
+      {server ? (
+        <div className="flex justify-center pb-6">
+          <Button type="button" variant="text" size="sm" onClick={() => void server.change()}>
+            <Trans>Change server</Trans>
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
