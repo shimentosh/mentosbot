@@ -4,8 +4,8 @@ import { useLingui } from "@lingui/react/macro";
 import { InputRevealLabelsProvider } from "@rakazo/ui-web";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { bootstrapI18n } from "../lib/i18n";
-import { MarkdownChrome } from "./markdown-copy";
+import { bootstrapI18n } from "../lib/locale/i18n";
+import { MarkdownChrome } from "./messages/markdown-copy";
 
 export function I18nBootstrap({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(() => i18n.locale === "en");

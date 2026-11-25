@@ -1,0 +1,142 @@
+import { oc } from "@orpc/contract";
+import * as z from "zod";
+import { Id } from "../ids.js";
+import {
+  FolderListingSchema,
+  ProjectFolderBrowseInput,
+  ProjectFolderInput,
+  ProjectFolderSetInput,
+  ProjectFolderStatusSchema,
+  ProjectFolderStopInput,
+} from "../project-folder.js";
+import { botId } from "../rpc/inputs.js";
+import {
+  ComputerProviderSettingsSchema,
+  ComputerProviderUpdateSchema,
+  ComputerReleaseReasonSchema,
+  ComputerScreenSchema,
+  ComputerServerAddSchema,
+  ComputerServerSetupSchema,
+  ComputerServerStatusSchema,
+  ComputerServerUpdateSchema,
+  ComputerServerUsageSchema,
+  ComputerStatusSchema,
+  ComputerUpdateSchema,
+  NetworkExitConnectSchema,
+  NetworkExitStatusSchema,
+} from "./computer.js";
+import { ComputerCommandSchema } from "./computer-command.js";
+
+export const computersRpc = {
+  /** Admin choice of where new computers run, with that provider's connection settings. */
+  computerProvider: {
+    get: oc.output(ComputerProviderSettingsSchema),
+    update: oc.input(ComputerProviderUpdateSchema).output(ComputerProviderSettingsSchema),
+    /** The signed-in account's provider for Team Computers, over the default. */
+    account: {
+      get: oc.output(ComputerProviderSettingsSchema),
+      update: oc.input(ComputerProviderUpdateSchema).output(ComputerProviderSettingsSchema),
+    },
+  },
+  /** A bot's project folder on its owner's own computer, and the commands it keeps running there. */
+  projectFolder: {
+    get: oc.input(ProjectFolderInput).output(ProjectFolderStatusSchema),
+    browse: oc.input(ProjectFolderBrowseInput).output(FolderListingSchema),
+    set: oc.input(ProjectFolderSetInput).output(ProjectFolderStatusSchema),
+    stop: oc.input(ProjectFolderStopInput).output(ProjectFolderStatusSchema),
+  },
+  /** The signed-in person's own network for their computers' browsers in the current Space. */
+  networkExit: {
+    get: oc.output(NetworkExitStatusSchema),
+    connect: oc.input(NetworkExitConnectSchema).output(NetworkExitStatusSchema),
+    disconnect: oc.output(NetworkExitStatusSchema),
+  },
+  /** The deployment's own servers for bots' computers. Deployment admins only. */
+  computerServers: {
+    list: oc.output(ComputerServerStatusSchema),
+    add: oc.input(ComputerServerAddSchema).output(ComputerServerStatusSchema),
+    /** Signs in again and reruns setup, for a server whose setup failed. */
+    setup: oc.input(ComputerServerSetupSchema).output(ComputerServerStatusSchema),
+    update: oc.input(ComputerServerUpdateSchema).output(ComputerServerStatusSchema),
+    remove: oc
+      .input(z.object({ id: z.string().min(1).max(64) }))
+      .output(ComputerServerStatusSchema),
+    /** CPU, memory, disk and computers on this deployment's server and each added one. */
+    usage: oc.output(z.array(ComputerServerUsageSchema)),
+  },
+  computer: {
+    status: oc.input(botId).output(ComputerStatusSchema),
+    boot: oc.input(botId).output(ComputerStatusSchema),
+    stop: oc.input(botId).output(ComputerStatusSchema),
+    recover: oc.input(botId).output(ComputerUpdateSchema),
+    reset: oc.input(botId).output(ComputerStatusSchema),
+    update: oc.input(botId).output(ComputerUpdateSchema),
+    updates: oc.output(z.array(ComputerUpdateSchema)),
+    releaseInterrupted: oc
+      .input(z.object({ id: Id, workersStopped: z.literal(true) }))
+      .output(z.object({ ok: z.literal(true) })),
+    dismissUpdate: oc.input(z.object({ id: Id })).output(z.object({ ok: z.literal(true) })),
+    dismissDiskWarning: oc.input(botId).output(z.object({ ok: z.literal(true) })),
+    takeover: oc.input(botId).output(z.object({ leaseId: Id, expiresAt: z.string() })),
+    release: oc
+      .input(
+        z.object({
+          botId: Id,
+          reason: ComputerReleaseReasonSchema.optional(),
+          /** The run a needs-you card answers; the release applies only while it waits on the caller. */
+          runId: Id.optional(),
+          /** The lease this page took; a late release from an old page leaves newer control alone. */
+          leaseId: Id.optional(),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
+    input: oc
+      .input(
+        z.object({
+          botId: Id,
+          kind: z.enum(["key", "pointer", "clipboard", "scroll"]),
+          payload: z.record(z.string(), z.unknown()),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
+    files: oc
+      .input(z.object({ botId: Id, path: z.string().default("/") }))
+      .output(
+        z.array(z.object({ path: z.string(), kind: z.enum(["file", "dir"]), size: z.number() })),
+      ),
+    readFile: oc
+      .input(z.object({ botId: Id, path: z.string() }))
+      .output(z.object({ path: z.string(), content: z.string() })),
+    downloadFile: oc
+      .input(z.object({ botId: Id, path: z.string().min(1) }))
+      .output(z.object({ path: z.string(), contentBase64: z.string() })),
+    uploadFile: oc
+      .input(
+        z.object({
+          botId: Id,
+          path: z.string().min(1),
+          contentBase64: z.string(),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
+    terminalUrl: oc.input(botId).output(z.object({ url: z.string().nullable() })),
+    commands: oc
+      .input(botId)
+      .output(z.array(ComputerCommandSchema.extend({ createdAt: z.string() }))),
+    /** A `preview` read only watches, so it leaves the computer's sleep schedule alone. */
+    screenUrl: oc
+      .input(botId.extend({ preview: z.boolean().optional() }))
+      .output(ComputerScreenSchema),
+    /** A still of the screen as an image data URL, or null when the computer is not running. */
+    preview: oc
+      .input(
+        z.object({
+          botId: Id,
+          /** The run a needs-you card shows; no image once that run stops waiting. */
+          runId: Id.optional(),
+        }),
+      )
+      .output(z.object({ image: z.string().nullable() })),
+    heartbeat: oc.input(botId).output(z.object({ ok: z.literal(true) })),
+  },
+};

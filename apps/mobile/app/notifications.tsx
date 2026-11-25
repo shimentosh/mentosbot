@@ -3,14 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { BotAvatar } from "../components/bot-avatar";
-import { formatActivityRelativeTime } from "../lib/activity";
-import { rpc } from "../lib/api";
-import { mobileTokens } from "../lib/appearance";
-import { bellRoute, inboxRows } from "../lib/bell";
-import { useI18n } from "../lib/i18n";
-import { native, useThemedStyles } from "../lib/native";
-import { queryClient, rpcQuery } from "../lib/query";
+import { BotAvatar } from "../components/bots/bot-avatar";
+import { rpc } from "../lib/api/api";
+import { mobileTokens } from "../lib/appearance/appearance";
+import { useI18n } from "../lib/i18n/i18n";
+import { formatActivityRelativeTime } from "../lib/inbox/activity";
+import { native, useThemedStyles } from "../lib/native/native";
+import { bellRoute, inboxRows } from "../lib/notifications/bell";
+import { queryClient, rpcQuery } from "../lib/query/query";
 
 /** What needs the person and what their bots just did, across the organization's Spaces. */
 export default function NotificationsScreen() {

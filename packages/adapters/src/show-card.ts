@@ -2,7 +2,7 @@ import type { CardBlock } from "@rakazo/contracts";
 import { cardBlockFromInput, ShowCardInput } from "@rakazo/contracts";
 import { containsSecret } from "@rakazo/core";
 import { z } from "zod";
-import { argumentGiven } from "./update-bot-patch.js";
+import { argumentGiven } from "./bots/update-bot-patch.js";
 
 /** The card show_card posts, or why it cannot. */
 export function showCardBlock(

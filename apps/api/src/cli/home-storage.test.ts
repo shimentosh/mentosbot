@@ -12,7 +12,7 @@ function run(scenario: string, args = ["migrate"]) {
     const source = readFileSync(new URL("./home-storage.ts", import.meta.url), "utf8")
       .replace('"@rakazo/adapters"', '"./stubs.mjs"')
       .replace('"@rakazo/core/node/load-root-env"', '"./stubs.mjs"')
-      .replace('"@rakazo/core"', '"./stubs.mjs"')
+      .replace('"@rakazo/core/node/secrets-guard"', '"./stubs.mjs"')
       .replace('"@rakazo/db"', '"./stubs.mjs"');
     writeFileSync(path.join(dir, "cli.mts"), source);
     writeFileSync(

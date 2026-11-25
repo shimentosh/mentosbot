@@ -11,8 +11,8 @@ import {
 } from "@rakazo/ui-web";
 import { ChevronLeft, ChevronRight, Folder, FolderCode } from "lucide-react";
 import { useEffect, useState } from "react";
-import { rpc } from "../lib/rpc";
-import { errorText } from "../lib/user-error";
+import { rpc } from "../lib/query/rpc";
+import { errorText } from "../lib/query/user-error";
 
 /** The folder as the person reads it: `~` for their home. */
 export function homeRelative(listing: Pick<FolderListing, "home" | "path">) {

@@ -4,7 +4,7 @@ import {
   disconnectGoogleWorkspace,
   getGoogleWorkspace,
   saveGoogleWorkspaceClient,
-} from "../google-workspace.js";
+} from "../integrations/google-workspace.js";
 import type { RouterContext } from "./context.js";
 
 export function googleWorkspaceRoutes(ctx: RouterContext) {

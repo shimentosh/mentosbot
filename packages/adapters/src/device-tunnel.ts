@@ -13,8 +13,8 @@ import {
   USER_DEVICE_TUNNEL_TICKET_HEADER,
 } from "@rakazo/contracts";
 import WebSocket from "ws";
+import type { UserDeviceNotice } from "./computers/host/user-device-protocol.js";
 import { bridgeSocket } from "./socket-bridge.js";
-import type { UserDeviceNotice } from "./user-device-protocol.js";
 
 /** Connections one device carries at once; past this the computer goes out directly. */
 const MAX_TUNNELS = 256;

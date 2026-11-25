@@ -1,11 +1,15 @@
 import type { SignedInAccount } from "@rakazo/contracts";
 import { MAX_SIGNED_IN_ACCOUNTS, signedInAccountsSchema } from "@rakazo/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { authClient } from "./auth";
-import { fetchAuthCapabilities } from "./auth-capabilities";
-import { endCallBeforeSignOut, forgetSignedInUser, sessionChangedUnderPage } from "./call-session";
-import { queryClient, useQueryUserId } from "./query";
-import { clearSpaceSelection } from "./rpc";
+import { authClient } from "./auth/auth";
+import { fetchAuthCapabilities } from "./auth/auth-capabilities";
+import {
+  endCallBeforeSignOut,
+  forgetSignedInUser,
+  sessionChangedUnderPage,
+} from "./calls/call-session";
+import { queryClient, useQueryUserId } from "./query/query";
+import { clearSpaceSelection } from "./query/rpc";
 
 export type { SignedInAccount } from "@rakazo/contracts";
 

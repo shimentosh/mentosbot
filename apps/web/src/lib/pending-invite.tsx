@@ -1,5 +1,5 @@
 import { Navigate, useParams } from "react-router-dom";
-import { hasSignedInBefore } from "./returning-user";
+import { hasSignedInBefore } from "./auth/returning-user";
 
 const PENDING_INVITE_KEY = "rakazo:pending-invite";
 

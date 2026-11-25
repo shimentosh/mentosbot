@@ -22,6 +22,7 @@ model AiDataConsent {
 }
 
 model User {
+  meetingSessions MeetingSession[]
   aiDataConsents AiDataConsent[]
   pages          Page[]
   botAccess      BotAccess[]
@@ -55,6 +56,10 @@ model User {
   /// Labs features this person turned on, by contracts' LabFeature id. Unknown ids are ignored.
   labs                        String[]                     @default([])
   marketingEmailOptOutAt      DateTime?
+  /// How many times this person began connecting a first model; numbers each try for measurement.
+  modelConnectStarts          Int                          @default(0)
+  /// The number of a try that chose credits and waits for the purchase that funds them.
+  pendingCreditsConnect       Int?
   /// When an organization this person owns first subscribed; uses up every trial kind.
   billingTrialUsedAt          DateTime?
   /// When an organization this person owns was given free own-key days; uses up only that
@@ -106,7 +111,7 @@ model User {
   agentSecrets               AgentSecret[]
   createdTickets              Ticket[]                     @relation("TicketCreatorUser")
   ticketComments              TicketComment[]              @relation("TicketCommentAuthorUser")
-  pushToken                   PushToken?
+  pushRegistrations           PushRegistration[]
   callPushDevices             CallPushDevice[]
   workActivityTokens          WorkActivityToken[]
   workActivityStartTokens     WorkActivityStartToken[]
@@ -156,19 +161,21 @@ model Session {
   @@map("session")
 }
 
-/// One current device registration per account, matching the notification API contract.
+/// One row per signed-in device; a device token belongs to one account at a time.
 /// No session FK: password changes delete a session before the replacement is created.
-model PushToken {
-  userId String @id
+model PushRegistration {
+  userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ciphertext String
   tokenDigest String @unique
   sessionId String
+  ciphertext String
   /// "android_sender" when the installed Android build renders data-only sender pushes.
   presentation String?
   updatedAt DateTime @updatedAt
 
-  @@map("push_tokens")
+  @@id([userId, tokenDigest])
+  @@index([sessionId])
+  @@map("push_registrations")
 }
 
 /// Encrypted call registrations per installation. Legacy message push remains compatible.
@@ -539,11 +546,9 @@ model BillingAccount {
   cancellationReason  String?
   cancellationComment String?
   subscribedAt        DateTime?
-  /// When a subscription was first seen active, so a trial that never paid is not a paid plan.
+  /// When a subscription payment first went through, so a trial that never paid is not a paid plan.
   paidAt              DateTime?
   syncedAt            DateTime?
-  checkoutLeaseId     String?
-  checkoutLeaseExpiresAt DateTime?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
@@ -683,6 +688,7 @@ model Member {
 }
 
 model Space {
+  meetingSessions MeetingSession[]
   aiDataConsents              AiDataConsent[]
   id                          String                       @id
   organizationId              String
@@ -1024,6 +1030,7 @@ model SpaceVoicePreference {
 }
 
 model Bot {
+  meetingSessions MeetingSession[]
   screenGeneration Int @default(0)
   id                String            @id @default(cuid())
   spaceId           String
@@ -1377,7 +1384,7 @@ model Run {
   // Partial index runs_recent_activity_idx (recent foreground activity) is created in SQL.
   // Partial index runs_bot_outcome_pending_idx (unreturned bot-message outcomes) is created in SQL.
   // Partial index runs_helper_outcome_pending_idx (unreturned background-helper outcomes) is created in SQL.
-  @@index([routineId])
+  @@index([routineId, createdAt])
   @@map("runs")
 }
 
@@ -1445,9 +1452,6 @@ model CloudAgent {
   generation          Int      @default(0)
   wakeGeneration      Int      @default(-1)
   version             Int      @default(0)
-  /// Kept only for the previous release, which claims the row instead of taking the agent's lease.
-  leaseToken          String?
-  leaseExpiresAt      DateTime?
   nextPollAt          DateTime? @default(now())
   errorCount          Int      @default(0)
   createdAt           DateTime @default(now())
@@ -1591,6 +1595,9 @@ model Routine {
   timezone       String    @default("UTC")
   active         Boolean   @default(false)
   notify         Boolean   @default(true)
+  /// Runs as a turn in its chat, with the whole conversation, waiting while the bot is busy there.
+  /// Otherwise it runs on time alongside other work, with its recent results and the chat's last messages.
+  inChat         Boolean   @default(false)
   webhookEnabled Boolean   @default(false)
   githubEnabled  Boolean   @default(false)
   messageProvider String?
@@ -1775,7 +1782,7 @@ model Connection {
   spaceId     String
   space       Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   userId      String
-  connectorId String   @default("composio")
+  connectorId String
   provider    String
   displayName String
   status      String
@@ -1966,13 +1973,10 @@ model Computer {
 }
 
 /// Hosted billing only: a stopped computer whose saved home is due for deletion after its plan
-/// ended or it went unused. `claimId` is kept only for the previous release, which claims the row
-/// while it emails instead of taking the organization's lease.
+/// ended or it went unused.
 model HomeDeletionNotice {
   computerId     String    @id
   computer       Computer  @relation(fields: [computerId], references: [id], onDelete: Cascade)
-  claimId        String?
-  claimExpiresAt DateTime?
   /// When the owner was emailed; null until then, and nothing is deleted before it.
   warnedAt       DateTime?
   /// The deletion date the email gave.
@@ -1982,7 +1986,7 @@ model HomeDeletionNotice {
   @@map("home_deletion_notices")
 }
 
-/// One holder at a time for long work across processes. `withLease` in packages/db/src/leases.ts
+/// One holder at a time for long work across processes. `withLease` in packages/db/src/database/leases.ts
 /// is the only writer. A release deletes its row; `fence` comes from `leases_fence_seq`, so a key's
 /// next holder always outranks every earlier one.
 model Lease {
@@ -2011,7 +2015,7 @@ model ComputerRun {
   startedAt  DateTime
   /// Null while running. When the end was not seen as it happened, this is when it was detected.
   endedAt    DateTime?
-  /// How it ended; see `ComputerRunEnd` in packages/db/src/computer-runs.ts.
+  /// How it ended; see `ComputerRunEnd` in packages/db/src/computers/computer-runs.ts.
   endReason  String?
   /// When Rakazo last saw this stretch running: at its start and at each idle check.
   lastSeenAt DateTime?
@@ -2123,6 +2127,8 @@ model PageVersion {
 }
 
 model UsageRecord {
+  /// Operator expenses never settle purchased model credits.
+  fundingSource      String   @default("customer")
   id                 String   @id @default(cuid())
   spaceId            String
   /// Which bot spent this. Deliberately not a relation: usage is spend that really happened,
@@ -2358,6 +2364,8 @@ model McpOAuthSession {
   endpoint        String
   redirectUri     String
   oauthCiphertext String
+  /// The bot that gets the server once this sign-in finishes.
+  botId           String?
   createdAt       DateTime  @default(now())
 
   @@index([spaceId, userId, createdAt])
@@ -2382,6 +2390,9 @@ model ModelOAuthSession {
   result         Json?
   /// The process waiting on the provider renews this; a lapsed lease means it is gone.
   leaseExpiresAt DateTime?
+  /// Set while the sign-in is measured: the app it began in and which try it is.
+  surface        String?
+  connectNumber  Int?
   createdAt      DateTime  @default(now())
 
   @@index([userId, provider])
@@ -2863,6 +2874,7 @@ model SpaceModelRoleChoice {
   provider      String
   modelId       String
   thinkingLevel String?
+  creditOfferingId String?
   credentialId  String?
   credential    UserModelCredential? @relation(fields: [credentialId, userId], references: [id, userId], onDelete: Cascade)
 
@@ -2894,6 +2906,7 @@ model UserModelRoleChoice {
   provider      String
   modelId       String
   thinkingLevel String?
+  creditOfferingId String?
   credentialId  String?
   credential    UserModelCredential? @relation(fields: [credentialId, userId], references: [id, userId], onDelete: Cascade)
 
@@ -3043,4 +3056,135 @@ model BrowserSignIns {
   updatedAt  DateTime @updatedAt
 
   @@map("browser_sign_ins")
+}
+
+/// Operator grants; never purchased model credits. Counter includes uncertain reservations.
+model SpeechAllowance {
+  userId String @id
+  limitMicros BigInt
+  usedMicros BigInt @default(0)
+  expiresAt DateTime
+  @@map("speech_allowances")
+}
+
+/// Financial evidence survives chat deletion; contains no audio, transcripts or credentials.
+model SpeechCost {
+  id String @id
+  userId String
+  spaceId String
+  callId String?
+  provider String
+  operation String
+  model String
+  unit String
+  units Float?
+  billableUnits Json?
+  observedModel String?
+  observedUnit String?
+  accountedMicros BigInt
+  confirmationSource String?
+  confirmationReference String? @unique
+  reservedMicros BigInt
+  costMicros BigInt?
+  microsPerUnit Float
+  pricingSource String
+  pricingVersion String
+  providerRequestId String?
+  state String @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  @@index([userId, createdAt], map: "speech_costs_account")
+  @@index([spaceId, createdAt], map: "speech_costs_space")
+  @@index([state, createdAt], map: "speech_costs_reconcile")
+  @@map("speech_costs")
+}
+
+/// A bot's attendance and transcript import, scoped to the member who requested it.
+model MeetingSession {
+  id           String    @id @default(cuid())
+  spaceId      String
+  space        Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  botId        String
+  bot          Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String
+  platform     String
+  status       String
+  meetingUrl   String?   @db.Text
+  activeKey    String?   @unique
+  externalId   String?
+  recordingId  String?
+  transcriptId String?
+  transcript   String?   @db.Text
+  error        String?
+  requestedAt  DateTime?
+  receivedAt   DateTime?
+  closedAt     DateTime?
+  expiresAt    DateTime
+  scheduledFor DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([spaceId, userId, botId, createdAt])
+  @@index([spaceId, createdAt])
+  @@index([userId])
+  @@unique([provider, externalId])
+  @@index([spaceId, scheduledFor])
+  @@map("meeting_sessions")
+}
+
+model MeetingCalendarConnection {
+  id                 String                  @id
+  spaceId            String
+  userId             String
+  provider           String
+  externalCalendarId String?
+  disconnecting      Boolean                 @default(false)
+  createdAt          DateTime                @default(now())
+  eventsDigest       String?
+  rules              MeetingCalendarRule[]
+  bookings           MeetingCalendarBooking[]
+
+  @@unique([spaceId, userId])
+  @@unique([provider, externalCalendarId])
+  @@map("meeting_calendar_connections")
+}
+
+model MeetingCalendarAuthorization {
+  id        String   @id
+  spaceId   String
+  userId    String
+  botId     String?
+  expiresAt DateTime
+  sessionId String?
+
+  @@unique([spaceId, userId])
+  @@map("meeting_calendar_authorizations")
+}
+
+model MeetingCalendarRule {
+  connectionId  String
+  connection    MeetingCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  scope         String
+  targetId      String
+  botId         String?
+  eventStartsAt DateTime?
+  seriesId      String?
+
+  @@id([connectionId, scope, targetId])
+  @@map("meeting_calendar_rules")
+}
+
+model MeetingCalendarBooking {
+  connectionId String
+  connection   MeetingCalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  eventId      String
+  sessionId    String
+  startsAt     DateTime
+  linked       Boolean                   @default(false)
+  configDigest String
+
+  @@id([connectionId, eventId])
+  @@index([sessionId])
+  @@map("meeting_calendar_bookings")
 }

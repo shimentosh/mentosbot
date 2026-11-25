@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Route } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { captureScreenshot, completeOnboarding, openUserSettings, signup } from "./helpers";
+import { captureScreenshot, completeOnboarding, openUserSettings, signup } from "./helpers/helpers";
 
 async function asAdmin(route: Route) {
   const response = await route.fetch();

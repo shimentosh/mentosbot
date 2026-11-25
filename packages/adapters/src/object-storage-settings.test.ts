@@ -1,7 +1,6 @@
 import type { ObjectStorage } from "@rakazo/adapter-kit";
 import type { PrismaClient } from "@rakazo/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MemoryObjectStorage } from "./object-storage.test-support.js";
 import type { S3ObjectStorageConfig } from "./object-storage-settings.js";
 import {
   measureObjectStorage,
@@ -11,6 +10,7 @@ import {
   verifyObjectStorage,
   watchObjectStorageSettings,
 } from "./object-storage-settings.js";
+import { MemoryObjectStorage } from "./storage/object-storage.test-support.js";
 
 const config: S3ObjectStorageConfig = {
   bucket: "rakazo-files",

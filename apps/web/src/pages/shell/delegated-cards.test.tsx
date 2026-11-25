@@ -7,12 +7,12 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({ approvals: vi.fn(), answer: vi.fn() }));
-vi.mock("../../lib/rpc", () => ({
+vi.mock("../../lib/query/rpc", () => ({
   rpc: { inbox: { approvals: api.approvals } },
   rpcForSpace: () => ({ threads: { answer: api.answer } }),
   selectedSpaceId: () => "space-1",
 }));
-vi.mock("../../lib/query", async () => {
+vi.mock("../../lib/query/query", async () => {
   const { QueryClient } = await import("@tanstack/react-query");
   return {
     queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
@@ -27,7 +27,7 @@ vi.mock("@rakazo/ui-web", () => ({
   BotAvatar: () => <i />,
   Button: (props: ComponentProps<"button">) => <button type="button" {...props} />,
 }));
-vi.mock("../../components/AskCard", () => ({
+vi.mock("../../components/messages/AskCard", () => ({
   AskCard: ({
     block,
     onAnswer,
@@ -40,7 +40,7 @@ vi.mock("../../components/AskCard", () => ({
     </button>
   ),
 }));
-vi.mock("./message-cards", () => ({ ArtifactImage: () => null }));
+vi.mock("./chat/message-cards", () => ({ ArtifactImage: () => null }));
 
 import { DelegatedCards } from "./delegated-cards";
 

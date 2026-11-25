@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { askPreviewImages } from "./run-turn.js";
+import { askPreviewImages } from "./runs/turn/run-turn-pause.js";
 
 describe("askPreviewImages", () => {
   const run = { spaceId: "space-1", botId: "bot-1", userId: "ada" };

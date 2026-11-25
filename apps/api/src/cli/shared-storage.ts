@@ -10,8 +10,8 @@ import {
   resolveObjectStorage,
   unwrapEnvFromKeyManager,
 } from "@rakazo/adapters";
-import { resolveEncryptionKey } from "@rakazo/core";
 import { loadRootEnv } from "@rakazo/core/node/load-root-env";
+import { resolveEncryptionKey } from "@rakazo/core/node/secrets-guard";
 import { createDb } from "@rakazo/db";
 
 loadRootEnv();

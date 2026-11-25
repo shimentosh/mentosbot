@@ -8,12 +8,12 @@ import { afterEach, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({ approvals: vi.fn(), answer: vi.fn() }));
 const tabs = vi.hoisted(() => ({ change: (_value: string): void => undefined }));
-vi.mock("../lib/rpc", () => ({
+vi.mock("../lib/query/rpc", () => ({
   rpc: { inbox: { approvals: api.approvals } },
   rpcForSpace: () => ({ threads: { answer: api.answer } }),
   selectedSpaceId: () => "space-1",
 }));
-vi.mock("../lib/query", async () => {
+vi.mock("../lib/query/query", async () => {
   const { QueryClient } = await import("@tanstack/react-query");
   return {
     queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
@@ -71,11 +71,11 @@ vi.mock("@rakazo/ui-web", () => {
     buttonVariants: () => "",
   };
 });
-vi.mock("../components/AskCard", () => ({
+vi.mock("../components/messages/AskCard", () => ({
   AskCard: ({ block }: { block: { text: string } }) => <p data-ask>{block.text}</p>,
 }));
-vi.mock("./ActivityList", () => ({ ActivityList: () => null }));
-vi.mock("./shell/message-cards", () => ({ ArtifactImage: () => null }));
+vi.mock("./space/ActivityList", () => ({ ActivityList: () => null }));
+vi.mock("./shell/chat/message-cards", () => ({ ArtifactImage: () => null }));
 
 import { ApprovalsOverlay } from "./ApprovalsOverlay";
 

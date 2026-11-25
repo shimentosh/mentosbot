@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as CallSessionModule from "./call-session";
-import { SIGNED_IN_USER_KEY } from "./call-session";
-import { selectedSpaceId, selectSpace } from "./rpc";
+import type * as CallSessionModule from "./calls/call-session";
+import { SIGNED_IN_USER_KEY } from "./calls/call-session";
+import { selectedSpaceId, selectSpace } from "./query/rpc";
 import { switchAccount } from "./signed-in-accounts";
 
 const { request, endCallBeforeSignOut } = vi.hoisted(() => ({
@@ -11,8 +11,8 @@ const { request, endCallBeforeSignOut } = vi.hoisted(() => ({
   endCallBeforeSignOut: vi.fn(async () => undefined),
 }));
 
-vi.mock("./auth", () => ({ authClient: { $fetch: request } }));
-vi.mock("./call-session", async (importOriginal) => ({
+vi.mock("./auth/auth", () => ({ authClient: { $fetch: request } }));
+vi.mock("./calls/call-session", async (importOriginal) => ({
   ...(await importOriginal<typeof CallSessionModule>()),
   endCallBeforeSignOut,
 }));

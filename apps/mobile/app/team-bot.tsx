@@ -13,15 +13,15 @@ import {
   Text,
   View,
 } from "react-native";
-import { glassHeaderOptions } from "../components/glass-title";
-import { NativeActionButton } from "../components/native-action-button";
-import { rpc } from "../lib/api";
-import { mobileTokens } from "../lib/appearance";
-import { openMobileArtifact } from "../lib/artifact-open";
-import { useI18n } from "../lib/i18n";
-import { native, useResolvedAppearance, useThemedStyles } from "../lib/native";
-import { queryClient } from "../lib/query";
-import { errorText } from "../lib/user-error";
+import { glassHeaderOptions } from "../components/native/glass-title";
+import { NativeActionButton } from "../components/native/native-action-button";
+import { rpc } from "../lib/api/api";
+import { errorText } from "../lib/api/user-error";
+import { mobileTokens } from "../lib/appearance/appearance";
+import { openMobileArtifact } from "../lib/artifacts/artifact-open";
+import { useI18n } from "../lib/i18n/i18n";
+import { native, useResolvedAppearance, useThemedStyles } from "../lib/native/native";
+import { queryClient } from "../lib/query/query";
 
 /** A teammate's bot's chat for the team's owner: reading only, newest at the bottom. */
 export default function TeamBotScreen() {

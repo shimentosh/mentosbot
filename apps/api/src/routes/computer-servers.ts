@@ -21,8 +21,8 @@ import {
   updateComputerServer,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
-import { isAdmin } from "../admins.js";
-import { COMPUTER_SERVER_INSTALL_SCRIPT } from "../computer-server-install.js";
+import { isAdmin } from "../auth/admins.js";
+import { COMPUTER_SERVER_INSTALL_SCRIPT } from "../computers/computer-server-install.js";
 import type { RouterContext } from "./context.js";
 
 /** `host`, `host:port`, `[v6]` or `[v6]:port`, as an admin types where to sign in. */

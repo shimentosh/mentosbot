@@ -1,11 +1,11 @@
 import type { FinalReplyToolRecord } from "@rakazo/adapter-kit";
 import { escapePromptData } from "@rakazo/core";
 import { z } from "zod";
-import { sanitizeAutoReviewReason } from "./auto-review.js";
-import { truncateReviewText } from "./auto-review.prompt.js";
-import { automated } from "./automated-messages.prompt.js";
-import { parseModelJson } from "./model-json.js";
-import { NO_RESPONSE } from "./silent-reply.js";
+import { sanitizeAutoReviewReason } from "./approvals/auto-review.js";
+import { truncateReviewText } from "./approvals/auto-review.prompt.js";
+import { automated } from "./messaging/automated-messages.prompt.js";
+import { parseModelJson } from "./models/model-json.js";
+import { NO_RESPONSE } from "./runs/assembly/silent-reply.js";
 
 /** Bump when the rubric or its examples change, so a verdict names the rules it was judged by. */
 export const REPLY_CLAIM_RUBRIC_VERSION = "reply-claims-v1";

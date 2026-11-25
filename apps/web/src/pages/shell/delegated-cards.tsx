@@ -1,7 +1,7 @@
 import type { Approval } from "@rakazo/contracts";
 import { ANSWERED_LINGER_MS, ApprovalItem, useApprovals } from "../../components/ApprovalItem";
 import { inboxQueryKey } from "../../lib/inbox";
-import { queryClient, useQueryUserId } from "../../lib/query";
+import { queryClient, useQueryUserId } from "../../lib/query/query";
 
 /**
  * Cards that bots this bot handed work to are waiting on, answerable in this chat: the person

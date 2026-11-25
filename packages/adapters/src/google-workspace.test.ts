@@ -9,7 +9,7 @@ import {
   googleStateDigest,
   newGoogleState,
 } from "./google-workspace.js";
-import { EncryptedSecretStore } from "./secrets.js";
+import { EncryptedSecretStore } from "./secrets/secrets.js";
 
 const KEY = "test-encryption-key-test-encryption-key";
 

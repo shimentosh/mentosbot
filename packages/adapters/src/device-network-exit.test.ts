@@ -10,6 +10,8 @@ import {
 import type { PrismaClient } from "@rakazo/db";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+import type { UserDeviceHub, UserDevices } from "./computers/host/user-device-gateway.js";
+import type { UserDeviceNotice } from "./computers/host/user-device-protocol.js";
 import {
   DeviceExitRelay,
   deviceExitHome,
@@ -20,8 +22,6 @@ import {
   tunnelTarget,
 } from "./device-network-exit.js";
 import { carryablePort, createDeviceTunnels, publicAddress } from "./device-tunnel.js";
-import type { UserDeviceHub, UserDevices } from "./user-device-gateway.js";
-import type { UserDeviceNotice } from "./user-device-protocol.js";
 
 const KEY = "test-encryption-key-at-least-thirty-two-chars";
 const closers: Array<() => unknown> = [];

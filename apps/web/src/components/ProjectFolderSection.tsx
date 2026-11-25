@@ -4,10 +4,10 @@ import { Button, SectionHeading } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { ExternalLink, FolderCode, X } from "lucide-react";
 import { useState } from "react";
-import { thisComputer } from "../lib/desktop";
-import { queryClient, spaceQueries, useQueryUserId } from "../lib/query";
-import { rpc, selectedSpaceId } from "../lib/rpc";
-import { errorText } from "../lib/user-error";
+import { thisComputer } from "../lib/platform/desktop";
+import { queryClient, spaceQueries, useQueryUserId } from "../lib/query/query";
+import { rpc, selectedSpaceId } from "../lib/query/rpc";
+import { errorText } from "../lib/query/user-error";
 import { FolderPickerDialog } from "./FolderPickerDialog";
 
 /** Names the computer the desktop app runs on, so folder work stays on it. */

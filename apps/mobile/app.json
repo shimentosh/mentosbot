@@ -93,6 +93,7 @@
       "./plugins/with-android-no-gwp-asan",
       "./plugins/with-agent-notifications",
       "./plugins/with-app-intents",
+      "./plugins/with-apple-watch",
       "expo-apple-authentication"
     ],
     "ios": {
@@ -140,6 +141,10 @@
           "experimental": {
             "ios": {
               "appExtensions": [
+                {
+                  "targetName": "RakazoWatch",
+                  "bundleIdentifier": "com.mentosbot.app.watchkitapp"
+                },
                 {
                   "targetName": "RakazoWidgets",
                   "bundleIdentifier": "com.mentosbot.app.widgets"

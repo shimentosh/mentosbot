@@ -4,10 +4,10 @@ import { cardLinks, cardStatus } from "@rakazo/core";
 import { typeScale } from "@rakazo/ui-tokens";
 import type { ComponentProps } from "react";
 import { Pressable, Text, View } from "react-native";
-import { useI18n } from "../../lib/i18n";
-import { useMobileTokens } from "../../lib/native";
-import { NativeActionButton } from "../native-action-button";
-import { NativeSymbol } from "../native-symbol";
+import { useI18n } from "../../lib/i18n/i18n";
+import { useMobileTokens } from "../../lib/native/native";
+import { NativeActionButton } from "../native/native-action-button";
+import { NativeSymbol } from "../native/native-symbol";
 import type { MessageActionProps } from "./message-bubble";
 
 const STATUS_SYMBOLS: Record<

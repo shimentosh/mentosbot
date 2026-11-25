@@ -1,4 +1,4 @@
-import type { HostComputerEnvironment } from "./host-computer-protocol.js";
+import type { HostComputerEnvironment } from "./computers/host/host-computer-protocol.js";
 
 /** Stands in for the task in an adapter's arguments; it reaches the agent as a variable. */
 export const AGENT_TASK: unique symbol = Symbol("task");

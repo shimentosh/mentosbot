@@ -1,7 +1,7 @@
 import type { LinkPreview } from "@rakazo/contracts";
 import { LINK_PREVIEW_URL_MAX_LENGTH } from "@rakazo/contracts";
 import { JSDOM } from "jsdom";
-import type { ResolveHostname } from "./network-address.js";
+import type { ResolveHostname } from "./network/network-address.js";
 import {
   BUSY,
   boundedCache,
@@ -10,7 +10,7 @@ import {
   sniffImage,
   untilAborted,
 } from "./site-lookup.js";
-import { fetchSafeWebBytes } from "./web-ssrf.js";
+import { fetchSafeWebBytes } from "./web/web-ssrf.js";
 
 /** Pages put their card tags in the head, well inside this; the rest is never read. */
 const PAGE_MAX_BYTES = 512 * 1024;

@@ -5,11 +5,11 @@ import { BotAvatar, Button } from "@rakazo/ui-web";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import { approvalsQueryKey } from "../lib/inbox";
-import { queryClient, useQueryUserId } from "../lib/query";
-import { formatRelativeTime } from "../lib/relative-time";
-import { rpc, rpcForSpace, selectedSpaceId } from "../lib/rpc";
-import { ArtifactImage } from "../pages/shell/message-cards";
-import { AskCard } from "./AskCard";
+import { formatRelativeTime } from "../lib/locale/relative-time";
+import { queryClient, useQueryUserId } from "../lib/query/query";
+import { rpc, rpcForSpace, selectedSpaceId } from "../lib/query/rpc";
+import { ArtifactImage } from "../pages/shell/chat/message-cards";
+import { AskCard } from "./messages/AskCard";
 
 /** How long an answered card stays to show its outcome before the list drops it. */
 export const ANSWERED_LINGER_MS = 900;

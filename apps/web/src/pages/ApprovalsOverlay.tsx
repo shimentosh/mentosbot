@@ -37,10 +37,10 @@ import {
 import type { ActivityListFilters } from "../lib/activity-list-filters";
 import { emptyActivityFilters } from "../lib/activity-list-filters";
 import { inboxQueryKey } from "../lib/inbox";
-import { queryClient, useQueryUserId } from "../lib/query";
-import { selectedSpaceId } from "../lib/rpc";
-import { errorText } from "../lib/user-error";
-import { ActivityList } from "./ActivityList";
+import { queryClient, useQueryUserId } from "../lib/query/query";
+import { selectedSpaceId } from "../lib/query/rpc";
+import { errorText } from "../lib/query/user-error";
+import { ActivityList } from "./space/ActivityList";
 
 /** Cards whose approve answer is plain, so "Approve all" can send it for the person. */
 function approvable(approval: Approval): boolean {

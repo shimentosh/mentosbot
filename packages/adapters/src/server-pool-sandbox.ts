@@ -24,9 +24,9 @@ import {
   serverComputerRef,
   takesNewComputers,
 } from "@rakazo/db";
-import { cancelComputerRunWork } from "./computer-idle.js";
-import { manageComputerWorkspaceDirectories } from "./computer-workspace.js";
-import { DockerSandboxProvider } from "./docker-sandbox.js";
+import { cancelComputerRunWork } from "./computers/computer-idle.js";
+import { manageComputerWorkspaceDirectories } from "./computers/computer-workspace.js";
+import { DockerSandboxProvider } from "./providers/computer/docker/docker-sandbox.js";
 
 export interface ComputerServerDirectory {
   /** The servers the computer with this home may use, and where it is now. */

@@ -2,8 +2,8 @@ import {
   getObjectStorageSettings,
   getObjectStorageUsage,
   updateObjectStorageSettings,
-} from "../object-storage-config.js";
-import { previewStorageCleanup, runStorageCleanup } from "../storage-cleanup.js";
+} from "../content/object-storage-config.js";
+import { previewStorageCleanup, runStorageCleanup } from "../content/storage-cleanup.js";
 import type { RouterContext } from "./context.js";
 
 export function objectStorageRoutes(ctx: RouterContext) {

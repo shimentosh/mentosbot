@@ -37,8 +37,8 @@ const { projectFolder, client } = vi.hoisted(() => ({
   projectFolder: { get: vi.fn(), browse: vi.fn(), set: vi.fn(), stop: vi.fn() },
   client: { current: undefined as unknown },
 }));
-vi.mock("../lib/rpc", () => ({ rpc: { projectFolder }, selectedSpaceId: () => "space-1" }));
-vi.mock("../lib/query", () => ({
+vi.mock("../lib/query/rpc", () => ({ rpc: { projectFolder }, selectedSpaceId: () => "space-1" }));
+vi.mock("../lib/query/query", () => ({
   get queryClient() {
     return client.current;
   },

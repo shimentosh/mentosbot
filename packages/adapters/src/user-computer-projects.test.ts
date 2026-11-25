@@ -6,7 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { ProcessEvent } from "@rakazo/adapter-kit";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { HostComputerRequest } from "./host-computer-protocol.js";
+import type { HostComputerRequest } from "./computers/host/host-computer-protocol.js";
+import type { UserDeviceGateway } from "./computers/host/user-device-protocol.js";
 import type { UserComputerSession } from "./user-computer-projects.js";
 import {
   checkUserComputerFolder,
@@ -19,7 +20,6 @@ import {
   stopKeptCommand,
   userFolder,
 } from "./user-computer-projects.js";
-import type { UserDeviceGateway } from "./user-device-protocol.js";
 
 /**
  * A device that runs each command here as the desktop app does: in a process group of its own

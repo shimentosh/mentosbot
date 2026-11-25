@@ -18,9 +18,9 @@ import type { PrismaClient } from "@rakazo/db";
 import { runAsSystem } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import WebSocket, { WebSocketServer } from "ws";
+import type { UserDeviceHub, UserDevices } from "./computers/host/user-device-gateway.js";
+import { validUserDeviceForwardSecret } from "./computers/host/user-device-gateway.js";
 import { pipeWebSockets } from "./socket-bridge.js";
-import type { UserDeviceHub, UserDevices } from "./user-device-gateway.js";
-import { validUserDeviceForwardSecret } from "./user-device-gateway.js";
 
 /** Another API process hands a device's tunnel socket to the one holding the relay's. Not under /api. */
 export const USER_DEVICE_TUNNEL_FORWARD_PATH = "/internal/user-devices/tunnel";

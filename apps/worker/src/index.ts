@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { JobPublisher, JobWorkerHost } from "@rakazo/adapter-kit";
 import { unwrapEnvFromKeyManager } from "@rakazo/adapters";
+import { configuredMeetingMedia } from "@rakazo/adapters/meeting-media";
 import { loadRootEnv } from "@rakazo/core/node/load-root-env";
 import { stopOnShutdownSignals } from "@rakazo/core/node/shutdown-signals";
 import { startWorkerHealth } from "./health.js";
@@ -14,6 +15,9 @@ import {
   ChatSdkMessagingSurface,
   CodexCatalogCache,
   configuredBotEmailProvider,
+  configuredEmailProvider,
+  configuredMeetingProviders,
+  configuredMeetingSpaces,
   contentKeyProviderFromEnv,
   createAgentHomeStore,
   createApnsActivityProvider,
@@ -22,6 +26,7 @@ import {
   createCloudAgentConnection,
   createConnectorRuntime,
   createDeadJobPruner,
+  createLifecycleEmailSender,
   createMediaGenerationProvider,
   createPaymentWalletProvider,
   createPostgresReconciliationLeadership,
@@ -41,7 +46,10 @@ import {
   InMemoryJobQueue,
   installedMessaging,
   isMessagingSurfaceEnabled,
+  MeetingCalendarService,
+  MeetingService,
   machineCleanupRecords,
+  meetingCalendarScope,
   messagingEnvFromProcess,
   messagingPlatformsFromEnv,
   PiAgentRuntime,
@@ -67,8 +75,10 @@ import {
   withHostComputerScreen,
   withRunWorker,
   withSecretPersistence,
+  withSecretWriteAhead,
 } from "@rakazo/adapters";
-import { abortableDelay, resolveSupervisorToken } from "@rakazo/core";
+import { abortableDelay } from "@rakazo/core";
+import { resolveMeetingSigningKey, resolveSupervisorToken } from "@rakazo/core/node/secrets-guard";
 import {
   createBoardEvents,
   createDb,
@@ -126,11 +136,15 @@ async function main() {
     }),
     (threadId) => workActivities?.threadChanged(threadId),
   );
-  const secrets = await createWorkerSecretStore(process.env, realtime);
+  // The queue is built from this client below; a secret written or dropped before then gets no
+  // backup.
+  let secretCleanupJobs: JobPublisher | undefined;
+  const secrets = withSecretWriteAhead(
+    await createWorkerSecretStore(process.env, realtime),
+    () => secretCleanupJobs,
+  );
   if (secrets.describe().capabilities.degraded)
     logger.warn("Secret storage degraded; encrypted credentials remain available");
-  // The queue is built from this client below; a secret dropped before then gets no retry.
-  let secretCleanupJobs: JobPublisher | undefined;
   prisma = withSecretPersistence(prisma, secrets, () => secretCleanupJobs);
   installSecurityEventStore(prisma);
   installAuditEventStore(prisma);
@@ -165,7 +179,13 @@ async function main() {
     : undefined;
   const memoryProviders = new SpaceMemoryProviderResolver(prisma, secrets);
   const objectStorage = await resolveObjectStorage(prisma, secrets);
-  const home = createAgentHomeStore(env.dataDir, prisma, process.env, objectStorage?.config);
+  const home = createAgentHomeStore(
+    env.dataDir,
+    prisma,
+    process.env,
+    env.workspaceSaveLimits,
+    objectStorage?.config,
+  );
   void home.removeStaleStaging().catch((error) => logger.error("home staging cleanup", error));
   const artifacts = createArtifactStore(env.dataDir, prisma, process.env, objectStorage?.config);
   // A bucket saved in Settings takes effect on restart, as it would from OBJECT_STORAGE_*.
@@ -239,8 +259,56 @@ async function main() {
     smtpUrl: process.env.BOT_EMAIL_SMTP_URL?.trim() || undefined,
     domain: process.env.INBOUND_EMAIL_DOMAIN?.trim() || undefined,
   });
+  // Account mail, for the lifecycle mails the queue holds. Without it, or with product mail
+  // switched off since they were queued, those jobs are dropped.
+  // Read only when product mail is on, so incomplete mail settings never stop a worker that
+  // sends none.
+  const accountEmail =
+    process.env.WELCOME_EMAIL_ENABLED === "true"
+      ? configuredEmailProvider({
+          provider: process.env.EMAIL_PROVIDER?.trim() || undefined,
+          apiKey: process.env.EMAIL_API_KEY?.trim() || undefined,
+          from: process.env.EMAIL_FROM?.trim() || undefined,
+          replyTo: process.env.EMAIL_REPLY_TO?.trim() || undefined,
+          smtpUrl: process.env.SMTP_URL?.trim() || undefined,
+        })
+      : undefined;
+  const lifecycleEmail = accountEmail
+    ? createLifecycleEmailSender({ prisma, email: accountEmail, jobs, analytics })
+    : undefined;
+  const { meeting: meetingProvider, calendar: calendarProvider } =
+    await configuredMeetingProviders();
+  const meetingMedia = meetingProvider && configuredMeetingMedia();
+  const meetings =
+    meetingProvider &&
+    new MeetingService({
+      prisma,
+      jobs,
+      events,
+      provider: meetingProvider,
+      spaceIds: configuredMeetingSpaces(meetingProvider),
+      buildJoin: meetingMedia?.buildJoin,
+    });
+  const meetingCalendar =
+    calendarProvider &&
+    meetings &&
+    new MeetingCalendarService({
+      prisma,
+      jobs,
+      provider: calendarProvider,
+      webOrigin: process.env.WEB_ORIGIN?.trim() || "http://127.0.0.1:5173",
+      oauthStateKey: resolveMeetingSigningKey(),
+      enabled: (spaceId) => meetings.enabled(spaceId),
+      buildJoin: meetingMedia?.buildJoin ?? ((input) => input),
+      publish: async ({ spaceId, userId }) => {
+        await events.publishSpaceChange?.(meetingCalendarScope(spaceId, userId), "meetingCalendar");
+      },
+    });
   const { executor, jobHandlers, messagingDelivery, teamChat } = createRunRuntime(env, connectors, {
     mediaGeneration,
+    meetingWork: meetings?.work.bind(meetings),
+    meetingCalendarSync:
+      meetingCalendar && (({ connectionId }) => meetingCalendar.sync(connectionId)),
     prisma,
     runtime,
     // Live per-account Codex catalog; never refreshes or writes credentials.
@@ -257,6 +325,7 @@ async function main() {
     onTicketChange: ticketChanges,
     // Bots use a separate sending connection from account email.
     email,
+    lifecycleEmail,
     messaging,
     isMessagingInstallationActive: messagingInstallations
       ? (id: string) => messagingInstallations.isActive(id)
@@ -294,6 +363,7 @@ async function main() {
   const reconciler = createRunReconciler(
     {
       prisma,
+      secretStore: secrets,
       jobs,
       events,
       notifications,
@@ -330,6 +400,7 @@ async function main() {
         await jobHost.stop();
         // A bot's email still on its way finishes before the process exits.
         await email?.drain?.();
+        await accountEmail?.drain?.();
         await jobs.close();
         await secrets.close();
         await realtime.close();

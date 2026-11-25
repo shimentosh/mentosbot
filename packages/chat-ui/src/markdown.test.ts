@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { expectLinearTime } from "@rakazo/contracts/test-timing";
 import { describe, expect, it } from "vitest";
 import {
   closeUnterminatedFence,
@@ -40,12 +41,6 @@ function linkHrefs(text: string) {
 }
 
 /** The input is sized so a backtracking pattern takes far longer, so a slow runner never trips the limit. */
-function expectLinearTime(work: () => unknown) {
-  const started = performance.now();
-  work();
-  expect(performance.now() - started).toBeLessThan(3_000);
-}
-
 describe("linkifyExplicitUrls", () => {
   it("links bare http(s) URLs and email addresses", () => {
     expect(
@@ -138,11 +133,10 @@ describe("plainTextLinkParts", () => {
   });
 
   it("scans a long alphanumeric run without an at-sign quickly", () => {
-    const text = "a".repeat(40_000);
-    const started = performance.now();
-    const parts = plainTextLinkParts(text);
-    expect(performance.now() - started).toBeLessThan(250);
-    expect(parts).toEqual([{ type: "text", value: text }]);
+    const text = "a".repeat(400_000);
+    expectLinearTime(() =>
+      expect(plainTextLinkParts(text)).toEqual([{ type: "text", value: text }]),
+    );
   });
 });
 

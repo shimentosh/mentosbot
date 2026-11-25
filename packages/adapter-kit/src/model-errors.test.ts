@@ -1,3 +1,4 @@
+import { expectLinearTime } from "@rakazo/contracts/test-timing";
 import { describe, expect, it } from "vitest";
 import {
   isModelCredentialRejected,
@@ -442,6 +443,33 @@ describe("provider availability classification", () => {
   });
 });
 
+describe("OpenAI prepaid credit exhaustion", () => {
+  const noCredits = [
+    "You have no credits remaining. Add credits to continue using the API at",
+    "https://example.test/credits.",
+  ].join(" ");
+
+  it.each([
+    ["statusless no-credits message", new Error(noCredits)],
+    [
+      "statusless credit_balance_exhausted text",
+      new Error(`credit_balance_exhausted: ${noCredits}`),
+    ],
+    ["code only", { code: "credit_balance_exhausted" }],
+    ["HTTP 429 credit_balance_exhausted", { status: 429, code: "credit_balance_exhausted" }],
+  ])("moves to a backup without retrying the same model: %s", (_label, error) => {
+    expect(isRetryableProviderUnavailable(error)).toBe(true);
+    expect(isTransientModelError(error)).toBe(false);
+  });
+
+  it.each([`401 invalid_api_key: ${noCredits}`, `${noCredits} invalid api key`])(
+    "does not treat a credit message with an auth marker as fallback-eligible: %s",
+    (error) => {
+      expect(isRetryableProviderUnavailable(new Error(error))).toBe(false);
+    },
+  );
+});
+
 describe("rejected model credentials", () => {
   it.each([
     '401 {"type":"error","error":{"type":"authentication_error","message":"OAuth access token has been revoked."}}',
@@ -524,9 +552,9 @@ describe("status codes in long messages", () => {
   });
 
   it("stays fast on long runs of spacing after a status word", () => {
-    const started = performance.now();
-    isTransientModelError(`status${"\t".repeat(50_000)}x`);
-    isModelCredentialRejected(`http status${"\t".repeat(50_000)}x`);
-    expect(performance.now() - started).toBeLessThan(500);
+    expectLinearTime(() => {
+      isTransientModelError(`status${"\t".repeat(200_000)}x`);
+      isModelCredentialRejected(`http status${"\t".repeat(200_000)}x`);
+    });
   });
 });

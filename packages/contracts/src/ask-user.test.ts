@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { askTextLength, encodeAskChoiceAnswer, parseAskChoiceAnswer } from "./ask-user.js";
-import { MessageBlock } from "./events.js";
+import { MessageBlock } from "./threads/message-blocks.js";
 
 describe("choice question blocks", () => {
   it("still reads a question saved before drafts, multi-select and own answers", () => {

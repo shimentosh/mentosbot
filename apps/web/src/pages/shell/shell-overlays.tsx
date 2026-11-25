@@ -12,20 +12,21 @@ import { writeSaved } from "@rakazo/core/query";
 import type { RefObject } from "react";
 import { lazyOverlay } from "../../components/ErrorBoundary";
 import { setLabs } from "../../lib/bootstrap";
-import type { SpaceQueries } from "../../lib/query";
-import { queryClient } from "../../lib/query";
-import type { createSpaceRpc, RpcClient } from "../../lib/rpc";
-import type { ShellOverlay } from "../shell-overlay";
-import { FALLBACK_BOT_COLOR } from "./chat-shared";
+import { invalidateVoiceConsent } from "../../lib/calls/voice-consent";
+import type { SpaceQueries } from "../../lib/query/query";
+import { queryClient } from "../../lib/query/query";
+import type { createSpaceRpc, RpcClient } from "../../lib/query/rpc";
+import { FALLBACK_BOT_COLOR } from "./chat/chat-shared";
+import type { ShellOverlay } from "./shell-overlay-url";
 
 const SettingsOverlay = lazyOverlay(() =>
-  import("../SettingsOverlay").then((module) => module.SettingsOverlay),
+  import("../settings/SettingsOverlay").then((module) => module.SettingsOverlay),
 );
 const PeerMessagesOverlay = lazyOverlay(() =>
-  import("../PeerMessagesOverlay").then((module) => module.PeerMessagesOverlay),
+  import("../settings/PeerMessagesOverlay").then((module) => module.PeerMessagesOverlay),
 );
 const IntegrationsOverlay = lazyOverlay(() =>
-  import("../IntegrationsOverlay").then((module) => module.IntegrationsOverlay),
+  import("../integrations/IntegrationsOverlay").then((module) => module.IntegrationsOverlay),
 );
 const SkillsDialog = lazyOverlay(() =>
   import("../../components/integrations/skills-dialog").then((module) => module.SkillsDialog),
@@ -38,8 +39,11 @@ const BotTemplatesDialog = lazyOverlay(() =>
     (module) => module.BotTemplatesDialog,
   ),
 );
+const AgentImportDialog = lazyOverlay(() =>
+  import("./bots/agent-import-dialog").then((module) => module.AgentImportDialog),
+);
 const McpServersOverlay = lazyOverlay(() =>
-  import("../McpServersOverlay").then((module) => module.McpServersOverlay),
+  import("../integrations/McpServersOverlay").then((module) => module.McpServersOverlay),
 );
 
 /** Bound Settings leave so a hung voice status refresh cannot block dismissal. */
@@ -53,7 +57,7 @@ function voiceStatusRefreshTimeout(): Promise<never> {
   });
 }
 
-/** The integrations, skills, approvals, bot templates and MCP overlays the URL opens. */
+/** The integrations, skills, approvals, bot templates, import and MCP overlays the URL opens. */
 export function AppOverlays({
   overlay,
   setOverlay,
@@ -101,6 +105,15 @@ export function AppOverlays({
           }}
         />
       ) : null}
+      {overlay?.kind === "import" ? (
+        <AgentImportDialog
+          onClose={() => setOverlay(null)}
+          onCreated={(bot) => {
+            setOverlay(null);
+            onOpenBot(bot);
+          }}
+        />
+      ) : null}
       {overlay?.kind === "mcp" ? (
         <McpServersOverlay
           editServerId={overlay.serverId}
@@ -125,7 +138,6 @@ export function SettingsOverlays({
   removeSpace,
   leftSpace,
   refreshSpaces,
-  openAgentImport,
   alive,
   user,
   refetchSession,
@@ -149,7 +161,6 @@ export function SettingsOverlays({
   removeSpace: (spaceId: string) => Promise<void>;
   leftSpace: (spaceId: string, activeSpaceId: string) => Promise<void>;
   refreshSpaces: () => Promise<void>;
-  openAgentImport: () => void;
   alive: RefObject<boolean>;
   user: { name?: string | null; email?: string } | undefined;
   refetchSession: () => Promise<unknown>;
@@ -229,15 +240,13 @@ export function SettingsOverlays({
             }
           }}
           onAccountImported={refreshSpaces}
-          onImportAgent={() => {
-            setOverlay(null);
-            openAgentImport();
-          }}
+          onImportAgent={() => setOverlay({ kind: "import" })}
           memoryConfig={memoryConfig}
           onMemoryConfigChange={(config) => {
             void writeSaved(queryClient, queries.memory.providerConfig.queryKey(), () => config);
           }}
           onVoiceStatusMaybeChanged={async () => {
+            invalidateVoiceConsent();
             try {
               queryClient.setQueryData(
                 voiceStatusKey,

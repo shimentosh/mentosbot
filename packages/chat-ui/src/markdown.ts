@@ -5,7 +5,7 @@ import { LINK_PREVIEW_URL_MAX_LENGTH } from "@rakazo/contracts";
 import { urlSite } from "@rakazo/core/egress";
 import LinkifyIt from "linkify-it";
 import type { ReactNode } from "react";
-import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
@@ -574,6 +574,8 @@ function linkLookup<Source extends { endpoint?: string }, T>(
   const mounted = new Map<string, number>();
   const listeners = new Set<() => void>();
 
+  const keyFor = (source: Source | null, subject: string) =>
+    JSON.stringify([source?.endpoint ?? "", subject]);
   const setValue = (key: string, value: T | null) => {
     values.delete(key);
     values.set(key, value);
@@ -614,50 +616,85 @@ function linkLookup<Source extends { endpoint?: string }, T>(
       },
     );
   };
-
-  /** The answer once the API has one, and a way to drop a value that turns out unusable. */
-  // biome-ignore lint/correctness/noComponentHookFactories: called once at module scope per lookup kind, never inside a component.
-  return function useLookup(
-    source: Source | null,
-    subject: string | undefined,
-    paused: boolean,
-  ): { value: T | null; unusable: () => void } {
-    const key = JSON.stringify([source?.endpoint ?? "", subject]);
-    const snapshot = () => (subject ? (values.get(key) ?? null) : null);
-    const value = useSyncExternalStore(subscribe, snapshot, snapshot);
-    useEffect(() => {
-      if (!subject) return;
-      mounted.set(key, (mounted.get(key) ?? 0) + 1);
-      return () => {
-        const left = (mounted.get(key) ?? 1) - 1;
-        if (left > 0) {
-          mounted.set(key, left);
-          return;
-        }
-        mounted.delete(key);
-        const retry = busyRetries.get(key);
-        if (retry === undefined) return;
-        clearTimeout(retry);
-        busyRetries.delete(key);
-        pending.delete(key);
-      };
-    }, [key, subject]);
-    useEffect(() => {
-      if (!source || paused || !subject) return;
-      if (values.has(key) || pending.has(key)) return;
-      if (Date.now() - (failed.get(key) ?? -Infinity) < FAILED_LOOKUP_RETRY_MS) return;
-      request(source, subject, key, 1);
-    }, [source, paused, subject, key]);
-    return {
-      value,
-      unusable: () => {
-        if (subject) setValue(key, null);
-      },
+  /** Counts a link to this subject as on screen until the returned release runs. */
+  const show = (key: string) => {
+    mounted.set(key, (mounted.get(key) ?? 0) + 1);
+    return () => {
+      const left = (mounted.get(key) ?? 1) - 1;
+      if (left > 0) {
+        mounted.set(key, left);
+        return;
+      }
+      mounted.delete(key);
+      const retry = busyRetries.get(key);
+      if (retry === undefined) return;
+      clearTimeout(retry);
+      busyRetries.delete(key);
+      pending.delete(key);
     };
+  };
+  const askFor = (source: Source, subject: string, key: string) => {
+    if (values.has(key) || pending.has(key)) return;
+    if (Date.now() - (failed.get(key) ?? -Infinity) < FAILED_LOOKUP_RETRY_MS) return;
+    request(source, subject, key, 1);
+  };
+
+  return {
+    /** The answer once the API has one, and a way to drop a value that turns out unusable. */
+    useOne(
+      source: Source | null,
+      subject: string | undefined,
+      paused: boolean,
+    ): { value: T | null; unusable: () => void } {
+      const key = keyFor(source, subject ?? "");
+      const snapshot = () => (subject ? (values.get(key) ?? null) : null);
+      const value = useSyncExternalStore(subscribe, snapshot, snapshot);
+      useEffect(() => (subject ? show(key) : undefined), [key, subject]);
+      useEffect(() => {
+        if (source && !paused && subject) askFor(source, subject, key);
+      }, [source, paused, subject, key]);
+      return {
+        value,
+        unusable: () => {
+          if (subject) setValue(key, null);
+        },
+      };
+    },
+    /** The answers the API has for these subjects so far, by subject. */
+    useMany(source: Source | null, subjects: readonly string[], paused: boolean) {
+      const sorted = [...new Set(subjects)].sort();
+      const subjectList = JSON.stringify(sorted);
+      // The joined answers are a string, so an unchanged answer keeps the same snapshot.
+      const snapshot = () =>
+        JSON.stringify(sorted.map((subject) => values.get(keyFor(source, subject)) ?? null));
+      const answers = useSyncExternalStore(subscribe, snapshot, snapshot);
+      useEffect(() => {
+        const shown: string[] = JSON.parse(subjectList);
+        const releases = shown.map((subject) => show(keyFor(source, subject)));
+        return () => {
+          for (const release of releases) release();
+        };
+      }, [source, subjectList]);
+      useEffect(() => {
+        if (!source || paused) return;
+        for (const subject of JSON.parse(subjectList) as string[]) {
+          askFor(source, subject, keyFor(source, subject));
+        }
+      }, [source, paused, subjectList]);
+      return useMemo(() => {
+        const bySubject = new Map<string, T>();
+        const list = JSON.parse(subjectList) as string[];
+        (JSON.parse(answers) as (T | null)[]).forEach((answer, index) => {
+          const subject = list[index];
+          if (answer !== null && subject !== undefined) bySubject.set(subject, answer);
+        });
+        return bySubject as ReadonlyMap<string, T>;
+      }, [answers, subjectList]);
+    },
   };
 }
 
-const useFaviconLookup = linkLookup<LinkFavicons, string>(async (source, origin) => {
+const faviconLookup = linkLookup<LinkFavicons, string>(async (source, origin) => {
   const answer = await source.load(origin);
   return { value: answer.icon, retry: answer.retry };
 });
@@ -666,21 +703,21 @@ const useFaviconLookup = linkLookup<LinkFavicons, string>(async (source, origin)
 export function useLinkFavicon(href: string): { icon: string | null; unusable: () => void } {
   const source = useContext(LinkFaviconsContext);
   const paused = useContext(LinkFaviconsPausedContext);
-  const { value, unusable } = useFaviconLookup(source, linkFaviconOrigin(href), paused);
+  const { value, unusable } = faviconLookup.useOne(source, linkFaviconOrigin(href), paused);
   return { icon: value, unusable };
 }
 
 // Previews carry an image each, so a long session keeps only the most recent ones.
 const MAX_REMEMBERED_PREVIEWS = 200;
 
-const usePreviewLookup = linkLookup<LinkPreviews, LinkPreview>(async (source, url) => {
+const previewLookup = linkLookup<LinkPreviews, LinkPreview>(async (source, url) => {
   const answer = await source.load(url);
   return { value: answer.preview, retry: answer.retry };
 }, MAX_REMEMBERED_PREVIEWS);
 
 /** The preview for a link once the API has one; null while it loads and when there is none. */
 export function useLinkPreview(url: string): LinkPreview | null {
-  return usePreviewLookup(useContext(LinkPreviewsContext), url, false).value;
+  return previewLookup.useOne(useContext(LinkPreviewsContext), url, false).value;
 }
 
 /** The site a card names: the page's own name for its site, else the link's host without www. */
@@ -767,6 +804,22 @@ export function linkPreviewUrls(
     for (const href of visibleMarkdownLinks(prose)) add(href);
   }
   return links;
+}
+
+/** The icons the API has for these links so far, by link. */
+export function useLinkFavicons(hrefs: readonly string[]): ReadonlyMap<string, string> {
+  const source = useContext(LinkFaviconsContext);
+  const paused = useContext(LinkFaviconsPausedContext);
+  const origins = hrefs.flatMap((href) => linkFaviconOrigin(href) ?? []);
+  const byOrigin = faviconLookup.useMany(source, origins, paused);
+  return useMemo(() => {
+    const byHref = new Map<string, string>();
+    for (const href of hrefs) {
+      const icon = byOrigin.get(linkFaviconOrigin(href) ?? "");
+      if (icon) byHref.set(href, icon);
+    }
+    return byHref;
+  }, [byOrigin, hrefs]);
 }
 
 export function closeUnterminatedFence(markdown: string): string {

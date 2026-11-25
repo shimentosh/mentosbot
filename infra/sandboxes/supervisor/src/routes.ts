@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { boundedSandboxCommandTimeoutMs } from "@rakazo/core";
+import { boundedSandboxCommandTimeoutMs } from "@rakazo/core/node/sandbox-command";
 import { getLogger } from "@rakazo/logging";
 import { requestLogging } from "@rakazo/logging/hono";
 import type Docker from "dockerode";
@@ -22,6 +22,7 @@ import {
   COMPUTER_UID,
   COMPUTER_USER,
   computerBridgeNameFor,
+  computerBrowserProxyPacMatches,
   computerComputeGpusMatch,
   computerDnsMatches,
   computerHomeStorage,
@@ -39,6 +40,7 @@ import {
   xdotoolCommand,
 } from "./computer-spec.js";
 import {
+  computerBrowserProxyPacUrl,
   computerComputeGpus,
   computerDns,
   computerMounts,
@@ -318,6 +320,8 @@ app.post("/computers", async (c) => {
           // So is the owner's network: the browser's proxy is part of its environment.
           (info.Config.Labels?.[NETWORK_EXIT_LABEL] ?? undefined) ===
             networkExitFingerprint(networkExit) &&
+          // And the bot browser's proxy auto-config.
+          computerBrowserProxyPacMatches(info.Config.Env, computerBrowserProxyPacUrl) &&
           controlPublishOk &&
           (!storage.homeVolume || homeVolumeMatches(info.HostConfig.Mounts, storage.homeVolume)) &&
           // A computer that cannot rejoin its network is replaced below instead.
@@ -383,6 +387,7 @@ app.post("/computers", async (c) => {
           dns: computerDns,
           mounts: computerMounts,
           computeGpus: computerComputeGpus,
+          browserProxyPacUrl: computerBrowserProxyPacUrl,
           locale,
           env: exitSettings.env,
           labels: exitSettings.labels,

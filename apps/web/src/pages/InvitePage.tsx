@@ -4,12 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
-import { organizationsQuery } from "../lib/organizations";
+import { WindowChrome } from "../components/WindowChrome";
 import { clearPendingInvite } from "../lib/pending-invite";
-import { queryClient, useQueryUserId } from "../lib/query";
-import { rpc, selectSpace } from "../lib/rpc";
-import { errorText } from "../lib/user-error";
-import { WindowChrome } from "./WindowChrome";
+import { queryClient, useQueryUserId } from "../lib/query/query";
+import { rpc, selectSpace } from "../lib/query/rpc";
+import { errorText } from "../lib/query/user-error";
+import { organizationsQuery } from "../lib/spaces/organizations";
 
 export function InvitePage() {
   const { invitationId = "" } = useParams();

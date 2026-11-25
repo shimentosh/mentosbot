@@ -25,7 +25,7 @@ import {
   teamBotForOwner,
   unshareBot,
 } from "@rakazo/db";
-import { loadMessagePage } from "../thread-message-pages.js";
+import { loadMessagePage } from "../threads/thread-message-pages.js";
 import type { RouterContext } from "./context.js";
 import { computerContext, THREAD_MESSAGE_PAGE_SIZE } from "./shared.js";
 

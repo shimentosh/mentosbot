@@ -1,11 +1,11 @@
 import type { MessageBlock } from "@rakazo/contracts";
 import { createStreamingRedactor } from "@rakazo/core";
 import { describe, expect, it, vi } from "vitest";
-import { fakeDatabase } from "./bot-secrets.test-support.js";
-import type { RunContext } from "./run-context.js";
-import type { ToolCall } from "./run-tool-gate.js";
-import { secretTools } from "./run-tools-secrets.js";
-import { EncryptedSecretStore } from "./secrets.js";
+import type { RunContext } from "./runs/assembly/run-context.js";
+import type { ToolCall } from "./runs/tools/run-tool-gate.js";
+import { secretTools } from "./runs/tools/run-tools-secrets.js";
+import { fakeDatabase } from "./secrets/bot-secrets.test-support.js";
+import { EncryptedSecretStore } from "./secrets/secrets.js";
 
 const secretStore = new EncryptedSecretStore("test-only-encryption-key");
 const KEY = "fake-sheets-key-0123456789";

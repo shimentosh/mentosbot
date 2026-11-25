@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigation, useRouter } from "expo-router";
 import { useLayoutEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { BotAvatar } from "../components/bot-avatar";
-import { useI18n } from "../lib/i18n";
-import { native, useThemedStyles } from "../lib/native";
-import { queryClient, rpcQuery } from "../lib/query";
+import { BotAvatar } from "../components/bots/bot-avatar";
+import { useI18n } from "../lib/i18n/i18n";
+import { native, useThemedStyles } from "../lib/native/native";
+import { queryClient, rpcQuery } from "../lib/query/query";
 
 /** For a team's owner: every teammate's bot in this Space, to read. */
 export default function TeamScreen() {

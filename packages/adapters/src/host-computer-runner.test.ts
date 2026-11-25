@@ -2,8 +2,8 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { HostComputerFrame } from "./host-computer-protocol.js";
-import { createHostComputerRunner } from "./host-computer-runner.js";
+import type { HostComputerFrame } from "./computers/host/host-computer-protocol.js";
+import { createHostComputerRunner } from "./computers/host/host-computer-runner.js";
 
 let root: string;
 let home: string;

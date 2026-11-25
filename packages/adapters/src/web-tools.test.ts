@@ -1,6 +1,6 @@
 import type { AdapterContext, WebFetchProvider } from "@rakazo/adapter-kit";
 import { describe, expect, it } from "vitest";
-import { SCRIPT_PAGE_HINT, webFetchFromTool } from "./web-tools.js";
+import { SCRIPT_PAGE_HINT, webFetchFromTool } from "./web/web-tools.js";
 
 const context = { signal: new AbortController().signal } as AdapterContext;
 

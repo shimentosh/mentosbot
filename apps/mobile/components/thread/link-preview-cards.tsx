@@ -8,8 +8,8 @@ import type { LinkPreview } from "@rakazo/contracts";
 import { fontWeight, MAX_FONT_SCALE, typeScale } from "@rakazo/ui-tokens";
 import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useMobileTokens } from "../../lib/native";
-import { NativeSymbol } from "../native-symbol";
+import { useMobileTokens } from "../../lib/native/native";
+import { NativeSymbol } from "../native/native-symbol";
 
 /** Cards for the links a message shares, drawn once the server has read each page. */
 export function LinkPreviewCards({

@@ -194,8 +194,8 @@ jobs:
           # These read other packages' files without importing them, so the package graph misses them.
           pnpm exec vitest run "${packages[@]}" \
             infra/updater/src/compose-env.test.ts \
-            packages/adapters/src/lark-lazy-loading.test.ts \
-            packages/testkit/src/ios-screenshot-catalog.test.ts \
+            packages/adapters/src/providers/messaging/lark/lark-lazy-loading.test.ts \
+            packages/testkit/src/screenshots/ios-screenshot-catalog.test.ts \
             --shard=${{ matrix.shard }}/3
 
   # The required check and the deploy gate, under one stable name.
@@ -234,12 +234,12 @@ jobs:
         env:
           DATABASE_URL: postgres://rakazo:rakazo@127.0.0.1:5433/rakazo
       - run: pnpm --filter @rakazo/desktop build
-      - run: pnpm exec vitest run packages/adapters/src/host-computer.test.ts packages/adapters/src/desktop-sandbox-command.test.ts packages/adapters/src/desktop-sandbox-paths.test.ts packages/adapters/src/desktop-workspace-cleanup.test.ts packages/adapters/src/computer-support.test.ts apps/desktop/src/host-computer.test.ts
+      - run: pnpm exec vitest run packages/adapters/src/computers/host/host-computer.test.ts packages/adapters/src/providers/computer/desktop/desktop-sandbox-command.test.ts packages/adapters/src/providers/computer/desktop/desktop-sandbox-paths.test.ts packages/adapters/src/providers/computer/desktop/desktop-workspace-cleanup.test.ts packages/adapters/src/computers/screens/computer-support.test.ts apps/desktop/src/main/this-computer/host-computer.test.ts
       - name: Screen control on a real Windows desktop
         if: runner.os == 'Windows'
-        run: pnpm exec vitest run apps/desktop/src/host-screen.windows.test.ts
+        run: pnpm exec vitest run apps/desktop/src/main/this-computer/host-screen.windows.test.ts
       - name: Native computer in headless Electron
-        run: pnpm --filter @rakazo/desktop exec electron ../../node_modules/vitest/vitest.mjs run --root ../.. packages/adapters/src/host-computer.test.ts apps/desktop/src/host-computer.test.ts
+        run: pnpm --filter @rakazo/desktop exec electron ../../node_modules/vitest/vitest.mjs run --root ../.. packages/adapters/src/computers/host/host-computer.test.ts apps/desktop/src/main/this-computer/host-computer.test.ts
         env:
           ELECTRON_RUN_AS_NODE: "1"
 

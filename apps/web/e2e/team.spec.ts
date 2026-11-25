@@ -8,7 +8,7 @@ import {
   openUserSettings,
   rpc,
   signup,
-} from "./helpers";
+} from "./helpers/helpers";
 
 type OrganizationList = {
   organizations: Array<{ id: string; role: string; memberCount: number; defaultSpaceId: string }>;

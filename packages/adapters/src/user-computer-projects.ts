@@ -1,8 +1,8 @@
 import path from "node:path";
 import type { ProcessEvent } from "@rakazo/adapter-kit";
-import type { HostComputerEnvironment } from "./host-computer-protocol.js";
-import { nativeShellCommandArgv } from "./native-shell.js";
-import type { UserDeviceGateway } from "./user-device-protocol.js";
+import type { HostComputerEnvironment } from "./computers/host/host-computer-protocol.js";
+import { nativeShellCommandArgv } from "./computers/host/native-shell.js";
+import type { UserDeviceGateway } from "./computers/host/user-device-protocol.js";
 
 /**
  * Project folders and long-running commands on the user's own computer, shared by the bot's

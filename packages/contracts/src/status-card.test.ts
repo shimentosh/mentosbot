@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { MessageBlock } from "./events.js";
 import {
   CARD_FIELD_LIMIT,
   CARD_TITLE_MAX_LENGTH,
@@ -7,6 +6,7 @@ import {
   isCardLinkUrl,
   ShowCardInput,
 } from "./status-card.js";
+import { MessageBlock } from "./threads/message-blocks.js";
 
 describe("card block", () => {
   it("still parses a card stored before titles, statuses and links", () => {

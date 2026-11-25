@@ -117,6 +117,30 @@ callbacks.
 | `PI_SESSION_RECORDING` | off             | `true` records agent sessions as JSONL under `DATA_DIR/pi-sessions`. The files are not encrypted, so do not use it on a shared or multi-tenant install. |
 | `PRIVACY_POLICY_URL`   | Rakazo's policy | The privacy policy linked from the AI data-sharing notice. Set it on the API.                                                                           |
 
+## Chat history retention
+
+Rakazo keeps chat history until someone clears the chat or deletes the bot. To delete it
+automatically, set `CHAT_HISTORY_RETENTION_DAYS` on the API and worker to a whole number of days:
+
+```env
+CHAT_HISTORY_RETENTION_DAYS=180
+```
+
+About once an hour, one instance deletes the messages and the chat events older than that, oldest
+first, so each chat keeps an unbroken recent history. A chat with a bot run in progress, or a
+question or takeover waiting for an answer, is left alone until that finishes, and so is a message
+still queued behind a run. A saved summary of older messages is dropped with them. Unset or empty keeps
+everything. Any other value that is not a whole number from 1 to 36500 (`0` included) stops the worker,
+and an API running its own jobs (`WAKEUP_DRIVER=memory`), from starting, so a typo never leaves
+history kept unnoticed. Chats already open in an app keep showing deleted messages until they
+reload.
+
+Not deleted by this setting: run records (task prompts and errors), files and
+screenshots bots stored, memory a bot saved, the quoted excerpt a reply keeps of the message it
+answers, messages copied into a connected chat app, and the [audit log](./self-host-audit-log.md#retention),
+which has its own retention. Deleted history cannot be restored from the app; [backups](./self-host-backups.md)
+keep it for their own retention.
+
 ## Database roles
 
 Rakazo uses two Postgres logins:
@@ -225,6 +249,18 @@ To send the API and worker's outbound traffic through a corporate proxy, set `HT
 ```env
 HTTPS_PROXY=http://proxy.example.com:3128
 NO_PROXY=localhost,127.0.0.1,postgres,supervisor,api,worker,web
+```
+
+Guarded fetches tunnel to the address that passed the public-address check, so the proxy never
+resolves the name. A proxy that classifies traffic by the CONNECT target drops a bare address. For
+the HTTPS hosts it allows by name, set `RAKAZO_PROXY_CONNECT_BY_HOSTNAME_HOSTS` to a
+comma-separated list of those hosts. A `*.example.com` entry matches subdomains only. A bare `*`
+and a public suffix such as `*.com` are rejected. Listed hosts are still checked against local DNS
+and their certificate, and plain HTTP stays pinned to the checked address. Leave it unset to keep
+every tunnel on the checked address.
+
+```env
+RAKAZO_PROXY_CONNECT_BY_HOSTNAME_HOSTS=api.example.com,*.downloads.example.com
 ```
 
 For mirrors of the installer and images, see [restricted networks](./self-host-restricted-network.md).

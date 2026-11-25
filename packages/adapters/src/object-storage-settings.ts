@@ -3,8 +3,11 @@ import type { ObjectStorage, SecretStore } from "@rakazo/adapter-kit";
 import type { PrismaClient } from "@rakazo/db";
 import { runAsSystem } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
-import type { S3ObjectStorageConfig } from "./s3-object-storage.js";
-import { objectStorageConfigFromEnv, S3ObjectStorage } from "./s3-object-storage.js";
+import type { S3ObjectStorageConfig } from "./providers/object-storage/s3/s3-object-storage.js";
+import {
+  objectStorageConfigFromEnv,
+  S3ObjectStorage,
+} from "./providers/object-storage/s3/s3-object-storage.js";
 
 export type { S3ObjectStorageConfig };
 /** A bucket connection, named for callers outside the adapter layer. */

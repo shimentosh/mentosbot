@@ -1,4 +1,3 @@
-import { INVITED_TRIAL_WEEKS } from "@rakazo/contracts";
 import { describe, expect, it } from "vitest";
 import {
   accountDeletionEmail,
@@ -9,7 +8,11 @@ import {
   verificationEmail,
 } from "./email.js";
 import { homeDeletionEmail } from "./home-deletion-email.js";
-import { organizationInvitationEmail } from "./organization-invitation-email.js";
+import { modelConnectionEmail } from "./model-connection-email.js";
+import {
+  organizationInvitationEmail,
+  spaceInvitationEmail,
+} from "./organization-invitation-email.js";
 import {
   integrationClaimConfirmEmail,
   pluginSubmissionAdminEmail,
@@ -61,6 +64,7 @@ it("shares the layout across account, product and marketplace emails", async () 
     homeDeletionEmail(user, new Date(), "plan-ended", url),
     homeDeletionEmail(user, new Date(), "unused", url),
     referralEmail(user, url, url),
+    modelConnectionEmail(user, { webOrigin: url, unsubscribeUrl: url }),
     organizationInvitationEmail(user.email, {
       organizationName: "Acme",
       inviterName: "Sam",
@@ -107,4 +111,34 @@ describe("email language", () => {
     expect(english.text).toContain("Hi Ana,");
     expect(english.text).toContain("Rakazo runs on iPhone");
   });
+
+  it("names a Space invitation's Space, never an organization", async () => {
+    const invitation = { spaceName: "Clients", inviterName: "Ana", url: "https://example.test/i" };
+    const english = await spaceInvitationEmail("guest@example.test", invitation);
+    expect(english.subject).toBe("Ana invited you to Clients on Rakazo");
+    expect(english.text).toContain("This invitation expires in 7 days.");
+    expect(english.text).not.toContain("Sign in with this email address");
+  });
+});
+
+it("asks for one thing in the model connection email: the connect step", async () => {
+  const unsubscribeUrl = "https://app.example.test/unsubscribe?token=fake-token";
+  const message = await modelConnectionEmail(
+    { name: "Ana", email: "user@example.test" },
+    { webOrigin: "https://app.example.test", unsubscribeUrl },
+  );
+  expect(message.subject).toBe("Connect a model to start using Rakazo");
+  expect(message.text).toContain("Hi Ana,");
+  expect(message.text).toContain(
+    "Your Rakazo plan has started, but your bots can't reply until a model is connected.",
+  );
+  expect(message.text).toContain(
+    "Sign in with your ChatGPT or Claude subscription, or paste an API key.",
+  );
+  const links = [...message.html!.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
+  expect(links).toEqual([
+    "https://app.example.test/sign-in?next=%2Fonboarding%2Fmodel",
+    unsubscribeUrl,
+  ]);
+  expect(message.headers?.["List-Unsubscribe"]).toBe(`<${unsubscribeUrl}>`);
 });

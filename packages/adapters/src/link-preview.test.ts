@@ -6,7 +6,7 @@ import {
   linkPreviewTags,
   linkPreviewUrl,
 } from "./link-preview.js";
-import type { ResolveHostname } from "./network-address.js";
+import type { ResolveHostname } from "./network/network-address.js";
 
 type Reply = {
   status?: number;

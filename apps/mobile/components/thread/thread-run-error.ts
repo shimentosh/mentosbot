@@ -3,12 +3,12 @@ import { computerHoursOut } from "@rakazo/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { rpc } from "../../lib/api";
-import type { MobileSnapshot } from "../../lib/mobile-types";
-import { openModelSettings } from "../../lib/model-settings";
-import { queryClient, rpcQuery } from "../../lib/query";
-import { computerHoursOutCopy, runErrorActionLabel } from "../../lib/run-error-presentation";
-import { useRunError } from "../run-error-sheet";
+import { rpc } from "../../lib/api/api";
+import type { MobileSnapshot } from "../../lib/api/mobile-types";
+import { computerHoursOutCopy, runErrorActionLabel } from "../../lib/cards/run-error-presentation";
+import { openModelSettings } from "../../lib/models/model-settings";
+import { queryClient, rpcQuery } from "../../lib/query/query";
+import { useRunError } from "../cards/run-error-sheet";
 
 /** The chat's failed run: its error, the recovery action, and whether its details are open. */
 export function useThreadRunError(

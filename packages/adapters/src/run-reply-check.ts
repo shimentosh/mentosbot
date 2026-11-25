@@ -5,16 +5,16 @@ import {
   JEV_AUTO_REVIEW_PROVIDER,
   runCheckerJudge,
   SCRIPTED_AUTO_REVIEW_PROVIDER,
-} from "./auto-review.js";
-import { decisionModel } from "./decision-models.js";
+} from "./approvals/auto-review.js";
+import { decisionModel } from "./approvals/decision-models.js";
 import {
   buildReplyClaimPrompt,
   parseReplyClaimVerdict,
   REPLY_CLAIM_RUBRIC_VERSION,
   replyClaimCorrectionPrompt,
 } from "./reply-claim-check.js";
-import { checkerLlmOptions, checkerModelAccess } from "./run-auto-review.js";
-import type { RunContext } from "./run-context.js";
+import type { RunContext } from "./runs/assembly/run-context.js";
+import { checkerLlmOptions, checkerModelAccess } from "./runs/turn/run-auto-review.js";
 
 /**
  * In Auto, the model that reviews this owner's actions also checks the reply that ends their
@@ -40,6 +40,7 @@ export function finalReplyReviewer(ctx: RunContext): AgentRunRequest["reviewFina
       model: choice.modelId,
       thinkingLevel: choice.thinkingLevel,
       credentialId: choice.credentialId,
+      creditOfferingId: choice.creditOfferingId,
     };
     const scope = {
       runId,
@@ -53,7 +54,6 @@ export function finalReplyReviewer(ctx: RunContext): AgentRunRequest["reviewFina
       scope,
       {
         memberChecker: settings.primarySource === "member",
-        backups: settings.backups,
         registerSecrets: (values) => ctx.secrets.push(...values),
       },
       checker,
