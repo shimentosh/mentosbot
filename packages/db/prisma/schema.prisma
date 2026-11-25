@@ -135,6 +135,7 @@ model User {
   @@map("user")
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]
+  computerAccessKeys ComputerAccessKey[]
 }
 
 /// A row with no answers means the user skipped the survey.
@@ -801,6 +802,7 @@ model Space {
   @@map("spaces")
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]
+  computerAccessKeys ComputerAccessKey[]
 }
 
 /// A space's data encryption key, wrapped by a master key. There is no foreign key:
@@ -1155,6 +1157,7 @@ model Bot {
   @@map("bots")
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]
+  computerAccessKeys ComputerAccessKey[]
 }
 
 model BotSection {
@@ -2069,6 +2072,31 @@ model Computer {
 
 /// A stored revision of a computer's home, kept so its owner can restore an earlier one. Saves
 /// prune these; clearing or deleting the stored home deletes them with it.
+/// A key an outside AI uses to control one bot's computer over MCP. Only a digest of the key is
+/// kept, so a lookup is one indexed read and a leaked table holds nothing that works.
+model ComputerAccessKey {
+  id          String    @id @default(cuid())
+  spaceId     String
+  space       Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botId       String
+  bot         Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
+  name        String
+  /// sha256 of the key, hex.
+  tokenDigest String    @unique
+  /// The key's last four characters, so the owner can tell keys apart.
+  tokenHint   String
+  /// Whether the key may run terminal commands, not just see and use the screen.
+  allowCommands Boolean @default(false)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([spaceId, botId])
+  @@index([userId])
+  @@map("computer_access_keys")
+}
+
 model ComputerHomeVersion {
   id         String   @id @default(cuid())
   computerId String

@@ -24,6 +24,7 @@ export const INBOUND_DELIVERY_ROUTES = {
  */
 export const SESSIONLESS_ROUTES: Readonly<Record<string, string>> = {
   ...INBOUND_DELIVERY_ROUTES,
+  "POST /api/v1/mcp": "a computer access key as a bearer token, bound to one bot",
   "GET /api/auth/capabilities": "public: sign-in options from configuration, no database",
   "GET /api/auth/*": "the auth library: its own credential and session checks, on account tables",
   "POST /api/auth/*": "the auth library: its own credential and session checks, on account tables",

@@ -1332,6 +1332,10 @@ msgstr "Add server URL"
 msgid "Add skills"
 msgstr "Add skills"
 
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Add these to your AI's MCP servers. The key is shown only once."
+msgstr "Add these to your AI's MCP servers. The key is shown only once."
+
 #: apps/web/src/pages/shell/composer/hold-to-talk.tsx
 msgid "Add to message"
 msgstr "Add to message"
@@ -1429,6 +1433,10 @@ msgstr "Agent from another app"
 #: apps/mobile/app/(settings)/general.tsx
 msgid "Agent messages"
 msgstr "Agent messages"
+
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "AI access"
+msgstr "AI access"
 
 #: apps/mobile/app/(settings)/_layout.tsx
 #: apps/mobile/app/(settings)/ai-data-sharing.tsx
@@ -1552,6 +1560,10 @@ msgstr "Allow Rakazo to use Speech Recognition and the microphone in System Sett
 #: apps/mobile/lib/thread/thread-voice.ts
 msgid "Allow speech recognition in Settings, or connect a voice provider that transcribes."
 msgstr "Allow speech recognition in Settings, or connect a voice provider that transcribes."
+
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Allow terminal commands"
+msgstr "Allow terminal commands"
 
 #: apps/web/src/components/models/ProviderSettingsForm.tsx
 msgid "Allow writing"
@@ -2426,6 +2438,10 @@ msgstr "Can chat"
 msgid "Can manage"
 msgstr "Can manage"
 
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Can run commands"
+msgstr "Can run commands"
+
 #: apps/web/src/components/pages/SharePopover.tsx
 msgid "Can view without signing in"
 msgstr "Can view without signing in"
@@ -2930,6 +2946,7 @@ msgstr "Client secret"
 #: apps/web/src/pages/settings/PeerMessagesOverlay.tsx
 #: apps/web/src/pages/shell/bots/agent-import.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 #: apps/web/src/pages/shell/chat/chat-find-bar.tsx
 #: apps/web/src/pages/shell/sidebar/team-bots.tsx
 #: apps/web/src/pages/space/KnowledgeSection.tsx
@@ -3288,6 +3305,10 @@ msgstr "Connect a voice provider first."
 #: apps/web/src/lib/calls/dictation.ts
 msgid "Connect a voice provider that transcribes, or turn off automatic language detection in Voice settings."
 msgstr "Connect a voice provider that transcribes, or turn off automatic language detection in Voice settings."
+
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Connect an AI"
+msgstr "Connect an AI"
 
 #: apps/mobile/app/(settings)/model-connection.tsx
 #: apps/web/src/pages/model-settings/connection-controls.tsx
@@ -3842,6 +3863,10 @@ msgstr "Could not create group"
 msgid "Could not create invite link"
 msgstr "Could not create invite link"
 
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Could not create key"
+msgstr "Could not create key"
+
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 msgid "Could not create section"
 msgstr "Could not create section"
@@ -4043,6 +4068,7 @@ msgstr "Could not leave space"
 #: apps/web/src/components/computers/ComputerHomeVersions.tsx
 #: apps/web/src/components/ErrorBoundary.tsx
 #: apps/web/src/lib/auth/user-devices.ts
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 #: apps/web/src/pages/space/KnowledgeSection.tsx
 msgid "Could not load"
 msgstr "Could not load"
@@ -4409,6 +4435,10 @@ msgstr "Could not reject plugin"
 #: apps/web/src/pages/space/ScratchpadSection.tsx
 msgid "Could not remove"
 msgstr "Could not remove"
+
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Could not remove key"
+msgstr "Could not remove key"
 
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/mobile/app/space-members.tsx
@@ -4979,6 +5009,10 @@ msgstr "Create bot"
 msgid "Create group"
 msgstr "Create group"
 
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Create key"
+msgstr "Create key"
+
 #: apps/mobile/app/new-organization.tsx
 #: apps/web/src/components/spaces/CreateOrganizationDialog.tsx
 msgid "Create organization"
@@ -5452,6 +5486,10 @@ msgstr "Design"
 msgid "Desktop app"
 msgstr "Desktop app"
 
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Desktop assistant"
+msgstr "Desktop assistant"
+
 #: apps/web/src/components/computers/ComputerProviderSettings.tsx
 msgid "Desktop ID"
 msgstr "Desktop ID"
@@ -5693,6 +5731,7 @@ msgstr "Don’t have an account?"
 #: apps/web/src/components/settings/AccountDataSettings.tsx
 #: apps/web/src/components/vault/VaultImport.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 #: apps/web/src/pages/shell/bots/import-setup-card.tsx
 #: apps/web/src/pages/space/ticket-status.ts
 #: packages/i18n/src/activity.ts
@@ -6506,6 +6545,7 @@ msgstr "Has a question"
 
 #: apps/mobile/app/(settings)/mcp-server.tsx
 #: apps/web/src/pages/routines/routine-editor/trigger-cards.tsx
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 msgid "Header"
 msgstr "Header"
 
@@ -8006,6 +8046,7 @@ msgstr "My computers"
 #: apps/web/src/pages/settings/SpaceSettingsPanel.tsx
 #: apps/web/src/pages/shell/bots/agent-import-plan.tsx
 #: apps/web/src/pages/shell/bots/bot-panel.tsx
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 #: apps/web/src/pages/shell/bots/create-bot-dialog.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/space/GroupPanel.tsx
@@ -8118,6 +8159,10 @@ msgstr "Network"
 #: apps/web/src/components/settings/ApprovalRulesSettings.tsx
 msgid "Never ask"
 msgstr "Never ask"
+
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
+msgid "Never used"
+msgstr "Never used"
 
 #: apps/mobile/components/thread/unread-divider.tsx
 #: apps/web/src/components/vault/VaultSettings.tsx
@@ -9913,7 +9958,9 @@ msgstr "Remove"
 
 #. placeholder {0}: attachment.file.name
 #. placeholder {0}: device.name
+#. placeholder {0}: key.name
 #: apps/web/src/components/computers/ComputerDeviceSettings.tsx
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 #: apps/web/src/pages/shell/composer/composer-parts.tsx
 msgid "Remove {0}"
 msgstr "Remove {0}"
@@ -13160,6 +13207,7 @@ msgid "Urgent"
 msgstr "Urgent"
 
 #: apps/web/src/pages/routines/routine-editor/trigger-cards.tsx
+#: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 msgid "URL"
 msgstr "URL"
 

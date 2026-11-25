@@ -44,6 +44,7 @@ import {
   VoiceRow,
 } from "./bot-settings-sections";
 import { BotShareSection } from "./bot-share-section";
+import { ComputerAccessKeys } from "./computer-access-keys";
 import { InstructionSettings } from "./instruction-settings";
 
 const ScratchpadSection = lazyComponent(() =>
@@ -738,6 +739,9 @@ export function BotSettings({
               ) : null}
               {/* Read only once the settings are open: listing versions reads object storage. */}
               {settingsOpen ? <ComputerHomeVersions botId={bot.id} /> : null}
+              {settingsOpen && computer && !bot.share ? (
+                <ComputerAccessKeys botId={bot.id} />
+              ) : null}
               {changed.readAloud ? (
                 <SwitchRow
                   id={`${ids}-auto-speak`}

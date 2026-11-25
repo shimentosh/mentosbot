@@ -423,7 +423,7 @@ export function InboundKeyRows({
 }
 
 /** One labelled value a sender pastes into another service, with a copy button. */
-function CopyRow({
+export function CopyRow({
   label,
   value,
   copyable = true,

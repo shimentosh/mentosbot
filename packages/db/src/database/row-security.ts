@@ -161,6 +161,7 @@ export const ROW_SECURITY_MODELS: ReadonlySet<string> = new Set([
   "ComputerNetworkExit",
   "ComputerRun",
   "ComputerHomeVersion",
+  "ComputerAccessKey",
   "HomeDeletionNotice",
   "Board",
   "Ticket",

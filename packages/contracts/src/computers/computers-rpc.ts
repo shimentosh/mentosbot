@@ -28,6 +28,11 @@ import {
   NetworkExitConnectSchema,
   NetworkExitStatusSchema,
 } from "./computer.js";
+import {
+  ComputerAccessKeyCreatedSchema,
+  ComputerAccessKeyCreateSchema,
+  ComputerAccessKeySchema,
+} from "./computer-access.js";
 import { ComputerCommandSchema } from "./computer-command.js";
 
 export const computersRpc = {
@@ -155,5 +160,13 @@ export const computersRpc = {
       )
       .output(z.object({ image: z.string().nullable() })),
     heartbeat: oc.input(botId).output(z.object({ ok: z.literal(true) })),
+    /** Keys that let an outside AI control this bot's computer over MCP. Owner only. */
+    accessKeys: {
+      list: oc.input(botId).output(z.array(ComputerAccessKeySchema)),
+      create: oc.input(ComputerAccessKeyCreateSchema).output(ComputerAccessKeyCreatedSchema),
+      remove: oc
+        .input(z.object({ botId: Id, keyId: Id }))
+        .output(z.object({ ok: z.literal(true) })),
+    },
   },
 };

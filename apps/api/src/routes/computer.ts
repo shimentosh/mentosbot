@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { ORPCError } from "@orpc/server";
 import type { AgentHomeStore, SandboxProvider } from "@rakazo/adapter-kit";
 import { computerControlExpireJobKey, SandboxFileTooLargeError } from "@rakazo/adapter-kit";
@@ -14,16 +13,13 @@ import {
   ensureComputerWorkspaceLayout,
   isSandboxGoneError,
   ObjectAgentHomeStore,
-  provisionComputer,
   queueComputerUpdate,
   rateLimitEnds,
-  releaseComputerExecutionLease,
   resolveBotUploadPath,
   resolveBotWorkspaceCwd,
   resolveBotWorkspacePath,
   sandboxKindCapabilities,
   scheduleComputerSleep,
-  screenLeaseIdForRun,
   sleepDeferReason,
   toComputerRef,
   touchRunningComputer,
@@ -42,13 +38,12 @@ import type { ComputerRunEnd } from "@rakazo/db";
 import {
   expireComputerExecutionLeases,
   IsolationError,
-  isRecordNotFound,
   parseComputerMode,
   recordComputerRunEnd,
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
+import { bootBotComputer } from "../computers/computer-boot.js";
 import {
-  acquireBootLease,
   answerComputerRequest,
   assertNotAnotherPersonsControl,
   clearGoneSandbox,
@@ -65,6 +60,7 @@ import {
   withViewOnly,
 } from "../computers/computer-control.js";
 import { scrollPoint } from "../computers/computer-input.js";
+import { computerAccessKeyRoutes } from "./computer-access.js";
 import type { RouterContext } from "./context.js";
 import { computerContext } from "./shared.js";
 
@@ -105,54 +101,13 @@ export function computerRoutes(ctx: RouterContext) {
   const { deps, repos, taughtSkills, authed } = ctx;
   return {
     computer: {
+      accessKeys: computerAccessKeyRoutes(ctx),
       status: authed.computer.status.handler(async ({ context, input }) =>
         computerStatus(deps, context.actor, input.botId),
       ),
-      boot: authed.computer.boot.handler(async ({ context, input }) => {
-        const bot = await repos.getBot(context.actor, input.botId);
-        if (!bot.computer) throw new IsolationError();
-        if (bot.computer.state === "running" && bot.computer.providerRef) {
-          try {
-            await ensureComputerWorkspaceLayout(
-              deps.sandbox,
-              await wakeableComputerRef(deps.prisma, bot.computer),
-              parseComputerMode(bot.computer.scope),
-              bot.id,
-              computerContext(context.actor, bot.id, "boot"),
-            );
-            scheduleComputerSleep(deps.jobs, bot.computer.id);
-            return computerStatus(deps, context.actor, input.botId);
-          } catch (error) {
-            await clearGoneSandbox(deps, bot.computer, error);
-          }
-        }
-        const ctx = computerContext(context.actor, bot.id, "boot");
-        const manualRunId = `boot:${randomUUID()}`;
-        const lease = await acquireBootLease(deps.prisma, {
-          computerId: bot.computer.id,
-          runId: manualRunId,
-          botId: bot.id,
-        });
-        const computerId = bot.computer.id;
-        try {
-          await getLogger().withContext({ reason: "manual" }, () =>
-            provisionComputer(deps, computerId, {
-              ...ctx,
-              screenLeaseId: screenLeaseIdForRun(lease, manualRunId),
-            }),
-          );
-          scheduleComputerSleep(deps.jobs, bot.computer.id);
-        } catch (error) {
-          // The bot was deleted or moved to another computer while this boot waited.
-          if (isRecordNotFound(error)) {
-            throw new ClientError("NOT_FOUND", "Computer no longer exists");
-          }
-          throw error;
-        } finally {
-          await releaseComputerExecutionLease(deps.prisma, lease);
-        }
-        return computerStatus(deps, context.actor, input.botId);
-      }),
+      boot: authed.computer.boot.handler(async ({ context, input }) =>
+        bootBotComputer(deps, context.actor, input.botId),
+      ),
       stop: authed.computer.stop.handler(async ({ context, input }) => {
         const bot = await repos.getBot(context.actor, input.botId);
         if (!bot.computer) throw new IsolationError();

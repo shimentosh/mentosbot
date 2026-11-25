@@ -37,6 +37,7 @@ export * from "./clients/network-host.js";
 export * from "./clients/server-headers.js";
 export * from "./clients/server-updates.js";
 export * from "./computers/computer.js";
+export * from "./computers/computer-access.js";
 export * from "./computers/computer-command.js";
 export * from "./computers/terminal.js";
 export * from "./experiments.js";

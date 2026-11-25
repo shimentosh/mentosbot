@@ -125,6 +125,7 @@ import { createBillingService } from "./billing/billing.js";
 import { mountBillingRoutes } from "./billing/billing-webhook.js";
 import { createSpeechSummarizer } from "./calls/speech-summary.js";
 import { mountVoiceHttpRoutes } from "./calls/voice.js";
+import { mountComputerAccessMcp } from "./computer-access/mcp-endpoint.js";
 import { homeRetentionSweep } from "./computers/home-retention.js";
 import { localSignupAdmitter, mountLocalComputerHost } from "./computers/local-settings.js";
 import { mountScreenTarget } from "./computers/screen-proxy.js";
@@ -160,6 +161,7 @@ import { mountMeetingWebhook } from "./meetings/meeting-routes.js";
 import { startMessagingRuntime } from "./messaging/messaging-runtime.js";
 import { settleWithTimeout } from "./messaging/team-chat-startup.js";
 import { recordSignInEnded } from "./models/model-connect-analytics.js";
+import type { RouterDeps } from "./router.js";
 import { createRouter, routerEnv } from "./router.js";
 import { handleHttpError } from "./rpc-errors.js";
 import type { SpaceDeletionDeps } from "./spaces/space-deletion.js";
@@ -698,7 +700,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       enabled: (spaceId) => meetings.enabled(spaceId),
     });
 
-  const router = createRouter({
+  const routerDeps: RouterDeps = {
     // Only computers people paired: nothing clears a routine's "Use my computer" when this
     // server's own screen is turned off and on again.
     userDevices: userDevicesOverride ?? userDevices,
@@ -771,7 +773,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       openSignup: env.messagingOpenSignup,
     },
     env: routerEnv(env),
-  });
+  };
+  const router = createRouter(routerDeps);
   const app = new Hono();
   app.onError(handleHttpError);
   const inFlight = trackInFlightRequests();
@@ -915,6 +918,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   meetingMedia?.mount(app);
   if (meetingCalendar) mountMeetingCalendarHttp(app, meetingCalendar, sessionActor);
   mountWebhookHttpRoutes(app, { prisma, secrets, events, jobs });
+  mountComputerAccessMcp(app, routerDeps);
   if (env.inboundEmail) {
     mountEmailInboundRoute(app, {
       prisma,

@@ -1,0 +1,117 @@
+import { createHash, randomBytes } from "node:crypto";
+import type { Actor, ComputerAccessKey } from "@rakazo/contracts";
+import type { PrismaClient } from "@rakazo/db";
+import { accountDeactivated } from "@rakazo/db";
+
+/** Keys start with this, so a leaked one is easy to recognize and report. */
+const TOKEN_PREFIX = "rkc_";
+const TOKEN_BYTES = 32;
+/** lastUsedAt is a hint for the owner, so it is written at most once a minute. */
+const LAST_USED_WRITE_MS = 60_000;
+
+export const COMPUTER_ACCESS_PATH = "/api/v1/mcp";
+
+export function computerAccessUrl(origin: string): string {
+  return `${origin.replace(/\/$/, "")}${COMPUTER_ACCESS_PATH}`;
+}
+
+export function digestAccessToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function newAccessToken(): { token: string; digest: string; hint: string } {
+  const token = `${TOKEN_PREFIX}${randomBytes(TOKEN_BYTES).toString("base64url")}`;
+  return { token, digest: digestAccessToken(token), hint: token.slice(-4) };
+}
+
+type KeyRow = {
+  id: string;
+  name: string;
+  tokenHint: string;
+  allowCommands: boolean;
+  createdAt: Date;
+  lastUsedAt: Date | null;
+};
+
+export const ACCESS_KEY_SELECT = {
+  id: true,
+  name: true,
+  tokenHint: true,
+  allowCommands: true,
+  createdAt: true,
+  lastUsedAt: true,
+} as const;
+
+export function accessKeyDto(row: KeyRow): ComputerAccessKey {
+  return {
+    id: row.id,
+    name: row.name,
+    hint: row.tokenHint,
+    allowCommands: row.allowCommands,
+    createdAt: row.createdAt.toISOString(),
+    lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
+  };
+}
+
+/** Who a key acts as, and what it may reach. */
+export type AccessGrant = {
+  keyId: string;
+  keyName: string;
+  botId: string;
+  allowCommands: boolean;
+  actor: Actor;
+};
+
+/**
+ * The grant a bearer token carries, or null for anything that should be refused the same way:
+ * no such key, an archived bot, or an owner who is deactivated or no longer in the Space.
+ * Runs in a system context, since the token is all the caller has.
+ */
+export async function resolveAccessToken(
+  prisma: PrismaClient,
+  token: string,
+  now = new Date(),
+): Promise<AccessGrant | null> {
+  if (!token.startsWith(TOKEN_PREFIX)) return null;
+  const key = await prisma.computerAccessKey.findUnique({
+    where: { tokenDigest: digestAccessToken(token) },
+    select: {
+      id: true,
+      name: true,
+      botId: true,
+      spaceId: true,
+      userId: true,
+      allowCommands: true,
+      lastUsedAt: true,
+      bot: { select: { archivedAt: true, userId: true, spaceId: true } },
+      user: { select: { email: true } },
+    },
+  });
+  if (!key || key.bot.archivedAt) return null;
+  // A bot handed to someone else, or moved, leaves the old owner's keys behind.
+  if (key.bot.userId !== key.userId || key.bot.spaceId !== key.spaceId) return null;
+  if (await accountDeactivated(prisma, key.userId)) return null;
+  const member = await prisma.spaceMember.findUnique({
+    where: { spaceId_userId: { spaceId: key.spaceId, userId: key.userId } },
+    select: { id: true },
+  });
+  if (!member) return null;
+  if (!key.lastUsedAt || now.getTime() - key.lastUsedAt.getTime() >= LAST_USED_WRITE_MS) {
+    await prisma.computerAccessKey.updateMany({
+      where: { id: key.id },
+      data: { lastUsedAt: now },
+    });
+  }
+  return {
+    keyId: key.id,
+    keyName: key.name,
+    botId: key.botId,
+    allowCommands: key.allowCommands,
+    actor: {
+      userId: key.userId,
+      spaceId: key.spaceId,
+      email: key.user.email,
+      isDeploymentOwner: false,
+    },
+  };
+}

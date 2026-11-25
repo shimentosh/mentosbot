@@ -9,6 +9,7 @@
 export const SYSTEM_CONTEXT_PATHS = [
   ["/api/auth/*", "authentication"],
   ["/api/v1/bots/*", "bot webhook"],
+  ["/api/v1/mcp", "computer access key"],
   ["/api/v1/email/*", "inbound email"],
   ["/api/v1/messaging/*", "messaging webhook"],
   ["/api/v1/phone/*", "messaging webhook"],
