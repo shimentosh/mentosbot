@@ -58,6 +58,8 @@ export function useHoldToTalk({
   hasDraftRef.current = hasDraft;
   /** Dictation reported listening for this recording, so a later idle means it ended. */
   const started = useRef(false);
+  /** A mouse clicks to start and stop; only touch and pen hold to talk. */
+  const pointerType = useRef<string | null>(null);
   /** `toward` is -1 when cancel lies to the left, 1 in a right-to-left layout. */
   const gesture = useRef<{
     startX: number;
@@ -161,6 +163,8 @@ export function useHoldToTalk({
     startHandsFree,
     buttonProps: {
       onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+        pointerType.current = event.pointerType;
+        if (event.pointerType === "mouse") return;
         if (disabled || event.button !== 0 || recordingRef.current) return;
         event.preventDefault();
         event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -209,8 +213,9 @@ export function useHoldToTalk({
         if (!recordingRef.current?.locked) cancel();
       },
       onClick: (event: { detail: number }) => {
-        // detail 0 is a keyboard press; pointer presses are handled above.
-        if (event.detail === 0) startHandsFree();
+        // detail 0 is a keyboard press. A mouse click starts listening hands-free, and the
+        // Send or Discard button that replaces the microphone ends it; touch is handled above.
+        if (event.detail === 0 || pointerType.current === "mouse") startHandsFree();
       },
       onContextMenu: (event: { preventDefault: () => void }) => event.preventDefault(),
     },
@@ -369,7 +374,7 @@ export function HoldToTalkControls({
           {talk.notice}
         </span>
       ) : null}
-      <IconTooltip label={t`Tap to dictate, hold to send`}>
+      <IconTooltip label={t`Dictate`}>
         <Button
           variant="outline"
           size="icon"

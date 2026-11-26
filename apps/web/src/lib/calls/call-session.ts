@@ -621,7 +621,6 @@ async function openMic() {
       mode: "endpoint",
       callId,
       transcribe,
-      ...(autoLanguage ? { autoLanguage } : {}),
       onFinal: (text) => void handleTranscript(text),
     });
   } catch (error) {

@@ -233,6 +233,26 @@ describe("hold to talk", () => {
     expect(button("Add to message")).toBeTruthy();
   });
 
+  it("starts listening on a mouse click however long the button is held, and stops only on Add", () => {
+    const mic = button("Dictate");
+    const mouse = (type: string) =>
+      act(() => {
+        const event = new MouseEvent(type, { bubbles: true, button: 0, detail: 1 });
+        Object.defineProperty(event, "pointerType", { value: "mouse" });
+        mic.dispatchEvent(event);
+      });
+    mouse("pointerdown");
+    act(() => vi.advanceTimersByTime(TAP_MS + 100));
+    mouse("pointerup");
+    mouse("click");
+
+    expect(dictation.listen).toHaveBeenCalledOnce();
+    expect(dictation.submitHold).not.toHaveBeenCalled();
+    heard("call the bank");
+    act(() => button("Add to message").click());
+    expect(onText).toHaveBeenCalledWith("call the bank", "field");
+  });
+
   it("keeps the solid red under the held pointer in both themes", () => {
     const mic = button("Dictate");
     pointer(mic, "pointerdown");

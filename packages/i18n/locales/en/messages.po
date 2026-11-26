@@ -1555,10 +1555,6 @@ msgstr "Allow microphone access to dictate."
 msgid "Allow once"
 msgstr "Allow once"
 
-#: apps/web/src/lib/calls/dictation.ts
-msgid "Allow Rakazo to use Speech Recognition and the microphone in System Settings."
-msgstr "Allow Rakazo to use Speech Recognition and the microphone in System Settings."
-
 #: apps/mobile/lib/calls/call-session.ts
 #: apps/mobile/lib/composer/composer-dictation.ts
 #: apps/mobile/lib/thread/thread-voice.ts
@@ -1765,7 +1761,6 @@ msgstr "Anyone with the link"
 #: apps/web/src/components/models/ProviderSettingsForm.tsx
 #: apps/web/src/components/vault/kinds.tsx
 #: apps/web/src/lib/models/localized-provider-hint.ts
-#: apps/web/src/pages/integrations/IntegrationsOverlay.tsx
 #: apps/web/src/pages/model-settings/compatible-key-field.tsx
 #: apps/web/src/pages/model-settings/connection-controls.tsx
 #: apps/web/src/pages/model-settings/deployment-model-settings.tsx
@@ -3311,8 +3306,11 @@ msgstr "Connect a model in Settings before running bots."
 msgid "Connect a voice provider first."
 msgstr "Connect a voice provider first."
 
-#: apps/mobile/lib/calls/call-language-preference.ts
 #: apps/web/src/lib/calls/dictation.ts
+msgid "Connect a voice provider that transcribes in Voice settings."
+msgstr "Connect a voice provider that transcribes in Voice settings."
+
+#: apps/mobile/lib/calls/call-language-preference.ts
 msgid "Connect a voice provider that transcribes, or turn off automatic language detection in Voice settings."
 msgstr "Connect a voice provider that transcribes, or turn off automatic language detection in Voice settings."
 
@@ -5552,14 +5550,6 @@ msgstr "Diagram"
 #: apps/web/src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Dictate"
 msgstr "Dictate"
-
-#: apps/web/src/lib/calls/dictation.ts
-msgid "Dictation ended unexpectedly."
-msgstr "Dictation ended unexpectedly."
-
-#: apps/web/src/lib/calls/dictation.ts
-msgid "Dictation failed: {code}"
-msgstr "Dictation failed: {code}"
 
 #: apps/web/src/lib/calls/dictation.ts
 msgid "Dictation failed."
@@ -12111,10 +12101,6 @@ msgstr "Table"
 msgid "Take control"
 msgstr "Take control"
 
-#: apps/web/src/pages/shell/composer/hold-to-talk.tsx
-msgid "Tap to dictate, hold to send"
-msgstr "Tap to dictate, hold to send"
-
 #: apps/mobile/components/media/inline-image-attachment.tsx
 msgid "Tap to open"
 msgstr "Tap to open"
@@ -12239,10 +12225,6 @@ msgstr "The bot couldn't reply because its provider's weekly limit was reached."
 #: apps/web/src/components/messages/SecretAskCard.tsx
 msgid "The bot's browser stays signed in for everyone in this space"
 msgstr "The bot's browser stays signed in for everyone in this space"
-
-#: apps/web/src/lib/calls/dictation.ts
-msgid "The browser keeps dropping the microphone. Start dictation again to retry."
-msgstr "The browser keeps dropping the microphone. Start dictation again to retry."
 
 #: apps/web/src/components/computers/ComputerHomeVersions.tsx
 msgid "The computer gets the files from the chosen time when it next starts. Its current files stay restorable."
@@ -12460,10 +12442,6 @@ msgstr "This bot's reply stopped at its key's weekly limit. Your own key has its
 #: apps/web/src/lib/calls/dictation.ts
 msgid "This browser can't detect when you stop talking. Use Chrome, the desktop app, or hold-to-talk in the composer."
 msgstr "This browser can't detect when you stop talking. Use Chrome, the desktop app, or hold-to-talk in the composer."
-
-#: apps/web/src/lib/calls/dictation.ts
-msgid "This browser has no on-device dictation. Connect a voice provider with transcription, or use Chrome / the desktop app."
-msgstr "This browser has no on-device dictation. Connect a voice provider with transcription, or use Chrome / the desktop app."
 
 #: apps/mobile/lib/calls/incoming-calls.ts
 #: apps/web/src/components/call/IncomingCall.tsx
@@ -13540,10 +13518,6 @@ msgstr "Voice"
 msgid "Voice chat"
 msgstr "Voice chat"
 
-#: apps/web/src/pages/integrations/IntegrationsOverlay.tsx
-msgid "Voice cloning and speech"
-msgstr "Voice cloning and speech"
-
 #: apps/web/src/lib/calls/voice-consent.ts
 msgid "Voice data sharing was not allowed."
 msgstr "Voice data sharing was not allowed."
@@ -13551,10 +13525,6 @@ msgstr "Voice data sharing was not allowed."
 #: apps/web/src/lib/calls/tts.ts
 msgid "Voice request timed out."
 msgstr "Voice request timed out."
-
-#: apps/web/src/pages/integrations/IntegrationsOverlay.tsx
-msgid "Voices, speech and sound effects"
-msgstr "Voices, speech and sound effects"
 
 #. js-lingui-explicit-id
 #: packages/i18n/src/meeting.ts

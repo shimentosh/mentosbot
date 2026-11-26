@@ -75,20 +75,6 @@ const KEY_INTEGRATIONS: Integration[] = [
     fields: [{ name: "github-token", label: <Trans>Personal access token</Trans>, secret: true }],
   },
   {
-    id: "elevenlabs",
-    title: "ElevenLabs",
-    site: "https://elevenlabs.io",
-    description: <Trans>Voices, speech and sound effects</Trans>,
-    fields: [{ name: "elevenlabs-api-key", label: <Trans>API key</Trans>, secret: true }],
-  },
-  {
-    id: "fish-audio",
-    title: "Fish Audio",
-    site: "https://fish.audio",
-    description: <Trans>Voice cloning and speech</Trans>,
-    fields: [{ name: "fish-audio-api-key", label: <Trans>API key</Trans>, secret: true }],
-  },
-  {
     id: "r2",
     title: "Cloudflare R2",
     site: "https://www.cloudflare.com",

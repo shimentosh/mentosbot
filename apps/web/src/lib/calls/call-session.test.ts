@@ -842,9 +842,7 @@ describe("call session", () => {
       await vi.advanceTimersByTimeAsync(ECHO_GUARD_MS - 1);
       expect(listen).not.toHaveBeenCalled();
       await vi.advanceTimersByTimeAsync(1);
-      expect(listen).toHaveBeenCalledWith(
-        expect.objectContaining({ autoLanguage: true, transcribe: true }),
-      );
+      expect(listen).toHaveBeenCalledWith(expect.objectContaining({ transcribe: true }));
     } finally {
       mic.recordingOrStarting = false;
     }
