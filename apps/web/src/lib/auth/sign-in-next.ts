@@ -27,6 +27,8 @@ export function signInNext(next: string | null): string | null {
     next.startsWith(`${MCP_OAUTH_CALLBACK_PATH}?`) ||
     next.startsWith(`${GOOGLE_WORKSPACE_CALLBACK_PATH}?`) ||
     next.startsWith(`${SLACK_INSTALL_CALLBACK_PATH}?`) ||
+    // An outside AI's sign-in, to approve once signed in.
+    next.startsWith("/connect-ai?") ||
     INVITE_PATH.test(next) ||
     (next.startsWith(BOT_CHAT_PREFIX) && isBotChatRouteId(next.slice(BOT_CHAT_PREFIX.length))) ||
     PAGE_REVIEW_PATH.test(next)

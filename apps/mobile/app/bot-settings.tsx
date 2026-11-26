@@ -634,6 +634,17 @@ function BotSettings() {
               ) : null}
               {computerMaintenanceRows}
               {computerHomeVersionRows}
+              {/* Only the bot's owner hands its computer to an outside AI. */}
+              {bot && !bot.share ? (
+                <SettingsRow
+                  accessibilityRole="button"
+                  chevron="right"
+                  title={t`AI access`}
+                  onPress={() =>
+                    router.push({ pathname: "/computer-access", params: { botId: bot.id } })
+                  }
+                />
+              ) : null}
             </SettingsGroup>
             {changed?.readAloud || deviceVoiceEnabled ? (
               <SettingsGroup label={t`Voice`}>

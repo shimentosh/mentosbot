@@ -670,6 +670,21 @@ function LayoutContent() {
                       <Stack.Screen name="board" options={glassHeaderOptions(t`Board`)} />
                       <Stack.Screen name="computer" options={{ title: t`Computer` }} />
                       <Stack.Screen
+                        name="computer-access/index"
+                        options={glassHeaderOptions(t`AI access`)}
+                      />
+                      <Stack.Screen
+                        name="computer-access/new"
+                        options={{
+                          title: t`Connect an AI`,
+                          // Android formSheet hides the header action.
+                          presentation: Platform.OS === "ios" ? "formSheet" : "card",
+                          sheetAllowedDetents: [0.6, 1],
+                          sheetGrabberVisible: true,
+                          contentStyle: { backgroundColor: native.groupedPage },
+                        }}
+                      />
+                      <Stack.Screen
                         name="image"
                         options={{
                           headerShown: false,

@@ -126,6 +126,7 @@ import { mountBillingRoutes } from "./billing/billing-webhook.js";
 import { createSpeechSummarizer } from "./calls/speech-summary.js";
 import { mountVoiceHttpRoutes } from "./calls/voice.js";
 import { mountComputerAccessMcp } from "./computer-access/mcp-endpoint.js";
+import { mountComputerAccessOAuth } from "./computer-access/oauth.js";
 import { homeRetentionSweep } from "./computers/home-retention.js";
 import { localSignupAdmitter, mountLocalComputerHost } from "./computers/local-settings.js";
 import { mountScreenTarget } from "./computers/screen-proxy.js";
@@ -919,6 +920,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   if (meetingCalendar) mountMeetingCalendarHttp(app, meetingCalendar, sessionActor);
   mountWebhookHttpRoutes(app, { prisma, secrets, events, jobs });
   mountComputerAccessMcp(app, routerDeps);
+  mountComputerAccessOAuth(app, routerDeps);
   if (env.inboundEmail) {
     mountEmailInboundRoute(app, {
       prisma,

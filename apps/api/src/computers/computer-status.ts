@@ -54,6 +54,22 @@ export interface ComputerWork {
   takeoverUserId?: string | null;
 }
 
+/**
+ * The name of the outside AI whose key holds this computer's control, if one does. Its control is
+ * the owner's, so the owner's own page is told someone else holds it and never hands it back.
+ */
+export async function accessKeyHoldingControl(
+  prisma: PrismaClient,
+  computer: { controlHolder: string; controlLeaseId?: string | null } | null | undefined,
+): Promise<string | undefined> {
+  if (computer?.controlHolder !== "user" || !computer.controlLeaseId) return undefined;
+  const key = await prisma.computerAccessKey.findFirst({
+    where: { controlLeaseId: computer.controlLeaseId },
+    select: { name: true },
+  });
+  return key?.name;
+}
+
 export function toComputerStatus(
   botId: string,
   computer: {
@@ -74,13 +90,19 @@ export function toComputerStatus(
   work: ComputerWork = { busyBotName: null, takeoverRequested: false },
   shared = false,
   viewerId?: string,
+  /** The outside AI holding control, as {@link accessKeyHoldingControl} names it. */
+  aiHolder?: string,
 ): ComputerStatus {
   const controlledByOther = Boolean(
-    viewerId && computer?.controlHolder === "user" && !holdsUserControl(computer, viewerId),
+    viewerId &&
+      computer?.controlHolder === "user" &&
+      (aiHolder !== undefined || !holdsUserControl(computer, viewerId)),
   );
-  // Only the holder learns their lease, the one their screen hands back when it closes.
+  // Only the holder learns their lease, the one their screen hands back when it closes. An AI's
+  // control is its owner's, but their page did not take it, so it is not theirs to hand back.
   const ownLeaseId =
     viewerId &&
+    aiHolder === undefined &&
     computer?.controlHolder === "user" &&
     computer.controlBotId === botId &&
     computer.controlLeaseId &&
@@ -114,6 +136,9 @@ export function toComputerStatus(
     botId,
     ...(shared ? { shared } : {}),
     ...(controlledByOther ? { controlledByOther } : {}),
+    ...(aiHolder !== undefined && computer?.controlHolder === "user"
+      ? { controlledBy: aiHolder }
+      : {}),
     ...(ownLeaseId ? { controlLeaseId: ownLeaseId } : {}),
     mode: computer?.scope === "dedicated" ? "dedicated" : "team",
     kind,

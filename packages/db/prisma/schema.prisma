@@ -136,6 +136,7 @@ model User {
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]
   computerAccessKeys ComputerAccessKey[]
+  computerAccessCodes ComputerAccessCode[]
 }
 
 /// A row with no answers means the user skipped the survey.
@@ -803,6 +804,7 @@ model Space {
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]
   computerAccessKeys ComputerAccessKey[]
+  computerAccessCodes ComputerAccessCode[]
 }
 
 /// A space's data encryption key, wrapped by a master key. There is no foreign key:
@@ -1158,6 +1160,7 @@ model Bot {
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]
   computerAccessKeys ComputerAccessKey[]
+  computerAccessCodes ComputerAccessCode[]
 }
 
 model BotSection {
@@ -2090,11 +2093,45 @@ model ComputerAccessKey {
   /// Whether the key may run terminal commands, not just see and use the screen.
   allowCommands Boolean @default(false)
   lastUsedAt  DateTime?
+  /// The computer control lease this key's AI holds. It drives the screen while this matches the
+  /// computer's own controlLeaseId; any other grant there makes a new lease, so it never needs clearing.
+  controlLeaseId String?
+  /// Start of the current one-minute window of calls, and how many it has had.
+  windowStartedAt DateTime?
+  windowCalls Int @default(0)
   createdAt   DateTime  @default(now())
 
   @@index([spaceId, botId])
   @@index([userId])
+  @@index([controlLeaseId])
   @@map("computer_access_keys")
+}
+
+/// A one-time code an outside AI trades for a computer access key, after the owner approved it
+/// on the sign-in page. Lives a minute.
+model ComputerAccessCode {
+  id            String   @id @default(cuid())
+  spaceId       String
+  space         Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botId         String
+  bot           Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  /// sha256 of the code, hex.
+  codeDigest    String   @unique
+  /// What the key is called once traded: the AI's own name.
+  name          String
+  allowCommands Boolean  @default(false)
+  clientId      String
+  redirectUri   String
+  /// The PKCE S256 challenge the trade must answer.
+  codeChallenge String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([botId])
+  @@map("computer_access_codes")
 }
 
 model ComputerHomeVersion {

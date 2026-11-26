@@ -29,6 +29,9 @@ const EXISTING = new Set([
   "Computer.controlLeaseId",
   "Computer.controlLeaseExpiresAt",
   "Computer.controlFence",
+  // Which of those leases an outside AI's key holds: a copy of the computer's own lease id, not a
+  // lease of its own.
+  "ComputerAccessKey.controlLeaseId",
   // Not long work in one process, so not for `withLease`: a computer's execution lease outlives the
   // process that took it (a takeover keeps it for hours and a later worker takes it back by run id),
   // it is taken inside other transactions, and those transactions end it by run id.

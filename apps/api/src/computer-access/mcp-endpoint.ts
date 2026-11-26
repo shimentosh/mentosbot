@@ -1,11 +1,19 @@
+import type { BrowserProvider } from "@rakazo/adapter-kit";
+import { browserSignInShares, createBrowserProvider } from "@rakazo/adapters";
 import { runAsTenant } from "@rakazo/db";
 import type { Context, Hono } from "hono";
 import { readBoundedBody } from "../http/http-body.js";
 import type { RouterDeps } from "../router.js";
 import type { AccessGrant } from "./access-keys.js";
-import { COMPUTER_ACCESS_PATH, resolveAccessToken } from "./access-keys.js";
+import {
+  accessOrigin,
+  COMPUTER_ACCESS_PATH,
+  countAccessCall,
+  resolveAccessToken,
+} from "./access-keys.js";
 import { computerAccessTools } from "./computer-access.tool-definition.js";
 import { createComputerAccessTools } from "./computer-access-tools.js";
+import { resourceMetadataUrl } from "./oauth.js";
 
 /** A write_file of the largest text file, encoded as JSON, fits with room to spare. */
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
@@ -15,8 +23,12 @@ function bearerToken(header: string | undefined): string | undefined {
   return match?.[1];
 }
 
-function unauthorized(c: Context) {
-  c.header("WWW-Authenticate", 'Bearer realm="rakazo-computer"');
+/** Names where sign-in starts, so an AI given only this address can ask its person to approve it. */
+function unauthorized(c: Context, deps: RouterDeps) {
+  c.header(
+    "WWW-Authenticate",
+    `Bearer resource_metadata="${resourceMetadataUrl(accessOrigin(deps.env))}"`,
+  );
   return c.json({ error: "Unauthorized" }, 401);
 }
 
@@ -25,11 +37,21 @@ function unauthorized(c: Context) {
  * request carries its key, so any API instance answers any call.
  */
 export function mountComputerAccessMcp(app: Hono, deps: RouterDeps) {
+  // The bot's own browser, with the sign-ins it shares with the owner's other bots.
+  const browser = createBrowserProvider(undefined, {
+    sandbox: deps.sandbox,
+    signIns: browserSignInShares({ prisma: deps.prisma, secretStore: deps.secrets }),
+  });
   app.post(COMPUTER_ACCESS_PATH, async (c) => {
     const token = bearerToken(c.req.header("authorization"));
-    if (!token) return unauthorized(c);
+    if (!token) return unauthorized(c, deps);
     const grant = await resolveAccessToken(deps.prisma, token);
-    if (!grant) return unauthorized(c);
+    if (!grant) return unauthorized(c, deps);
+    const wait = await countAccessCall(deps.prisma, grant.keyId);
+    if (wait !== null) {
+      c.header("Retry-After", String(wait));
+      return c.json({ error: "Too many requests" }, 429);
+    }
     const raw = await readBoundedBody(c.req.raw, MAX_REQUEST_BYTES);
     if (raw === null) return c.json({ error: "Payload too large" }, 413);
     let body: unknown;
@@ -41,12 +63,12 @@ export function mountComputerAccessMcp(app: Hono, deps: RouterDeps) {
         400,
       );
     }
-    return runAsTenant(grant.actor, () => answer(deps, grant, c.req.raw, body));
+    return runAsTenant(grant.actor, () => answer(deps, grant, browser, c.req.raw, body));
   });
   // Without sessions there is no stream to open or close.
   app.on(["GET", "DELETE"], COMPUTER_ACCESS_PATH, async (c) => {
     const token = bearerToken(c.req.header("authorization"));
-    if (!token || !(await resolveAccessToken(deps.prisma, token))) return unauthorized(c);
+    if (!token || !(await resolveAccessToken(deps.prisma, token))) return unauthorized(c, deps);
     c.header("Allow", "POST");
     return c.json({ error: "Method not allowed" }, 405);
   });
@@ -55,6 +77,7 @@ export function mountComputerAccessMcp(app: Hono, deps: RouterDeps) {
 async function answer(
   deps: RouterDeps,
   grant: AccessGrant,
+  browser: BrowserProvider,
   request: Request,
   body: unknown,
 ): Promise<Response> {
@@ -68,7 +91,7 @@ async function answer(
     { name: "rakazo-computer", version: "1.0.0" },
     { capabilities: { tools: {} } },
   );
-  const tools = createComputerAccessTools(deps, grant);
+  const tools = createComputerAccessTools(deps, grant, browser);
   server.setRequestHandler(protocol.ListToolsRequestSchema, async () => ({
     tools: computerAccessTools({ allowCommands: grant.allowCommands }).map((tool) => ({
       name: tool.name,

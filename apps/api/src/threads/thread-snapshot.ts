@@ -8,7 +8,11 @@ import {
 } from "@rakazo/core";
 import type { Prisma, PrismaClient } from "@rakazo/db";
 import { botRunStatuses, spaceIsShared } from "@rakazo/db";
-import { resolveComputerWork, toComputerStatus } from "../computers/computer-status.js";
+import {
+  accessKeyHoldingControl,
+  resolveComputerWork,
+  toComputerStatus,
+} from "../computers/computer-status.js";
 import { THREAD_MESSAGE_PAGE_SIZE } from "../routes/shared.js";
 import { loadMessagePage } from "./thread-message-pages.js";
 import { findRetryableReplySource } from "./thread-retry.js";
@@ -142,7 +146,14 @@ export async function threadSnapshot(
       olderCursor: core.messagePage.olderCursor,
       run: core.run,
       activeRuns: core.activeRuns.map(mapRun),
-      computer: toComputerStatus(target.botId, core.computer, core.work, core.shared, viewerId),
+      computer: toComputerStatus(
+        target.botId,
+        core.computer,
+        core.work,
+        core.shared,
+        viewerId,
+        await accessKeyHoldingControl(deps.prisma, core.computer),
+      ),
     };
   }
 

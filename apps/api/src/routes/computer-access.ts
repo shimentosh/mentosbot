@@ -4,13 +4,13 @@ import { recordSecurityEvent } from "@rakazo/db";
 import {
   ACCESS_KEY_SELECT,
   accessKeyDto,
+  accessOrigin,
   computerAccessUrl,
+  MAX_KEYS_PER_BOT,
   newAccessToken,
 } from "../computer-access/access-keys.js";
+import { approveAccess, grantableBots, requestedClient } from "../computer-access/oauth.js";
 import type { RouterContext } from "./context.js";
-
-/** Most keys a bot keeps at once; one per AI that drives it is plenty. */
-const MAX_KEYS_PER_BOT = 20;
 
 /** Keys that let an outside AI control a bot's computer. Only the bot's owner manages them. */
 export function computerAccessKeyRoutes(ctx: RouterContext) {
@@ -62,8 +62,7 @@ export function computerAccessKeyRoutes(ctx: RouterContext) {
         spaceId: context.actor.spaceId,
         metadata: { kind: "computer_access_key", botId: input.botId, keyId: row.id },
       });
-      const origin = deps.env.publishedInboundOrigin ?? deps.env.webOrigin;
-      return { key: accessKeyDto(row), token, url: computerAccessUrl(origin) };
+      return { key: accessKeyDto(row), token, url: computerAccessUrl(accessOrigin(deps.env)) };
     }),
     remove: authed.computer.accessKeys.remove.handler(async ({ context, input }) => {
       await ownedBot(context.actor, input.botId);
@@ -84,6 +83,24 @@ export function computerAccessKeyRoutes(ctx: RouterContext) {
         });
       }
       return { ok: true as const };
+    }),
+    request: authed.computer.accessKeys.request.handler(async ({ context, input }) => {
+      const client = requestedClient(input.clientId, input.redirectUri);
+      const redirect = new URL(input.redirectUri);
+      return {
+        clientName: client.name || "AI",
+        redirectHost: redirect.host || redirect.protocol.replace(/:$/, ""),
+        bots: await grantableBots(deps.prisma, context.actor),
+      };
+    }),
+    approve: authed.computer.accessKeys.approve.handler(async ({ context, input }) => {
+      const count = await deps.prisma.computerAccessKey.count({
+        where: { spaceId: context.actor.spaceId, botId: input.botId },
+      });
+      if (count >= MAX_KEYS_PER_BOT) {
+        throw new ClientError("BAD_REQUEST", "Remove one of this bot's AI keys first");
+      }
+      return { redirectTo: await approveAccess(deps.prisma, context.actor, input) };
     }),
   };
 }

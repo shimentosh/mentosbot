@@ -27,6 +27,7 @@ export * from "./browser/browser-provider-factory.js";
 export * from "./browser/browser-tools.js";
 export * from "./browser/fake-browser.js";
 export * from "./browser/page-browser-session.js";
+export { browserSignInShares } from "./browser-sign-ins.js";
 export type { ApnsVoipConfig } from "./calls/apns-voip.js";
 export {
   apnsVoipConfig,

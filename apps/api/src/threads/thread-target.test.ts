@@ -1540,6 +1540,7 @@ describe("threadSnapshot", () => {
     };
     const prisma = {
       $transaction: vi.fn(async (work: (client: typeof tx) => unknown) => work(tx)),
+      computerAccessKey: { findFirst: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaClient;
     const snapshot = await threadSnapshot(
       { prisma },

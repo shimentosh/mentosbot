@@ -1,6 +1,9 @@
 import { ORPCError } from "@orpc/server";
-import type { ComputerObservation } from "@rakazo/adapter-kit";
+import type { BrowserProvider, ComputerObservation } from "@rakazo/adapter-kit";
 import {
+  browserActFromTool,
+  browserNavigateFromTool,
+  browserSnapshotFromTool,
   displayBotWorkspacePath,
   ensureComputerWorkspaceLayout,
   nativeShellCommandArgv,
@@ -10,6 +13,7 @@ import {
   resolveBotWorkspaceCwd,
   resolveBotWorkspacePath,
   sandboxKindCapabilities,
+  teamBotWorkspaceDirectory,
   WorkspacePathError,
   wakeableComputerRef,
 } from "@rakazo/adapters";
@@ -29,6 +33,7 @@ import {
 import type { RouterDeps } from "../router.js";
 import { computerContext } from "../routes/shared.js";
 import type { AccessGrant } from "./access-keys.js";
+import { ACCESS_BROWSER_ACT_KINDS } from "./computer-access.tool-definition.js";
 
 /** What a tool call answers, in the shape MCP sends back. */
 export type ToolAnswer = {
@@ -69,6 +74,19 @@ function observationAnswer(observation: ComputerObservation, note: string): Tool
   };
 }
 
+/** A page tool's result, which is JSON the browser helper built. */
+function pageAnswer(result: unknown): ToolAnswer {
+  const failed =
+    typeof result === "object" &&
+    result !== null &&
+    ((result as { ok?: unknown }).ok === false ||
+      typeof (result as { error?: unknown }).error === "string");
+  const { elements: _elements, ...view } = (result ?? {}) as Record<string, unknown>;
+  // The tree already lists every element with its ref, so the elements array only repeats it.
+  const shown = typeof view.tree === "string" ? view : result;
+  return { ...text(JSON.stringify(shown)), ...(failed ? { isError: true } : {}) };
+}
+
 function numberArg(value: unknown, fallback: number, min: number, max: number): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -82,7 +100,11 @@ function tail(value: string): string {
 }
 
 /** Runs the tools of one key's MCP session. Each call reads the bot afresh. */
-export function createComputerAccessTools(deps: RouterDeps, grant: AccessGrant) {
+export function createComputerAccessTools(
+  deps: RouterDeps,
+  grant: AccessGrant,
+  browser: BrowserProvider,
+) {
   const { actor, botId } = grant;
   const repos = createRepos(deps.prisma);
 
@@ -105,7 +127,7 @@ export function createComputerAccessTools(deps: RouterDeps, grant: AccessGrant) 
   /** Take or renew control of the screen, so the bot waits while the outside AI drives it. */
   async function controlledComputer(operation: string) {
     const loaded = await runningComputer();
-    await takeComputerControl(deps, actor, botId);
+    await takeComputerControl(deps, actor, botId, grant.keyId);
     await keepComputerAwake(deps, loaded.computer.id);
     const ref = await wakeableComputerRef(deps.prisma, loaded.computer);
     const context = await computerScreenContext(
@@ -116,6 +138,28 @@ export function createComputerAccessTools(deps: RouterDeps, grant: AccessGrant) 
       operation,
     );
     return { ...loaded, ref, context };
+  }
+
+  /** Whether this key's AI holds the screen now. */
+  async function keyHoldsControl(computer: { controlLeaseId: string | null }) {
+    if (!computer.controlLeaseId) return false;
+    const key = await deps.prisma.computerAccessKey.findUnique({
+      where: { id: grant.keyId },
+      select: { controlLeaseId: true },
+    });
+    return key?.controlLeaseId === computer.controlLeaseId;
+  }
+
+  /** The browser tools' options: downloads and uploads stay in the bot's own folders. */
+  function pageOptions(mode: ReturnType<typeof parseComputerMode>) {
+    return {
+      // The AI has the screen too, so a step the page browser cannot do falls back to it.
+      desktopTools: true,
+      downloads: {
+        folder: resolveBotWorkspacePath(mode, botId, "Downloads"),
+        botPath: (path: string) => displayBotWorkspacePath(mode, botId, "Downloads", path),
+      },
+    };
   }
 
   async function workspaceComputer(operation: string) {
@@ -131,16 +175,16 @@ export function createComputerAccessTools(deps: RouterDeps, grant: AccessGrant) 
   const tools: Record<string, (args: Record<string, unknown>) => Promise<ToolAnswer>> = {
     async computer_status() {
       const status = await computerStatus(deps, actor, botId);
-      const bot = await repos.getBot(actor, botId);
+      const { bot, computer } = await loadBot();
+      const held = status.controlHolder === "user" && (await keyHoldsControl(computer));
       return text(
         JSON.stringify({
           bot: bot.name,
           state: status.state,
-          screen:
-            status.controlHolder === "user"
-              ? status.controlledByOther
-                ? "someone else is using it"
-                : "you have control"
+          screen: held
+            ? "you have control"
+            : status.controlHolder === "user"
+              ? "someone else is using it"
               : status.controlHolder === "bot"
                 ? "the bot is using it"
                 : "free",
@@ -175,6 +219,46 @@ export function createComputerAccessTools(deps: RouterDeps, grant: AccessGrant) 
       );
       const note = `completed ${result.completed} of ${actions.length} actions`;
       return result.observation ? observationAnswer(result.observation, note) : text(note);
+    },
+    async browser_navigate(args) {
+      const { computer, ref, context } = await controlledComputer("browser");
+      const mode = parseComputerMode(computer.scope);
+      return pageAnswer(
+        await browserNavigateFromTool(browser, ref, context, args, pageOptions(mode)),
+      );
+    },
+    async browser_snapshot(args) {
+      const { computer, ref, context } = await controlledComputer("browser");
+      const mode = parseComputerMode(computer.scope);
+      return pageAnswer(
+        await browserSnapshotFromTool(browser, ref, context, args, pageOptions(mode)),
+      );
+    },
+    async browser_act(args) {
+      const actions = Array.isArray(args.actions) ? args.actions : [];
+      const refused = actions.find(
+        (action) =>
+          !(ACCESS_BROWSER_ACT_KINDS as readonly unknown[]).includes(
+            (action as { kind?: unknown } | null)?.kind,
+          ),
+      );
+      if (refused !== undefined) {
+        throw new ToolRefusal(
+          `Each action's kind must be one of ${ACCESS_BROWSER_ACT_KINDS.join(", ")}.`,
+        );
+      }
+      const { computer, ref, context } = await controlledComputer("browser");
+      const mode = parseComputerMode(computer.scope);
+      return pageAnswer(
+        await browserActFromTool(browser, ref, context, args, {
+          ...pageOptions(mode),
+          // A team computer's helper takes only this bot's folder and shared/; a private one
+          // already confines uploads to its home.
+          uploadRoots: mode === "team" ? [teamBotWorkspaceDirectory(botId), "shared"] : undefined,
+          resolveUploadPath: (path) =>
+            mode === "team" ? resolveBotUploadPath(mode, botId, path) : path,
+        }),
+      );
     },
     async run_command(args) {
       if (!grant.allowCommands) throw new ToolRefusal("This key may not run commands.");
@@ -256,8 +340,17 @@ export function createComputerAccessTools(deps: RouterDeps, grant: AccessGrant) 
     },
     async release_control() {
       const { bot, computer } = await loadBot();
-      if (!holdsComputerControl(computer, bot.id, actor)) return text("You did not have control.");
-      await releaseComputerControl(deps, actor, computer, bot.id);
+      if (!holdsComputerControl(computer, bot.id, actor) || !(await keyHoldsControl(computer))) {
+        return text("You did not have control.");
+      }
+      await releaseComputerControl(
+        deps,
+        actor,
+        computer,
+        bot.id,
+        "released",
+        computer.controlLeaseId!,
+      );
       return text("Control handed back to the bot.");
     },
   };

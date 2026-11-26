@@ -14,6 +14,27 @@ describe("toComputerStatus", () => {
       }),
     ).toMatchObject({ state: "error", screenAvailable: false });
   });
+  it("names the owner's outside AI holding control and keeps its lease from the owner's page", () => {
+    const status = toComputerStatus(
+      "bot",
+      {
+        kind: "docker",
+        state: "running",
+        scope: "team",
+        controlHolder: "user",
+        controlBotId: "bot",
+        controlUserId: "user-1",
+        controlLeaseId: "lease-1",
+        homeRevision: "saved",
+      },
+      undefined,
+      false,
+      "user-1",
+      "Desktop AI",
+    );
+    expect(status).toMatchObject({ controlledBy: "Desktop AI", controlledByOther: true });
+    expect(status.controlLeaseId).toBeUndefined();
+  });
   it("reads a computer whose provider this build does not have without throwing", () => {
     const status = toComputerStatus("bot", {
       kind: "a-provider-since-removed",

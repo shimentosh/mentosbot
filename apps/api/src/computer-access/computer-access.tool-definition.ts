@@ -12,6 +12,9 @@ function builtin(name: string): ConnectorTool {
 
 const act = builtin("computer_act");
 
+/** The page actions an outside AI may take: none that fill a saved login, card or code. */
+export const ACCESS_BROWSER_ACT_KINDS = ["click", "fill", "type", "upload"] as const;
+
 /** The tools an outside AI gets for one bot's computer. `run_command` only with that permission. */
 export function computerAccessTools(options: { allowCommands: boolean }): ConnectorTool[] {
   return [
@@ -36,6 +39,49 @@ export function computerAccessTools(options: { allowCommands: boolean }): Connec
       name: "computer_act",
       description: `${act.description} ${CONTROL_NOTE}`,
       inputSchema: act.inputSchema,
+    },
+    {
+      name: "browser_navigate",
+      description: `Open an http(s) URL in the computer's browser and return the page like browser_snapshot. Prefer the browser tools over pixel clicks for web pages. ${CONTROL_NOTE}`,
+      inputSchema: {
+        type: "object",
+        properties: { url: { type: "string", minLength: 1 } },
+        required: ["url"],
+      },
+    },
+    {
+      name: "browser_snapshot",
+      description:
+        "Read the browser's current page as text, with element refs (e1, e2, …) for browser_act. query lists only the controls whose name, label or nearby text match it. If loading is true, take another snapshot.",
+      inputSchema: { type: "object", properties: { query: { type: "string" } } },
+    },
+    {
+      name: "browser_act",
+      description: `Act on page elements by ref from browser_snapshot. click is a real mouse click; fill sets a field's text or picks a dropdown option by label; type presses keys like a keyboard; upload attaches workspace files to a file input. The result shows the page after the actions. ${CONTROL_NOTE}`,
+      inputSchema: {
+        type: "object",
+        properties: {
+          actions: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              properties: {
+                kind: { type: "string", enum: [...ACCESS_BROWSER_ACT_KINDS] },
+                ref: { type: "string" },
+                text: { type: "string", description: "For fill and type." },
+                paths: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "For upload: workspace file paths.",
+                },
+              },
+              required: ["kind", "ref"],
+            },
+          },
+        },
+        required: ["actions"],
+      },
     },
     ...(options.allowCommands
       ? [

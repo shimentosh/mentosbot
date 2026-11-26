@@ -22,13 +22,17 @@ import {
   screenLeaseIdForRun,
 } from "@rakazo/adapters";
 import type { Actor, ComputerStatus } from "@rakazo/contracts";
-import { ACTIVE_RUN_STATUSES } from "@rakazo/core";
+import { ACTIVE_RUN_STATUSES, ClientError } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
 import { createRepos, IsolationError, recordComputerRunEnd, spaceIsShared } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import type { RouterDeps } from "../router.js";
 import { computerContext } from "../routes/shared.js";
-import { resolveComputerWork, toComputerStatus } from "./computer-status.js";
+import {
+  accessKeyHoldingControl,
+  resolveComputerWork,
+  toComputerStatus,
+} from "./computer-status.js";
 
 /** What changing who controls a screen needs. */
 type ControlDeps = Pick<RouterDeps, "prisma" | "events" | "jobs" | "sandbox">;
@@ -86,7 +90,16 @@ export async function computerStatus(
     }),
     spaceIsShared(deps.prisma, actor.spaceId),
   ]);
-  return toComputerStatus(botId, bot.computer, work, shared, actor.userId);
+  const aiHolder = await accessKeyHoldingControl(deps.prisma, bot.computer);
+  return toComputerStatus(botId, bot.computer, work, shared, actor.userId, aiHolder);
+}
+
+async function leaseKeyId(prisma: PrismaClient, leaseId: string): Promise<string | undefined> {
+  const key = await prisma.computerAccessKey.findFirst({
+    where: { controlLeaseId: leaseId },
+    select: { id: true },
+  });
+  return key?.id;
 }
 
 /** Whether this person holds this bot's user control, so they may drive its screen. */
@@ -362,6 +375,8 @@ export async function takeComputerControl(
   deps: ControlDeps,
   actor: Actor,
   botId: string,
+  /** The outside AI's key taking control as this person, or none for the person's own page. */
+  accessKeyId?: string,
 ): Promise<{ leaseId: string; expiresAt: string }> {
   const repos = createRepos(deps.prisma);
   let bot = await repos.getBot(actor, botId);
@@ -370,14 +385,21 @@ export async function takeComputerControl(
   }
   assertNotAnotherPersonsControl(bot.computer, actor);
   if (holdsComputerControl(bot.computer, bot.id, actor)) {
-    const expiresAt = controlLeaseExpiresAt();
     const leaseId = bot.computer.controlLeaseId!;
-    if (await renewComputerControl(deps, bot.computer.id, leaseId, expiresAt)) {
-      return { leaseId, expiresAt: expiresAt.toISOString() };
+    const holder = await leaseKeyId(deps.prisma, leaseId);
+    if (holder === accessKeyId) {
+      const expiresAt = controlLeaseExpiresAt();
+      if (await renewComputerControl(deps, bot.computer.id, leaseId, expiresAt)) {
+        return { leaseId, expiresAt: expiresAt.toISOString() };
+      }
+      // The lease lapsed or was handed back meanwhile: take control afresh.
+      bot = await repos.getBot(actor, botId);
+      if (!bot.computer) throw new IsolationError();
+    } else if (accessKeyId) {
+      // The person, or another of their AIs, is on the screen; an AI never takes it from them.
+      throw new ClientError("CONFLICT", "Someone is using this screen. Try again later.");
     }
-    // The lease lapsed or was handed back meanwhile: take control afresh.
-    bot = await repos.getBot(actor, botId);
-    if (!bot.computer) throw new IsolationError();
+    // Otherwise the person takes the screen back from their AI: its lease ends below.
   }
   // This person's control of another bot's screen on a shared computer ends first.
   if (hasActiveComputerControl(bot.computer) && bot.computer.controlBotId) {
@@ -414,7 +436,10 @@ export async function takeComputerControl(
   if (granted.count !== 1) {
     const current = await deps.prisma.computer.findUniqueOrThrow({ where: { id: computerId } });
     // A second Take control from the holder, such as a double tap, keeps their lease.
-    if (holdsComputerControl(current, bot.id, actor)) {
+    if (
+      holdsComputerControl(current, bot.id, actor) &&
+      (await leaseKeyId(deps.prisma, current.controlLeaseId!)) === accessKeyId
+    ) {
       const renewed = controlLeaseExpiresAt();
       if (await renewComputerControl(deps, computerId, current.controlLeaseId!, renewed)) {
         return { leaseId: current.controlLeaseId!, expiresAt: renewed.toISOString() };
@@ -437,6 +462,12 @@ export async function takeComputerControl(
       },
     });
     throw error;
+  }
+  if (accessKeyId) {
+    await deps.prisma.computerAccessKey.updateMany({
+      where: { id: accessKeyId },
+      data: { controlLeaseId: leaseId },
+    });
   }
   if (bot.thread) {
     await deps.events.append({

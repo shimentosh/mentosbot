@@ -118,6 +118,15 @@ export function ComputerOverlay({
                 {computerLabel(computer?.mode, bot.name)}
               </span>
             )}
+            {!recordingSkill && computer?.controlledBy ? (
+              <span
+                data-testid="computer-controlled-by"
+                className="min-w-0 truncate text-body-sm text-muted-foreground"
+                dir="auto"
+              >
+                <Trans>Controlled by {computer.controlledBy}</Trans>
+              </span>
+            ) : null}
             {!recordingSkill && hasControl && computer?.shared ? (
               <span
                 data-testid="computer-shared-browser"

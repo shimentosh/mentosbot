@@ -60,6 +60,7 @@ import { lazyComponent } from "./lib/platform/preload-recovery";
 import { remoteImagesPreference } from "./lib/preferences/remote-images-preference";
 import { QueryUserProvider, setQueryUser } from "./lib/query/query";
 import { rpc } from "./lib/query/rpc";
+import { ConnectAiPage } from "./pages/connect-ai/ConnectAiPage";
 import { GoogleWorkspaceCallbackPage } from "./pages/integrations/GoogleWorkspaceCallback";
 import { IntegrationCallbackPage } from "./pages/integrations/IntegrationCallback";
 import { IntegrationSetupPage } from "./pages/integrations/IntegrationSetup";
@@ -323,6 +324,19 @@ function SessionApp() {
                 element={
                   user ? (
                     <SlackInstallCallbackPage />
+                  ) : (
+                    <Navigate
+                      to={`/sign-in?next=${encodeURIComponent(pathname + search)}`}
+                      replace
+                    />
+                  )
+                }
+              />
+              <Route
+                path="/connect-ai"
+                element={
+                  user ? (
+                    <ConnectAiPage />
                   ) : (
                     <Navigate
                       to={`/sign-in?next=${encodeURIComponent(pathname + search)}`}

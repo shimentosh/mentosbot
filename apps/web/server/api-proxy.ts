@@ -25,6 +25,9 @@ export const API_ROUTES: Readonly<Record<string, boolean>> = {
   // Native app domain association, served by the API from deployment settings.
   "/.well-known/apple-app-site-association": false,
   "/.well-known/assetlinks.json": false,
+  // Sign-in discovery for outside AIs that control a bot's computer.
+  "/.well-known/oauth-protected-resource": false,
+  "/.well-known/oauth-authorization-server": false,
 };
 
 /** Whether the API takes this request, or with `upgrade`, this upgrade; matched as Vite does. */

@@ -29,9 +29,12 @@ import {
   NetworkExitStatusSchema,
 } from "./computer.js";
 import {
+  ComputerAccessApproveSchema,
   ComputerAccessKeyCreatedSchema,
   ComputerAccessKeyCreateSchema,
   ComputerAccessKeySchema,
+  ComputerAccessRequestInfoSchema,
+  ComputerAccessRequestSchema,
 } from "./computer-access.js";
 import { ComputerCommandSchema } from "./computer-command.js";
 
@@ -167,6 +170,10 @@ export const computersRpc = {
       remove: oc
         .input(z.object({ botId: Id, keyId: Id }))
         .output(z.object({ ok: z.literal(true) })),
+      /** Checks an outside AI's sign-in request and lists the bots it could be given. */
+      request: oc.input(ComputerAccessRequestSchema).output(ComputerAccessRequestInfoSchema),
+      /** Approves it for one bot, returning where to send the browser. */
+      approve: oc.input(ComputerAccessApproveSchema).output(z.object({ redirectTo: z.string() })),
     },
   },
 };

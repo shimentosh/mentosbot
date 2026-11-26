@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RouterDeps } from "../router.js";
 import { appHandler, createRouter, handle } from "../router-test-support.js";
 import { handleRpcError } from "../rpc-errors.js";
+import { takeComputerControl } from "./computer-control.js";
 
 afterEach(() => {
   delete process.env.SANDBOX_MAX_COMPUTERS_PER_USER;
@@ -269,6 +270,7 @@ describe("computer terminal and file transfer", () => {
         findUnique: vi.fn().mockResolvedValue(null),
       },
       computerExecutionLease: { findUnique: vi.fn().mockResolvedValue(null) },
+      computerAccessKey: { findFirst: vi.fn().mockResolvedValue(null) },
       run: { findFirst: vi.fn().mockResolvedValue(null) },
       taughtSkill: { findFirst: vi.fn().mockResolvedValue(null) },
     } as unknown as PrismaClient;
@@ -438,6 +440,22 @@ describe("computer terminal and file transfer", () => {
       controlHolder: "user",
       controlUserId: "user-1",
     });
+  });
+
+  it("never lets an outside AI's key take the screen while its owner's own page holds it", async () => {
+    const { prisma, deps } = setup({ ...controlled, controlUserId: "user-1" });
+    await expect(takeComputerControl(deps, actor, "bot-1", "key-1")).rejects.toMatchObject({
+      kind: "CONFLICT",
+    });
+    expect(prisma.computer.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("ends the AI's lease when its owner takes control, instead of sharing it", async () => {
+    const { prisma, call } = setup({ ...controlled, controlUserId: "user-1" });
+    vi.mocked(prisma.computerAccessKey.findFirst).mockResolvedValue({ id: "key-1" } as never);
+    const response = await call("takeover", {});
+    expect(response.status).toBe(200);
+    expect(response.body.json.leaseId).not.toBe("lease-1");
   });
 
   it("returns the holder's own lease to a second Take control", async () => {
