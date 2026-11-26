@@ -46,4 +46,22 @@ describe("ElevenLabs transcription", () => {
       expect(form.has("language_code")).toBe(false);
     },
   );
+
+  it("reads a clip it finds no usable audio in as no words instead of failing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          { detail: { status: "invalid_content", message: "No usable audio." } },
+          { status: 400 },
+        ),
+      ),
+    );
+    await expect(
+      new ElevenLabsVoiceProvider().transcribe(
+        { audio: new Uint8Array([1, 2, 3]), mimeType: "audio/wav", apiKey: "test-key" },
+        context,
+      ),
+    ).resolves.toEqual({ text: "" });
+  });
 });

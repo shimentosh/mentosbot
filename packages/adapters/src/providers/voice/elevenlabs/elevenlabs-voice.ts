@@ -10,6 +10,7 @@ import type {
   VoiceVerifyResult,
 } from "@rakazo/adapter-kit";
 import { deadlineSignal } from "@rakazo/core";
+import { getLogger } from "@rakazo/logging";
 import {
   readVoiceAudio,
   readVoiceJson,
@@ -106,10 +107,25 @@ export class ElevenLabsVoiceProvider implements VoiceProvider {
       signal: deadlineSignal(60_000, request.signal ?? context.signal),
     });
     const body = await readVoiceJson(res, { requireValid: res.ok });
-    if (!res.ok) throw voiceRequestError(res.status, "ElevenLabs", "transcribing", body);
+    if (!res.ok) {
+      // Scribe refuses a clip with no audio it can use, such as a moment of silence or noise
+      // that hands-free listening picked up. That clip has no words; it is not a failure.
+      if (res.status === 400 && unusableClip(body)) {
+        getLogger().info("voice clip had no usable audio", {
+          bytes: request.audio.byteLength,
+          "audio.mime_type": request.mimeType,
+        });
+        return { text: "" };
+      }
+      throw voiceRequestError(res.status, "ElevenLabs", "transcribing", body);
+    }
     const text = String((body as { text?: unknown } | null)?.text ?? "").trim();
     return { text };
   }
+}
+
+function unusableClip(body: unknown): boolean {
+  return (body as { detail?: { status?: unknown } } | null)?.detail?.status === "invalid_content";
 }
 
 function asLabel(labels: unknown, key: string): string {
