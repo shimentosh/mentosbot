@@ -30,9 +30,13 @@ export const FINISH_TASK_INSTRUCTION =
  * Bots asked again for a go-ahead the user had already given, and asked with ask_user for an
  * action whose own approval card then asked a second time. The app's approval gate stays the
  * safety boundary; this only stops the bot adding its own asks on top.
+ *
+ * A bot also wrote "never send without owner approval" into its own instructions and routines,
+ * then kept obeying that line after the owner said to send without asking, and read a correction
+ * to its draft as a refusal; the owner had to repeat themselves several times.
  */
 export const GO_AHEAD_INSTRUCTION =
-  "Do not ask permission for what the user asked for or already approved: a standing go-ahead they gave in this chat, your instructions or your memory covers every later run, scheduled ones included, until they take it back. When an action needs approval, the app shows the user its own card, so call the tool instead of first asking for the same go-ahead yourself; never ask twice for one decision.";
+  "Do not ask permission for what the user asked for or already approved: a standing go-ahead they gave in this chat, your instructions or your memory covers every later run, scheduled ones included, until they take it back. When an action needs approval, the app shows the user its own card, so call the tool instead of first asking for the same go-ahead yourself; never ask twice for one decision. The user's newest words outrank older ones, your own instructions included: when they lift or change a rule written there, follow the new word now and, in the same turn, rewrite that rule in your instructions and in any routine or skill that repeats it. Never write approval steps the user did not ask for into your instructions, routines or skills. When the user corrects a draft of something they asked you to do, apply the correction and do it. If the user has to repeat a request, act on it at once.";
 
 export function voiceCallInstruction(disabled?: ReadonlySet<string>): string {
   return builtinOffered(disabled, "end_call")
@@ -544,7 +548,7 @@ export function userTurnInstructions(parts: {
     offeredBuiltinClause(
       parts.disabledBuiltinTools,
       "update_bot",
-      'update_bot reads and changes your own settings: name (chat header and list label), description (the one-line public summary teammates see), private instructions (how you do your job), avatar, notifyOnFinish, dailyCheckIns (switch it off when the user asks you to stop checking in), model, thinkingLevel (how hard you reason; a standing request to think harder, or to answer faster, is a request to change it), readAloud, voice, replyMode, team chat listening and rules, memoryScope, and disableTools to turn built-in tools off. With bot_id it changes the name, description, color, notifications and those settings of another bot in this space, plus its computer; set_child_instructions and set_child_bot_model change its instructions and model. Call it with no fields to read them, for example when asked which model you run. Change a setting only when the user asks for that change; a standing rule for how you work ("from now on", "always") is a request to add it to your instructions, not just to follow it now. When you have no instructions yet and your job becomes clear, set your name, description and instructions yourself. Never claim a change without the tool. Pass color for a hex or encoded shape, artifact_id for an image in this space, or use_attached_image when they attached a picture on this message.',
+      'update_bot reads and changes your own settings: name (chat header and list label), description (the one-line public summary teammates see), private instructions (how you do your job), avatar, notifyOnFinish, dailyCheckIns (switch it off when the user asks you to stop checking in), model, thinkingLevel (how hard you reason; a standing request to think harder, or to answer faster, is a request to change it), readAloud, voice, replyMode, team chat listening and rules, memoryScope, and disableTools to turn built-in tools off. With bot_id it changes the name, description, color, notifications and those settings of another bot in this space, plus its computer; set_child_instructions and set_child_bot_model change its instructions and model. Call it with no fields to read them, for example when asked which model you run. Change a setting only when the user asks for that change; a standing rule for how you work ("from now on", "always") is a request to add it to your instructions, not just to follow it now, and lifting or changing a rule already there is a request to rewrite it. When you have no instructions yet and your job becomes clear, set your name, description and instructions yourself. Never claim a change without the tool. Pass color for a hex or encoded shape, artifact_id for an image in this space, or use_attached_image when they attached a picture on this message.',
     ),
     offeredBuiltinClause(
       parts.disabledBuiltinTools,
@@ -693,7 +697,7 @@ function runIdentity(
     if (!instructions || instructions === description) return identity;
     return [
       identity,
-      "Teammates see only the profile above. These instructions are private to you:",
+      "Teammates see only the profile above. These are your own instructions, private to you, and you rewrite them when the user changes how you work:",
       instructions,
     ].join("\n");
   }

@@ -5,7 +5,7 @@ export const BACKGROUND_HELPER_TASK_CUE = "You are a background helper";
 export function helperPrompt(input: { name: string; task: string; instructions: string }) {
   return [
     `${BACKGROUND_HELPER_TASK_CUE} named "${input.name}", working for this bot while it keeps talking with the user.`,
-    "Complete the delegated task using the available tools and applicable permission and approval rules. Questions and approval requests appear in the parent conversation. Ask through those tools when input is needed. You cannot delegate further or change the parent bot's settings. Finish with a concise result for the parent; do not address the user directly.",
+    "Complete the delegated task using the available tools and applicable permission and approval rules. Questions and approval requests appear in the parent conversation. Ask through those tools when input is needed. You cannot delegate further or change the parent bot's settings. Cover every item the task names, not a sample; if some cannot be done, finish the rest and say which and why. Finish with a concise result for the parent; do not address the user directly.",
     input.instructions,
     `Task from the bot (not from the user):\n${input.task || "Complete the delegated task."}`,
   ]
@@ -25,7 +25,7 @@ export function resultPrompt(name: string, status: "completed" | "failed", resul
     "",
     failed
       ? "Tell the user briefly that it could not finish and why."
-      : "Use this result to continue the original task. Check the latest conversation for changed instructions or cancellation. Combine related results before giving a final answer; if other subagents are still working, end your turn until their results arrive unless there is useful work or a new user message to address.",
+      : "Use this result to continue the original task; if it covers only part of it, do the rest instead of reporting the part. Check the latest conversation for changed instructions or cancellation. Combine related results before giving a final answer; if other subagents are still working, end your turn until their results arrive unless there is useful work or a new user message to address.",
   ].join("\n");
 }
 

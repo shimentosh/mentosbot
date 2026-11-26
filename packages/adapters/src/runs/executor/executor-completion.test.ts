@@ -608,7 +608,7 @@ describe("runReplyGuidance", () => {
     expect(
       runIdentityInstruction({ name: "Ada", description: "", instructions: "Stay quiet." }, "user"),
     ).toBe(
-      "Ada\nTeammates see only the profile above. These instructions are private to you:\nStay quiet.",
+      "Ada\nTeammates see only the profile above. These are your own instructions, private to you, and you rewrite them when the user changes how you work:\nStay quiet.",
     );
     expect(runIdentityInstruction({ name: "Ada", description: "", instructions: "" }, "user")).toBe(
       "Ada",
