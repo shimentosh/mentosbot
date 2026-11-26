@@ -12,6 +12,7 @@ import {
   pageWindow,
 } from "../../../web/web-limits.js";
 import { createWebProvider, resolveWebProviderKind } from "../../../web/web-provider-factory.js";
+import { WEB_SEARCH_BLOCKED } from "../../../web/web-search-blocked.prompt.js";
 import { webFetchFromTool, webSearchFromTool } from "../../../web/web-tools.js";
 import { FakeWebProvider } from "../fake/fake-web.js";
 import {
@@ -353,6 +354,11 @@ describe("keyless HTTP web provider", () => {
       return `<div class="result"><a class="result__a" href="https://example.test/${i}">T${i}</a><div class="result__snippet">S${i}</div></div>`;
     }).join("");
     expect(parseDuckDuckGoResults(html, 3)).toHaveLength(3);
+  });
+
+  it("reports a bot check page as blocked search instead of no results", () => {
+    const html = `<form action="//duckduckgo.com/anomaly.js?sv=html"><div class="anomaly-modal__box">Select all squares containing a duck</div></form>`;
+    expect(() => parseDuckDuckGoResults(html, 3)).toThrow(WEB_SEARCH_BLOCKED);
   });
 });
 

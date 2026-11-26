@@ -15,6 +15,7 @@ import {
   clampOffset,
   pageWindow,
 } from "../../../web/web-limits.js";
+import { WEB_SEARCH_BLOCKED } from "../../../web/web-search-blocked.prompt.js";
 import type { ResolveHostname } from "../../../web/web-ssrf.js";
 import { decodeWebText, fetchSafeWebBytes, fetchSafeWebText } from "../../../web/web-ssrf.js";
 
@@ -163,6 +164,9 @@ export function parseDuckDuckGoResults(html: string, maxResults: number): WebSea
     if (title && url) results.push({ title, url, snippet });
     if (results.length >= maxResults) break;
   }
+  // DuckDuckGo answers some server addresses with a bot check in place of results.
+  if (!results.length && document.querySelector('form[action*="anomaly"], .anomaly-modal__box'))
+    throw new Error(WEB_SEARCH_BLOCKED);
   return results;
 }
 
