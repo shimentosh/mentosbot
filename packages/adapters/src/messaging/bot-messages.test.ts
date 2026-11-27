@@ -33,6 +33,8 @@ function deps(
     uniqueConflictOnCommit?: boolean;
     transactionConflictOnce?: boolean;
     deletingSpace?: boolean;
+    /** Runs already holding the target's chat. */
+    targetBusy?: { id: string; trigger: string; status: string; userId: string }[];
   } = {},
 ) {
   const enqueue = vi.fn().mockResolvedValue(undefined);
@@ -59,7 +61,9 @@ function deps(
       findUnique: vi.fn().mockResolvedValue({ status: "running" }),
       create: vi.fn().mockResolvedValue({ id: "run-2" }),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findMany: vi.fn().mockResolvedValue(options.targetBusy ?? []),
     },
+    steeringMessage: { create: vi.fn().mockResolvedValue({}) },
     bot: {
       findFirst: vi.fn().mockResolvedValue(options.targetArchived ? null : { id: "bot-target" }),
     },
@@ -113,6 +117,54 @@ function deps(
     notify,
   };
 }
+
+describe("a report to a busy bot", () => {
+  const busy = (trigger: string) => [
+    { id: "run-busy", trigger, status: "running", userId: run.userId },
+  ];
+
+  it("joins the chat turn already running instead of starting a run", async () => {
+    const harness = deps({ targetBusy: busy("user") });
+    const sent = await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "Posted all four comments.",
+      intent: "result",
+    });
+
+    expect(sent).toMatchObject({ ok: true });
+    expect(harness.tx.steeringMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ runId: "run-busy", originTrigger: "bot_message" }),
+    });
+    expect(harness.tx.run.create).not.toHaveBeenCalled();
+    expect(harness.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("waits for one follow-up while the bot answers another bot", async () => {
+    const harness = deps({ targetBusy: busy("bot_message") });
+    await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "Draft pack is ready.",
+      intent: "fyi",
+    });
+
+    expect(harness.tx.steeringMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ runId: null, originTrigger: "bot_message" }),
+    });
+    expect(harness.tx.run.create).not.toHaveBeenCalled();
+  });
+
+  it("still gives a request its own run, since its reply goes back", async () => {
+    const harness = deps({ targetBusy: busy("user") });
+    await messageBot(harness.deps, run, sender, {
+      bot_id: "bot-target",
+      message: "Draft five comments.",
+      intent: "request",
+    });
+
+    expect(harness.tx.steeringMessage.create).not.toHaveBeenCalled();
+    expect(harness.tx.run.create).toHaveBeenCalled();
+  });
+});
 
 describe("messaging another bot", () => {
   it("starts no run for the target while the Space is being deleted", async () => {

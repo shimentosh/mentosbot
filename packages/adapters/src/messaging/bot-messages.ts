@@ -17,6 +17,7 @@ import type { PrismaClient } from "@rakazo/db";
 import {
   appendEventInTransaction,
   createThreadMessageInTransaction,
+  handBotReplyToBusyChat,
   isUniqueViolation,
   spaceTakesWork,
   storedMessageBlocks,
@@ -198,7 +199,8 @@ export async function messageBot(
   let committed:
     | {
         ok: true;
-        runId: string;
+        /** Null when the message joined the work its bot already had. */
+        runId: string | null;
         targetEventSeq: number;
         senderEventSeq: number;
       }
@@ -293,36 +295,50 @@ export async function messageBot(
           clientNonce: deliveryKey,
           markUnread: options?.forceUnread === true,
         });
-        const task = await tx.task.create({
-          data: {
-            spaceId: run.spaceId,
-            botId: target.id,
+        // Nothing goes back for a result, status or FYI, so a busy bot takes it into the work it
+        // already has, and several arriving together are answered in one turn.
+        const handedOver =
+          (intent === "result" || intent === "status" || intent === "fyi") &&
+          (await handBotReplyToBusyChat(tx, {
             threadId: targetThreadId,
-            userId: run.userId,
-            prompt: wakePrompt,
-            status: "queued",
-          },
-        });
-        const nextRun = await tx.run.create({
-          data: {
-            spaceId: run.spaceId,
             botId: target.id,
-            threadId: targetThreadId,
-            taskId: task.id,
             userId: run.userId,
-            status: "queued",
-            trigger: "bot_message",
-            sourceMessageId: inbound.id,
-          },
-          select: { id: true },
-        });
-        await tx.message.update({ where: { id: inbound.id }, data: { runId: nextRun.id } });
+            messageId: inbound.id,
+          }));
+        let nextRunId: string | null = null;
+        if (!handedOver) {
+          const task = await tx.task.create({
+            data: {
+              spaceId: run.spaceId,
+              botId: target.id,
+              threadId: targetThreadId,
+              userId: run.userId,
+              prompt: wakePrompt,
+              status: "queued",
+            },
+          });
+          const nextRun = await tx.run.create({
+            data: {
+              spaceId: run.spaceId,
+              botId: target.id,
+              threadId: targetThreadId,
+              taskId: task.id,
+              userId: run.userId,
+              status: "queued",
+              trigger: "bot_message",
+              sourceMessageId: inbound.id,
+            },
+            select: { id: true },
+          });
+          nextRunId = nextRun.id;
+          await tx.message.update({ where: { id: inbound.id }, data: { runId: nextRun.id } });
+        }
         const inboundEvent = await appendEventInTransaction(tx, {
           spaceId: run.spaceId,
           threadId: targetThreadId,
           botId: target.id,
           type: "thread.message.created",
-          runId: nextRun.id,
+          ...(nextRunId ? { runId: nextRunId } : {}),
           payload: { messageId: inbound.id, role: "user", blocks: [inboundBlock, ...files] },
         });
         const outboundEvent = await appendEventInTransaction(tx, {
@@ -337,7 +353,7 @@ export async function messageBot(
         });
         return {
           ok: true as const,
-          runId: nextRun.id,
+          runId: nextRunId,
           targetEventSeq: inboundEvent.seq,
           senderEventSeq: outboundEvent.seq,
         };
@@ -360,7 +376,7 @@ export async function messageBot(
 
   await deps.events.notify(targetThreadId, committed.targetEventSeq);
   await deps.events.notify(run.threadId, committed.senderEventSeq);
-  await wakeRun(deps.jobs, committed.runId);
+  if (committed.runId) await wakeRun(deps.jobs, committed.runId);
   return {
     ok: true as const,
     botId: target.id,

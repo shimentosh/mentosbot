@@ -1,7 +1,7 @@
 import type { ConnectorCall, ConnectorTool } from "@rakazo/adapter-kit";
 import { BOT_INSTRUCTIONS_MAX_LENGTH, BotSecretAuth, OneTimeCodeTarget } from "@rakazo/contracts";
 import { approvalCardExpires, approvalModeFromPreference, redactSecrets } from "@rakazo/core";
-import { runLoginKind } from "@rakazo/db";
+import { BOT_MESSAGE_ORIGIN, runLoginKind } from "@rakazo/db";
 import type { FleetCardSummary } from "../../approvals/approval-ask.js";
 import type { TerminatingToolResult } from "../../approvals/approval-effect.js";
 import {
@@ -454,13 +454,14 @@ export async function prepareToolRequest(
         "user_computer_unavailable",
         "The user's computer is not available in this run.",
       );
-    // Routines and webhooks reach no one's computer, including through a run they were handed to.
+    // Routines, webhooks and other bots' reports reach no one's computer, including through a
+    // run they were handed to.
     if (
       await deps.prisma.steeringMessage.findFirst({
         where: {
           runId: ctx.runId,
           claimedAt: { not: null },
-          originTrigger: { in: ["routine", "webhook"] },
+          originTrigger: { in: ["routine", "webhook", BOT_MESSAGE_ORIGIN] },
         },
         select: { id: true },
       })

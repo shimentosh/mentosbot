@@ -93,9 +93,11 @@ export { botRunStatuses, primaryActiveRun } from "./threads/thread-listing.js";
 export * from "./threads/thread-reads.js";
 export type { ClaimedSteeringMessage, ClaimSteeringInput } from "./threads/thread-steering.js";
 export {
+  BOT_MESSAGE_ORIGIN,
   claimSteering,
   createPendingSteeringRun,
   discardAnsweredSteering,
+  handBotReplyToBusyChat,
   handQueuedRunToWorkingRun,
 } from "./threads/thread-steering.js";
 export * from "./threads/thread-takeover.js";

@@ -778,7 +778,7 @@ describe("the user's computer after a routine or webhook joined the run", () => 
     return { ctx, request, findFirst };
   }
 
-  it("refuses once the run has read a handed-over routine or webhook task", async () => {
+  it("refuses once the run has read a handed-over routine, webhook task or bot report", async () => {
     const { ctx, request, findFirst } = userComputerCall(true);
     await expect(prepareToolRequest(ctx as never, request)).resolves.toEqual({
       error: "The user's computer is not available in this run.",
@@ -786,7 +786,7 @@ describe("the user's computer after a routine or webhook joined the run", () => 
     expect(findFirst.mock.calls.at(-1)?.[0].where).toEqual({
       runId: "run-1",
       claimedAt: { not: null },
-      originTrigger: { in: ["routine", "webhook"] },
+      originTrigger: { in: ["routine", "webhook", "bot_message"] },
     });
   });
 

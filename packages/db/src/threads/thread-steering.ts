@@ -3,8 +3,11 @@ import {
   BACKGROUND_HELPER_TRIGGER,
   BACKGROUND_RUN_TRIGGERS,
   blocksToAgentHistoryText,
+  botMessageContext,
+  buildBotMessageWakePrompt,
   HELPER_RESULT_TRIGGER,
   isConversationalRun,
+  messageBypassesTakeoverWait,
   messagingChannelId,
   QUEUE_HOLDING_RUN_STATUSES,
   STEERING_CONTINUATION_PROMPT,
@@ -18,6 +21,9 @@ import { HOLDS_CHAT } from "../runs/chat-holding-runs.js";
 import { appendEventInTransaction } from "./events.js";
 import { mayBeChannelMessage, readMessageBlocks, storedMessageBlocks } from "./message-blocks.js";
 import { createThreadMessageInTransaction } from "./messages.js";
+
+/** Steering another bot delivered: its result, status or FYI, handed to a busy chat. */
+export const BOT_MESSAGE_ORIGIN = "bot_message";
 
 export interface ClaimSteeringInput {
   threadId: string;
@@ -35,9 +41,10 @@ export interface ClaimedSteeringMessage {
   blocks: MessageBlock[];
   /**
    * Who sent it: the run's own person (in the app or a connected chat), another member of the
-   * chat, someone else in a connected chat, a webhook, or a scheduled task handed over mid-run.
+   * chat, someone else in a connected chat, a webhook, a scheduled task handed over mid-run, or
+   * another bot reporting back (see handBotReplyToBusyChat).
    */
-  origin: "user" | "member" | "messaging" | "webhook" | "routine";
+  origin: "user" | "member" | "messaging" | "webhook" | "routine" | "bot";
 }
 
 export async function claimSteering(
@@ -211,13 +218,15 @@ async function claimSteeringOnce(
     };
     return steering.map((item) => {
       const blocks = storedMessageBlocks(item.message);
+      const fromBot = item.originTrigger === BOT_MESSAGE_ORIGIN;
       return {
         id: item.id,
         messageId: item.messageId,
-        text: blocksToAgentHistoryText(blocks),
+        text: (fromBot && botMessageWakeText(blocks)) || blocksToAgentHistoryText(blocks),
         blocks,
-        origin:
-          item.originTrigger === "webhook"
+        origin: fromBot
+          ? ("bot" as const)
+          : item.originTrigger === "webhook"
             ? ("webhook" as const)
             : item.originTrigger === "routine"
               ? ("routine" as const)
@@ -356,9 +365,12 @@ export async function createPendingSteeringRun(
       threadId: input.threadId,
       userId,
       prompt:
-        origin === "webhook" || origin === "routine"
-          ? blocksToAgentHistoryText(storedMessageBlocks(source.message))
-          : STEERING_CONTINUATION_PROMPT,
+        origin === BOT_MESSAGE_ORIGIN
+          ? botMessageWakeText(storedMessageBlocks(source.message)) ||
+            blocksToAgentHistoryText(storedMessageBlocks(source.message))
+          : origin === "webhook" || origin === "routine"
+            ? blocksToAgentHistoryText(storedMessageBlocks(source.message))
+            : STEERING_CONTINUATION_PROMPT,
       status: "queued",
     },
   });
@@ -374,7 +386,7 @@ export async function createPendingSteeringRun(
       // from the app; one direct-line delivery keeps it messaging, so it is never owner-started.
       // Rows queued before origins were recorded are recognized by their channel message.
       trigger:
-        origin === "webhook" || origin === "routine"
+        origin === "webhook" || origin === "routine" || origin === BOT_MESSAGE_ORIGIN
           ? origin
           : origin === "private" &&
               batch.every(
@@ -425,7 +437,11 @@ function steeringOrigin(item: {
   originTrigger: string | null;
   message: { id: string; blocks: unknown };
 }): string {
-  if (item.originTrigger === "webhook" || item.originTrigger === "routine")
+  if (
+    item.originTrigger === "webhook" ||
+    item.originTrigger === "routine" ||
+    item.originTrigger === BOT_MESSAGE_ORIGIN
+  )
     return item.originTrigger;
   if (item.originTrigger !== "messaging") return "private";
   const { blocks, intact } = readMessageBlocks(item.message);
@@ -441,9 +457,64 @@ function steeringOrigin(item: {
  */
 export async function releaseUnreadHandovers(tx: Prisma.TransactionClient, runId: string) {
   await tx.steeringMessage.updateMany({
-    where: { runId, claimedAt: null, originTrigger: "routine" },
+    where: { runId, claimedAt: null, originTrigger: { in: ["routine", BOT_MESSAGE_ORIGIN] } },
     data: { runId: null },
   });
+}
+
+/** What a bot's message wakes its reader with, untrusted framing included. */
+function botMessageWakeText(blocks: readonly MessageBlock[]): string | undefined {
+  const context = botMessageContext(blocks);
+  return context
+    ? buildBotMessageWakePrompt({
+        from: { id: context.fromBotId, name: context.fromBotName },
+        text: context.text,
+        intent: context.intent,
+        userRequest: context.userRequest,
+      })
+    : undefined;
+}
+
+/**
+ * A result, status or FYI from another bot needs no reply, so when its bot's chat is busy it
+ * joins the work already there instead of waiting for a turn of its own: the running turn reads
+ * it before its next step, and otherwise it waits with the bot's other held messages for one
+ * follow-up that answers them together (see createPendingSteeringRun). Returns false when the
+ * chat is free, so the caller starts a run. Call with the chat's thread locked.
+ */
+export async function handBotReplyToBusyChat(
+  tx: Prisma.TransactionClient,
+  input: { threadId: string; botId: string; userId: string; messageId: string },
+): Promise<boolean> {
+  const active = await tx.run.findMany({
+    where: {
+      threadId: input.threadId,
+      botId: input.botId,
+      status: { in: [...QUEUE_HOLDING_RUN_STATUSES] },
+      ...HOLDS_CHAT,
+    },
+    select: { id: true, trigger: true, status: true, userId: true },
+  });
+  // A run acts with its own person's accounts, so it takes only that person's chain.
+  const steers = (run: (typeof active)[number]) =>
+    run.userId === input.userId && isConversationalRun(run.trigger);
+  const holding = active.filter((run) => !messageBypassesTakeoverWait(run, steers(run)));
+  if (holding.length === 0) return false;
+  const working = holding.find(steers);
+  await tx.steeringMessage.create({
+    data: {
+      messageId: input.messageId,
+      botId: input.botId,
+      userId: input.userId,
+      runId: working?.id ?? null,
+      originTrigger: BOT_MESSAGE_ORIGIN,
+    },
+  });
+  await tx.message.update({
+    where: { id: input.messageId },
+    data: { runId: (working ?? holding[0]!).id },
+  });
+  return true;
 }
 
 /** Chat turns that cannot take a handed-over task: helper results and work kept out of the chat. */
