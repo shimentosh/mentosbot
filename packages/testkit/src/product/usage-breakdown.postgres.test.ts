@@ -213,7 +213,7 @@ describeBreakdown("usage.breakdown", () => {
       costUsd: 0,
     });
 
-    // A call without a price makes the cost unknown rather than zero.
+    // A call without a price leaves the cost as the sum of the priced calls, marked partial.
     await prisma.usageRecord.create({
       data: {
         ...owner,
@@ -228,7 +228,10 @@ describeBreakdown("usage.breakdown", () => {
       },
     });
     const mixed = await get({ range: "30d", botId: alpha.id });
-    expect(mixed.totals).toMatchObject({ runs: 2, modelCalls: 5, totalTokens: 207, costUsd: null });
+    expect(mixed.totals).toMatchObject({ runs: 2, modelCalls: 5, totalTokens: 207 });
+    expect(mixed.totals.costUsd).toBeCloseTo(0.0115);
+    expect(mixed.totals.partial).toContain("costUsd");
+    expect(mixed.totals.partial).not.toContain("totalTokens");
     expect(mixed.models.find((m) => m.model === "unpriced")?.costUsd).toBeNull();
     expect(mixed.models.find((m) => m.model === "m1")?.costUsd).toBeCloseTo(0.0115);
 
@@ -245,8 +248,10 @@ describeBreakdown("usage.breakdown", () => {
       },
     });
     const partial = await get({ range: "30d", botId: alpha.id });
-    expect(partial.totals).toMatchObject({ modelCalls: 6, totalTokens: 207, tokensPartial: true });
-    expect(mixed.totals.tokensPartial).toBe(false);
+    expect(partial.totals).toMatchObject({ modelCalls: 6, totalTokens: 207 });
+    expect(partial.totals.partial).toEqual(
+      expect.arrayContaining(["inputTokens", "outputTokens", "totalTokens", "costUsd"]),
+    );
 
     // Input read from the cache is its own figure, unknown where a call did not measure it.
     await prisma.usageRecord.createMany({
@@ -267,7 +272,7 @@ describeBreakdown("usage.breakdown", () => {
     const cached = await get({ range: "30d", botId: alpha.id });
     expect(cached.models.find((m) => m.model === "caching")?.cachedTokens).toBe(42);
     expect(cached.models.find((m) => m.model === "m1")?.cachedTokens).toBeNull();
-    // One call without the figure makes the model's sum unknown, even beside measured ones.
+    // One call without the figure leaves the model's sum as the measured ones, marked partial.
     await prisma.usageRecord.createMany({
       data: [5, null].map((cacheReadTokens) => ({
         ...owner,
@@ -283,8 +288,10 @@ describeBreakdown("usage.breakdown", () => {
       })),
     });
     const mixedCache = await get({ range: "30d", botId: alpha.id });
-    expect(mixedCache.models.find((m) => m.model === "mixed-cache")?.cachedTokens).toBeNull();
-    // A row from before cache reads were measured holds a zero and no total: still unknown.
+    const mixedModel = mixedCache.models.find((m) => m.model === "mixed-cache");
+    expect(mixedModel?.cachedTokens).toBe(5);
+    expect(mixedModel?.partial).toEqual(["cachedTokens"]);
+    // A row from before cache reads were measured holds a zero and no total: counted as partial.
     await prisma.usageRecord.create({
       data: {
         ...owner,
@@ -299,7 +306,9 @@ describeBreakdown("usage.breakdown", () => {
       },
     });
     const older = await get({ range: "30d", botId: alpha.id });
-    expect(older.models.find((m) => m.model === "caching")?.cachedTokens).toBeNull();
+    const olderModel = older.models.find((m) => m.model === "caching");
+    expect(olderModel?.cachedTokens).toBe(42);
+    expect(olderModel?.partial).toContain("cachedTokens");
 
     const elsewhere = await rpc<UsageBreakdown>(app, other, "usage/breakdown", { range: "all" });
     expect(summary(elsewhere)).toEqual({ runs: 1, calls: 1, tokens: 1_000_000 });

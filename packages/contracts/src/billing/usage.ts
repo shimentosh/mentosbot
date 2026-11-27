@@ -30,19 +30,34 @@ export const UsageRecordSchema = z.object({
 
 export type UsageRecord = z.infer<typeof UsageRecordSchema>;
 
-/** Token and cost totals are null when any counted call lacks that figure. */
-const UsageTotalsSchema = z.object({
+export const UsageFigureSchema = z.enum([
+  "inputTokens",
+  "cachedTokens",
+  "outputTokens",
+  "totalTokens",
+  "costUsd",
+]);
+export type UsageFigure = z.infer<typeof UsageFigureSchema>;
+
+/**
+ * Token and cost totals add up the counted calls that reported the figure, and are null when none
+ * did. `partial` names each figure some counted calls left out (an interrupted call, an unpriced
+ * model), so the figure is a lower bound.
+ */
+const UsageFiguresSchema = z.object({
   inputTokens: z.number().nullable(),
   outputTokens: z.number().nullable(),
   totalTokens: z.number().nullable().optional(),
   costUsd: z.number().nullable().optional(),
   modelCalls: z.number().optional(),
 });
+const partial = z.array(UsageFigureSchema).optional();
+const UsageTotalsSchema = UsageFiguresSchema.extend({ partial });
+/** Every figure present, as a breakdown row reports them. */
+const UsageRowSchema = UsageFiguresSchema.required().extend({ partial });
 export const UsageSummarySchema = UsageTotalsSchema.extend({
   runs: z.number(),
-  models: z
-    .array(UsageTotalsSchema.required().extend({ provider: z.string(), model: z.string() }))
-    .optional(),
+  models: z.array(UsageRowSchema.extend({ provider: z.string(), model: z.string() })).optional(),
 });
 export type UsageSummary = z.infer<typeof UsageSummarySchema>;
 
@@ -58,15 +73,15 @@ export const UsageBreakdownInputSchema = z.object({
 });
 export type UsageBreakdownInput = z.infer<typeof UsageBreakdownInputSchema>;
 
-export const UsageBreakdownModelSchema = UsageTotalsSchema.required().extend({
+export const UsageBreakdownModelSchema = UsageRowSchema.extend({
   provider: z.string(),
   model: z.string(),
-  /** Input read from the provider's cache, which `inputTokens` leaves out; null when any call lacks the figure. */
+  /** Input read from the provider's cache, which `inputTokens` leaves out; null when no call measured it. */
   cachedTokens: z.number().nullable(),
 });
 export type UsageBreakdownModel = z.infer<typeof UsageBreakdownModelSchema>;
 
-export const UsageBreakdownPointSchema = UsageTotalsSchema.required().extend({
+export const UsageBreakdownPointSchema = UsageRowSchema.extend({
   /** The bucket's first day in the member's timezone, YYYY-MM-DD. */
   date: z.string(),
 });
@@ -83,10 +98,11 @@ export const UsageBreakdownBotSchema = z.object({
   totalTokens: z.number().nullable(),
   costUsd: z.number().nullable(),
   modelCalls: z.number(),
+  partial,
 });
 export type UsageBreakdownBot = z.infer<typeof UsageBreakdownBotSchema>;
 
-export const UsageBreakdownRoutineSchema = UsageTotalsSchema.required().extend({
+export const UsageBreakdownRoutineSchema = UsageRowSchema.extend({
   /**
    * Null for everything no routine started: chats, messages from other bots, background work,
    * and the runs of a routine that was since deleted.
@@ -105,11 +121,7 @@ export const UsageBreakdownSchema = z.object({
   bots: z.array(UsageBreakdownBotSchema),
   /** Every model used in the range, for the model selector. */
   modelOptions: z.array(z.object({ provider: z.string(), model: z.string() })),
-  totals: UsageTotalsSchema.required().extend({
-    runs: z.number(),
-    /** The token total adds up only the calls that reported a count; some did not. */
-    tokensPartial: z.boolean().optional(),
-  }),
+  totals: UsageRowSchema.extend({ runs: z.number() }),
   models: z.array(UsageBreakdownModelSchema),
   /** The selection split by the routine that started each run, largest first. */
   routines: z.array(UsageBreakdownRoutineSchema),

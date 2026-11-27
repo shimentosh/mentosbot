@@ -1,5 +1,10 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { ModelCatalogEntry, UsageBreakdownBot, UsageDateRange } from "@rakazo/contracts";
+import type {
+  ModelCatalogEntry,
+  UsageBreakdownBot,
+  UsageDateRange,
+  UsageFigure,
+} from "@rakazo/contracts";
 import {
   Field,
   FieldLabel,
@@ -74,6 +79,9 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
   const number = (value: number | null | undefined) => (value == null ? "—" : count.format(value));
   const cost = (value: number | null | undefined) =>
     value == null ? "—" : value > 0 && value < 0.01 ? `<${usd.format(0.01)}` : usd.format(value);
+  // A "+" marks a figure that leaves out calls which reported none, such as an interrupted one.
+  const plus = (row: { partial?: UsageFigure[] } | undefined, name: UsageFigure) =>
+    row?.partial?.includes(name) ? "+" : "";
 
   const ranges: { id: UsageDateRange; label: string }[] = [
     { id: "today", label: t`Today` },
@@ -190,9 +198,9 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
           { label: t`Runs`, value: number(totals?.runs) },
           {
             label: t`Tokens`,
-            value: `${number(totals?.totalTokens)}${totals?.tokensPartial ? "+" : ""}`,
+            value: `${number(totals?.totalTokens)}${plus(totals, "totalTokens")}`,
           },
-          { label: t`Cost`, value: cost(totals?.costUsd) },
+          { label: t`Cost`, value: `${cost(totals?.costUsd)}${plus(totals, "costUsd")}` },
         ].map((stat) => (
           <div key={stat.label} className="rounded-xl border border-border px-4 py-3">
             <dt className="text-body-sm text-muted-foreground">{stat.label}</dt>
@@ -217,7 +225,9 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
                 : value === 0
                   ? 0
                   : Math.max(4, Math.round((value / maxTokens) * 100));
-              const label = t`${dayLabel(point.date)}: ${number(point.totalTokens)} tokens, ${cost(point.costUsd)}`;
+              const tokens = `${number(point.totalTokens)}${plus(point, "totalTokens")}`;
+              const spent = `${cost(point.costUsd)}${plus(point, "costUsd")}`;
+              const label = t`${dayLabel(point.date)}: ${tokens} tokens, ${spent}`;
               return (
                 <Tooltip key={point.date}>
                   <TooltipTrigger
@@ -299,14 +309,20 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {number(row.inputTokens)}
+                      {plus(row, "inputTokens")}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {number(row.cachedTokens)}
+                      {plus(row, "cachedTokens")}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {number(row.outputTokens)}
+                      {plus(row, "outputTokens")}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{cost(row.costUsd)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {cost(row.costUsd)}
+                      {plus(row, "costUsd")}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -360,8 +376,12 @@ export function UsageSettingsPanel({ panelRef }: { panelRef?: RefObject<HTMLDivE
                   <TableCell className="text-right tabular-nums">{number(row.runs)}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {number(row.totalTokens)}
+                    {plus(row, "totalTokens")}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{cost(row.costUsd)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {cost(row.costUsd)}
+                    {plus(row, "costUsd")}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

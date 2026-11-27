@@ -286,6 +286,7 @@ describe.skipIf(!enabled)("persisted Pi usage accounting", () => {
         modelCalls: number;
         runs: number;
         costUsd: number | null;
+        partial?: string[];
         models: {
           model: string;
           modelCalls: number;
@@ -303,7 +304,7 @@ describe.skipIf(!enabled)("persisted Pi usage accounting", () => {
         totalTokens: 1170,
       });
       expect(summary.models[0]?.costUsd).toBeCloseTo(0.00108);
-      // A call without a price makes its model's cost and the overall cost unknown, not zero.
+      // A call without a price leaves its own model's cost unknown and the overall cost partial.
       await db.usageRecord.create({
         data: {
           spaceId: delivered.spaceId,
@@ -316,7 +317,9 @@ describe.skipIf(!enabled)("persisted Pi usage accounting", () => {
         },
       });
       const mixed = await rpc<Summary>("usage/summary");
-      expect(mixed).toMatchObject({ totalTokens: 1172, modelCalls: 10, runs: 5, costUsd: null });
+      expect(mixed).toMatchObject({ totalTokens: 1172, modelCalls: 10, runs: 5 });
+      expect(mixed.costUsd).toBeCloseTo(0.00108);
+      expect(mixed.partial).toEqual(["costUsd"]);
       expect(
         mixed.models.map(({ model, modelCalls, totalTokens }) => [model, modelCalls, totalTokens]),
       ).toEqual([

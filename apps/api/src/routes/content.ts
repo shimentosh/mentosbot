@@ -1,5 +1,5 @@
 import { planLimitsReader, readMemberPlanLimits, resolveBotWorkspacePath } from "@rakazo/adapters";
-import type { ExportManifest, UsageRecord } from "@rakazo/contracts";
+import type { ExportManifest, UsageFigure, UsageRecord } from "@rakazo/contracts";
 import { attachmentMaxBytes, MediaModelRoleSchema, resolveBotAvatarSet } from "@rakazo/contracts";
 import {
   AttachmentValidationError,
@@ -200,7 +200,8 @@ export function contentRoutes(ctx: RouterContext) {
             .reduce((total, row) => total + row._count._all, 0);
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
-        // A total that skips rows without a count would understate spend, so it reads as unknown.
+        // A figure adds up the rows that reported it, is null when none did, and is named in
+        // `partial` when some did not, so a few interrupted calls never blank a whole total.
         const completeSums = (
           group: {
             _sum: Record<keyof typeof sums, number | null>;
@@ -208,16 +209,19 @@ export function contentRoutes(ctx: RouterContext) {
           },
           media: number,
         ) => {
+          const fields = Object.keys(sums) as (keyof typeof sums)[];
           const complete = (field: keyof typeof sums) =>
-            group._count[field] + (field === "costUsd" ? 0 : media) === group._count._all
-              ? (group._sum[field] ?? 0)
-              : null;
+            group._count[field] + (field === "costUsd" ? 0 : media) === group._count._all;
+          const value = (field: keyof typeof sums) =>
+            complete(field) ? (group._sum[field] ?? 0) : group._sum[field];
+          const partial = fields.filter((field) => !complete(field) && group._sum[field] !== null);
           return {
-            inputTokens: complete("inputTokens"),
-            outputTokens: complete("outputTokens"),
-            totalTokens: complete("totalTokens"),
-            costUsd: complete("costUsd"),
+            inputTokens: value("inputTokens"),
+            outputTokens: value("outputTokens"),
+            totalTokens: value("totalTokens"),
+            costUsd: value("costUsd"),
             modelCalls: group._count._all,
+            ...(partial.length > 0 ? { partial } : {}),
           };
         };
         return {
@@ -298,17 +302,31 @@ export function contentRoutes(ctx: RouterContext) {
 
         const toNum = (v: bigint | number | null | undefined) =>
           v == null ? 0 : typeof v === "bigint" ? Number(v) : v;
-        const toNullableInt = (v: number | bigint | null, complete: boolean) =>
-          complete ? Math.round(toNum(v)) : null;
-        const toNullableFloat = (v: number | null, complete: boolean) =>
-          complete ? (v ?? 0) : null;
+        // A figure adds up the calls that reported it; a few without one (an interrupted call)
+        // must not blank it, so it is null only when no call did and is named in `partial`.
+        const figure = (v: number | bigint | null, complete: boolean, whole = true) =>
+          v == null && !complete ? null : whole ? Math.round(toNum(v)) : toNum(v);
+        const partialOf = (
+          checks: [UsageFigure, number | bigint | null, boolean][],
+        ): { partial?: UsageFigure[] } => {
+          const partial = checks.flatMap(([name, v, complete]) =>
+            !complete && v != null ? [name] : [],
+          );
+          return partial.length > 0 ? { partial } : {};
+        };
         const totalsOf = (row: TotalsRow) => ({
           runs: "runs" in row ? toNum((row as { runs?: bigint | number }).runs) : 0,
           modelCalls: toNum(row.modelCalls),
-          inputTokens: toNullableInt(row.inputTokens, Boolean(row.inputComplete)),
-          outputTokens: toNullableInt(row.outputTokens, Boolean(row.outputComplete)),
-          totalTokens: toNullableInt(row.totalTokens, Boolean(row.totalComplete)),
-          costUsd: toNullableFloat(row.costUsd, Boolean(row.costComplete)),
+          inputTokens: figure(row.inputTokens, Boolean(row.inputComplete)),
+          outputTokens: figure(row.outputTokens, Boolean(row.outputComplete)),
+          totalTokens: figure(row.totalTokens, Boolean(row.totalComplete)),
+          costUsd: figure(row.costUsd, Boolean(row.costComplete), false),
+          ...partialOf([
+            ["inputTokens", row.inputTokens, Boolean(row.inputComplete)],
+            ["outputTokens", row.outputTokens, Boolean(row.outputComplete)],
+            ["totalTokens", row.totalTokens, Boolean(row.totalComplete)],
+            ["costUsd", row.costUsd, Boolean(row.costComplete)],
+          ]),
         });
 
         const usageRunId = Prisma.sql`COALESCE(u."parentRunId", u."runId")`;
@@ -442,46 +460,24 @@ export function contentRoutes(ctx: RouterContext) {
             costUsd: null,
             costComplete: true,
           } satisfies TotalsRow);
-        const totals = (() => {
-          if (toNum(rawTotals.modelCalls) === 0) {
-            return {
-              runs: 0,
-              modelCalls: 0,
-              inputTokens: 0,
-              outputTokens: 0,
-              totalTokens: 0,
-              costUsd: 0,
-            };
-          }
-          // A few calls without a count (an interrupted one) must not blank the whole total.
-          const tokensPartial = !rawTotals.totalComplete && rawTotals.totalTokens !== null;
-          return {
-            ...totalsOf({
-              ...rawTotals,
-              inputComplete: Boolean(rawTotals.inputComplete),
-              outputComplete: Boolean(rawTotals.outputComplete),
-              totalComplete: Boolean(rawTotals.totalComplete) || tokensPartial,
-              costComplete: Boolean(rawTotals.costComplete),
-            }),
-            tokensPartial,
-          };
-        })();
+        const totals =
+          toNum(rawTotals.modelCalls) === 0
+            ? {
+                runs: 0,
+                modelCalls: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                totalTokens: 0,
+                costUsd: 0,
+              }
+            : totalsOf(rawTotals);
 
         const nextDay = (day: string) =>
           new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
         const points = new Map(
           timeRows.map((row) => {
-            const t = totalsOf({ ...row, runs: 0 });
-            return [
-              row.bucket,
-              {
-                modelCalls: t.modelCalls,
-                inputTokens: t.inputTokens,
-                outputTokens: t.outputTokens,
-                totalTokens: t.totalTokens,
-                costUsd: t.costUsd,
-              },
-            ] as const;
+            const { runs: _runs, ...point } = totalsOf({ ...row, runs: 0 });
+            return [row.bucket, point] as const;
           }),
         );
         const firstDay = since ? localDay(since) : timeRows[0]?.bucket;
@@ -498,6 +494,7 @@ export function contentRoutes(ctx: RouterContext) {
           outputTokens: number | null;
           totalTokens: number | null;
           costUsd: number | null;
+          partial?: UsageFigure[];
         };
         const empty: Point = {
           modelCalls: 0,
@@ -506,7 +503,7 @@ export function contentRoutes(ctx: RouterContext) {
           totalTokens: 0,
           costUsd: 0,
         };
-        const add = (a: number | null, b: number | null) => (a == null || b == null ? null : a + b);
+        const monthFigures = ["inputTokens", "outputTokens", "totalTokens", "costUsd"] as const;
         const overTime: ({ date: string } & Point)[] = [];
         // Every day or month in the range gets a point, so quiet stretches show as gaps.
         for (
@@ -521,11 +518,21 @@ export function contentRoutes(ctx: RouterContext) {
             overTime.push({ date, ...point });
             continue;
           }
+          // A quiet day adds nothing; a month's first day with calls stands as it is.
+          if (point.modelCalls === 0) continue;
+          if (last.modelCalls === 0) {
+            overTime[overTime.length - 1] = { ...point, date };
+            continue;
+          }
+          // Days add up the way calls do: what was reported, partial when a day left calls out.
+          const partial = new Set([...(last.partial ?? []), ...(point.partial ?? [])]);
+          for (const name of monthFigures) {
+            const [a, b] = [last[name], point[name]];
+            if ((a == null) !== (b == null)) partial.add(name);
+            last[name] = a == null && b == null ? null : (a ?? 0) + (b ?? 0);
+          }
           last.modelCalls += point.modelCalls;
-          last.inputTokens = add(last.inputTokens, point.inputTokens);
-          last.outputTokens = add(last.outputTokens, point.outputTokens);
-          last.totalTokens = add(last.totalTokens, point.totalTokens);
-          last.costUsd = add(last.costUsd, point.costUsd);
+          if (partial.size > 0) last.partial = [...partial];
         }
 
         return {
@@ -533,16 +540,17 @@ export function contentRoutes(ctx: RouterContext) {
           totals,
           modelOptions: modelOptionRows.map(({ provider, model }) => ({ provider, model })),
           models: modelRows.map((row) => {
-            const t = totalsOf({ ...row, runs: 0 });
+            const { runs: _runs, partial, ...t } = totalsOf({ ...row, runs: 0 });
+            const cached = partialOf([
+              ["cachedTokens", row.cachedTokens, Boolean(row.cachedComplete)],
+            ]).partial;
+            const all = [...(partial ?? []), ...(cached ?? [])];
             return {
               provider: row.provider,
               model: row.model,
-              modelCalls: t.modelCalls,
-              inputTokens: t.inputTokens,
-              cachedTokens: toNullableInt(row.cachedTokens, Boolean(row.cachedComplete)),
-              outputTokens: t.outputTokens,
-              totalTokens: t.totalTokens,
-              costUsd: t.costUsd,
+              ...t,
+              cachedTokens: figure(row.cachedTokens, Boolean(row.cachedComplete)),
+              ...(all.length > 0 ? { partial: all } : {}),
             };
           }),
           routines: routineRows.map((row) => ({

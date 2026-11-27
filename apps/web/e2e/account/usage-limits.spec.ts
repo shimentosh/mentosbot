@@ -257,7 +257,7 @@ test("account menu shows the usage hint and Usage shows allowances and credits o
           overTime: input.range === "30d" ? monthlyUsage : breakdown.overTime,
           ...(filtered
             ? {
-                totals: { ...point, runs: 14, tokensPartial: true },
+                totals: { ...point, runs: 14, partial: ["totalTokens"] },
                 models: [
                   {
                     provider: "subscription",

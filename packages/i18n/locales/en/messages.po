@@ -193,11 +193,9 @@ msgid "{0}, paused until you turn it on"
 msgstr "{0}, paused until you turn it on"
 
 #. placeholder {0}: dayLabel(point.date)
-#. placeholder {1}: number(point.totalTokens)
-#. placeholder {2}: cost(point.costUsd)
 #: apps/web/src/pages/settings/UsageSettingsPanel.tsx
-msgid "{0}: {1} tokens, {2}"
-msgstr "{0}: {1} tokens, {2}"
+msgid "{0}: {tokens} tokens, {spent}"
+msgstr "{0}: {tokens} tokens, {spent}"
 
 #. placeholder {0}: Math.min(100, Math.round(shares[2]! * 100))
 #. placeholder {1}: usage.cpus

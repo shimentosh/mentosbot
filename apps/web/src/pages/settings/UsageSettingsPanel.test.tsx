@@ -299,15 +299,15 @@ it("does not show the previous selection's numbers while the next one loads", as
   }
 });
 
-it("marks a token total that leaves out calls with no count", async () => {
+it("marks totals that leave out calls with no count", async () => {
   const panel = await renderPanel();
   try {
     breakdown.fetch.mockImplementation(async (input: Input) => {
       const usage = usageFor(input);
-      return { ...usage, totals: { ...usage.totals, tokensPartial: true } };
+      return { ...usage, totals: { ...usage.totals, partial: ["totalTokens", "costUsd"] } };
     });
     await panel.pick("Today");
-    expect(panel.totals()).toEqual(["3", "467+", "$0.04"]);
+    expect(panel.totals()).toEqual(["3", "467+", "$0.04+"]);
   } finally {
     await panel.unmount();
   }
