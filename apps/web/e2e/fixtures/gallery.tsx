@@ -19,6 +19,7 @@ import { BOT, FixtureTranscript } from "./thread-fixture";
 
 const SCOUT = { botId: "bot-2", name: "Scout", color: botColor("green") };
 const LEDGER = { botId: "bot-3", name: "Ledger", color: botColor("red") };
+const WRITER = { botId: "bot-4", name: "Writer", color: botColor("blue"), status: "running" };
 const INSTRUCTIONS_BEFORE = [
   "Reply in English.",
   "Sign off as the team, never by name.",
@@ -617,7 +618,7 @@ const working: Scenario = {
 const team: Scenario = {
   id: "team",
   label: "Team",
-  bots: [BOT, SCOUT, LEDGER],
+  bots: [BOT, SCOUT, LEDGER, WRITER],
   messages: [
     user("Plan the offsite with the team."),
     bot([
@@ -665,6 +666,16 @@ const team: Scenario = {
       },
     ]),
     say("The Loft fits the budget.", { botId: LEDGER.botId }),
+    say("Booking The Loft for Friday. Writer is drafting the invite."),
+    bot([
+      {
+        kind: "bot_message_sent",
+        toBotId: WRITER.botId,
+        toBotName: WRITER.name,
+        text: "Draft the offsite invite for Friday at The Loft.",
+        intent: "request",
+      },
+    ]),
     bot([
       {
         kind: "channel_message",

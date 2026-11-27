@@ -3,11 +3,12 @@ import { ChatMarkdown } from "@rakazo/chat-ui/web";
 import type { BotAvatarSet } from "@rakazo/contracts";
 import { plainTextFromMarkdown, splitPeerLabel } from "@rakazo/core";
 import type { GroupAvatarMember } from "@rakazo/ui-web";
-import { BotAvatar, Button, GroupAvatar, resolvePersonaColorDef } from "@rakazo/ui-web";
+import { BotAvatar, GroupAvatar, resolvePersonaColorDef } from "@rakazo/ui-web";
 import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
+  ChevronDown,
   ChevronRight,
   CornerUpRight,
 } from "lucide-react";
@@ -34,9 +35,10 @@ export interface PeerMessageEntry {
 }
 
 /**
- * What one bot sent another: who, a one-line excerpt that expands in place, and an Open that
- * leads to the whole exchange when the viewer can see it. Given `entries` from several bots,
- * the line names them all and expands to one row per message, each with its own Open.
+ * What one bot sent another, as one quiet line: who, and a one-line excerpt. The line opens the
+ * whole exchange when the viewer can see it, and otherwise expands in place. While the other bot
+ * is still working on it, the excerpt says so. Given `entries` from several bots, the line names
+ * them all and expands to one row per message, each opening its bot.
  */
 export function PeerMessageCard({
   direction,
@@ -48,6 +50,7 @@ export function PeerMessageCard({
   text,
   openLabel,
   onOpen,
+  working = false,
   entries,
   members,
 }: {
@@ -60,6 +63,8 @@ export function PeerMessageCard({
   text: string;
   openLabel?: string;
   onOpen?: () => void;
+  /** The other bot is still at work, so the line shows that instead of the excerpt. */
+  working?: boolean;
   entries?: PeerMessageEntry[];
   members?: GroupAvatarMember[];
 }) {
@@ -79,63 +84,51 @@ export function PeerMessageCard({
   const excerpt = plainTextFromMarkdown(text);
   const Glyph = GLYPHS[direction];
   return (
-    <div
-      data-testid="peer-message-card"
-      className="mx-auto w-full max-w-md rounded-xl border border-border px-3 py-2 text-body-sm"
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <button
-          type="button"
-          data-testid="peer-receipt-chip"
-          aria-expanded={excerpt ? expanded : undefined}
-          disabled={!excerpt}
-          onClick={() => setExpanded((value) => !value)}
-          className="flex min-w-0 flex-1 flex-col items-start gap-0.5 rounded-md text-start text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-        >
-          <span className="flex min-w-0 max-w-full items-center gap-1">
-            <Glyph className="size-3.5 shrink-0" aria-hidden="true" />
-            {parts.before ? <span className="whitespace-pre-wrap">{parts.before}</span> : null}
-            <span className="shrink-0">
-              <BotAvatar avatarSet={avatarSet} color={color} identity={identity} size={16} />
-            </span>
-            {parts.name ? (
-              <span
-                dir="auto"
-                className="truncate font-medium"
-                style={{ color: resolvePersonaColorDef(identity, color).hex }}
-              >
-                {parts.name}
-              </span>
-            ) : null}
-            {parts.after ? <span className="whitespace-pre-wrap">{parts.after}</span> : null}
-          </span>
-          {excerpt && !expanded ? (
-            <span dir="auto" className="w-full truncate text-foreground/75">
-              {excerpt}
-            </span>
-          ) : null}
-        </button>
-        {onOpen ? (
-          <Button
-            variant="text"
-            size="xs"
-            aria-label={openLabel}
-            onClick={onOpen}
-            className="shrink-0 font-normal"
+    <div data-testid="peer-message-card" className="mx-auto w-full max-w-md text-body-sm">
+      <button
+        type="button"
+        data-testid="peer-receipt-chip"
+        aria-label={onOpen ? openLabel : undefined}
+        aria-expanded={!onOpen && excerpt ? expanded : undefined}
+        disabled={!onOpen && !excerpt}
+        onClick={onOpen ?? (() => setExpanded((value) => !value))}
+        className={LINE_CLASS}
+      >
+        <Glyph className="size-3.5 shrink-0" aria-hidden="true" />
+        {parts.before ? <span className="shrink-0 whitespace-pre">{parts.before}</span> : null}
+        <BotAvatar avatarSet={avatarSet} color={color} identity={identity} size={16} />
+        {parts.name ? (
+          <span
+            dir="auto"
+            className="max-w-[45%] shrink-0 truncate font-medium"
+            style={{ color: resolvePersonaColorDef(identity, color).hex }}
           >
-            <Trans>Open</Trans>
-            <ChevronRight data-icon="inline-end" aria-hidden="true" />
-          </Button>
+            {parts.name}
+          </span>
         ) : null}
-      </div>
+        {parts.after ? <span className="shrink-0 whitespace-pre">{parts.after}</span> : null}
+        <span dir="auto" className="min-w-0 flex-1 truncate text-foreground/75">
+          {working ? (
+            <span className="text-shimmer">
+              <Trans>Working…</Trans>
+            </span>
+          ) : expanded ? null : (
+            excerpt
+          )}
+        </span>
+        {onOpen ? <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" /> : null}
+      </button>
       {expanded ? (
-        <div dir="auto" className="mt-1.5 text-body leading-normal text-foreground/90">
+        <div dir="auto" className="mt-1 px-2 text-body leading-normal text-foreground/90">
           <ChatMarkdown>{text}</ChatMarkdown>
         </div>
       ) : null}
     </div>
   );
 }
+
+const LINE_CLASS =
+  "flex w-full min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-start text-muted-foreground hover:bg-muted disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2";
 
 function PeerGroupCard({
   label,
@@ -151,71 +144,62 @@ function PeerGroupCard({
   onToggle: () => void;
 }) {
   const latest = entries.at(-1);
-  const excerpt = latest ? plainTextFromMarkdown(latest.text) : "";
   return (
-    <div
-      data-testid="peer-message-card"
-      className="mx-auto w-full max-w-md rounded-xl border border-border px-3 py-2 text-body-sm"
-    >
+    <div data-testid="peer-message-card" className="mx-auto w-full max-w-md text-body-sm">
       <button
         type="button"
         data-testid="peer-receipt-chip"
         aria-expanded={expanded}
         onClick={onToggle}
-        className="flex w-full min-w-0 flex-col items-start gap-0.5 rounded-md text-start text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+        className={LINE_CLASS}
       >
-        <span className="flex w-full min-w-0 items-center gap-1.5">
-          <ArrowLeftRight className="size-3.5 shrink-0" aria-hidden="true" />
-          <GroupAvatar members={members} size={16} className="shrink-0" />
-          <span dir="auto" className="truncate">
-            {label}
-          </span>
+        <ArrowLeftRight className="size-3.5 shrink-0" aria-hidden="true" />
+        <GroupAvatar members={members} size={16} className="shrink-0" />
+        <span dir="auto" className="max-w-[45%] shrink-0 truncate font-medium">
+          {label}
         </span>
-        {excerpt && !expanded ? (
-          <span dir="auto" className="w-full truncate text-foreground/75">
-            {latest ? `${latest.peerName}: ${excerpt}` : excerpt}
-          </span>
-        ) : null}
+        <span dir="auto" className="min-w-0 flex-1 truncate text-foreground/75">
+          {latest && !expanded ? `${latest.peerName}: ${plainTextFromMarkdown(latest.text)}` : null}
+        </span>
+        <ChevronDown
+          className={`size-3.5 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
       </button>
       {expanded ? (
-        <ul className="mt-1.5 flex flex-col gap-1.5">
+        <ul className="mt-0.5 flex flex-col">
           {entries.map((entry) => {
             const Glyph = GLYPHS[entry.direction];
             return (
-              <li key={entry.key} className="flex min-w-0 items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-1 text-muted-foreground">
-                    <Glyph className="size-3.5 shrink-0" aria-hidden="true" />
-                    <BotAvatar
-                      avatarSet={entry.avatarSet}
-                      color={entry.color}
-                      identity={entry.identity}
-                      size={16}
-                    />
-                    <span
-                      dir="auto"
-                      className="truncate font-medium"
-                      style={{ color: resolvePersonaColorDef(entry.identity, entry.color).hex }}
-                    >
-                      {entry.peerName}
-                    </span>
-                  </div>
-                  <p dir="auto" className="line-clamp-2 text-foreground/75">
-                    {plainTextFromMarkdown(entry.text)}
-                  </p>
-                </div>
-                {entry.onOpen ? (
-                  <Button
-                    variant="text"
-                    size="xs"
-                    aria-label={entry.openLabel}
-                    onClick={entry.onOpen}
-                    className="shrink-0 font-normal"
+              <li key={entry.key}>
+                <button
+                  type="button"
+                  aria-label={entry.onOpen ? entry.openLabel : undefined}
+                  disabled={!entry.onOpen}
+                  onClick={entry.onOpen}
+                  className={LINE_CLASS}
+                >
+                  <Glyph className="size-3.5 shrink-0" aria-hidden="true" />
+                  <BotAvatar
+                    avatarSet={entry.avatarSet}
+                    color={entry.color}
+                    identity={entry.identity}
+                    size={16}
+                  />
+                  <span
+                    dir="auto"
+                    className="max-w-[45%] shrink-0 truncate font-medium"
+                    style={{ color: resolvePersonaColorDef(entry.identity, entry.color).hex }}
                   >
-                    <Trans>Open</Trans>
-                    <ChevronRight data-icon="inline-end" aria-hidden="true" />
-                  </Button>
-                ) : null}
+                    {entry.peerName}
+                  </span>
+                  <span dir="auto" className="min-w-0 flex-1 truncate text-foreground/75">
+                    {plainTextFromMarkdown(entry.text)}
+                  </span>
+                  {entry.onOpen ? (
+                    <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
+                  ) : null}
+                </button>
               </li>
             );
           })}

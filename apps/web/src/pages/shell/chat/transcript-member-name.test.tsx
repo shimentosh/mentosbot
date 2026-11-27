@@ -137,9 +137,11 @@ function header(messageId: string): string | null {
 
 /** The hand-off card's who-to-whom line, without its excerpt. */
 function handoffLine(messageId: string): string {
-  const line = container.querySelector(
-    `[data-message-id="${messageId}"] [data-testid="peer-receipt-chip"] > span`,
-  );
+  const line = container
+    .querySelector(`[data-message-id="${messageId}"] [data-testid="peer-receipt-chip"]`)
+    ?.cloneNode(true) as HTMLElement | undefined;
+  // The excerpt follows the label on the same line.
+  line?.querySelector(".flex-1")?.remove();
   return line?.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
 

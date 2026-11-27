@@ -151,25 +151,25 @@ const sent: BubbleProps["message"] = {
 };
 
 it("shows who was messaged with a one-line excerpt that expands in place", () => {
-  const { summary, query } = render({ message: sent });
-  expect(summary.textContent).toBe("Messaged KODIPost published: https://example.test/post");
+  const { summary, query } = render({ message: sent, groupId: "group" });
+  expect(summary.textContent).toBe("KODIPost published: https://example.test/post");
   expect(query("full-text")).toBeNull();
 
   act(() => summary.click());
   expect(query("full-text")?.textContent).toBe("Post **published**: https://example.test/post");
-  expect(summary.textContent).toBe("Messaged KODI");
+  expect(summary.textContent).toBe("KODI");
 });
 
 it("opens the exchange from a bot's own chat", () => {
   const onOpenPeerChat = vi.fn();
-  const { open } = render({ message: sent, onOpenPeerChat });
-  expect(open?.getAttribute("aria-label")).toBe("Open KODI");
-  act(() => open?.click());
+  const { summary } = render({ message: sent, onOpenPeerChat });
+  expect(summary.getAttribute("aria-label")).toBe("Open KODI");
+  act(() => summary.click());
   expect(onOpenPeerChat).toHaveBeenCalledWith({ peerBotId: "kodi", peerBotName: "KODI" });
 });
 
 it("offers nothing to open from a group chat", () => {
-  expect(render({ message: sent, groupId: "group" }).open).toBeNull();
+  expect(render({ message: sent, groupId: "group" }).summary.getAttribute("aria-label")).toBeNull();
 });
 
 it("reads a group handoff as a handoff", () => {

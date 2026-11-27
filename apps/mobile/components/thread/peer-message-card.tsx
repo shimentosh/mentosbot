@@ -8,7 +8,7 @@ import {
   resolvePersonaColorDef,
   splitPeerLabel,
 } from "@rakazo/core";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useState } from "react";
 import type { PressableProps } from "react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -32,9 +32,10 @@ const GLYPHS: Record<
 type BotLook = { color?: string; avatarSet?: BotAvatarSet } | undefined;
 
 /**
- * What one bot sent another: who, a one-line excerpt that expands in place, and an Open that
- * leads to the whole exchange when the viewer can see it. A line that spans several bots names
- * them all and expands to one row per message, each with its own Open.
+ * What one bot sent another, as one quiet line: who, and a one-line excerpt. The line opens the
+ * whole exchange when the viewer can see it, and otherwise expands in place. While the other bot
+ * is still working on it, the excerpt says so. A line that spans several bots names them all and
+ * expands to one row per message, each opening its bot.
  */
 export function PeerMessageCard({
   peerBotId,
@@ -45,6 +46,7 @@ export function PeerMessageCard({
   direction,
   text,
   onOpen,
+  working = false,
   actionProps,
   exchange,
   lookOf,
@@ -59,6 +61,8 @@ export function PeerMessageCard({
   direction: keyof typeof GLYPHS;
   text: string;
   onOpen?: () => void;
+  /** The other bot is still at work, so the line shows that instead of the excerpt. */
+  working?: boolean;
   actionProps: Pick<
     PressableProps,
     "onLongPress" | "accessibilityActions" | "onAccessibilityAction"
@@ -73,9 +77,33 @@ export function PeerMessageCard({
   const tokens = mobileTokens();
   const [expanded, setExpanded] = useState(false);
   const bots = exchange ? peerExchangeBots(exchange) : [];
+  const glyph = (name: keyof typeof GLYPHS) => (
+    <NativeSymbol
+      ios={GLYPHS[name].ios}
+      android={GLYPHS[name].android}
+      size={12}
+      color={tokens.mutedForeground}
+    />
+  );
+  const chevron = (ios: string, android: ComponentProps<typeof NativeSymbol>["android"]) => (
+    <NativeSymbol ios={ios} android={android} size={11} color={tokens.mutedForeground} />
+  );
+  const botName = (id: string, name: string, look?: BotLook) => (
+    <Text
+      numberOfLines={1}
+      style={[styles.text, styles.name, { color: resolvePersonaColorDef(id, look?.color).hex }]}
+    >
+      {name}
+    </Text>
+  );
+  const excerptText = (value: ReactNode) => (
+    <Text numberOfLines={1} style={[styles.text, styles.excerpt]}>
+      {value}
+    </Text>
+  );
+
   if (exchange && bots.length > 1) {
     const latest = exchange.entries.at(-1);
-    const colorOf = (id: string) => lookOf?.(id)?.color ?? tokens.mutedForeground;
     return (
       <View testID="peer-message-card" style={styles.card}>
         <Pressable
@@ -84,169 +112,89 @@ export function PeerMessageCard({
           accessibilityRole="button"
           accessibilityState={{ expanded }}
           onPress={() => setExpanded((value) => !value)}
-          style={({ pressed }) => [styles.summary, { opacity: pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [styles.line, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <View style={styles.label}>
-            <NativeSymbol
-              ios={GLYPHS.exchange.ios}
-              android={GLYPHS.exchange.android}
-              size={12}
-              color={tokens.mutedForeground}
-            />
-            <GroupAvatar
-              size={16}
-              members={bots.map((bot) => ({
-                botId: bot.id,
-                name: bot.name,
-                color: colorOf(bot.id),
-                avatarSet: lookOf?.(bot.id)?.avatarSet,
-              }))}
-            />
-            <Text numberOfLines={1} style={[styles.labelText, styles.groupLabel]}>
-              {t("Messages with {names}", { names: peerExchangeNames(bots) })}
-            </Text>
-          </View>
-          {latest && !expanded ? (
-            <Text numberOfLines={1} style={styles.excerpt}>
-              {`${latest.peerBotName}: ${plainTextFromMarkdown(latest.text)}`}
-            </Text>
-          ) : null}
+          {glyph("exchange")}
+          <GroupAvatar
+            size={16}
+            members={bots.map((bot) => ({
+              botId: bot.id,
+              name: bot.name,
+              color: lookOf?.(bot.id)?.color ?? tokens.mutedForeground,
+              avatarSet: lookOf?.(bot.id)?.avatarSet,
+            }))}
+          />
+          <Text numberOfLines={1} style={[styles.text, styles.name]}>
+            {peerExchangeNames(bots)}
+          </Text>
+          {excerptText(
+            latest && !expanded
+              ? `${latest.peerBotName}: ${plainTextFromMarkdown(latest.text)}`
+              : null,
+          )}
+          {expanded ? chevron("chevron.up", "chevron-up") : chevron("chevron.down", "chevron-down")}
         </Pressable>
         {expanded
           ? exchange.entries.map((entry, index) => {
-              const entryGlyph = GLYPHS[entry.direction];
+              const look = lookOf?.(entry.peerBotId);
               return (
-                <View key={`${entry.messageId}:${index}`} style={styles.entry}>
-                  <View style={styles.summary}>
-                    <View style={styles.label}>
-                      <NativeSymbol
-                        ios={entryGlyph.ios}
-                        android={entryGlyph.android}
-                        size={12}
-                        color={tokens.mutedForeground}
-                      />
-                      <BotAvatar
-                        avatarSet={lookOf?.(entry.peerBotId)?.avatarSet}
-                        color={colorOf(entry.peerBotId)}
-                        identity={entry.peerBotId}
-                        size={16}
-                      />
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          styles.labelText,
-                          styles.name,
-                          {
-                            color: resolvePersonaColorDef(
-                              entry.peerBotId,
-                              lookOf?.(entry.peerBotId)?.color,
-                            ).hex,
-                          },
-                        ]}
-                      >
-                        {entry.peerBotName}
-                      </Text>
-                    </View>
-                    <Text numberOfLines={2} style={styles.excerpt}>
-                      {plainTextFromMarkdown(entry.text)}
-                    </Text>
-                  </View>
-                  {onOpenPeer &&
-                  // One Open per bot: its later rows lead to the same conversation.
-                  exchange.entries.findIndex((e) => e.peerBotId === entry.peerBotId) === index ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t("Open {name}", { name: entry.peerBotName })}
-                      hitSlop={8}
-                      onPress={() =>
-                        onOpenPeer({ peerBotId: entry.peerBotId, peerBotName: entry.peerBotName })
-                      }
-                      style={({ pressed }) => [styles.open, { opacity: pressed ? 0.6 : 1 }]}
-                    >
-                      <Text style={styles.labelText}>{t("Open")}</Text>
-                      <NativeSymbol
-                        ios="chevron.right"
-                        android="chevron-forward"
-                        size={11}
-                        color={tokens.mutedForeground}
-                      />
-                    </Pressable>
-                  ) : null}
-                </View>
+                <Pressable
+                  key={`${entry.messageId}:${index}`}
+                  accessibilityRole={onOpenPeer ? "button" : undefined}
+                  accessibilityLabel={
+                    onOpenPeer ? t("Open {name}", { name: entry.peerBotName }) : undefined
+                  }
+                  disabled={!onOpenPeer}
+                  onPress={() =>
+                    onOpenPeer?.({ peerBotId: entry.peerBotId, peerBotName: entry.peerBotName })
+                  }
+                  style={({ pressed }) => [styles.line, { opacity: pressed ? 0.6 : 1 }]}
+                >
+                  {glyph(entry.direction)}
+                  <BotAvatar
+                    avatarSet={look?.avatarSet}
+                    color={look?.color ?? tokens.mutedForeground}
+                    identity={entry.peerBotId}
+                    size={16}
+                  />
+                  {botName(entry.peerBotId, entry.peerBotName, look)}
+                  {excerptText(plainTextFromMarkdown(entry.text))}
+                  {onOpenPeer ? chevron("chevron.right", "chevron-forward") : null}
+                </Pressable>
               );
             })
           : null}
       </View>
     );
   }
+
   const parts = splitPeerLabel(label, peerBotName);
   const excerpt = plainTextFromMarkdown(text);
-  const glyph = GLYPHS[direction];
   return (
     <View testID="peer-message-card" style={styles.card}>
-      <View style={styles.row}>
-        <Pressable
-          {...actionProps}
-          testID="peer-receipt-line"
-          accessible
-          accessibilityRole={excerpt ? "button" : undefined}
-          accessibilityState={excerpt ? { expanded } : undefined}
-          onPress={excerpt ? () => setExpanded((value) => !value) : undefined}
-          style={({ pressed }) => [styles.summary, { opacity: pressed ? 0.6 : 1 }]}
-        >
-          <View style={styles.label}>
-            <NativeSymbol
-              ios={glyph.ios}
-              android={glyph.android}
-              size={12}
-              color={tokens.mutedForeground}
-            />
-            {parts.before ? <Text style={styles.labelText}>{parts.before}</Text> : null}
-            <BotAvatar
-              avatarSet={avatarSet}
-              color={color ?? tokens.mutedForeground}
-              identity={peerBotId}
-              size={16}
-            />
-            {parts.name ? (
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.labelText,
-                  styles.name,
-                  { color: resolvePersonaColorDef(peerBotId, color).hex },
-                ]}
-              >
-                {parts.name}
-              </Text>
-            ) : null}
-            {parts.after ? <Text style={styles.labelText}>{parts.after}</Text> : null}
-          </View>
-          {excerpt && !expanded ? (
-            <Text numberOfLines={1} style={styles.excerpt}>
-              {excerpt}
-            </Text>
-          ) : null}
-        </Pressable>
-        {onOpen ? (
-          <Pressable
-            testID="peer-message-open"
-            accessibilityRole="button"
-            accessibilityLabel={t("Open {name}", { name: peerBotName })}
-            hitSlop={8}
-            onPress={onOpen}
-            style={({ pressed }) => [styles.open, { opacity: pressed ? 0.6 : 1 }]}
-          >
-            <Text style={styles.labelText}>{t("Open")}</Text>
-            <NativeSymbol
-              ios="chevron.right"
-              android="chevron-forward"
-              size={11}
-              color={tokens.mutedForeground}
-            />
-          </Pressable>
-        ) : null}
-      </View>
+      <Pressable
+        {...actionProps}
+        testID="peer-receipt-line"
+        accessible
+        accessibilityRole={onOpen || excerpt ? "button" : undefined}
+        accessibilityLabel={onOpen ? t("Open {name}", { name: peerBotName }) : undefined}
+        accessibilityState={!onOpen && excerpt ? { expanded } : undefined}
+        onPress={onOpen ?? (excerpt ? () => setExpanded((value) => !value) : undefined)}
+        style={({ pressed }) => [styles.line, { opacity: pressed ? 0.6 : 1 }]}
+      >
+        {glyph(direction)}
+        {parts.before ? <Text style={styles.text}>{parts.before}</Text> : null}
+        <BotAvatar
+          avatarSet={avatarSet}
+          color={color ?? tokens.mutedForeground}
+          identity={peerBotId}
+          size={16}
+        />
+        {parts.name ? botName(peerBotId, parts.name, { color }) : null}
+        {parts.after ? <Text style={styles.text}>{parts.after}</Text> : null}
+        {excerptText(working ? t("Working…") : expanded ? null : excerpt)}
+        {onOpen ? chevron("chevron.right", "chevron-forward") : null}
+      </Pressable>
       {expanded ? (
         <View style={styles.body}>
           <ChatMarkdown palette={tokens} colorScheme={colorScheme}>
@@ -261,26 +209,17 @@ export function PeerMessageCard({
 function createStyles() {
   const tokens = mobileTokens();
   return StyleSheet.create({
-    card: {
-      alignSelf: "center",
-      width: "100%",
-      maxWidth: 448,
-      marginVertical: 4,
-      borderRadius: 14,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: tokens.border,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+    card: { alignSelf: "center", width: "100%", maxWidth: 448, marginVertical: 2 },
+    line: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 6,
     },
-    row: { flexDirection: "row", alignItems: "center", gap: 8 },
-    summary: { flex: 1, minWidth: 0, gap: 2 },
-    label: { flexDirection: "row", alignItems: "center", gap: 4 },
-    labelText: { color: tokens.mutedForeground, fontSize: 13 },
-    name: { fontWeight: "500", flexShrink: 1 },
-    excerpt: { color: tokens.foreground, opacity: 0.75, fontSize: 13 },
-    open: { flexDirection: "row", alignItems: "center", gap: 2 },
-    body: { marginTop: 6 },
-    groupLabel: { flexShrink: 1 },
-    entry: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 6 },
+    text: { color: tokens.mutedForeground, fontSize: 13 },
+    name: { fontWeight: "500", flexShrink: 0, maxWidth: "45%" },
+    excerpt: { flex: 1, minWidth: 0, color: tokens.foreground, opacity: 0.75 },
+    body: { paddingHorizontal: 8, paddingBottom: 4 },
   });
 }

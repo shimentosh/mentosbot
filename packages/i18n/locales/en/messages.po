@@ -303,10 +303,6 @@ msgstr "{count, plural, one {{names} keeps its own model} other {{names} keep th
 msgid "{count, plural, one {# bot has its own model: {names}} other {# bots have their own model: {names}}}"
 msgstr "{count, plural, one {# bot has its own model: {names}} other {# bots have their own model: {names}}}"
 
-#: apps/web/src/pages/shell/chat/message-view.tsx
-msgid "{count, plural, one {# message with {peer}} other {# messages with {peer}}}"
-msgstr "{count, plural, one {# message with {peer}} other {# messages with {peer}}}"
-
 #: apps/web/src/components/messages/markdown-copy.tsx
 msgid "{count, plural, one {# row} other {# rows}}"
 msgstr "{count, plural, one {# row} other {# rows}}"
@@ -351,10 +347,6 @@ msgstr "{count} files"
 #: apps/mobile/app/invite.tsx
 msgid "{count} free months earned"
 msgstr "{count} free months earned"
-
-#: apps/mobile/components/thread/message-bubble.tsx
-msgid "{count} messages with {peer}"
-msgstr "{count} messages with {peer}"
 
 #. js-lingui-explicit-id
 #: packages/i18n/src/billing.ts
@@ -7878,11 +7870,6 @@ msgstr "Message composer"
 msgid "Message event"
 msgstr "Message event"
 
-#: apps/mobile/components/thread/message-bubble.tsx
-#: apps/web/src/pages/shell/chat/message-view.tsx
-msgid "Message from {peer}"
-msgstr "Message from {peer}"
-
 #: packages/i18n/src/activity.ts
 msgid "Message from another agent"
 msgstr "Message from another agent"
@@ -7892,19 +7879,10 @@ msgstr "Message from another agent"
 msgid "Message…"
 msgstr "Message…"
 
-#: apps/mobile/components/thread/message-bubble.tsx
-#: apps/web/src/pages/shell/chat/message-view.tsx
-msgid "Messaged {peer}"
-msgstr "Messaged {peer}"
-
 #: apps/mobile/lib/thread/send/thread-send.ts
 #: apps/web/src/pages/shell/composer/use-composer-actions.ts
 msgid "Messages can be up to {limit} characters."
 msgstr "Messages can be up to {limit} characters."
-
-#: apps/web/src/pages/shell/chat/message-view.tsx
-msgid "Messages with {names}"
-msgstr "Messages with {names}"
 
 #: apps/mobile/lib/settings/ai-consent.ts
 msgid "Messages, chat history, bot instructions, memories, attachments, screenshots and connected-app content are sent to run your bots, including routines."
@@ -8981,7 +8959,6 @@ msgstr "Only you"
 #: apps/mobile/app/(settings)/wallet.tsx
 #: apps/mobile/app/pages.tsx
 #: apps/mobile/components/cards/ImportSetupCard.tsx
-#: apps/web/src/components/ai/CollaborationMarker.tsx
 #: apps/web/src/components/ApprovalItem.tsx
 #: apps/web/src/components/bot-templates/bot-templates-dialog.tsx
 #: apps/web/src/components/computers/ComputerCard.tsx
@@ -13911,6 +13888,7 @@ msgstr "Working instructions"
 #: apps/mobile/app/sign-in.tsx
 #: apps/mobile/components/inbox/inbox-rows.tsx
 #: apps/mobile/components/integrations/integration-detail.tsx
+#: apps/web/src/components/ai/CollaborationMarker.tsx
 #: apps/web/src/components/messages/ToolActivityDisclosure.tsx
 #: apps/web/src/lib/chat/roster-status.ts
 #: apps/web/src/pages/auth/Auth.tsx

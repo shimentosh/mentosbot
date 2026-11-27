@@ -121,7 +121,7 @@ it("keeps a received peer marker off the user's side while user replies align to
     { kind: "bot_message_received", fromBotId: "peer", fromBotName: "Atlas", text: "Done." },
   ]);
   const chip = container.querySelector('[data-testid="peer-receipt-chip"]');
-  expect(chip?.textContent).toBe("Message from AtlasDone.");
+  expect(chip?.textContent).toBe("AtlasDone.");
   expect(chip?.closest(".items-end")).toBeNull();
 
   renderView("user", [{ kind: "text", text: "Thanks." }]);
@@ -402,7 +402,7 @@ it("disables starting a read while a call holds the speaker, keeping stop availa
   for (const button of stopButtons()) expect(button.disabled).toBe(false);
 });
 
-it("opens one counted peer line without an inline reply toggle", () => {
+it("opens a peer line from the line itself, showing its latest message", () => {
   const open = vi.fn();
   renderView(
     "bot",
@@ -411,26 +411,37 @@ it("opens one counted peer line without an inline reply toggle", () => {
       peerExchange: {
         peerBotId: "peer",
         peerBotName: "Researcher",
-        count: 3,
+        count: 2,
         direction: "sent",
-        entries: [],
+        entries: [
+          {
+            messageId: "a",
+            peerBotId: "peer",
+            peerBotName: "Researcher",
+            direction: "sent",
+            text: "Request",
+          },
+          {
+            messageId: "b",
+            peerBotId: "peer",
+            peerBotName: "Researcher",
+            direction: "received",
+            text: "Found it",
+          },
+        ],
       },
       onOpenPeerMessages: open,
     },
   );
   const line = container.querySelector<HTMLButtonElement>('[data-testid="peer-receipt-chip"]');
-  expect(line?.textContent).toBe("3 messages with ResearcherRequest");
+  expect(line?.textContent).toBe("ResearcherFound it");
+  expect(line?.getAttribute("aria-label")).toBe("Open Researcher");
   expect(container.querySelector('[data-testid="peer-replies-toggle"]')).toBeNull();
   act(() => line?.click());
-  expect(open).not.toHaveBeenCalled();
-  const openButton = container.querySelector<HTMLButtonElement>(
-    'button[aria-label="Open Researcher"]',
-  );
-  act(() => openButton?.click());
   expect(open).toHaveBeenCalledWith({ peerBotId: "peer", peerBotName: "Researcher" });
 });
 
-it("shows back-to-back messages with several bots as one line, with an Open for each", () => {
+it("shows back-to-back messages with several bots as one line, each row opening its bot", () => {
   const open = vi.fn();
   const entry = (messageId: string, peerBotId: string, peerBotName: string, text: string) => ({
     messageId,
@@ -454,7 +465,7 @@ it("shows back-to-back messages with several bots as one line, with an Open for 
     },
   );
   const line = container.querySelector<HTMLButtonElement>('[data-testid="peer-receipt-chip"]');
-  expect(line?.textContent).toBe("Messages with Writer and ScoutScout: Found five");
+  expect(line?.textContent).toBe("Writer and ScoutScout: Found five");
   act(() => line?.click());
   const openScout = container.querySelector<HTMLButtonElement>('button[aria-label="Open Scout"]');
   act(() => openScout?.click());
@@ -482,7 +493,7 @@ it("opens no exchange from a group chat, which has no thread of its own to read 
     { artifactTarget: { groupId: "group" } },
   );
   expect(container.querySelector('[data-testid="peer-receipt-chip"]')?.textContent).toBe(
-    "Messaged ResearcherRequest",
+    "ResearcherRequest",
   );
   expect(container.querySelector('button[aria-label^="Open"]')).toBeNull();
 });

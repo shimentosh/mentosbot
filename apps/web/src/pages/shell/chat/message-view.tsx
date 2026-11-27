@@ -1,4 +1,3 @@
-import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import {
   ChatMarkdown,
@@ -18,6 +17,7 @@ import type {
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
 import {
   isPeerReceiptBlocks,
+  isRunWorking,
   isToolActivityBlock,
   otherAuthor,
   peerExchangeBots,
@@ -461,7 +461,6 @@ export const MessageView = memo(function MessageView({
               return null;
             const peer = peerExchange?.peerBotName ?? (sent ? block.toBotName : block.fromBotName);
             const peerBotId = sent ? block.toBotId : block.fromBotId;
-            const count = peerExchange?.count ?? 1;
             // The exchange is read from this bot's own chat, so a group chat has nothing to open.
             const ownBotId = "botId" in artifactTarget ? artifactTarget.botId : undefined;
             const bots = peerExchange ? peerExchangeBots(peerExchange) : [];
@@ -475,7 +474,7 @@ export const MessageView = memo(function MessageView({
                   identity={peerBotId}
                   peerName={peer}
                   text={block.text}
-                  label={t`Messages with ${names}`}
+                  label={names}
                   members={bots.map((bot) => ({
                     botId: bot.id,
                     name: bot.name,
@@ -493,12 +492,8 @@ export const MessageView = memo(function MessageView({
                       peerName: name,
                       text: entry.text,
                       openLabel: t`Open ${name}`,
-                      // One Open per bot: its later rows lead to the same conversation.
                       onOpen:
-                        ownBotId &&
-                        ownBotId !== entry.peerBotId &&
-                        peerExchange.entries.findIndex((e) => e.peerBotId === entry.peerBotId) ===
-                          index
+                        ownBotId && ownBotId !== entry.peerBotId
                           ? () =>
                               onOpenPeerMessages({
                                 peerBotId: entry.peerBotId,
@@ -510,24 +505,29 @@ export const MessageView = memo(function MessageView({
                 />
               );
             }
-            const label =
-              count > 1
-                ? t`${plural(count, { one: `# message with ${peer}`, other: `# messages with ${peer}` })}`
-                : sent
-                  ? t`Messaged ${peer}`
-                  : t`Message from ${peer}`;
+            // The line shows the latest message, or that the other bot is still on it.
+            const latest = peerExchange?.entries.at(-1);
+            const directions = new Set(peerExchange?.entries.map((entry) => entry.direction));
             // Named so the label reuses the translated "Open {name}".
             const name = peer;
             return (
               <PeerMessageCard
                 key={i}
-                direction={count > 1 ? "exchange" : sent ? "sent" : "received"}
+                direction={
+                  directions.size > 1
+                    ? "exchange"
+                    : (latest?.direction ?? (sent ? "sent" : "received"))
+                }
                 peerName={peer}
                 color={peerBot(peerBotId)?.color ?? FALLBACK_BOT_COLOR}
                 avatarSet={peerBot(peerBotId)?.avatarSet}
                 identity={peerBotId}
-                label={label}
-                text={block.text}
+                label={peer}
+                text={latest?.text ?? block.text}
+                working={
+                  (latest?.direction ?? (sent ? "sent" : "received")) === "sent" &&
+                  isRunWorking(peerBot(peerBotId)?.status)
+                }
                 openLabel={t`Open ${name}`}
                 onOpen={
                   ownBotId && ownBotId !== peerBotId

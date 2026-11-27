@@ -39,7 +39,7 @@ function renderCard(props: Partial<Parameters<typeof PeerMessageCard>[0]> = {}) 
         peerName="KODI · COO"
         color="#14B8A6"
         identity="kodi"
-        label="Messaged KODI · COO"
+        label="KODI · COO"
         text={"Post **published**:\n\nhttps://example.test/post"}
         {...props}
       />,
@@ -47,14 +47,13 @@ function renderCard(props: Partial<Parameters<typeof PeerMessageCard>[0]> = {}) 
   );
   return {
     toggle: container.querySelector<HTMLButtonElement>('[data-testid="peer-receipt-chip"]')!,
-    open: container.querySelector<HTMLButtonElement>('button[aria-label^="Open"]'),
   };
 }
 
 describe("peer message card", () => {
   it("names the other bot in its color with a one-line excerpt", () => {
     const { toggle } = renderCard();
-    expect(toggle.textContent).toBe("Messaged KODI · COOPost published: https://example.test/post");
+    expect(toggle.textContent).toBe("KODI · COOPost published: https://example.test/post");
     expect(toggle.querySelector(".rakazo-organic-avatar")).not.toBeNull();
     expect(toggle.querySelector("span.font-medium")?.getAttribute("style")).toContain("color");
     expect(toggle.querySelector(".truncate.text-foreground\\/75")).not.toBeNull();
@@ -67,20 +66,25 @@ describe("peer message card", () => {
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     const card = container.querySelector('[data-testid="peer-message-card"]')!;
     expect(card.querySelector("strong")?.textContent).toBe("published");
-    expect(toggle.textContent).toBe("Messaged KODI · COO");
+    expect(toggle.textContent).toBe("KODI · COO");
     act(() => toggle.click());
     expect(card.querySelector("strong")).toBeNull();
   });
 
-  it("opens the exchange only when given somewhere to go", () => {
+  it("opens the exchange from the line when given somewhere to go", () => {
     const onOpen = vi.fn();
-    const { open, toggle } = renderCard({ onOpen, openLabel: "Open KODI · COO" });
-    expect(open?.textContent).toBe("Open");
-    act(() => open?.click());
+    const { toggle } = renderCard({ onOpen, openLabel: "Open KODI · COO" });
+    expect(toggle.getAttribute("aria-label")).toBe("Open KODI · COO");
+    expect(toggle.hasAttribute("aria-expanded")).toBe(false);
+    act(() => toggle.click());
     expect(onOpen).toHaveBeenCalledTimes(1);
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(container.querySelector("strong")).toBeNull();
+  });
 
-    expect(renderCard({ onOpen: undefined }).open).toBeNull();
+  it("says the other bot is still working in place of the excerpt", () => {
+    const { toggle } = renderCard({ working: true });
+    expect(toggle.textContent).toContain("Working…");
+    expect(toggle.textContent).not.toContain("Post published");
   });
 
   it("stays a plain line when there is nothing to expand", () => {

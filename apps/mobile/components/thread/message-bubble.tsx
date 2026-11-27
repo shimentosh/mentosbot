@@ -12,6 +12,7 @@ import {
   formatFileSize,
   isApprovalAskBlock,
   isQuestionAskBlock,
+  isRunWorking,
   messagingProviderLabel,
   resolveAskChoice,
   selectedAskActionLabel,
@@ -72,12 +73,6 @@ import { PeerMessageCard } from "./peer-message-card";
 import { RoutineEventRows } from "./routine-event-row";
 import { isSpecialMessageBlock, SpecialMessageCard } from "./special-message-card";
 import { StatusCard } from "./status-card";
-
-/** "Messaged Ana", "Message from Ana", or "3 messages with Ana". */
-function peerExchangeLabel(count: number, direction: "sent" | "received", peer: string): string {
-  if (count === 1) return direction === "sent" ? t`Messaged ${peer}` : t`Message from ${peer}`;
-  return t`${count} messages with ${peer}`;
-}
 
 type AskAction = NonNullable<Extract<MessageBlock, { kind: "ask" }>["actions"]>[number];
 
@@ -404,17 +399,20 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
     const peerBot = bots.find((bot) => bot.id === peerBotId);
     const peerMember = members?.find((member) => member.botId === peerBotId);
     const peerName = peerExchange?.peerBotName ?? peer ?? t`Bot`;
-    const count = peerExchange?.count ?? 1;
-    const direction = sent ? "sent" : "received";
+    // The line shows the latest message, or that the other bot is still on it.
+    const latest = peerExchange?.entries.at(-1);
+    const direction = latest?.direction ?? (sent ? "sent" : "received");
+    const mixed = new Set(peerExchange?.entries.map((entry) => entry.direction)).size > 1;
     return (
       <PeerMessageCard
         peerBotId={peerBotId}
         peerBotName={peerName}
         color={peerBot?.color ?? peerMember?.color}
         avatarSet={peerBot?.avatarSet ?? peerMember?.avatarSet}
-        label={peerExchangeLabel(count, direction, peerName)}
-        direction={count > 1 ? "exchange" : direction}
-        text={peerMessage.text}
+        label={peerName}
+        direction={mixed ? "exchange" : direction}
+        text={latest?.text ?? peerMessage.text}
+        working={direction === "sent" && isRunWorking(peerBot?.status)}
         actionProps={actionProps}
         onOpen={
           !groupId && botId && peerBotId !== botId
