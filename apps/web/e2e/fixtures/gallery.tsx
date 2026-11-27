@@ -629,12 +629,30 @@ const team: Scenario = {
         intent: "request",
       },
     ]),
+    bot([
+      {
+        kind: "bot_message_sent",
+        toBotId: LEDGER.botId,
+        toBotName: LEDGER.name,
+        text: "What can we spend per person?",
+        intent: "request",
+      },
+    ]),
     message("user", [
       {
         kind: "bot_message_received",
         fromBotId: SCOUT.botId,
         fromBotName: SCOUT.name,
         text: "The Loft, Harbor Hall and Pine Room are free.",
+        intent: "result",
+      },
+    ]),
+    message("user", [
+      {
+        kind: "bot_message_received",
+        fromBotId: LEDGER.botId,
+        fromBotName: LEDGER.name,
+        text: "Up to $80 per person, including dinner.",
         intent: "result",
       },
     ]),

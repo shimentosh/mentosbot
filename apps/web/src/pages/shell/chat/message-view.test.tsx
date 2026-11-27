@@ -413,6 +413,7 @@ it("opens one counted peer line without an inline reply toggle", () => {
         peerBotName: "Researcher",
         count: 3,
         direction: "sent",
+        entries: [],
       },
       onOpenPeerMessages: open,
     },
@@ -427,6 +428,37 @@ it("opens one counted peer line without an inline reply toggle", () => {
   );
   act(() => openButton?.click());
   expect(open).toHaveBeenCalledWith({ peerBotId: "peer", peerBotName: "Researcher" });
+});
+
+it("shows back-to-back messages with several bots as one line, with an Open for each", () => {
+  const open = vi.fn();
+  const entry = (messageId: string, peerBotId: string, peerBotName: string, text: string) => ({
+    messageId,
+    peerBotId,
+    peerBotName,
+    direction: "received" as const,
+    text,
+  });
+  renderView(
+    "user",
+    [{ kind: "bot_message_received", fromBotId: "x", fromBotName: "Writer", text: "Posted" }],
+    {
+      peerExchange: {
+        peerBotId: "x",
+        peerBotName: "Writer",
+        count: 2,
+        direction: "received",
+        entries: [entry("m1", "x", "Writer", "Posted"), entry("m2", "y", "Scout", "Found five")],
+      },
+      onOpenPeerMessages: open,
+    },
+  );
+  const line = container.querySelector<HTMLButtonElement>('[data-testid="peer-receipt-chip"]');
+  expect(line?.textContent).toBe("Messages with Writer and ScoutScout: Found five");
+  act(() => line?.click());
+  const openScout = container.querySelector<HTMLButtonElement>('button[aria-label="Open Scout"]');
+  act(() => openScout?.click());
+  expect(open).toHaveBeenCalledWith({ peerBotId: "y", peerBotName: "Scout" });
 });
 
 it("shows a group handoff as a card with nothing to open", () => {

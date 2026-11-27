@@ -7884,6 +7884,10 @@ msgstr "Messaged {peer}"
 msgid "Messages can be up to {limit} characters."
 msgstr "Messages can be up to {limit} characters."
 
+#: apps/web/src/pages/shell/chat/message-view.tsx
+msgid "Messages with {names}"
+msgstr "Messages with {names}"
+
 #: apps/mobile/lib/settings/ai-consent.ts
 msgid "Messages, chat history, bot instructions, memories, attachments, screenshots and connected-app content are sent to run your bots, including routines."
 msgstr "Messages, chat history, bot instructions, memories, attachments, screenshots and connected-app content are sent to run your bots, including routines."

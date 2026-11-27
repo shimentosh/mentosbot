@@ -2,7 +2,12 @@ import type { ThreadMessage } from "@rakazo/contracts";
 import { describe, expect, it } from "vitest";
 import { BOT_MESSAGE_MAX_LENGTH, clampBotMessage } from "../bots/bot-messages.js";
 import { foldPeerReplies } from "../messages/message-visibility.js";
-import { peerExchangeLines, splitPeerLabel } from "./peer-exchanges.js";
+import {
+  peerExchangeBots,
+  peerExchangeLines,
+  peerExchangeNames,
+  splitPeerLabel,
+} from "./peer-exchanges.js";
 import { peerMessagesFrom } from "./peer-messages.js";
 
 function message(id: string, blocks: ThreadMessage["blocks"], runId?: string): ThreadMessage {
@@ -160,7 +165,7 @@ describe("peer exchanges", () => {
       ),
     ];
     const projection = peerExchangeLines(foldPeerReplies(messages, { includePeerReceipts: true }));
-    expect([...projection.lines.values()]).toEqual([
+    expect([...projection.lines.values()]).toMatchObject([
       {
         peerBotId: "peer",
         peerBotName: "Renamed",
@@ -172,7 +177,7 @@ describe("peer exchanges", () => {
     expect(peerMessagesFrom(messages).map((m) => m.messageId)).toEqual(["m1", "m3"]);
   });
 
-  it("does not merge across a visible row or another peer", () => {
+  it("merges back-to-back messages across bots, but not across a visible row", () => {
     const messages = [
       received("m1"),
       message("m2", [{ kind: "ask", text: "Choose" }]),
@@ -180,9 +185,18 @@ describe("peer exchanges", () => {
       received("m4", undefined, "other"),
       received("m5"),
     ];
-    expect(
-      peerExchangeLines(foldPeerReplies(messages, { includePeerReceipts: true })).lines.size,
-    ).toBe(4);
+    const { lines } = peerExchangeLines(foldPeerReplies(messages, { includePeerReceipts: true }));
+    expect([...lines.keys()]).toEqual(["m1", "m3"]);
+    const merged = lines.get("m3")!;
+    expect(merged.entries.map((entry) => entry.messageId)).toEqual(["m3", "m4", "m5"]);
+    expect(peerExchangeBots(merged).map((bot) => bot.id)).toEqual(["peer", "other"]);
+  });
+
+  it("names the bots of a line as one phrase", () => {
+    const bots = ["Ana", "Ben", "Cy"].map((name) => ({ name }));
+    expect(peerExchangeNames(bots.slice(0, 1))).toBe("Ana");
+    expect(peerExchangeNames(bots.slice(0, 2))).toBe("Ana and Ben");
+    expect(peerExchangeNames(bots)).toBe("Ana, Ben and Cy");
   });
 
   it("retains attachments and repeated text from different runs chronologically", () => {

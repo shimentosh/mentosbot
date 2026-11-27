@@ -16,7 +16,13 @@ import type {
   ThreadMessage,
 } from "@rakazo/contracts";
 import type { ChildBotBlock, PeerExchange } from "@rakazo/core";
-import { isPeerReceiptBlocks, isToolActivityBlock, otherAuthor } from "@rakazo/core";
+import {
+  isPeerReceiptBlocks,
+  isToolActivityBlock,
+  otherAuthor,
+  peerExchangeBots,
+  peerExchangeNames,
+} from "@rakazo/core";
 import { BotAvatar, Button, cn, resolvePersonaColorDef } from "@rakazo/ui-web";
 import { UserRound } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
@@ -456,14 +462,60 @@ export const MessageView = memo(function MessageView({
             const peer = peerExchange?.peerBotName ?? (sent ? block.toBotName : block.fromBotName);
             const peerBotId = sent ? block.toBotId : block.fromBotId;
             const count = peerExchange?.count ?? 1;
+            // The exchange is read from this bot's own chat, so a group chat has nothing to open.
+            const ownBotId = "botId" in artifactTarget ? artifactTarget.botId : undefined;
+            const bots = peerExchange ? peerExchangeBots(peerExchange) : [];
+            if (peerExchange && bots.length > 1) {
+              const names = peerExchangeNames(bots);
+              return (
+                <PeerMessageCard
+                  key={i}
+                  direction="exchange"
+                  color={FALLBACK_BOT_COLOR}
+                  identity={peerBotId}
+                  peerName={peer}
+                  text={block.text}
+                  label={t`Messages with ${names}`}
+                  members={bots.map((bot) => ({
+                    botId: bot.id,
+                    name: bot.name,
+                    color: peerBot(bot.id)?.color ?? FALLBACK_BOT_COLOR,
+                    avatarSet: peerBot(bot.id)?.avatarSet,
+                  }))}
+                  entries={peerExchange.entries.map((entry, index) => {
+                    const name = entry.peerBotName;
+                    return {
+                      key: `${entry.messageId}:${index}`,
+                      direction: entry.direction,
+                      color: peerBot(entry.peerBotId)?.color ?? FALLBACK_BOT_COLOR,
+                      avatarSet: peerBot(entry.peerBotId)?.avatarSet,
+                      identity: entry.peerBotId,
+                      peerName: name,
+                      text: entry.text,
+                      openLabel: t`Open ${name}`,
+                      // One Open per bot: its later rows lead to the same conversation.
+                      onOpen:
+                        ownBotId &&
+                        ownBotId !== entry.peerBotId &&
+                        peerExchange.entries.findIndex((e) => e.peerBotId === entry.peerBotId) ===
+                          index
+                          ? () =>
+                              onOpenPeerMessages({
+                                peerBotId: entry.peerBotId,
+                                peerBotName: entry.peerBotName,
+                              })
+                          : undefined,
+                    };
+                  })}
+                />
+              );
+            }
             const label =
               count > 1
                 ? t`${plural(count, { one: `# message with ${peer}`, other: `# messages with ${peer}` })}`
                 : sent
                   ? t`Messaged ${peer}`
                   : t`Message from ${peer}`;
-            // The exchange is read from this bot's own chat, so a group chat has nothing to open.
-            const ownBotId = "botId" in artifactTarget ? artifactTarget.botId : undefined;
             // Named so the label reuses the translated "Open {name}".
             const name = peer;
             return (

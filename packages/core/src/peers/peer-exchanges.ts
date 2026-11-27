@@ -2,11 +2,22 @@ import type { MessageBlock } from "@rakazo/contracts";
 import { clampBotMessage } from "../bots/bot-messages.js";
 import type { FoldedTranscript } from "../messages/message-visibility.js";
 
+/** One message a bot sent another, or received from one, inside an exchange line. */
+export type PeerExchangeEntry = {
+  messageId: string;
+  peerBotId: string;
+  peerBotName: string;
+  direction: "sent" | "received";
+  text: string;
+};
+
 export type PeerExchange = {
   peerBotId: string;
   peerBotName: string;
   count: number;
   direction: "sent" | "received";
+  /** Every bot message the line stands for, oldest first; it may span several bots. */
+  entries: PeerExchangeEntry[];
 };
 
 type Message = {
@@ -92,7 +103,56 @@ export function unreturnedPeerReplies<T extends Message>(
   return result;
 }
 
-/** Project only visible rows; callers remove invisible tool/reaction rows before grouping. */
+function peerEntries(message: Message): PeerExchangeEntry[] {
+  return message.blocks.flatMap((block): PeerExchangeEntry[] =>
+    block.kind === "bot_message_sent"
+      ? [
+          {
+            messageId: message.id,
+            peerBotId: block.toBotId,
+            peerBotName: block.toBotName,
+            direction: "sent",
+            text: block.text,
+          },
+        ]
+      : block.kind === "bot_message_received"
+        ? [
+            {
+              messageId: message.id,
+              peerBotId: block.fromBotId,
+              peerBotName: block.fromBotName,
+              direction: "received",
+              text: block.text,
+            },
+          ]
+        : [],
+  );
+}
+
+/** The bots an exchange line involves, in the order they first appear, by their latest name. */
+export function peerExchangeBots(exchange: PeerExchange): { id: string; name: string }[] {
+  const names = new Map<string, string>();
+  for (const entry of exchange.entries) {
+    names.delete(entry.peerBotId);
+    names.set(entry.peerBotId, entry.peerBotName);
+  }
+  const order = [...new Set(exchange.entries.map((entry) => entry.peerBotId))];
+  return order.map((id) => ({ id, name: names.get(id)! }));
+}
+
+/** The bots' names as one phrase: "Ana", "Ana and Ben", "Ana, Ben and Cy". */
+export function peerExchangeNames(bots: readonly { name: string }[]): string {
+  const names = bots.map((bot) => bot.name);
+  return names.length < 2
+    ? (names[0] ?? "")
+    : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
+/**
+ * Project only visible rows; callers remove invisible tool/reaction rows before grouping.
+ * Back-to-back bot messages share one line even across bots, so a manager that asks three bots
+ * and hears back from them shows one line, not six.
+ */
 export function peerExchangeLines<T extends Message>(transcript: FoldedTranscript<T>) {
   const lines = new Map<string, PeerExchange>();
   const lineOf = new Map<string, string>();
@@ -109,12 +169,13 @@ export function peerExchangeLines<T extends Message>(transcript: FoldedTranscrip
       message.blocks.filter(
         (b) => b.kind === "bot_message_sent" || b.kind === "bot_message_received",
       ).length + (unreturned.get(message.id)?.length ?? 0);
-    if (previous?.peerBotId === receipt.peerBotId && firstId) {
-      previous.peerBotName = receipt.peerBotName;
+    if (previous && firstId) {
+      if (previous.peerBotId === receipt.peerBotId) previous.peerBotName = receipt.peerBotName;
       previous.count += count;
+      previous.entries.push(...peerEntries(message));
     } else {
       firstId = message.id;
-      previous = { ...receipt, count };
+      previous = { ...receipt, count, entries: peerEntries(message) };
       lines.set(firstId, previous);
     }
     lineOf.set(message.id, firstId);

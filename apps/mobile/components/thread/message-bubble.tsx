@@ -421,6 +421,9 @@ const MessageBubbleContent = memo(function MessageBubbleContent({
             ? () => onOpenPeerChat({ peerBotId, peerBotName: peer ?? t`Bot` })
             : undefined
         }
+        exchange={peerExchange}
+        lookOf={(id) => bots.find((b) => b.id === id) ?? members?.find((m) => m.botId === id)}
+        onOpenPeer={!groupId && botId ? onOpenPeerChat : undefined}
       />
     );
   }

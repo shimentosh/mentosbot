@@ -315,7 +315,12 @@ export const Transcript = memo(function Transcript({
   // A jump needs older rows, and must keep them after it clears its request.
   if (tailOnly && scrollRequest) setTailOnly(false);
   const showTail = tailOnly && !scrollRequest;
-  const items = groupVoiceChats(reactionView.visibleMessages).filter(
+  // A bot message merged into the exchange line above it shows only there.
+  const items = groupVoiceChats(
+    reactionView.visibleMessages.filter(
+      (message) => !exchanges.lineOf.has(message.id) || exchanges.lines.has(message.id),
+    ),
+  ).filter(
     (item) =>
       item.kind === "voiceChat" || messageHasVisibleBlocks(item.message.blocks, showToolActivity),
   );
