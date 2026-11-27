@@ -254,14 +254,13 @@ export async function revokeTeamInvitation(
   });
 }
 
+/**
+ * The unguessable link went to the invited address, so holding it with an account for that
+ * address is the proof. Asking a brand new account to verify first only stranded invitees.
+ */
 interface OpenInvitationInput {
   userId: string;
   invitationId: string;
-  /**
-   * Whether the account must have proved its mailbox. Servers that send email do; without
-   * email, the link the inviter passed on and the matching address are the proof.
-   */
-  requireVerifiedEmail: boolean;
 }
 
 async function openInvitation(
@@ -287,7 +286,7 @@ async function openInvitation(
     }),
     db.user.findUnique({
       where: { id: input.userId },
-      select: { email: true, emailVerified: true },
+      select: { email: true },
     }),
   ]);
   if (
@@ -296,7 +295,6 @@ async function openInvitation(
     invitation.status !== "pending" ||
     invitation.expiresAt <= new Date() ||
     invitation.organization.spaces.length === 0 ||
-    (input.requireVerifiedEmail && !user.emailVerified) ||
     user.email.trim().toLowerCase() !== invitation.email.trim().toLowerCase()
   )
     throw new InvitationUnavailableError();
@@ -305,6 +303,22 @@ async function openInvitation(
     role: teamRole(invitation.role ?? "member") === "admin" ? "admin" : "member",
     inviterId: invitation.inviterId,
   };
+}
+
+/** Whether an address holds a live team invitation, so it may register while signups are closed. */
+export async function hasOpenTeamInvitation(prisma: Db, email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+  const found = await prisma.invitation.findFirst({
+    where: {
+      email: { equals: normalized, mode: "insensitive" },
+      status: "pending",
+      expiresAt: { gt: new Date() },
+      organization: LIVE,
+    },
+    select: { id: true },
+  });
+  return found !== null;
 }
 
 /** What the invited person sees before accepting. Anyone else gets the same unavailable error. */

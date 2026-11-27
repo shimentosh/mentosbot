@@ -131,7 +131,6 @@ export function teamRoutes(ctx: RouterContext) {
             previewTeamInvitation(deps.prisma, {
               userId: context.actor.userId,
               invitationId: input.invitationId,
-              requireVerifiedEmail: Boolean(deps.email),
             }),
           ),
         ),
@@ -142,7 +141,6 @@ export function teamRoutes(ctx: RouterContext) {
             acceptTeamInvitation(deps.prisma, {
               userId: context.actor.userId,
               invitationId: input.invitationId,
-              requireVerifiedEmail: Boolean(deps.email),
             }),
           );
           await recordAuditEvent({

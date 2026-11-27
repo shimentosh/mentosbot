@@ -82,6 +82,7 @@ function fixture({
   };
   const messages: TransactionalEmail[] = [];
   const members = new Set<string>();
+  const invited = new Set<string>();
   const prisma = {
     authData: data,
     $executeRaw: vi.fn(async () => 0),
@@ -137,6 +138,11 @@ function fixture({
       ),
     },
     member: { findMany: vi.fn(async () => []) },
+    invitation: {
+      findFirst: vi.fn(async ({ where }: { where: { email: { equals: string } } }) =>
+        invited.has(where.email.equals) ? { id: "invitation-1" } : null,
+      ),
+    },
     messagingIdentity: { deleteMany: vi.fn(async () => ({ count: 0 })) },
     messagingLinkCode: { deleteMany: vi.fn(async () => ({ count: 0 })) },
     account: { deleteMany: vi.fn(async () => ({ count: 0 })) },
@@ -277,6 +283,7 @@ function fixture({
     policy,
     messages,
     members,
+    invited,
   };
 }
 
@@ -484,6 +491,15 @@ describe("identity trust through auth endpoints", () => {
       code: "REGISTRATION_CLOSED",
       message: "Registration is closed",
     });
+  });
+
+  it("lets an address with a live team invitation register while registration is closed", async () => {
+    const f = fixture();
+    f.policy.signupsEnabled = false;
+    f.invited.add("invited@example.test");
+    const response = await f.signup("invited@example.test");
+    expect(response.status).toBe(200);
+    expect(bootstrapUserSpace).toHaveBeenCalledTimes(1);
   });
 
   it("permits ordinary unverified signup without granting admin or mailbox proof on open deployments", async () => {

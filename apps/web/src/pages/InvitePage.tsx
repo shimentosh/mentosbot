@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
 import { WindowChrome } from "../components/WindowChrome";
-import { clearPendingInvite } from "../lib/pending-invite";
+import { addAccountPath } from "../lib/add-account";
+import { authClient } from "../lib/auth/auth";
+import { clearPendingInvite, rememberPendingInvite } from "../lib/pending-invite";
 import { queryClient, useQueryUserId } from "../lib/query/query";
 import { rpc, selectSpace } from "../lib/query/rpc";
 import { errorText } from "../lib/query/user-error";
@@ -14,6 +16,7 @@ import { organizationsQuery } from "../lib/spaces/organizations";
 export function InvitePage() {
   const { invitationId = "" } = useParams();
   const userId = useQueryUserId();
+  const email = authClient.useSession().data?.user.email;
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(clearPendingInvite, []);
@@ -87,10 +90,26 @@ export function InvitePage() {
                   It may have expired, or it was sent to another email address. Ask for a new one.
                 </Trans>
               </p>
+              {email ? (
+                <p className="text-body text-muted-foreground break-words">
+                  <Trans>You're signed in as {email}.</Trans>
+                </p>
+              ) : null}
             </div>
-            <Link to="/app" className={buttonVariants({ variant: "outline" })}>
-              <Trans>Go home</Trans>
-            </Link>
+            <div className="flex flex-col gap-2">
+              {userId ? (
+                <Link
+                  to={addAccountPath(userId)}
+                  onClick={() => rememberPendingInvite(invitationId)}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  <Trans>Use another account</Trans>
+                </Link>
+              ) : null}
+              <Link to="/app" className={buttonVariants({ variant: "ghost" })}>
+                <Trans>Go home</Trans>
+              </Link>
+            </div>
           </>
         )}
       </main>

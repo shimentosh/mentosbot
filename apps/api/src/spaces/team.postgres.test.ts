@@ -39,7 +39,6 @@ describePostgres("team membership (PostgreSQL)", () => {
   let system: PrismaClient;
   let root: string;
   let sequence = 0;
-  let emailEnabled = true;
 
   const email: TransactionalEmailProvider = {
     send: async (message) => {
@@ -55,7 +54,7 @@ describePostgres("team membership (PostgreSQL)", () => {
       jobs: { cancel: vi.fn(), enqueue: vi.fn() } as unknown as JobPublisher,
       artifacts: { remove: vi.fn() } as unknown as ArtifactStore,
       dataDir: root,
-      email: emailEnabled ? email : undefined,
+      email,
     }) as unknown as RouterDeps;
   const client = (actor: Actor) => createRouterClient(createRouter(deps()), { context: { actor } });
 
@@ -159,7 +158,7 @@ describePostgres("team membership (PostgreSQL)", () => {
     });
   });
 
-  it("admits only the invited, verified address, and only while the link is current", async () => {
+  it("admits only the invited address, and only while the link is current", async () => {
     const owner = await signup();
     const invited = await signup({ verified: false });
     const stranger = await signup();
@@ -171,9 +170,6 @@ describePostgres("team membership (PostgreSQL)", () => {
       unavailable,
     );
     await expect(client(stranger).team.accept({ invitationId })).rejects.toMatchObject(unavailable);
-    // A server that sends email requires the address to be proven first.
-    await expect(client(invited).team.accept({ invitationId })).rejects.toMatchObject(unavailable);
-    await system.user.update({ where: { id: invited.userId }, data: { emailVerified: true } });
 
     // Inviting again replaces the earlier link.
     const replacement = await invite(owner, invited.email);
@@ -198,23 +194,13 @@ describePostgres("team membership (PostgreSQL)", () => {
     ).resolves.toBe(0);
   });
 
-  it("without email delivery, the link and matching address are enough", async () => {
+  it("lets a brand new account join from the emailed link before verifying its address", async () => {
     const owner = await signup();
     const invited = await signup({ verified: false });
-    emailEnabled = false;
-    try {
-      const { id, emailSent } = await client(owner).team.invite({
-        organizationId: owner.spaceId,
-        email: invited.email,
-        role: "member",
-      });
-      expect(emailSent).toBe(false);
-      await expect(client(invited).team.accept({ invitationId: id })).resolves.toMatchObject({
-        organizationId: owner.spaceId,
-      });
-    } finally {
-      emailEnabled = true;
-    }
+    const invitationId = await invite(owner, invited.email);
+    await expect(client(invited).team.accept({ invitationId })).resolves.toMatchObject({
+      organizationId: owner.spaceId,
+    });
   });
 
   it("keeps team management to owners and admins, and admins below the owner", async () => {

@@ -65,10 +65,7 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     const teammate = await context.newPage();
     await signup(teammate, invitee, "password12", "Team Member");
     await completeOnboarding(teammate);
-    // This server sends email, so joining needs the address proven first.
-    const verification = await latestEmail(teammate, invitee, /Verify/);
-    await teammate.goto(firstLink(verification));
-
+    // The emailed link is the proof of the address: no separate verification first.
     await teammate.goto(new URL(inviteUrl).pathname);
     await expect(teammate.getByRole("button", { name: "Join team" })).toBeVisible();
     await expect(

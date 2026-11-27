@@ -3,10 +3,13 @@ import { hasSignedInBefore } from "./auth/returning-user";
 
 const PENDING_INVITE_KEY = "rakazo:pending-invite";
 
-/** Remembers an invitation opened signed out, so signing up or in comes back to it. */
+/**
+ * Remembers an invitation opened signed out, so signing up or in comes back to it, also from the
+ * new tab an email link opens.
+ */
 export function rememberPendingInvite(invitationId: string) {
   try {
-    window.sessionStorage.setItem(PENDING_INVITE_KEY, invitationId);
+    window.localStorage.setItem(PENDING_INVITE_KEY, invitationId);
   } catch {
     // Without storage the person opens the link again after signing in.
   }
@@ -15,7 +18,7 @@ export function rememberPendingInvite(invitationId: string) {
 /** The invitation to return to after signing up or in; the invite page clears it. */
 export function pendingInvitePath(): string | null {
   try {
-    const id = window.sessionStorage.getItem(PENDING_INVITE_KEY);
+    const id = window.localStorage.getItem(PENDING_INVITE_KEY);
     return id ? `/team-invite/${encodeURIComponent(id)}` : null;
   } catch {
     return null;
@@ -24,7 +27,7 @@ export function pendingInvitePath(): string | null {
 
 export function clearPendingInvite() {
   try {
-    window.sessionStorage.removeItem(PENDING_INVITE_KEY);
+    window.localStorage.removeItem(PENDING_INVITE_KEY);
   } catch {
     // Nothing was stored.
   }

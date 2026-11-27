@@ -26,6 +26,7 @@ import type { PrismaClient, SecurityEventType } from "@rakazo/db";
 import {
   bootstrapUserSpace,
   clearAccountIdentity,
+  hasOpenTeamInvitation,
   OwnedOrganizationHasMembersError,
   recordSecurityEvent,
   SpaceDeletionInProgressError,
@@ -228,6 +229,16 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
   const admission = (headers: Headers | undefined) => {
     const policy = signupPolicyFromEnv(env);
     return env.admitsSignup && !env.admitsSignup(headers) ? { ...policy, enabled: false } : policy;
+  };
+  /**
+   * The signup policy for one address. A live team invitation admits it even while signups are
+   * closed or the allowlist leaves it out: the team already chose to bring that person in.
+   */
+  const admissionFor = async (headers: Headers | undefined, email: string) => {
+    const policy = admission(headers);
+    if (env.admitsSignup && !env.admitsSignup(headers)) return policy;
+    if (policy.enabled && emailAllowed(email, policy.allowlist)) return policy;
+    return (await hasOpenTeamInvitation(prisma, email)) ? { enabled: true, allowlist: [] } : policy;
   };
   /** The directory provisioned this account, so it is admitted whatever the signup policy. */
   const provisioned = async (userId: string) =>
@@ -448,7 +459,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
         const email = String(user.email ?? "").toLowerCase();
         if (isMessagingEmail(email)) return { error: "EMAIL_NOT_AVAILABLE" };
         if (source.action === "create-user") {
-          const policy = admission(ctx?.headers);
+          const policy = await admissionFor(ctx?.headers, email);
           const bypassAllowlist = providerId === "oidc" && env.oidc?.allowSignupBypass;
           if (!policy.enabled) return { error: "REGISTRATION_CLOSED" };
           if (!bypassAllowlist && !emailAllowed(email, policy.allowlist))
@@ -669,7 +680,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
             .trim()
             .toLowerCase();
           if (!(await ctx.context.internalAdapter.findUserByEmail(email))) {
-            const policy = admission(ctx.headers);
+            const policy = await admissionFor(ctx.headers, email);
             if (!policy.enabled || !emailAllowed(email, policy.allowlist)) {
               if (ctx.path === SEND_SIGN_IN_CODE_PATH) return ctx.json({ success: true });
               throw new APIError("BAD_REQUEST", { code: "INVALID_OTP", message: "Invalid OTP" });
@@ -678,7 +689,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
         }
         let policy =
           ctx.path === "/sign-up/email"
-            ? admission(ctx.headers)
+            ? await admissionFor(ctx.headers, String(ctx.body?.email ?? ""))
             : ctx.path === "/sign-in/email"
               ? signupPolicyFromEnv(env)
               : undefined;
@@ -829,7 +840,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
           before: async (session, ctx) => {
             // The auth adapter can still be inside the signup transaction.
             const user = await ctx?.context.internalAdapter.findUserById(session.userId);
-            const policy = admission(ctx?.headers);
+            const policy = await admissionFor(ctx?.headers, user?.email ?? "");
             const oidcSignIn = isOidcCallback(ctx);
             const bypassAllowlist = oidcSignIn && env.oidc?.allowSignupBypass;
             if (!user || isMessagingEmail(user.email)) {

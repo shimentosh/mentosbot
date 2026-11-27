@@ -3626,6 +3626,11 @@ msgstr "Copy diagram source"
 msgid "Copy invite link"
 msgstr "Copy invite link"
 
+#. placeholder {0}: invitation.email
+#: apps/web/src/pages/settings/TeamMembersSettings.tsx
+msgid "Copy invite link for {0}"
+msgstr "Copy invite link for {0}"
+
 #: apps/mobile/components/thread/routine-event-row.tsx
 msgid "Copy key"
 msgstr "Copy key"
@@ -7558,6 +7563,11 @@ msgstr "Manage {shown}"
 msgid "Manage billing"
 msgstr "Manage billing"
 
+#. placeholder {0}: invitation.email
+#: apps/web/src/pages/settings/TeamMembersSettings.tsx
+msgid "Manage invite for {0}"
+msgstr "Manage invite for {0}"
+
 #: apps/web/src/pages/integrations/IntegrationsOverlay.tsx
 #: apps/web/src/pages/plugins/add-menu.tsx
 #: apps/web/src/pages/plugins/manage-view.tsx
@@ -11048,6 +11058,10 @@ msgstr "Send <0>{code}</0> from {app} within 10 minutes."
 msgid "Send <0>{code}</0> to <1>{address}</1> from {app} within 10 minutes."
 msgstr "Send <0>{code}</0> to <1>{address}</1> from {app} within 10 minutes."
 
+#: apps/web/src/pages/settings/TeamMembersSettings.tsx
+msgid "Send a new link"
+msgstr "Send a new link"
+
 #: apps/mobile/components/thread/ask-block.tsx
 msgid "Send answer"
 msgstr "Send answer"
@@ -13308,6 +13322,10 @@ msgstr "Use an account with the same email address"
 msgid "Use an http or https URL"
 msgstr "Use an http or https URL"
 
+#: apps/web/src/pages/InvitePage.tsx
+msgid "Use another account"
+msgstr "Use another account"
+
 #: apps/mobile/app/server.tsx
 msgid "Use default server"
 msgstr "Use default server"
@@ -13864,6 +13882,10 @@ msgstr "You're all caught up"
 #: apps/mobile/app/paywall.tsx
 msgid "You're all set"
 msgstr "You're all set"
+
+#: apps/web/src/pages/InvitePage.tsx
+msgid "You're signed in as {email}."
+msgstr "You're signed in as {email}."
 
 #: apps/mobile/app/(settings)/account.tsx
 #: apps/mobile/app/(settings)/profile.tsx

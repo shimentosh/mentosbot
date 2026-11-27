@@ -86,27 +86,15 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
           />
         ))}
         {team.invitations.map((invitation) => (
-          <SettingsRow
+          <InvitationRow
             key={invitation.id}
-            label={
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate">{invitation.email}</span>
-                <span className="text-body-sm text-muted-foreground">
-                  <Trans>Invited</Trans> · <RoleName role={invitation.role} />
-                </span>
-              </span>
+            invitation={invitation}
+            onResend={() =>
+              run(() =>
+                rpc.team.invite({ organizationId, email: invitation.email, role: invitation.role }),
+              )
             }
-            control={
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  void run(() => rpc.team.revokeInvitation({ invitationId: invitation.id }))
-                }
-              >
-                <Trans>Revoke</Trans>
-              </Button>
-            }
+            onRevoke={() => run(() => rpc.team.revokeInvitation({ invitationId: invitation.id }))}
           />
         ))}
       </SettingsGroup>
@@ -137,6 +125,68 @@ function RoleName({ role }: { role: TeamRole }) {
   if (role === "owner") return <Trans>Owner</Trans>;
   if (role === "admin") return <Trans>Admin</Trans>;
   return <Trans>Member</Trans>;
+}
+
+function inviteLink(invitationId: string): string {
+  return new URL(`/team-invite/${encodeURIComponent(invitationId)}`, window.location.origin).href;
+}
+
+function InvitationRow({
+  invitation,
+  onResend,
+  onRevoke,
+}: {
+  invitation: Team["invitations"][number];
+  onResend: () => Promise<void>;
+  onRevoke: () => Promise<void>;
+}) {
+  const { t } = useLingui();
+  const [copied, copy] = useCopyText();
+  return (
+    <SettingsRow
+      label={
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate">{invitation.email}</span>
+          <span className="text-body-sm text-muted-foreground">
+            <Trans>Invited</Trans> · <RoleName role={invitation.role} />
+          </span>
+        </span>
+      }
+      control={
+        <>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t`Copy invite link for ${invitation.email}`}
+            onClick={() => copy(inviteLink(invitation.id))}
+          >
+            {copied ? <Check /> : <Copy />}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t`Manage invite for ${invitation.email}`}
+                />
+              }
+            >
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => void onResend()}>
+                <Trans>Send a new link</Trans>
+              </DropdownMenuItem>
+              <DropdownMenuItem variant="destructive" onClick={() => void onRevoke()}>
+                <Trans>Revoke</Trans>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      }
+    />
+  );
 }
 
 /** Mirrors the server's rule: owners manage everyone else, admins manage members. */
@@ -307,9 +357,7 @@ function InviteDialog({
         onClose();
         return;
       }
-      setLink(
-        new URL(`/team-invite/${encodeURIComponent(invited.id)}`, window.location.origin).href,
-      );
+      setLink(inviteLink(invited.id));
     } catch (reason) {
       setError(errorText(reason));
     } finally {
