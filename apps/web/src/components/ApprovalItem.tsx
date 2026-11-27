@@ -75,7 +75,7 @@ function ApprovalRow({ approval, showSpace, onAnswered, onOpen }: ApprovalItemPr
   const { t } = useLingui();
   const { ask, bot } = approval;
   const target = approval.groupId ? { groupId: approval.groupId } : { botId: bot.id };
-  // Stops the run waiting on this card, as Stop does in the chat.
+  // Stops the run waiting on the person, as Stop does in the chat.
   const cancel = useSave({
     save: (_: undefined, client) => client.threads.stop(target),
     onSaved: onAnswered,
@@ -96,27 +96,12 @@ function ApprovalRow({ approval, showSpace, onAnswered, onOpen }: ApprovalItemPr
             variant="ghost"
             size="xs"
             className="ms-auto shrink-0 text-muted-foreground"
-            aria-label={t`Cancel ${bot.name}'s request`}
-            disabled={cancel.pending}
-            onClick={() => cancel.run(undefined)}
-          >
-            {cancel.pending ? <Trans>Cancelling…</Trans> : <Trans>Cancel</Trans>}
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            className="shrink-0 text-muted-foreground"
             onClick={onOpen}
           >
             <Trans>Open chat</Trans>
             <ArrowUpRight aria-hidden="true" />
           </Button>
         </div>
-        {cancel.error ? (
-          <p role="alert" className="text-body-sm text-destructive">
-            {errorText(cancel.error, t`Could not cancel`)}
-          </p>
-        ) : null}
         {ask?.block.kind === "ask" ? (
           <AskCard
             block={ask.block}
@@ -129,6 +114,10 @@ function ApprovalRow({ approval, showSpace, onAnswered, onOpen }: ApprovalItemPr
             }}
             onDismiss={async () => {
               await answerApproval(approval, ask.messageId, "", undefined, undefined, true);
+              onAnswered();
+            }}
+            onCancel={async () => {
+              await rpcForSpace(approval.spaceId).threads.stop(target);
               onAnswered();
             }}
             renderImage={
@@ -144,11 +133,26 @@ function ApprovalRow({ approval, showSpace, onAnswered, onOpen }: ApprovalItemPr
             }
           />
         ) : (
-          <div className="flex items-center gap-3 rounded-[20px] bg-muted px-5 py-4 text-body text-foreground">
-            <span className="flex-1">{t`Needs you in the chat`}</span>
-            <Button size="sm" onClick={onOpen}>
-              <Trans>Open</Trans>
-            </Button>
+          <div className="flex flex-col gap-2 rounded-[20px] bg-muted px-5 py-4 text-body text-foreground">
+            <div className="flex items-center gap-3">
+              <span className="flex-1">{t`Needs you in the chat`}</span>
+              <Button
+                variant="text"
+                size="sm"
+                disabled={cancel.pending}
+                onClick={() => cancel.run(undefined)}
+              >
+                {cancel.pending ? <Trans>Cancelling…</Trans> : <Trans>Cancel</Trans>}
+              </Button>
+              <Button size="sm" onClick={onOpen}>
+                <Trans>Open</Trans>
+              </Button>
+            </div>
+            {cancel.error ? (
+              <p role="alert" className="text-body-sm text-destructive">
+                {errorText(cancel.error, t`Could not cancel`)}
+              </p>
+            ) : null}
           </div>
         )}
       </div>

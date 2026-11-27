@@ -76,6 +76,7 @@ export const MessageView = memo(function MessageView({
   pages,
   isPageSuperseded,
   onAnswer,
+  onCancelAsk,
   onOpenBot,
   onOpenPeerMessages,
   peerExchange,
@@ -125,6 +126,8 @@ export const MessageView = memo(function MessageView({
     dismiss?: boolean,
     remember?: false,
   ) => Promise<void>;
+  /** Stops the run a question in the chat is waiting on. */
+  onCancelAsk?: () => Promise<void>;
   onOpenBot: (botId: string) => void;
   onOpenPeerMessages: (peer: { peerBotId: string; peerBotName: string }) => void;
   /** The adjacent receipts represented by this peer line. */
@@ -762,6 +765,7 @@ export const MessageView = memo(function MessageView({
                       onAnswer(message, text, fields, undefined, remember)
                     }
                     onDismiss={() => onAnswer(message, "", undefined, true)}
+                    onCancel={onCancelAsk}
                     rpc={rpc}
                     renderImage={(image) => (
                       <ArtifactImage

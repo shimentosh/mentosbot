@@ -130,6 +130,9 @@ function approvalActionLabel(
   return fallback;
 }
 
+/** Marks Cancel as the pending action; no answer can be this value. */
+const CANCEL_ACTION = "\u0000cancel";
+
 export type AskCardProps = {
   block: AskBlock;
   canAnswer: boolean;
@@ -139,6 +142,8 @@ export type AskCardProps = {
   onAnswer: (text: string, fields?: LoginFieldInput[], remember?: false) => Promise<void>;
   /** Turns down a secret request without a value. */
   onDismiss: () => Promise<void>;
+  /** Stops the run waiting on a question, for a person who would rather not answer it. */
+  onCancel?: () => Promise<void>;
   /** The chat's space; Undo goes there even if another tab selects a different space. */
   rpc?: RpcClient;
   /** Shows one of a draft's images, such as a post's picture. */
@@ -158,9 +163,10 @@ export function AskCard(props: AskCardProps) {
 
 function PromptAskCard({
   block,
-  canAnswer,
+  canAnswer: canAnswerNow,
   answerIsSeparate,
   onAnswer,
+  onCancel,
   rpc = selectedSpaceRpc,
   renderImage,
   onOpenAgentImport,
@@ -172,6 +178,8 @@ function PromptAskCard({
   const [undone, setUndone] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+  const canAnswer = canAnswerNow && !cancelled;
   const submitting = pendingAction !== null;
   const answered = block.status === "answered" || acceptedAnswer !== undefined;
   const answeredQuestion = answered && isQuestionAskBlock(block);
@@ -215,6 +223,22 @@ function PromptAskCard({
   }
 
   const { instructionUpdate, settingsUpdate, routineUpdate } = block;
+  // Approvals already carry their own refusal.
+  const cancellable =
+    onCancel && canAnswer && !answered && !approvalActions && !instructionUpdate && !routineUpdate;
+  async function cancel() {
+    if (submitting || !onCancel) return;
+    setPendingAction(CANCEL_ACTION);
+    setError(null);
+    try {
+      await onCancel();
+      setCancelled(true);
+    } catch (err) {
+      setError(errorText(err, t`Could not cancel`));
+    } finally {
+      setPendingAction(null);
+    }
+  }
   const always = routineUpdate && displayActions?.find((action) => action.id === "always");
   const inlineActions = always
     ? displayActions?.filter((action) => action !== always)
@@ -447,6 +471,13 @@ function PromptAskCard({
         </div>
       ) : null}
 
+      {cancellable ? (
+        <div className="mt-2 flex justify-end">
+          <Button variant="text" disabled={submitting} onClick={() => void cancel()}>
+            {pendingAction === CANCEL_ACTION ? <Trans>Cancelling…</Trans> : <Trans>Cancel</Trans>}
+          </Button>
+        </div>
+      ) : null}
       {error ? <p className="mt-3 text-body-sm text-destructive">{error}</p> : null}
     </BuiCard>
   );

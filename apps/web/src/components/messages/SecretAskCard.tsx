@@ -103,8 +103,9 @@ export function SecretAskCard({ block, canAnswer, canDismiss, onAnswer, onDismis
     }
   }
 
-  async function dismiss() {
-    if (submitting) return;
+  /** Shows a failure on the card and hands it back, for the form to stay open on. */
+  async function tryDismiss(): Promise<{ failed: unknown } | null> {
+    if (submitting) return null;
     setPending("dismiss");
     setError(null);
     setAnswer("");
@@ -112,12 +113,18 @@ export function SecretAskCard({ block, canAnswer, canDismiss, onAnswer, onDismis
     try {
       await onDismiss();
       setDismissed(true);
+      return null;
     } catch (err) {
       setError(t`Could not submit this answer`);
-      throw err;
+      return { failed: err };
     } finally {
       setPending(null);
     }
+  }
+
+  async function dismiss() {
+    const result = await tryDismiss();
+    if (result) throw result.failed;
   }
 
   async function saveForm(result: VaultEditorResult) {
@@ -200,7 +207,12 @@ export function SecretAskCard({ block, canAnswer, canDismiss, onAnswer, onDismis
           {status}
         </div>
       ) : form && canAnswer && !ownerOnly ? (
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex justify-end gap-2">
+          {canDismiss ? (
+            <Button variant="text" disabled={submitting} onClick={() => void tryDismiss()}>
+              <Trans>Dismiss</Trans>
+            </Button>
+          ) : null}
           <Button
             data-testid="secret-ask-add"
             disabled={submitting}
@@ -264,7 +276,7 @@ export function SecretAskCard({ block, canAnswer, canDismiss, onAnswer, onDismis
                 type="button"
                 variant="text"
                 disabled={submitting}
-                onClick={() => void dismiss().catch(() => undefined)}
+                onClick={() => void tryDismiss()}
               >
                 <Trans>Dismiss</Trans>
               </Button>

@@ -488,6 +488,49 @@ it("leaves an unanswered question's options as plain actions", async () => {
   expect(container.querySelector(".sr-only")).toBeNull();
 });
 
+it("stops the run behind an open question from its Cancel, but leaves approvals to Deny", async () => {
+  const onCancel = vi.fn(async () => undefined);
+  const card = (block: AskBlock) => (
+    <AskCard
+      block={block}
+      canAnswer
+      canDismiss
+      onAnswer={async () => undefined}
+      onDismiss={async () => undefined}
+      onCancel={onCancel}
+    />
+  );
+  await act(async () =>
+    root.render(
+      card({
+        kind: "ask",
+        text: "Allow?",
+        status: "pending",
+        approvalEffectId: "e1",
+        actions: [
+          { id: "allow", label: "Allow once" },
+          { id: "deny", label: "Deny" },
+        ],
+      }),
+    ),
+  );
+  expect(button("Cancel")).toBeUndefined();
+  await act(async () =>
+    root.render(
+      card({
+        kind: "ask",
+        text: "Which city?",
+        status: "pending",
+        actions: [{ id: "paris", label: "Paris" }],
+      }),
+    ),
+  );
+  await act(async () => button("Cancel")!.click());
+  expect(onCancel).toHaveBeenCalledTimes(1);
+  expect(button("Cancel")).toBeUndefined();
+  expect(button("AParis")!.disabled).toBe(true);
+});
+
 it("dims a closed question's options without a status line", async () => {
   await act(async () =>
     root.render(
@@ -778,6 +821,15 @@ it("sends a login for this run only when Save to Vault is off, and reads Sent", 
   );
   expect(container.textContent).toContain("Sent");
   expect(container.textContent).not.toContain("Saved");
+});
+
+it("dismisses a login card from beside Continue, without opening the form", async () => {
+  const onDismiss = vi.fn(async () => undefined);
+  await render(loginCard, onDismiss);
+  await act(async () => button("Dismiss")!.click());
+  expect(onDismiss).toHaveBeenCalledTimes(1);
+  expect(dialog()).toBeNull();
+  expect(container.textContent).toContain("Dismissed");
 });
 
 it("dismisses a login card from its form, sending nothing typed", async () => {

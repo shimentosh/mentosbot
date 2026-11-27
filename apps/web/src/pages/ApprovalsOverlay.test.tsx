@@ -10,7 +10,7 @@ const api = vi.hoisted(() => ({ approvals: vi.fn(), answer: vi.fn(), stop: vi.fn
 const tabs = vi.hoisted(() => ({ change: (_value: string): void => undefined }));
 vi.mock("../lib/query/rpc", () => ({
   rpc: { inbox: { approvals: api.approvals } },
-  rpcForSpace: () => ({ threads: { answer: api.answer } }),
+  rpcForSpace: () => ({ threads: { answer: api.answer, stop: api.stop } }),
   selectedSpaceId: () => "space-1",
 }));
 vi.mock("../lib/query/query", async () => {
@@ -18,18 +18,7 @@ vi.mock("../lib/query/query", async () => {
   return {
     queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
     useQueryUserId: () => "user-1",
-    useSave: <Input,>({
-      save,
-      onSaved,
-    }: {
-      save: (input: Input, client: unknown) => Promise<unknown>;
-      onSaved?: (saved: unknown, input: Input) => unknown;
-    }) => ({
-      run: (input: Input) =>
-        void save(input, { threads: { stop: api.stop } }).then((saved) => onSaved?.(saved, input)),
-      pending: false,
-      error: null,
-    }),
+    useSave: () => ({ run: vi.fn(), pending: false, error: null }),
   };
 });
 vi.mock("@lingui/react/macro", () => {
@@ -84,7 +73,14 @@ vi.mock("@rakazo/ui-web", () => {
   };
 });
 vi.mock("../components/messages/AskCard", () => ({
-  AskCard: ({ block }: { block: { text: string } }) => <p data-ask>{block.text}</p>,
+  AskCard: ({ block, onCancel }: { block: { text: string }; onCancel: () => Promise<void> }) => (
+    <p data-ask>
+      {block.text}
+      <button type="button" onClick={() => void onCancel()}>
+        Cancel
+      </button>
+    </p>
+  ),
 }));
 vi.mock("./space/ActivityList", () => ({ ActivityList: () => null }));
 vi.mock("./shell/chat/message-cards", () => ({ ArtifactImage: () => null }));
@@ -184,9 +180,10 @@ it("cancels the run a card is waiting on", async () => {
         <ApprovalsOverlay bots={[]} groups={[]} onClose={vi.fn()} onOpenChat={vi.fn()} />,
       ),
     );
-    await vi.waitFor(() => expect(container.querySelector("[data-ask]")).not.toBeNull());
-    const cancel = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Cancel Planner\'s request"]',
+    // The cache can still hold the last test's cards until this list arrives.
+    await vi.waitFor(() => expect(container.querySelectorAll("[data-ask]")).toHaveLength(1));
+    const cancel = [...container.querySelectorAll("button")].find(
+      (node) => node.textContent === "Cancel",
     )!;
     await act(async () => cancel.click());
     expect(api.stop).toHaveBeenCalledWith({ botId: "Planner" });

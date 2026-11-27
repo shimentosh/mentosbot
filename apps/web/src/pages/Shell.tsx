@@ -832,6 +832,7 @@ function SpaceShell() {
             onLoadOlder={loadOlder}
             onOpenBot={openBot}
             onAnswer={composer.answerMessage}
+            onCancelAsk={composer.stopRun}
             onReply={replyToMessage}
             onMarkUnread={markMessageUnread}
             onQuote={quoteMessage}
