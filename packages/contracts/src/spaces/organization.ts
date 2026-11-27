@@ -85,6 +85,8 @@ export const TeamSchema = z.object({
       email: z.string(),
       role: InvitableTeamRoleSchema,
       expiresAt: IsoDate,
+      /** The link to pass on by hand when the email doesn't arrive. */
+      url: z.string().url(),
     }),
   ),
 });

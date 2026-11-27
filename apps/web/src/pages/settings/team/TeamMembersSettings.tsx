@@ -146,10 +146,6 @@ function RoleName({ role }: { role: TeamRole }) {
   return <Trans>Member</Trans>;
 }
 
-function inviteLink(invitationId: string): string {
-  return new URL(`/team-invite/${encodeURIComponent(invitationId)}`, window.location.origin).href;
-}
-
 function InvitationRow({
   invitation,
   onResend,
@@ -177,7 +173,7 @@ function InvitationRow({
             variant="ghost"
             size="icon-sm"
             aria-label={t`Copy invite link for ${invitation.email}`}
-            onClick={() => copy(inviteLink(invitation.id))}
+            onClick={() => copy(invitation.url)}
           >
             {copied ? <Check /> : <Copy />}
           </Button>
@@ -406,7 +402,7 @@ function InviteDialog({
         onClose();
         return;
       }
-      setLink(inviteLink(invited.id));
+      setLink(invited.url);
     } catch (reason) {
       setError(errorText(reason));
     } finally {

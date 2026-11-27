@@ -27,6 +27,7 @@ const settingsScreens = new Set([
   "model-settings",
   "models",
   "organization",
+  "organization-member",
   "organization-members",
   "plugin",
   "profile",

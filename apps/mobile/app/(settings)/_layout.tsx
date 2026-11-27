@@ -148,6 +148,13 @@ export default function SettingsLayout() {
           contentStyle: { backgroundColor: native.groupedPage },
         }}
       />
+      <Stack.Screen
+        name="organization-member"
+        options={({ route }) => ({
+          ...glassHeaderOptions((route.params as { name?: string } | undefined)?.name ?? t`Member`),
+          contentStyle: { backgroundColor: native.groupedPage },
+        })}
+      />
       <Stack.Screen name="messaging" options={glassHeaderOptions(t`Messaging`)} />
       <Stack.Screen
         name="labs"

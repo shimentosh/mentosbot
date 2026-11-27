@@ -1511,6 +1511,7 @@ msgstr "All spaces"
 msgid "All statuses"
 msgstr "All statuses"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 #: apps/web/src/pages/settings/UsageSettingsPanel.tsx
 #: apps/web/src/pages/space/Artifacts.tsx
@@ -2289,6 +2290,7 @@ msgid "Both"
 msgstr "Both"
 
 #: apps/mobile/app/(settings)/mcp-server.tsx
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/mobile/components/vault/vault-item-editor.tsx
 #: apps/mobile/components/vault/vault-item-sheet.tsx
 #: apps/web/src/components/vault/VaultItemAccess.tsx
@@ -2377,6 +2379,10 @@ msgstr "Built-in"
 msgid "Button “{button}” · read from the page, not checked"
 msgstr "Button “{button}” · read from the page, not checked"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
+msgid "By bot"
+msgstr "By bot"
+
 #: apps/web/src/pages/settings/UsageSettingsPanel.tsx
 msgid "Cached"
 msgstr "Cached"
@@ -2445,11 +2451,13 @@ msgstr "Calls, dictation, and replies read aloud."
 msgid "Camera"
 msgstr "Camera"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/bot-access-list.tsx
 #: apps/web/src/pages/shell/bots/bot-share-section.tsx
 msgid "Can chat"
 msgstr "Can chat"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/bot-access-list.tsx
 #: apps/web/src/pages/shell/bots/bot-share-section.tsx
 msgid "Can manage"
@@ -3680,6 +3688,7 @@ msgstr "Copy rows"
 msgid "Copy URL"
 msgstr "Copy URL"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 #: apps/web/src/pages/settings/UsageSettingsPanel.tsx
 msgid "Cost"
@@ -3747,6 +3756,10 @@ msgstr "Could not cancel invites"
 #: apps/web/src/components/computers/ComputerDeviceSettings.tsx
 msgid "Could not change"
 msgstr "Could not change"
+
+#: apps/mobile/app/(settings)/organization-member.tsx
+msgid "Could not change access"
+msgstr "Could not change access"
 
 #: apps/mobile/app/(settings)/computers.tsx
 #: apps/web/src/components/computers/CloudComputerSizes.tsx
@@ -4141,6 +4154,7 @@ msgstr "Could not load billing"
 msgid "Could not load bot"
 msgstr "Could not load bot"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/mobile/app/index.tsx
 #: apps/mobile/lib/inbox/use-inbox.ts
 msgid "Could not load bots"
@@ -7228,6 +7242,7 @@ msgstr "Large paste"
 msgid "Large text pasted inline"
 msgstr "Large text pasted inline"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 msgid "Last 30 days"
 msgstr "Last 30 days"
@@ -7240,6 +7255,7 @@ msgstr "Last check {checkedAt}: changed"
 msgid "Last check {checkedAt}: no changes"
 msgstr "Last check {checkedAt}: no changes"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/components/account/SocialSignInButtons.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 msgid "Last used"
@@ -7722,6 +7738,7 @@ msgstr "Meeting link"
 msgid "Meetings"
 msgstr "Meetings"
 
+#: apps/mobile/app/(settings)/_layout.tsx
 #: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
 #: packages/i18n/src/identity-display.ts
 msgid "Member"
@@ -8214,6 +8231,7 @@ msgstr "Needs: {names}"
 msgid "Network"
 msgstr "Network"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 msgid "Never"
 msgstr "Never"
@@ -8401,6 +8419,7 @@ msgstr "Next thinking level"
 msgid "Next week"
 msgstr "Next week"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/bot-access-list.tsx
 msgid "No access"
 msgstr "No access"
@@ -9065,6 +9084,10 @@ msgstr "OpenAI-compatible server URL"
 msgid "OpenAPI JSON"
 msgstr "OpenAPI JSON"
 
+#: apps/mobile/app/(settings)/organization-members.tsx
+msgid "Opens their bots and usage"
+msgstr "Opens their bots and usage"
+
 #: apps/web/src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "Opens your browser's print dialog. Choose Save as PDF as the destination."
@@ -9143,6 +9166,7 @@ msgstr "OTA {id}"
 msgid "OTA {id}, {date}"
 msgstr "OTA {id}, {date}"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/components/settings/StorageSettings.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 msgid "Other"
@@ -9382,6 +9406,10 @@ msgstr "Payment failed"
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
 msgid "Pending"
 msgstr "Pending"
+
+#: apps/mobile/app/(settings)/organization-member.tsx
+msgid "Period"
+msgstr "Period"
 
 #: apps/mobile/app/bot-settings.tsx
 msgid "Permissions"
@@ -11088,6 +11116,7 @@ msgstr "Send <0>{code}</0> from {app} within 10 minutes."
 msgid "Send <0>{code}</0> to <1>{address}</1> from {app} within 10 minutes."
 msgstr "Send <0>{code}</0> to <1>{address}</1> from {app} within 10 minutes."
 
+#: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
 msgid "Send a new link"
 msgstr "Send a new link"
@@ -11795,7 +11824,6 @@ msgstr "Spaces"
 msgid "Spaces keep work apart. Bots, chats, memory and computers never cross between them."
 msgstr "Spaces keep work apart. Bots, chats, memory and computers never cross between them."
 
-#: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 msgid "Spaces only they use pass to you."
 msgstr "Spaces only they use pass to you."
@@ -12383,6 +12411,10 @@ msgstr "The transcript will be removed from Rakazo."
 msgid "The unused difference is credited to your next invoice."
 msgstr "The unused difference is credited to your next invoice."
 
+#: apps/mobile/app/(settings)/organization-members.tsx
+msgid "Their bots pass to you."
+msgstr "Their bots pass to you."
+
 #: apps/mobile/components/settings/space-bots-model.tsx
 msgid "Their own model is cleared. You can pick one again in each bot."
 msgstr "Their own model is cleared. You can pick one again in each bot."
@@ -12824,6 +12856,7 @@ msgstr "Today"
 msgid "Toggle sidebar"
 msgstr "Toggle sidebar"
 
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/team/member-usage.tsx
 #: apps/web/src/pages/settings/UsageSettingsPanel.tsx
 msgid "Tokens"
@@ -13005,6 +13038,7 @@ msgstr "Try again"
 
 #: apps/mobile/app/(settings)/archived-bots.tsx
 #: apps/mobile/app/(settings)/bot-template.tsx
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/mobile/app/(settings)/profile.tsx
 #: apps/mobile/app/artifact.tsx
@@ -13289,6 +13323,7 @@ msgid "URL"
 msgstr "URL"
 
 #: apps/mobile/app/(settings)/account.tsx
+#: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/ServerUsage.tsx
 #: apps/web/src/pages/settings/settings-nav.ts
 #: apps/web/src/pages/settings/team/member-usage.tsx

@@ -1,9 +1,9 @@
 import { MenuView } from "@expo/ui/community/menu";
 import { ph } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react/macro";
-import type { OrganizationInvitation, OrganizationMember } from "@rakazo/contracts";
+import type { Team, TeamRole } from "@rakazo/contracts";
 import { accountDisplay } from "@rakazo/core";
-import { useIsFocused, useLocalSearchParams } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet } from "react-native";
 import { NativeSymbol } from "../../components/native/native-symbol";
@@ -27,25 +27,35 @@ import { useScreenQuery } from "../../lib/query/screen-query";
 import { ACCOUNT_SETTINGS } from "../../lib/query/settings-target";
 import { refreshOrganizations } from "../../lib/spaces/organizations";
 
+type Member = Team["members"][number];
+type Invitation = Team["invitations"][number];
 type Change =
   | { kind: "invite"; email: string }
-  | { kind: "role"; member: OrganizationMember; role: "admin" | "member" }
-  | { kind: "remove"; member: OrganizationMember }
-  | { kind: "cancel"; invitation: OrganizationInvitation };
+  | { kind: "resend"; invitation: Invitation }
+  | { kind: "role"; member: Member; role: "admin" | "member" }
+  | { kind: "remove"; member: Member }
+  | { kind: "revoke"; invitation: Invitation };
 
-/** Everyone in the organization; its owner and admins also invite, change roles and remove. */
+/** Mirrors the server's rule: owners manage everyone else, admins manage members. */
+function canManage(viewer: TeamRole, target: TeamRole): boolean {
+  if (target === "owner") return false;
+  return viewer === "owner" || (viewer === "admin" && target === "member");
+}
+
+/** Everyone on the team; its owner and admins also invite, open a member, and remove. */
 export default function OrganizationMembersScreen() {
   const { t } = useLingui();
+  const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const tokens = useMobileTokens();
   const appearance = useResolvedAppearance();
   const sideInsets = useSideInsets();
   const { organizationId } = useLocalSearchParams<{ organizationId: string }>();
-  const read = targetRpcQuery(ACCOUNT_SETTINGS, "organizations/members/list", { organizationId });
+  const read = targetRpcQuery(ACCOUNT_SETTINGS, "team/get", { organizationId });
   const query = useScreenQuery(read, { enabled: Boolean(organizationId) });
   // Someone else's change to the members reaches this screen as a signal on the live stream.
   useLiveStream(useIsFocused());
-  const members = query.data ?? null;
+  const team = query.data ?? null;
   const [email, setEmail] = useState("");
   const loadError =
     query.error && !query.isFetching ? errorText(query.error, t`Could not load members`) : null;
@@ -53,40 +63,39 @@ export default function OrganizationMembersScreen() {
   const change = useSave({
     target: ACCOUNT_SETTINGS,
     save: async (ask: Change, send) => {
-      if (ask.kind === "invite") {
-        return send("organizations/invitations/create", { organizationId, email: ask.email });
+      if (ask.kind === "invite" || ask.kind === "resend") {
+        const invited = await send("team/invite", {
+          organizationId,
+          email: ask.kind === "invite" ? ask.email : ask.invitation.email,
+          role: ask.kind === "invite" ? "member" : ask.invitation.role,
+        });
+        await refreshOrganizations();
+        return invited;
       }
-      if (ask.kind === "cancel") {
-        await send("organizations/invitations/cancel", {
-          organizationId,
-          invitationId: ask.invitation.id,
-        });
+      if (ask.kind === "revoke") {
+        await send("team/revokeInvitation", { invitationId: ask.invitation.id });
       } else if (ask.kind === "remove") {
-        await send("organizations/members/remove", { organizationId, userId: ask.member.userId });
+        await send("team/remove", { organizationId, userId: ask.member.userId });
       } else {
-        await send("organizations/members/setRole", {
-          organizationId,
-          userId: ask.member.userId,
-          role: ask.role,
-        });
+        await send("team/setRole", { organizationId, userId: ask.member.userId, role: ask.role });
       }
       // The member count shows on the Organization screen.
       await refreshOrganizations();
+      return null;
     },
     stale: [read.queryKey],
     onSaved: async (sent, ask) => {
-      if (ask.kind !== "invite" || !sent) return;
-      setEmail("");
+      if (ask.kind === "invite") setEmail("");
       // Without an email from this server, the link goes to them by hand.
-      if (!sent.emailed) await shareLink(sent.url);
+      if (sent && !sent.emailSent) await shareLink(sent.url);
     },
     onFailed: (err, ask) =>
       Alert.alert(
-        ask.kind === "invite"
+        ask.kind === "invite" || ask.kind === "resend"
           ? t`Could not invite`
           : ask.kind === "remove"
             ? t`Could not remove member`
-            : ask.kind === "cancel"
+            : ask.kind === "revoke"
               ? t`Could not cancel invitation`
               : t`Could not change role`,
         errorText(err, t`Try again.`),
@@ -105,8 +114,8 @@ export default function OrganizationMembersScreen() {
     if (address && !change.pending) change.run({ kind: "invite", email: address });
   }
 
-  function confirmRemove(member: OrganizationMember, label: string) {
-    Alert.alert(t`Remove ${ph({ name: label })}?`, t`Spaces only they use pass to you.`, [
+  function confirmRemove(member: Member, label: string) {
+    Alert.alert(t`Remove ${ph({ name: label })}?`, t`Their bots pass to you.`, [
       { text: t`Cancel`, style: "cancel" },
       {
         text: t`Remove`,
@@ -116,7 +125,8 @@ export default function OrganizationMembersScreen() {
     ]);
   }
 
-  const canManage = members?.canManage === true;
+  const viewer = team?.role ?? "member";
+  const canInvite = viewer !== "member";
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
@@ -125,8 +135,8 @@ export default function OrganizationMembersScreen() {
       contentContainerStyle={styles.content}
     >
       {loadError ? <LoadFailure message={loadError} onRetry={() => void query.refetch()} /> : null}
-      {!members && !loadError ? <ActivityIndicator color={native.secondaryLabel} /> : null}
-      {canManage ? (
+      {!team && !loadError ? <ActivityIndicator color={native.secondaryLabel} /> : null}
+      {canInvite ? (
         <SettingsGroup>
           <SettingsInputRow
             key="email"
@@ -161,34 +171,36 @@ export default function OrganizationMembersScreen() {
           />
         </SettingsGroup>
       ) : null}
-      {members ? (
+      {team ? (
         <SettingsGroup accessibilityLabel={t`Members`}>
-          {members.members.map((member) => {
+          {team.members.map((member) => {
             const display = accountDisplay(member, member.email);
-            const row = (
-              <SettingsRow
-                key={member.userId}
-                title={display.label}
-                detail={display.label === member.email ? undefined : member.email}
-                value={
-                  member.role === "owner"
-                    ? t`Owner`
-                    : member.role === "admin"
-                      ? t`Admin`
-                      : undefined
-                }
-              />
-            );
-            if (!member.manageable) return row;
+            const roleLabel =
+              member.role === "owner" ? t`Owner` : member.role === "admin" ? t`Admin` : undefined;
+            if (!canManage(viewer, member.role))
+              return (
+                <SettingsRow
+                  key={member.userId}
+                  title={display.label}
+                  detail={display.label === member.email ? undefined : member.email}
+                  value={roleLabel}
+                />
+              );
             const roleTitle = member.role === "admin" ? t`Make member` : t`Make admin`;
             const nextRole = member.role === "admin" ? "member" : "admin";
+            const roleChangeable = viewer === "owner";
+            const open = () =>
+              router.push({
+                pathname: "/organization-member",
+                params: { organizationId, userId: member.userId, name: display.label },
+              });
             return (
               <MenuView
                 key={member.userId}
                 shouldOpenOnLongPress
                 colorScheme={appearance}
                 actions={[
-                  ...(member.roleChangeable
+                  ...(roleChangeable
                     ? [{ id: "role", title: roleTitle, image: "person.badge.key" as const }]
                     : []),
                   {
@@ -206,9 +218,13 @@ export default function OrganizationMembersScreen() {
                 <SettingsRow
                   title={display.label}
                   detail={display.label === member.email ? undefined : member.email}
-                  value={member.role === "admin" ? t`Admin` : undefined}
+                  value={roleLabel}
+                  chevron="right"
+                  accessibilityRole="button"
+                  accessibilityHint={t`Opens their bots and usage`}
+                  onPress={open}
                   accessibilityActions={[
-                    ...(member.roleChangeable ? [{ name: "role", label: roleTitle }] : []),
+                    ...(roleChangeable ? [{ name: "role", label: roleTitle }] : []),
                     { name: "remove", label: t`Remove` },
                   ]}
                   onAccessibilityAction={({ nativeEvent }) => {
@@ -219,22 +235,24 @@ export default function OrganizationMembersScreen() {
               </MenuView>
             );
           })}
-          {members.invitations.map((invitation) => (
+          {team.invitations.map((invitation) => (
             <MenuView
               key={invitation.id}
               shouldOpenOnLongPress
               colorScheme={appearance}
               actions={[
                 { id: "share", title: t`Share invite link`, image: "square.and.arrow.up" },
+                { id: "resend", title: t`Send a new link`, image: "arrow.clockwise" },
                 {
-                  id: "cancel",
+                  id: "revoke",
                   title: t`Cancel invitation`,
                   image: "xmark",
                   attributes: { destructive: true },
                 },
               ]}
               onPressAction={({ nativeEvent }) => {
-                if (nativeEvent.event === "cancel") change.run({ kind: "cancel", invitation });
+                if (nativeEvent.event === "revoke") change.run({ kind: "revoke", invitation });
+                else if (nativeEvent.event === "resend") change.run({ kind: "resend", invitation });
                 else void shareLink(invitation.url);
               }}
             >
@@ -243,11 +261,14 @@ export default function OrganizationMembersScreen() {
                 value={t`Invited`}
                 accessibilityActions={[
                   { name: "share", label: t`Share invite link` },
-                  { name: "cancel", label: t`Cancel invitation` },
+                  { name: "resend", label: t`Send a new link` },
+                  { name: "revoke", label: t`Cancel invitation` },
                 ]}
                 onAccessibilityAction={({ nativeEvent }) => {
-                  if (nativeEvent.actionName === "cancel")
-                    change.run({ kind: "cancel", invitation });
+                  if (nativeEvent.actionName === "revoke")
+                    change.run({ kind: "revoke", invitation });
+                  else if (nativeEvent.actionName === "resend")
+                    change.run({ kind: "resend", invitation });
                   else void shareLink(invitation.url);
                 }}
               />

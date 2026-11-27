@@ -129,7 +129,7 @@ export const spacesRpc = {
           bots: z.array(InvitationBotGrantSchema).max(200).optional(),
         }),
       )
-      .output(z.object({ id: z.string(), emailSent: z.boolean() })),
+      .output(z.object({ id: z.string(), url: z.string().url(), emailSent: z.boolean() })),
     revokeInvitation: oc
       .input(z.object({ invitationId }))
       .output(z.object({ ok: z.literal(true) })),

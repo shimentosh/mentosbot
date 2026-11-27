@@ -34,6 +34,8 @@ import { computerContext, THREAD_MESSAGE_PAGE_SIZE } from "./shared.js";
 
 export function teamRoutes(ctx: RouterContext) {
   const { deps, authed } = ctx;
+  const teamInviteUrl = (invitationId: string) =>
+    new URL(`/team-invite/${encodeURIComponent(invitationId)}`, deps.env.webOrigin).toString();
   const lifecycle = {
     prisma: deps.prisma,
     sandbox: deps.sandbox,
@@ -62,6 +64,7 @@ export function teamRoutes(ctx: RouterContext) {
             invitations: team.invitations.map((invitation) => ({
               ...invitation,
               expiresAt: invitation.expiresAt.toISOString(),
+              url: teamInviteUrl(invitation.id),
             })),
           };
         }),
@@ -97,10 +100,7 @@ export function teamRoutes(ctx: RouterContext) {
                   inviterName: invitation.inviterName || context.actor.email,
                   teamName: invitation.organizationName,
                 },
-                new URL(
-                  `/team-invite/${encodeURIComponent(invitation.id)}`,
-                  deps.env.webOrigin,
-                ).toString(),
+                teamInviteUrl(invitation.id),
                 emailLocale(invitee?.locale),
               );
               await deps.email.send(message);
@@ -109,7 +109,7 @@ export function teamRoutes(ctx: RouterContext) {
               deps.onEmailError?.(error);
             }
           }
-          return { id: invitation.id, emailSent };
+          return { id: invitation.id, url: teamInviteUrl(invitation.id), emailSent };
         }),
       ),
       revokeInvitation: authed.team.revokeInvitation.handler(({ context, input }) =>
