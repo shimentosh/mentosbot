@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Field,
+  FieldGroup,
   FieldLabel,
   Input,
   OptionSelect,
@@ -74,8 +75,18 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
   };
   const canInvite = team.role !== "member";
   return (
-    <div className="space-y-3" data-testid="team-members">
-      <SettingsGroup title={<Trans>Members</Trans>}>
+    <div className="space-y-6" data-testid="team-members">
+      <SettingsGroup
+        title={<Trans>Members</Trans>}
+        action={
+          canInvite ? (
+            <Button variant="outline" size="sm" onClick={() => setInviting(true)}>
+              <UserPlus aria-hidden="true" />
+              <Trans>Invite</Trans>
+            </Button>
+          ) : null
+        }
+      >
         {team.members.map((member) => (
           <MemberRow
             key={member.userId}
@@ -96,29 +107,31 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
             }}
           />
         ))}
-        {team.invitations.map((invitation) => (
-          <InvitationRow
-            key={invitation.id}
-            invitation={invitation}
-            onResend={() =>
-              run(() =>
-                rpc.team.invite({ organizationId, email: invitation.email, role: invitation.role }),
-              )
-            }
-            onRevoke={() => run(() => rpc.team.revokeInvitation({ invitationId: invitation.id }))}
-          />
-        ))}
       </SettingsGroup>
+      {team.invitations.length ? (
+        <SettingsGroup title={<Trans>Invitations</Trans>}>
+          {team.invitations.map((invitation) => (
+            <InvitationRow
+              key={invitation.id}
+              invitation={invitation}
+              onResend={() =>
+                run(() =>
+                  rpc.team.invite({
+                    organizationId,
+                    email: invitation.email,
+                    role: invitation.role,
+                  }),
+                )
+              }
+              onRevoke={() => run(() => rpc.team.revokeInvitation({ invitationId: invitation.id }))}
+            />
+          ))}
+        </SettingsGroup>
+      ) : null}
       {error ? (
         <p role="alert" className="px-1 text-body-sm text-destructive">
           {error}
         </p>
-      ) : null}
-      {canInvite ? (
-        <Button variant="outline" className="rounded-full" onClick={() => setInviting(true)}>
-          <UserPlus aria-hidden="true" />
-          <Trans>Invite</Trans>
-        </Button>
       ) : null}
       {openMember ? (
         <MemberDialog
@@ -163,7 +176,7 @@ function InvitationRow({
         <span className="flex min-w-0 flex-col">
           <span className="truncate">{invitation.email}</span>
           <span className="text-body-sm text-muted-foreground">
-            <Trans>Invited</Trans> · <RoleName role={invitation.role} />
+            <RoleName role={invitation.role} />
           </span>
         </span>
       }
@@ -410,102 +423,118 @@ function InviteDialog({
     }
   }
 
+  const formId = useId();
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent size="md">
+        <DialogHeader className="px-6 pt-6 pe-14 pb-4">
           <DialogTitle>
             <Trans>Invite to team</Trans>
           </DialogTitle>
         </DialogHeader>
         {link ? (
-          <Field>
-            <FieldLabel>
-              <Trans>Send this link to {email}</Trans>
-            </FieldLabel>
-            <div className="flex gap-2">
-              <Input readOnly value={link} onFocus={(event) => event.currentTarget.select()} />
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label={t`Copy link`}
-                onClick={() => copy(link)}
-              >
-                {copied ? <Check /> : <Copy />}
+          <div className="px-6 pb-6">
+            <Field>
+              <FieldLabel>
+                <Trans>Send this link to {email}</Trans>
+              </FieldLabel>
+              <div className="flex gap-2">
+                <Input readOnly value={link} onFocus={(event) => event.currentTarget.select()} />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={t`Copy link`}
+                  onClick={() => copy(link)}
+                >
+                  {copied ? <Check /> : <Copy />}
+                </Button>
+              </div>
+            </Field>
+          </div>
+        ) : (
+          <>
+            <form
+              id={formId}
+              className="min-h-0 flex-1 overflow-y-auto px-6 pb-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              <FieldGroup>
+                <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]">
+                  <Field>
+                    <FieldLabel htmlFor={emailId}>
+                      <Trans>Email</Trans>
+                    </FieldLabel>
+                    <Input
+                      id={emailId}
+                      type="email"
+                      autoComplete="off"
+                      value={email}
+                      disabled={pending}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        setError(null);
+                      }}
+                    />
+                  </Field>
+                  {canInviteAdmins ? (
+                    <Field>
+                      <FieldLabel htmlFor={roleId}>
+                        <Trans>Role</Trans>
+                      </FieldLabel>
+                      <OptionSelect<InvitableTeamRole>
+                        id={roleId}
+                        value={role}
+                        disabled={pending}
+                        onValueChange={setRole}
+                        options={[
+                          { value: "member", label: t`Member` },
+                          { value: "admin", label: t`Admin` },
+                        ]}
+                      />
+                    </Field>
+                  ) : null}
+                </div>
+                {bots.length ? (
+                  <Field>
+                    <FieldLabel>
+                      <Trans>Bots</Trans>
+                    </FieldLabel>
+                    <BotAccessList
+                      bots={bots}
+                      levelOf={(botId) => grants.get(botId) ?? null}
+                      personName={email.trim() || t`They`}
+                      disabled={pending}
+                      onChange={(changes) =>
+                        setGrants((now) => {
+                          const next = new Map(now);
+                          for (const { botId, level } of changes) {
+                            if (level) next.set(botId, level);
+                            else next.delete(botId);
+                          }
+                          return next;
+                        })
+                      }
+                    />
+                  </Field>
+                ) : null}
+              </FieldGroup>
+            </form>
+            <div className="flex items-center gap-3 border-t border-border px-6 py-4">
+              {error ? (
+                <p role="alert" className="min-w-0 flex-1 text-body-sm text-destructive">
+                  {error}
+                </p>
+              ) : (
+                <span className="flex-1" />
+              )}
+              <Button type="submit" form={formId} disabled={pending || !email.trim()}>
+                {pending ? <Trans>Inviting…</Trans> : <Trans>Invite</Trans>}
               </Button>
             </div>
-          </Field>
-        ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submit();
-            }}
-          >
-            <Field>
-              <FieldLabel htmlFor={emailId}>
-                <Trans>Email</Trans>
-              </FieldLabel>
-              <Input
-                id={emailId}
-                type="email"
-                autoComplete="off"
-                value={email}
-                disabled={pending}
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                  setError(null);
-                }}
-              />
-            </Field>
-            {canInviteAdmins ? (
-              <Field>
-                <FieldLabel htmlFor={roleId}>
-                  <Trans>Role</Trans>
-                </FieldLabel>
-                <OptionSelect<InvitableTeamRole>
-                  id={roleId}
-                  value={role}
-                  disabled={pending}
-                  onValueChange={setRole}
-                  options={[
-                    { value: "member", label: t`Member` },
-                    { value: "admin", label: t`Admin` },
-                  ]}
-                />
-              </Field>
-            ) : null}
-            {bots.length ? (
-              <Field>
-                <FieldLabel>
-                  <Trans>Bots</Trans>
-                </FieldLabel>
-                <BotAccessList
-                  bots={bots}
-                  levelOf={(botId) => grants.get(botId) ?? null}
-                  personName={email.trim() || t`They`}
-                  disabled={pending}
-                  onChange={(botId, level) =>
-                    setGrants((now) => {
-                      const next = new Map(now);
-                      if (level) next.set(botId, level);
-                      else next.delete(botId);
-                      return next;
-                    })
-                  }
-                />
-              </Field>
-            ) : null}
-            {error ? (
-              <p role="alert" className="text-body text-destructive">
-                {error}
-              </p>
-            ) : null}
-            <Button type="submit" className="w-full" disabled={pending || !email.trim()}>
-              {pending ? <Trans>Inviting…</Trans> : <Trans>Invite</Trans>}
-            </Button>
-          </form>
+          </>
         )}
       </DialogContent>
     </Dialog>

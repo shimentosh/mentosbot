@@ -123,8 +123,9 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     await memberSettings.getByRole("button", { name: "Bots and usage for Team Member" }).click();
     const memberDialog = page.getByTestId("member-dialog");
     await expect(memberDialog.getByTestId("bot-access")).toBeVisible();
-    await expect(memberDialog.getByTestId("member-usage")).toBeVisible();
     await captureScreenshot(page, testInfo, "team-member-dialog");
+    await memberDialog.getByRole("tab", { name: "Usage" }).click();
+    await expect(memberDialog.getByTestId("member-usage")).toBeVisible();
     await memberDialog.getByRole("button", { name: "Close" }).click();
     await memberSettings.getByRole("button", { name: "Close user settings" }).click();
 

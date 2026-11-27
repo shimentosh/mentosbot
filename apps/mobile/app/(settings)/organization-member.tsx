@@ -71,6 +71,8 @@ export default function OrganizationMemberScreen() {
     (latest, row) => (latest && latest > row.lastUsedAt ? latest : row.lastUsedAt),
     null,
   );
+  // Bots carry their Space's name, worth showing only when they come from more than one.
+  const severalSpaces = new Set(botsQuery.data?.map((bot) => bot.spaceName)).size > 1;
   const loadError =
     botsQuery.error && !botsQuery.isFetching
       ? errorText(botsQuery.error, t`Could not load bots`)
@@ -112,7 +114,7 @@ export default function OrganizationMemberScreen() {
               >
                 <SettingsRow
                   title={bot.name}
-                  detail={bot.spaceName ?? undefined}
+                  detail={severalSpaces ? (bot.spaceName ?? undefined) : undefined}
                   value={options.find((option) => option.value === level)?.label}
                   chevron="down"
                   leading={

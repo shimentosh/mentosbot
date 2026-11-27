@@ -428,6 +428,11 @@ msgstr "{from} handed off to {to}"
 msgid "{from}–{to} of {total} rows"
 msgstr "{from}–{to} of {total} rows"
 
+#. placeholder {0}: bots.length
+#: apps/web/src/pages/settings/team/bot-access-list.tsx
+msgid "{granted} of {0} bots"
+msgstr "{granted} of {0} bots"
+
 #: apps/web/src/components/messages/markdown-copy.tsx
 msgid "{header}, column {index}"
 msgstr "{header}, column {index}"
@@ -7007,6 +7012,10 @@ msgstr "Invalid code"
 msgid "Invitation sent"
 msgstr "Invitation sent"
 
+#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+msgid "Invitations"
+msgstr "Invitations"
+
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/mobile/app/space-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
@@ -7050,7 +7059,6 @@ msgstr "Invite to team"
 
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
 msgid "Invited"
 msgstr "Invited"
 
@@ -7420,6 +7428,10 @@ msgstr "Loading activity…"
 #: apps/web/src/pages/ApprovalsOverlay.tsx
 msgid "Loading approvals…"
 msgstr "Loading approvals…"
+
+#: apps/web/src/pages/settings/team/member-dialog.tsx
+msgid "Loading bots…"
+msgstr "Loading bots…"
 
 #: apps/web/src/pages/shell/meetings/meeting-calendar.tsx
 msgid "Loading calendar…"
@@ -8473,6 +8485,7 @@ msgstr "No bots"
 msgid "No bots"
 msgstr "No bots"
 
+#: apps/web/src/pages/settings/team/bot-access-list.tsx
 #: apps/web/src/pages/shell/bots/bot-picker.tsx
 #: apps/web/src/pages/space/GroupPanel.tsx
 msgid "No bots match"
@@ -10980,6 +10993,7 @@ msgid "Search artifacts…"
 msgstr "Search artifacts…"
 
 #: apps/mobile/components/composer/bot-chip-picker.tsx
+#: apps/web/src/pages/settings/team/bot-access-list.tsx
 #: apps/web/src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Search bots"
 msgstr "Search bots"
@@ -11241,9 +11255,17 @@ msgstr "Session"
 msgid "Set"
 msgstr "Set"
 
+#: apps/web/src/pages/settings/team/bot-access-list.tsx
+msgid "Set all"
+msgstr "Set all"
+
 #: apps/web/src/components/settings/StorageSettings.tsx
 msgid "Set by the server environment."
 msgstr "Set by the server environment."
+
+#: apps/web/src/pages/settings/team/bot-access-list.tsx
+msgid "Set shown"
+msgstr "Set shown"
 
 #: apps/web/src/components/computers/NetworkExitDialog.tsx
 #: apps/web/src/pages/settings/ComputerServersSettings.tsx
@@ -13339,7 +13361,7 @@ msgstr "URL"
 #: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/ServerUsage.tsx
 #: apps/web/src/pages/settings/settings-nav.ts
-#: apps/web/src/pages/settings/team/member-usage.tsx
+#: apps/web/src/pages/settings/team/member-dialog.tsx
 #: apps/web/src/pages/shell/sidebar/sidebar-footer.tsx
 msgid "Usage"
 msgstr "Usage"
@@ -13581,6 +13603,7 @@ msgid "Video model"
 msgstr "Video model"
 
 #: apps/web/src/pages/ApprovalsOverlay.tsx
+#: apps/web/src/pages/settings/team/member-dialog.tsx
 msgid "View"
 msgstr "View"
 
@@ -13962,6 +13985,10 @@ msgstr "You declined"
 #: apps/web/src/components/spaces/InviteDialog.tsx
 msgid "You get a free month when they start their trial with a new card."
 msgstr "You get a free month when they start their trial with a new card."
+
+#: apps/web/src/pages/settings/team/member-dialog.tsx
+msgid "You have no bots to share yet."
+msgstr "You have no bots to share yet."
 
 #: apps/web/src/pages/shell/sidebar/notification-bell.tsx
 msgid "You're all caught up"

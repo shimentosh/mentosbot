@@ -1,7 +1,17 @@
-import { Trans } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import type { BotAccessLevel, Team } from "@rakazo/contracts";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, SectionHeading } from "@rakazo/ui-web";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Spinner,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { queryClient, useQueryUserId, useSave } from "../../../lib/query/query";
 import { rpc } from "../../../lib/query/rpc";
 import { errorText } from "../../../lib/query/user-error";
@@ -19,7 +29,9 @@ export function grantableBotsQuery(
   });
 }
 
-/** One teammate: which bots they may use, and how much they have used. */
+type Change = { botId: string; level: BotAccessLevel | null };
+
+/** One teammate: which bots they may use, and for the team's owner, how much they have used. */
 export function MemberDialog({
   organizationId,
   member,
@@ -32,58 +44,91 @@ export function MemberDialog({
   showUsage: boolean;
   onClose: () => void;
 }) {
+  const { t } = useLingui();
   const userId = useQueryUserId();
+  const [tab, setTab] = useState<"bots" | "usage">("bots");
   const query = grantableBotsQuery(userId, organizationId, member.userId);
-  const { data: bots } = useQuery({ ...query, enabled: Boolean(userId) }, queryClient);
+  const { data: bots, error } = useQuery({ ...query, enabled: Boolean(userId) }, queryClient);
   const save = useSave({
-    save: async (change: { botId: string; level: BotAccessLevel | null }, client) => {
-      if (change.level)
-        await client.team.shareBot({
-          botId: change.botId,
-          userId: member.userId,
-          level: change.level,
-        });
-      else await client.team.unshareBot({ botId: change.botId, userId: member.userId });
+    save: async (changes: Change[], client) => {
+      // Each bot saves on its own; the list re-reads afterwards, so a partial failure shows as is.
+      const results = await Promise.allSettled(
+        changes.map((change) =>
+          change.level
+            ? client.team.shareBot({
+                botId: change.botId,
+                userId: member.userId,
+                level: change.level,
+              })
+            : client.team.unshareBot({ botId: change.botId, userId: member.userId }),
+        ),
+      );
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) throw failed.reason;
     },
     stale: [query.queryKey],
   });
   const shown = member.name.trim() || member.email;
-  const levelOf = (botId: string) =>
-    save.pending && save.input?.botId === botId
-      ? save.input.level
-      : (bots?.find((bot) => bot.id === botId)?.level ?? null);
+  const levelOf = (botId: string) => {
+    const pending = save.pending ? save.input?.find((change) => change.botId === botId) : undefined;
+    return pending ? pending.level : (bots?.find((bot) => bot.id === botId)?.level ?? null);
+  };
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="sm:max-w-md" data-testid="member-dialog">
-        <DialogHeader>
+      <DialogContent size="md" data-testid="member-dialog">
+        <DialogHeader className="gap-1 px-6 pt-6 pe-14 pb-4">
           <DialogTitle className="break-words">{shown}</DialogTitle>
           {shown !== member.email ? (
             <p className="truncate text-body-sm text-muted-foreground">{member.email}</p>
           ) : null}
+          {showUsage ? (
+            <Tabs
+              value={tab}
+              onValueChange={(next) => setTab(next as "bots" | "usage")}
+              className="mt-3"
+            >
+              <TabsList aria-label={t`View`}>
+                <TabsTrigger value="bots" className="px-3">
+                  <Trans>Bots</Trans>
+                </TabsTrigger>
+                <TabsTrigger value="usage" className="px-3">
+                  <Trans>Usage</Trans>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          ) : null}
         </DialogHeader>
-        <div className="space-y-5">
-          {bots?.length ? (
-            <section className="space-y-2">
-              <SectionHeading variant="label">
-                <Trans>Bots</Trans>
-              </SectionHeading>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+          {tab === "usage" && showUsage ? (
+            <MemberUsage organizationId={organizationId} memberUserId={member.userId} />
+          ) : error && !bots ? (
+            <p role="alert" className="text-body-sm text-destructive">
+              {errorText(error)}
+            </p>
+          ) : !bots ? (
+            <Spinner aria-label={t`Loading bots…`} />
+          ) : bots.length === 0 ? (
+            <p className="py-6 text-center text-body-sm text-muted-foreground">
+              <Trans>You have no bots to share yet.</Trans>
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
               <BotAccessList
                 bots={bots}
                 levelOf={levelOf}
                 personName={shown}
                 disabled={save.pending}
-                onChange={(botId, level) => save.run({ botId, level })}
+                onChange={(changes) => {
+                  if (changes.length) save.run(changes);
+                }}
               />
               {save.error ? (
                 <p role="alert" className="text-body-sm text-destructive">
                   {errorText(save.error)}
                 </p>
               ) : null}
-            </section>
-          ) : null}
-          {showUsage ? (
-            <MemberUsage organizationId={organizationId} memberUserId={member.userId} />
-          ) : null}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

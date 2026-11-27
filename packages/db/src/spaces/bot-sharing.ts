@@ -147,7 +147,7 @@ export interface GrantableBotRow {
   name: string;
   color: string;
   avatarSet: string;
-  /** The Space's name when it is not the team's default one. */
+  /** The bot's Space, for grouping a long list. */
   spaceName: string | null;
   /** What the member already has, when listing for a member. */
   level: BotAccessLevel | null;
@@ -204,7 +204,7 @@ export async function listGrantableBots(
       name: bot.name,
       color: bot.color,
       avatarSet: bot.avatarSet,
-      spaceName: space && !space.isDefault ? space.name : null,
+      spaceName: space?.name ?? null,
       level: granted ? accessLevel(granted.level) : null,
     };
   });

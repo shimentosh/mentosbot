@@ -123,7 +123,7 @@ export const GrantableBotSchema = z.object({
   name: z.string(),
   color: z.string(),
   avatarSet: BotAvatarSetSchema,
-  /** The Space's name when it is not the team's default one. */
+  /** The bot's Space, for grouping a long list. */
   spaceName: z.string().nullable(),
   level: BotAccessLevelSchema.nullable(),
 });

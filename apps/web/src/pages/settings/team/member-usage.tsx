@@ -1,6 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { TeamUsagePeriod, TeamUsageRow } from "@rakazo/contracts";
-import { OptionSelect, SectionHeading } from "@rakazo/ui-web";
+import { OptionSelect } from "@rakazo/ui-web";
 import {
   Table,
   TableBody,
@@ -48,7 +48,7 @@ export function useUsageFormat() {
   };
 }
 
-/** How much a teammate has used, in total and by bot. Shown to the team's owner only. */
+/** How much a teammate has used, in total and by bot, under their dialog's Usage tab. */
 export function MemberUsage({
   organizationId,
   memberUserId,
@@ -76,14 +76,12 @@ export function MemberUsage({
     null,
   );
   return (
-    <section className="space-y-2" data-testid="member-usage">
-      <div className="flex items-center justify-between gap-2">
-        <SectionHeading variant="label">
-          <Trans>Usage</Trans>
-        </SectionHeading>
+    <section className="space-y-3" data-testid="member-usage">
+      <div className="flex justify-end">
         <OptionSelect<TeamUsagePeriod>
           aria-label={t`Usage period`}
           size="sm"
+          className="w-40"
           value={period}
           onValueChange={setPeriod}
           options={[
