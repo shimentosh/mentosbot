@@ -1,6 +1,7 @@
 const SETTINGS_SECTIONS = [
   "general",
   "organization",
+  "team",
   "spaces",
   "space",
   "models",

@@ -184,6 +184,7 @@ describe("renaming the organization", () => {
                 <OrganizationSettingsPanel
                   page="main"
                   onPageChange={() => {}}
+                  onOpenTeam={() => {}}
                   onBusyChange={onBusyChange}
                 />
               ) : null}

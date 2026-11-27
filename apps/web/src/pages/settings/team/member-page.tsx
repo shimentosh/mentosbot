@@ -1,15 +1,6 @@
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { BotAccessLevel, Team } from "@rakazo/contracts";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  Spinner,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@rakazo/ui-web";
+import { Spinner, Tabs, TabsList, TabsTrigger } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { queryClient, useQueryUserId, useSave } from "../../../lib/query/query";
@@ -17,6 +8,7 @@ import { rpc } from "../../../lib/query/rpc";
 import { errorText } from "../../../lib/query/user-error";
 import { BotAccessList } from "./bot-access-list";
 import { MemberUsage } from "./member-usage";
+import { RoleName } from "./role-name";
 
 export function grantableBotsQuery(
   userId: string | null,
@@ -32,17 +24,15 @@ export function grantableBotsQuery(
 type Change = { botId: string; level: BotAccessLevel | null };
 
 /** One teammate: which bots they may use, and for the team's owner, how much they have used. */
-export function MemberDialog({
+export function MemberPage({
   organizationId,
   member,
   showUsage,
-  onClose,
 }: {
   organizationId: string;
   member: Team["members"][number];
   /** Usage is the team owner's alone. */
   showUsage: boolean;
-  onClose: () => void;
 }) {
   const { t } = useLingui();
   const userId = useQueryUserId();
@@ -74,63 +64,58 @@ export function MemberDialog({
     return pending ? pending.level : (bots?.find((bot) => bot.id === botId)?.level ?? null);
   };
   return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent size="md" data-testid="member-dialog">
-        <DialogHeader className="gap-1 px-6 pt-6 pe-14 pb-4">
-          <DialogTitle className="break-words">{shown}</DialogTitle>
-          {shown !== member.email ? (
-            <p className="truncate text-body-sm text-muted-foreground">{member.email}</p>
-          ) : null}
-          {showUsage ? (
-            <Tabs
-              value={tab}
-              onValueChange={(next) => setTab(next as "bots" | "usage")}
-              className="mt-3"
-            >
-              <TabsList aria-label={t`View`}>
-                <TabsTrigger value="bots" className="px-3">
-                  <Trans>Bots</Trans>
-                </TabsTrigger>
-                <TabsTrigger value="usage" className="px-3">
-                  <Trans>Usage</Trans>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          ) : null}
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
-          {tab === "usage" && showUsage ? (
-            <MemberUsage organizationId={organizationId} memberUserId={member.userId} />
-          ) : error && !bots ? (
-            <p role="alert" className="text-body-sm text-destructive">
-              {errorText(error)}
-            </p>
-          ) : !bots ? (
-            <Spinner aria-label={t`Loading bots…`} />
-          ) : bots.length === 0 ? (
-            <p className="py-6 text-center text-body-sm text-muted-foreground">
-              <Trans>You have no bots to share yet.</Trans>
-            </p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <BotAccessList
-                bots={bots}
-                levelOf={levelOf}
-                personName={shown}
-                disabled={save.pending}
-                onChange={(changes) => {
-                  if (changes.length) save.run(changes);
-                }}
-              />
-              {save.error ? (
-                <p role="alert" className="text-body-sm text-destructive">
-                  {errorText(save.error)}
-                </p>
-              ) : null}
-            </div>
-          )}
+    <div className="flex flex-col gap-6" data-testid="team-member">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h3 className="break-words text-heading3 text-foreground">{shown}</h3>
+          <p className="truncate text-body-sm text-muted-foreground">
+            {shown !== member.email ? `${member.email} · ` : null}
+            <RoleName role={member.role} />
+          </p>
         </div>
-      </DialogContent>
-    </Dialog>
+        {showUsage ? (
+          <Tabs value={tab} onValueChange={(next) => setTab(next as "bots" | "usage")}>
+            <TabsList aria-label={t`View`}>
+              <TabsTrigger value="bots" className="px-3">
+                <Trans>Bots</Trans>
+              </TabsTrigger>
+              <TabsTrigger value="usage" className="px-3">
+                <Trans>Usage</Trans>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        ) : null}
+      </div>
+      {tab === "usage" && showUsage ? (
+        <MemberUsage organizationId={organizationId} memberUserId={member.userId} />
+      ) : error && !bots ? (
+        <p role="alert" className="text-body-sm text-destructive">
+          {errorText(error)}
+        </p>
+      ) : !bots ? (
+        <Spinner aria-label={t`Loading bots…`} />
+      ) : bots.length === 0 ? (
+        <p className="py-6 text-center text-body-sm text-muted-foreground">
+          <Trans>You have no bots to share yet.</Trans>
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <BotAccessList
+            bots={bots}
+            levelOf={levelOf}
+            personName={shown}
+            disabled={save.pending}
+            onChange={(changes) => {
+              if (changes.length) save.run(changes);
+            }}
+          />
+          {save.error ? (
+            <p role="alert" className="text-body-sm text-destructive">
+              {errorText(save.error)}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </div>
   );
 }

@@ -51,6 +51,7 @@ import { PaymentWalletSettingsPanel } from "./PaymentWalletSettingsPanel";
 import { SpaceSettingsPanel } from "./SpaceSettingsPanel";
 import { SpacesSettingsPanel } from "./SpacesSettingsPanel";
 import { useSettingsNavItems } from "./settings-nav";
+import { TeamSettingsPanel } from "./team/team-settings-panel";
 import { UsageSettingsPanel } from "./UsageSettingsPanel";
 import { VoiceSettingsOverlay } from "./VoiceSettingsOverlay";
 
@@ -411,7 +412,7 @@ export function SettingsOverlay({
                 {/* Memory scrolls its own body and applies the same width there; Usage's table needs the room. */}
                 <div
                   className={
-                    section === "memory" || section === "usage"
+                    section === "memory" || section === "usage" || section === "team"
                       ? "contents"
                       : SETTINGS_CONTENT_WIDTH
                   }
@@ -454,9 +455,11 @@ export function SettingsOverlay({
                     <OrganizationSettingsPanel
                       page={organizationPage}
                       onPageChange={setOrganizationPage}
+                      onOpenTeam={() => onSectionChange("team")}
                       onBusyChange={setVoiceBusy}
                     />
                   ) : null}
+                  {section === "team" ? <TeamSettingsPanel /> : null}
                   {section === "confirmations" ? <ApprovalRulesSettings scope="account" /> : null}
                   {section === "vault" ? <VaultSettings scope="account" /> : null}
                   {section === "messaging" && messagingEnabled ? <MessagingSettingsPanel /> : null}

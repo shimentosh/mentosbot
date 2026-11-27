@@ -1409,7 +1409,8 @@ msgstr "Adds"
 
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
+#: apps/web/src/pages/settings/team/role-name.tsx
 msgid "Admin"
 msgstr "Admin"
 
@@ -2298,8 +2299,8 @@ msgstr "Both"
 #: apps/mobile/components/vault/vault-item-sheet.tsx
 #: apps/web/src/components/vault/VaultItemAccess.tsx
 #: apps/web/src/components/vault/VaultItemDetail.tsx
-#: apps/web/src/pages/settings/team/member-dialog.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
+#: apps/web/src/pages/settings/team/member-page.tsx
 msgid "Bots"
 msgstr "Bots"
 
@@ -2316,7 +2317,7 @@ msgstr "Bots and routines that rely on this connection may stop."
 msgid "Bots and their own chats stay."
 msgstr "Bots and their own chats stay."
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Bots and usage for {shown}"
 msgstr "Bots and usage for {shown}"
 
@@ -2564,7 +2565,7 @@ msgstr "Can't read images"
 #: apps/web/src/pages/settings/ComputerServersSettings.tsx
 #: apps/web/src/pages/settings/MemorySettingsOverlay.tsx
 #: apps/web/src/pages/settings/PaymentWalletSettingsPanel.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 #: apps/web/src/pages/shell/bots/create-bot-dialog.tsx
 #: apps/web/src/pages/shell/create-delete-dialogs.tsx
 #: apps/web/src/pages/shell/meetings/meeting-calendar.tsx
@@ -3659,7 +3660,7 @@ msgid "Copy invite link"
 msgstr "Copy invite link"
 
 #. placeholder {0}: invitation.email
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Copy invite link for {0}"
 msgstr "Copy invite link for {0}"
 
@@ -3672,7 +3673,7 @@ msgstr "Copy key"
 #: apps/web/src/components/pages/PublicPageShell.tsx
 #: apps/web/src/components/pages/SharePopover.tsx
 #: apps/web/src/components/spaces/InviteDialog.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 msgid "Copy link"
 msgstr "Copy link"
 
@@ -5795,6 +5796,7 @@ msgstr "Don’t have an account?"
 #: apps/web/src/components/models/SubscriptionSignInSteps.tsx
 #: apps/web/src/components/settings/AccountDataSettings.tsx
 #: apps/web/src/components/vault/VaultImport.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 #: apps/web/src/pages/shell/bots/avatar-studio-popover.tsx
 #: apps/web/src/pages/shell/bots/computer-access-keys.tsx
 #: apps/web/src/pages/shell/bots/import-setup-card.tsx
@@ -5931,7 +5933,7 @@ msgstr "Edit routine"
 #: apps/web/src/pages/auth/AdminAccessPage.tsx
 #: apps/web/src/pages/auth/Auth.tsx
 #: apps/web/src/pages/settings/AccountSettingsOverlay.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 msgid "Email"
 msgstr "Email"
 
@@ -7012,7 +7014,7 @@ msgstr "Invalid code"
 msgid "Invitation sent"
 msgstr "Invitation sent"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Invitations"
 msgstr "Invitations"
 
@@ -7020,7 +7022,8 @@ msgstr "Invitations"
 #: apps/mobile/app/space-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 #: apps/web/src/components/spaces/SpaceMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Invite"
 msgstr "Invite"
 
@@ -7053,7 +7056,8 @@ msgstr "Invite link copied"
 msgid "Invite people"
 msgstr "Invite people"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Invite to team"
 msgstr "Invite to team"
 
@@ -7062,7 +7066,7 @@ msgstr "Invite to team"
 msgid "Invited"
 msgstr "Invited"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 msgid "Inviting…"
 msgstr "Inviting…"
 
@@ -7290,7 +7294,7 @@ msgstr "Learn from conversations"
 #: apps/mobile/app/space-members.tsx
 #: apps/web/src/components/spaces/SpaceMembersSettings.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Leave"
 msgstr "Leave"
 
@@ -7313,11 +7317,11 @@ msgstr "Leave meeting"
 msgid "Leave space"
 msgstr "Leave space"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Leave team"
 msgstr "Leave team"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Leave this team?"
 msgstr "Leave this team?"
 
@@ -7429,7 +7433,7 @@ msgstr "Loading activity…"
 msgid "Loading approvals…"
 msgstr "Loading approvals…"
 
-#: apps/web/src/pages/settings/team/member-dialog.tsx
+#: apps/web/src/pages/settings/team/member-page.tsx
 msgid "Loading bots…"
 msgstr "Loading bots…"
 
@@ -7590,13 +7594,13 @@ msgstr "Make a copy"
 
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Make admin"
 msgstr "Make admin"
 
 #: apps/mobile/app/(settings)/organization-members.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Make member"
 msgstr "Make member"
 
@@ -7610,7 +7614,7 @@ msgstr "Manage"
 msgid "Manage {0}"
 msgstr "Manage {0}"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Manage {shown}"
 msgstr "Manage {shown}"
 
@@ -7622,7 +7626,7 @@ msgid "Manage billing"
 msgstr "Manage billing"
 
 #. placeholder {0}: invitation.email
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Manage invite for {0}"
 msgstr "Manage invite for {0}"
 
@@ -7760,7 +7764,8 @@ msgid "Meetings"
 msgstr "Meetings"
 
 #: apps/mobile/app/(settings)/_layout.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
+#: apps/web/src/pages/settings/team/role-name.tsx
 #: packages/i18n/src/identity-display.ts
 msgid "Member"
 msgstr "Member"
@@ -7774,7 +7779,8 @@ msgstr "Member"
 #: apps/mobile/components/inbox/inbox-render-item.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 #: apps/web/src/components/spaces/SpaceMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/OrganizationSettingsPanel.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Members"
 msgstr "Members"
 
@@ -9238,7 +9244,7 @@ msgstr "Own computer"
 #: apps/web/src/components/pages/SharePopover.tsx
 #: apps/web/src/components/spaces/OrganizationMembersSettings.tsx
 #: apps/web/src/components/spaces/SpaceMembersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/role-name.tsx
 #: apps/web/src/pages/space/board-views.tsx
 #: apps/web/src/pages/space/Board.tsx
 #: packages/i18n/src/identity-display.ts
@@ -10079,7 +10085,7 @@ msgstr "Remote MCP server"
 #: apps/web/src/pages/plugins/connector-detail.tsx
 #: apps/web/src/pages/plugins/manage-view.tsx
 #: apps/web/src/pages/settings/ComputerServersSettings.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 #: apps/web/src/pages/space/ScratchpadSection.tsx
 msgid "Remove"
 msgstr "Remove"
@@ -10129,7 +10135,7 @@ msgstr "Remove {name}"
 #: apps/mobile/app/(settings)/plugin.tsx
 #: apps/mobile/app/(settings)/vault.tsx
 #: apps/mobile/app/space-members.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Remove {name}?"
 msgstr "Remove {name}?"
 
@@ -10605,7 +10611,7 @@ msgstr "Revision {version}"
 #: apps/mobile/app/(settings)/messaging.tsx
 #: apps/web/src/pages/auth/AdminAccessPage.tsx
 #: apps/web/src/pages/settings/MessagingSettingsPanel.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Revoke"
 msgstr "Revoke"
 
@@ -10617,7 +10623,7 @@ msgstr "Revoked"
 msgid "Right"
 msgstr "Right"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 msgid "Role"
 msgstr "Role"
 
@@ -11144,7 +11150,7 @@ msgid "Send <0>{code}</0> to <1>{address}</1> from {app} within 10 minutes."
 msgstr "Send <0>{code}</0> to <1>{address}</1> from {app} within 10 minutes."
 
 #: apps/mobile/app/(settings)/organization-members.tsx
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 msgid "Send a new link"
 msgstr "Send a new link"
 
@@ -11175,7 +11181,7 @@ msgstr "Send recording"
 msgid "Send reset link"
 msgstr "Send reset link"
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 msgid "Send this link to {email}"
 msgstr "Send this link to {email}"
 
@@ -12227,6 +12233,8 @@ msgstr "Teaching in progress. Stop teaching before sending a new message."
 #: apps/mobile/app/_layout.tsx
 #: apps/mobile/app/(settings)/account.tsx
 #: apps/mobile/components/computers/computer-mode-picker.tsx
+#: apps/web/src/pages/settings/settings-nav.ts
+#: apps/web/src/pages/settings/team/team-settings-panel.tsx
 #: apps/web/src/pages/shell/bots/bot-settings-sections.tsx
 #: apps/web/src/pages/shell/sidebar/team-bots.tsx
 msgid "Team"
@@ -12468,7 +12476,7 @@ msgstr "These files or choices no longer match. Choose the files again."
 msgid "These saved settings can't be read. Remove it and add it again."
 msgstr "These saved settings can't be read. Remove it and add it again."
 
-#: apps/web/src/pages/settings/team/TeamMembersSettings.tsx
+#: apps/web/src/pages/settings/team/invite-page.tsx
 msgid "They"
 msgstr "They"
 
@@ -13361,7 +13369,7 @@ msgstr "URL"
 #: apps/mobile/app/(settings)/organization-member.tsx
 #: apps/web/src/pages/settings/ServerUsage.tsx
 #: apps/web/src/pages/settings/settings-nav.ts
-#: apps/web/src/pages/settings/team/member-dialog.tsx
+#: apps/web/src/pages/settings/team/member-page.tsx
 #: apps/web/src/pages/shell/sidebar/sidebar-footer.tsx
 msgid "Usage"
 msgstr "Usage"
@@ -13603,7 +13611,7 @@ msgid "Video model"
 msgstr "Video model"
 
 #: apps/web/src/pages/ApprovalsOverlay.tsx
-#: apps/web/src/pages/settings/team/member-dialog.tsx
+#: apps/web/src/pages/settings/team/member-page.tsx
 msgid "View"
 msgstr "View"
 
@@ -13986,7 +13994,7 @@ msgstr "You declined"
 msgid "You get a free month when they start their trial with a new card."
 msgstr "You get a free month when they start their trial with a new card."
 
-#: apps/web/src/pages/settings/team/member-dialog.tsx
+#: apps/web/src/pages/settings/team/member-page.tsx
 msgid "You have no bots to share yet."
 msgstr "You have no bots to share yet."
 

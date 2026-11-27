@@ -55,7 +55,7 @@ function Page() {
       <header>
         {page === "main" ? <OrganizationOptionsMenu onActivityLog={() => setPage("log")} /> : null}
       </header>
-      <OrganizationSettingsPanel page={page} onPageChange={setPage} />
+      <OrganizationSettingsPanel page={page} onPageChange={setPage} onOpenTeam={() => {}} />
     </>
   );
 }
@@ -204,10 +204,12 @@ it("keeps the log off the organization page until Activity log is chosen, and Ba
   await render();
   const body = container.querySelector('[data-testid="organization-settings"]')!;
   expect(body).not.toBeNull();
-  // The body holds only Name and the team list inline: no options menu, no Delete.
+  // The body holds only Name and the way to the Team page: no options menu, no Delete.
   expect(container.querySelector('button[aria-label="Organization options"]')).not.toBeNull();
   expect(body.querySelector('button[aria-label="Organization options"]')).toBeNull();
-  expect([...body.querySelectorAll("button")].map((each) => each.textContent)).toEqual([]);
+  expect([...body.querySelectorAll("button")].map((each) => each.textContent)).toEqual([
+    "Members3",
+  ]);
   expect(container.querySelector('[data-testid="audit-log"]')).toBeNull();
   expect(api.events).not.toHaveBeenCalled();
 

@@ -10,7 +10,7 @@ import {
   FieldLabel,
   Input,
 } from "@rakazo/ui-web";
-import { MoreHorizontal } from "lucide-react";
+import { ChevronRight, MoreHorizontal } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { AuditLog } from "../../components/audit/AuditLog";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -20,7 +20,6 @@ import { clearSpaceSelection, rpc, selectSpace } from "../../lib/query/rpc";
 import { errorText } from "../../lib/query/user-error";
 import type { Organization } from "../../lib/spaces/organizations";
 import { organizationsQuery, useOrganizations } from "../../lib/spaces/organizations";
-import { TeamMembersSettings } from "./team/TeamMembersSettings";
 
 export type OrganizationPage = "main" | "log";
 
@@ -28,10 +27,13 @@ export type OrganizationPage = "main" | "log";
 export function OrganizationSettingsPanel({
   page,
   onPageChange,
+  onOpenTeam,
   onBusyChange,
 }: {
   page: OrganizationPage;
   onPageChange: (page: OrganizationPage) => void;
+  /** Its people and their bots live on the Team page. */
+  onOpenTeam: () => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
   const { organizations, activeOrganizationId } = useOrganizations();
@@ -43,6 +45,7 @@ export function OrganizationSettingsPanel({
       organization={organization}
       page={page}
       onPageChange={onPageChange}
+      onOpenTeam={onOpenTeam}
       onBusyChange={onBusyChange}
     />
   );
@@ -97,11 +100,13 @@ function OrganizationSettings({
   organization,
   page,
   onPageChange,
+  onOpenTeam,
   onBusyChange,
 }: {
   organization: Organization;
   page: OrganizationPage;
   onPageChange: (page: OrganizationPage) => void;
+  onOpenTeam: () => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
   const userId = useQueryUserId();
@@ -185,8 +190,18 @@ function OrganizationSettings({
             </p>
           ) : null}
         </SettingsRow>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-4 px-4 py-3 text-start text-body text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+          onClick={onOpenTeam}
+        >
+          <Trans>Members</Trans>
+          <span className="flex items-center gap-1 text-muted-foreground tabular-nums">
+            {organization.memberCount}
+            <ChevronRight aria-hidden="true" className="size-4 rtl:rotate-180" />
+          </span>
+        </button>
       </SettingsGroup>
-      <TeamMembersSettings organizationId={organization.id} />
     </div>
   );
 }

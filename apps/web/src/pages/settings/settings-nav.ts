@@ -14,6 +14,7 @@ import {
   Monitor,
   Settings,
   ShieldCheck,
+  Users,
   Volume2,
   Wallet,
 } from "lucide-react";
@@ -101,6 +102,7 @@ export function useSettingsNavItems(available: {
       icon: Layers,
       description: t`Spaces keep work apart. Bots, chats, memory and computers never cross between them.`,
     },
+    { id: "team", label: t`Team`, icon: Users },
     { id: "organization", label: t`Organization`, icon: Building2 },
     ...(available.updates
       ? [{ id: "updates" as const, label: t`Updates`, icon: CloudDownload }]
