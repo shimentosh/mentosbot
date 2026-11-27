@@ -49,6 +49,9 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
   const dialog = page.getByRole("dialog", { name: "Invite to team" });
   const invitee = `team-member-${stamp}@rakazo.test`;
   await dialog.getByLabel("Email").fill(invitee);
+  // The owner's bot goes with the invitation, so the teammate has it the moment they join.
+  await dialog.getByTestId("bot-access").getByRole("combobox").first().click();
+  await page.getByRole("option", { name: "Can chat" }).click();
   await captureScreenshot(page, testInfo, "team-invite-dialog");
   await dialog.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -107,14 +110,23 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     await chat.getByRole("button", { name: "Screen" }).click();
     await page.keyboard.press("Escape");
 
-    // The owner shares their own bot with the teammate, from its settings.
+    // The invitation already shared the owner's bot; its settings show it.
     const ownerBotId = activeBotId(page);
     await openBotPanel(page);
     const shareSection = page.getByTestId("bot-share");
-    await shareSection.getByRole("button", { name: "Share" }).click();
-    await page.getByRole("menuitem", { name: "Team Member" }).click();
     await expect(shareSection.getByLabel("Access for Team Member")).toHaveText("Can chat");
     await captureScreenshot(page, testInfo, "bot-share-section");
+
+    // The teammate's panel in Settings > Organization: their bots, changed in place.
+    const memberSettings = await openUserSettings(page);
+    await memberSettings.getByTestId("settings-nav-organization").click();
+    await memberSettings.getByRole("button", { name: "Bots and usage for Team Member" }).click();
+    const memberDialog = page.getByTestId("member-dialog");
+    await expect(memberDialog.getByTestId("bot-access")).toBeVisible();
+    await expect(memberDialog.getByTestId("member-usage")).toBeVisible();
+    await captureScreenshot(page, testInfo, "team-member-dialog");
+    await memberDialog.getByRole("button", { name: "Close" }).click();
+    await memberSettings.getByRole("button", { name: "Close user settings" }).click();
 
     // The teammate finds it in their sidebar and talks to it; it runs as the owner's bot.
     await teammate.goto(`/app/${ownerBotId}`);
@@ -124,14 +136,20 @@ test("invite a teammate, who joins from the emailed link", async ({ page, browse
     await expect(teammate.getByTestId("message-bot-bubble").last()).toBeVisible();
     await captureScreenshot(teammate, testInfo, "shared-bot-teammate");
 
-    // The owner's chat shows who wrote it.
+    // The teammate has their own chat with it: the owner's chat stays the owner's, and the owner
+    // reads the teammate's from the Team section.
     await page.reload();
-    const fromTeammate = page
-      .getByTestId("message-user-bubble")
-      .filter({ hasText: "hello from your teammate" });
-    await expect(fromTeammate).toBeVisible();
     await expect(
-      page.getByTestId("transcript").getByText("Team Member", { exact: true }),
+      page.getByTestId("message-user-bubble").filter({ hasText: "hello from your teammate" }),
+    ).toHaveCount(0);
+    const teammateChat = page
+      .getByTestId("team-bots")
+      .getByRole("button")
+      .filter({ hasText: "Team Member" })
+      .filter({ hasNotText: "Research helper" });
+    await teammateChat.click();
+    await expect(
+      page.getByTestId("team-bot-chat").getByText("hello from your teammate"),
     ).toBeVisible();
     await captureScreenshot(page, testInfo, "shared-bot-owner");
   } finally {

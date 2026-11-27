@@ -2,12 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { recordUsage } from "./usage.js";
 
-function client(createMany: ReturnType<typeof vi.fn>, authorUserId: string | null = null) {
-  const tx = {
-    usageRecord: { createMany },
-    modelCreditEntry: { findUnique: async () => null },
-    run: { findUnique: async () => ({ sourceMessage: { authorUserId } }) },
-  };
+function client(createMany: ReturnType<typeof vi.fn>) {
+  const tx = { usageRecord: { createMany }, modelCreditEntry: { findUnique: async () => null } };
   return {
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(tx),
   } as unknown as Pick<PrismaClient, "$transaction">;
@@ -146,9 +142,14 @@ describe("usage ledger", () => {
       count: 1,
     }));
     await recordUsage(
-      client(createMany, "teammate-fixture"),
+      client(createMany),
       { type: "usage", provider: "fixture", model: "test", inputTokens: 1, outputTokens: 1 },
-      { spaceId: "space-fixture", userId: "owner-fixture", runId: "run-fixture" },
+      {
+        spaceId: "space-fixture",
+        userId: "owner-fixture",
+        runId: "run-fixture",
+        startedByUserId: "teammate-fixture",
+      },
     );
     expect(createMany.mock.calls[0]?.[0].data[0]).toMatchObject({
       userId: "owner-fixture",

@@ -304,6 +304,8 @@ export function createGroupRepos(prisma: PrismaClient) {
       await prisma.chatGroup.findMany({
         where: {
           spaceId: { in: spaceIds },
+          // A group chat is its creator's, like the bots in it.
+          userId,
           archivedAt: null,
         },
         select: {
@@ -335,6 +337,7 @@ export function createGroupRepos(prisma: PrismaClient) {
       await prisma.chatGroup.findMany({
         where: {
           spaceId: actor.spaceId,
+          userId: actor.userId,
           OR: [
             { archivedAt: { not: null } },
             { members: { some: { bot: { archivedAt: { not: null } } } } },
@@ -362,6 +365,7 @@ export function createGroupRepos(prisma: PrismaClient) {
         await prisma.chatGroup.findMany({
           where: {
             spaceId: actor.spaceId,
+            userId: actor.userId,
             archivedAt: null,
           },
           include: groupInclude(actor.userId),
@@ -381,6 +385,7 @@ export function createGroupRepos(prisma: PrismaClient) {
         where: {
           id: groupId,
           spaceId: actor.spaceId,
+          userId: actor.userId,
           ...(options.includeArchived ? {} : { archivedAt: null }),
         },
         include: groupInclude(actor.userId),
@@ -394,6 +399,7 @@ export function createGroupRepos(prisma: PrismaClient) {
         where: {
           id: groupId,
           spaceId: actor.spaceId,
+          userId: actor.userId,
           archivedAt: null,
         },
         include: groupTargetInclude,

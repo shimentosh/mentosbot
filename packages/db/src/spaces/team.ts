@@ -570,6 +570,8 @@ export interface TeamBotRow {
   status: string;
   lastActivityAt: Date;
   archived: boolean;
+  /** Set for a teammate's own chat with a bot shared with them; `owner` is then that teammate. */
+  memberUserId: string | null;
 }
 
 /** The owner's own role check for a Space they are in, or nothing for anyone else. */
@@ -611,12 +613,33 @@ export async function listTeamBots(
       runs: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true, createdAt: true } },
     },
   });
+  // Each teammate's own chat with a bot shared with them, whoever owns the bot.
+  const chats = await prisma.thread.findMany({
+    where: { spaceId: space.id, memberBotId: { not: null } },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    take: 500,
+    select: {
+      userId: true,
+      createdAt: true,
+      memberBot: {
+        select: { id: true, name: true, color: true, avatarSet: true, archivedAt: true },
+      },
+      runs: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true, createdAt: true } },
+    },
+  });
   const owners = await prisma.user.findMany({
-    where: { id: { in: [...new Set(bots.map((bot) => bot.userId))] } },
+    where: {
+      id: {
+        in: [...new Set([...bots.map((bot) => bot.userId), ...chats.map((chat) => chat.userId)])],
+      },
+    },
     select: { id: true, name: true, email: true },
   });
   const ownerById = new Map(owners.map((owner) => [owner.id, owner]));
-  return bots.flatMap((bot) => {
+  // The latest run says what the bot is doing now; a finished one leaves it idle.
+  const statusOf = (runs: { status: string }[]) =>
+    ACTIVE.has(runs[0]?.status ?? "") ? runs[0]!.status : "idle";
+  const rows: TeamBotRow[] = bots.flatMap((bot) => {
     const owner = ownerById.get(bot.userId);
     if (!owner) return [];
     return [
@@ -626,13 +649,45 @@ export async function listTeamBots(
         color: bot.color,
         avatarSet: bot.avatarSet,
         owner: { userId: owner.id, name: owner.name, email: owner.email },
-        // The latest run says what the bot is doing now; a finished one leaves it idle.
-        status: ACTIVE.has(bot.runs[0]?.status ?? "") ? bot.runs[0]!.status : "idle",
+        status: statusOf(bot.runs),
         lastActivityAt: bot.runs[0]?.createdAt ?? bot.updatedAt,
         archived: bot.archivedAt !== null,
+        memberUserId: null,
       },
     ];
   });
+  for (const chat of chats) {
+    const person = ownerById.get(chat.userId);
+    // A chat nobody has written in yet is not work to oversee.
+    if (!person || !chat.memberBot || chat.runs.length === 0) continue;
+    rows.push({
+      id: chat.memberBot.id,
+      name: chat.memberBot.name,
+      color: chat.memberBot.color,
+      avatarSet: chat.memberBot.avatarSet,
+      owner: { userId: person.id, name: person.name, email: person.email },
+      status: statusOf(chat.runs),
+      lastActivityAt: chat.runs[0]?.createdAt ?? chat.createdAt,
+      archived: chat.memberBot.archivedAt !== null,
+      memberUserId: person.id,
+    });
+  }
+  return rows.sort((a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime());
+}
+
+/** A teammate's own chat with a shared bot, for the team's owner to read. */
+export async function memberChatForOwner(
+  prisma: PrismaClient,
+  input: { userId: string; spaceId: string; botId: string; memberUserId: string },
+) {
+  const space = await teamOwnerOfSpace(prisma, input);
+  if (!space) throw new IsolationError();
+  const thread = await prisma.thread.findFirst({
+    where: { spaceId: space.id, memberBotId: input.botId, userId: input.memberUserId },
+    select: { id: true, memberBot: { select: { id: true, name: true } } },
+  });
+  if (!thread?.memberBot) throw new IsolationError();
+  return { id: thread.memberBot.id, name: thread.memberBot.name, threadId: thread.id };
 }
 
 /**

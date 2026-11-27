@@ -720,6 +720,8 @@ export async function selectRunTools(
       Boolean(
         channelId ||
           conversationThread.externalConversationId ||
+          // A teammate's own chat with a shared bot never reads the owner's other chats.
+          conversationThread.memberBotId ||
           (sourceMessage && mayBeChannelMessage(sourceMessage)),
       ),
   );
@@ -731,6 +733,8 @@ export async function selectRunTools(
       : await deps.prisma.bot.findMany({
           where: {
             spaceId: run.spaceId,
+            // The owner's other bots; a teammate's are theirs to share, not this bot's to message.
+            userId: bot.userId,
             archivedAt: null,
             id: { not: bot.id },
             thread: { isNot: null },

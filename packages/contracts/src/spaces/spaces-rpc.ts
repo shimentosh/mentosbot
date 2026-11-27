@@ -149,9 +149,16 @@ export const spacesRpc = {
       .output(z.object({ ok: z.literal(true) })),
     /** Teammates' bots in the current Space, for its team's owner; empty for anyone else. */
     bots: oc.output(z.array(TeamBotSchema)),
-    /** A page of a teammate's bot's chat, read only, for the team's owner. */
+    /** A page of a teammate's bot's chat, or a teammate's chat with a shared bot, read only, for the team's owner. */
     botMessages: oc
-      .input(z.object({ botId: Id, before: z.number().int().nonnegative().optional() }))
+      .input(
+        z.object({
+          botId: Id,
+          /** Reads this teammate's own chat with the bot instead of the bot's main chat. */
+          memberUserId: Id.optional(),
+          before: z.number().int().nonnegative().optional(),
+        }),
+      )
       .output(ThreadMessagePageSchema),
     /**
      * The bots the signed-in person may hand out on a team, with what a member already has; without

@@ -14,6 +14,7 @@ import {
   listGrantableBots,
   listTeam,
   listTeamBots,
+  memberChatForOwner,
   previewTeamInvitation,
   recordAuditEvent,
   removeTeamMember,
@@ -191,24 +192,34 @@ export function teamRoutes(ctx: RouterContext) {
         ),
       ),
       botMessages: authed.team.botMessages.handler(async ({ context, input }) => {
-        const bot = await runAsSystem("check the team's owner may read a teammate's bot", () =>
-          teamBotForOwner(deps.prisma, {
-            userId: context.actor.userId,
-            spaceId: context.actor.spaceId,
-            botId: input.botId,
-          }),
-        );
+        const scope = {
+          userId: context.actor.userId,
+          spaceId: context.actor.spaceId,
+          botId: input.botId,
+        };
+        const memberUserId = input.memberUserId;
+        const chat = memberUserId
+          ? {
+              ...(await runAsSystem("check the team's owner may read a teammate's chat", () =>
+                memberChatForOwner(deps.prisma, { ...scope, memberUserId }),
+              )),
+              metadata: { chatOf: memberUserId },
+            }
+          : await runAsSystem("check the team's owner may read a teammate's bot", async () => {
+              const bot = await teamBotForOwner(deps.prisma, scope);
+              return { ...bot, metadata: { botOwner: bot.ownerUserId } };
+            });
         // Opening the chat is recorded, so overseeing a teammate's work is never silent.
         if (input.before === undefined)
           await recordAuditEvent({
             action: "team.bot.viewed",
             actor: { type: "user", id: context.actor.userId },
             spaceId: context.actor.spaceId,
-            target: { type: "bot", id: bot.id, label: bot.name },
-            metadata: { botOwner: bot.ownerUserId },
+            target: { type: "bot", id: chat.id, label: chat.name },
+            metadata: chat.metadata,
           });
         // The Space is the owner's own, so the tenant scope already reads its chats.
-        return loadMessagePage(deps.prisma, bot.threadId, input.before, THREAD_MESSAGE_PAGE_SIZE);
+        return loadMessagePage(deps.prisma, chat.threadId, input.before, THREAD_MESSAGE_PAGE_SIZE);
       }),
       grantableBots: authed.team.grantableBots.handler(({ context, input }) =>
         runAsSystem("list the bots someone may hand out on a team", async () =>

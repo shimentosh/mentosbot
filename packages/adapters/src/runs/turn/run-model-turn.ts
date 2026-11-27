@@ -186,6 +186,7 @@ function modelTurnRequest(
         spaceId: run.spaceId,
         botId: bot.id,
         userId: run.userId,
+        startedByUserId: thread.memberBotId ? thread.userId : null,
         runId,
         parentRunId: runId,
         operationId: runId,
@@ -194,7 +195,8 @@ function modelTurnRequest(
     prompt: turnData ? `${prompt}\n\n${turnData}` : prompt,
     ...(speakers &&
     (run.trigger === "user" || (run.trigger === "follow_up" && sourceMessage?.role === "user"))
-      ? { promptSpeaker: personSpeaker(people, run.userId) }
+      ? // In a teammate's own chat with a shared bot, the teammate is the one asking.
+        { promptSpeaker: personSpeaker(people, thread.memberBotId ? thread.userId : run.userId) }
       : {}),
     // Keep an explicit executor override, but let the runtime select
     // cache-aware context for connections declaring a cache window.

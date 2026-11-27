@@ -1490,7 +1490,7 @@ describe("run notification preference", () => {
         bot: {
           select: { id: true, name: true, color: true, avatarSet: true, notifyOnFinish: true },
         },
-        thread: { select: { groupId: true } },
+        thread: { select: { groupId: true, memberBotId: true, userId: true } },
       },
     });
 

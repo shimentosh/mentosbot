@@ -517,6 +517,7 @@ describe("listGroups archived", () => {
     };
     expect(query.where).toEqual({
       spaceId: "space-1",
+      userId: "user-1",
       OR: [
         { archivedAt: { not: null } },
         { members: { some: { bot: { archivedAt: { not: null } } } } },
@@ -545,6 +546,7 @@ describe("listGroups archived", () => {
     expect(listed.map((item) => item.id)).toEqual(["openable"]);
     expect(findMany.mock.calls[0]![0].where).toEqual({
       spaceId: "space-1",
+      userId: "user-1",
       archivedAt: null,
     });
   });

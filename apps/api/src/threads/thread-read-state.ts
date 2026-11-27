@@ -9,9 +9,13 @@ import {
 } from "@rakazo/db";
 import type { ThreadTarget } from "./thread-target.js";
 
-/** The actor's own read state for a chat. */
+/** The actor's own read state for a chat: the teammate's, when they use a shared bot. */
 function readerOf(actor: Actor, target: ThreadTarget) {
-  return { threadId: target.threadId, spaceId: actor.spaceId, userId: actor.userId };
+  return {
+    threadId: target.threadId,
+    spaceId: actor.spaceId,
+    userId: actor.teammateUserId ?? actor.userId,
+  };
 }
 
 /**

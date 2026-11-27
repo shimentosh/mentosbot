@@ -144,6 +144,7 @@ export async function consumeRunEvents(
           spaceId: run.spaceId,
           botId: bot.id,
           userId: run.userId,
+          startedByUserId: ctx.thread.memberBotId ? ctx.thread.userId : null,
           runId,
           parentRunId: runId,
           operationId: runId,

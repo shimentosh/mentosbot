@@ -9,6 +9,11 @@ export const ActorSchema = z.object({
   email: z.string().email(),
   /** Deprecated wire field. App accounts have no deployment role; always false. */
   isDeploymentOwner: z.boolean(),
+  /**
+   * Set while a teammate uses a bot shared with them: the request runs as the bot's owner, and this
+   * names the teammate, whose own chat with the bot it reads and writes.
+   */
+  teammateUserId: Id.optional(),
 });
 export type Actor = z.infer<typeof ActorSchema>;
 

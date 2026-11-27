@@ -62,7 +62,7 @@ export default function TeamScreen() {
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.list}
       data={shown}
-      keyExtractor={(bot) => bot.id}
+      keyExtractor={(bot) => `${bot.id}:${bot.memberUserId ?? ""}`}
       ListEmptyComponent={<Text style={styles.empty}>{t("No bots yet")}</Text>}
       renderItem={({ item }) => (
         <Pressable
@@ -75,6 +75,7 @@ export default function TeamScreen() {
                 name: item.name,
                 ownerName: teamPersonName(item.owner),
                 ownerId: item.owner.userId,
+                ...(item.memberUserId ? { memberUserId: item.memberUserId } : {}),
               },
             })
           }

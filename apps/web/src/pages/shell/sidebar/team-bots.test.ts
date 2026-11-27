@@ -18,6 +18,7 @@ const bot = (id: string, userId: string, name: string): TeamBot => ({
   owner: { userId, name, email: `${userId}@rakazo.test` },
   status: "idle",
   lastActivityAt: new Date().toISOString(),
+  memberUserId: null,
   archived: false,
 });
 

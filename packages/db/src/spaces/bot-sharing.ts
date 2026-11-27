@@ -1,5 +1,9 @@
+import { ACTIVE_RUN_STATUSES } from "@rakazo/core";
+import { botThreadPreviews } from "../bots/bot-previews.js";
 import type { Prisma, PrismaClient } from "../database/client.js";
 import { IsolationError } from "../database/scope.js";
+import { primaryActiveRun } from "../threads/thread-listing.js";
+import { readStateFor, snoozedUntilFor, unreadFor } from "../threads/thread-reads.js";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -345,4 +349,76 @@ export async function listSharedBots(
       },
     ];
   });
+}
+
+/**
+ * A teammate's own chat with a bot shared with them, made the first time they open it. It sits in
+ * the bot's Space, so the bot's owner and the run that answers can read it.
+ */
+export async function memberThreadId(
+  prisma: Db,
+  input: { spaceId: string; botId: string; userId: string },
+): Promise<string> {
+  const where = { memberBotId_userId: { memberBotId: input.botId, userId: input.userId } };
+  const found = await prisma.thread.findUnique({ where, select: { id: true } });
+  if (found) return found.id;
+  const thread = await prisma.thread.upsert({
+    where,
+    create: { spaceId: input.spaceId, userId: input.userId, memberBotId: input.botId },
+    update: {},
+    select: { id: true },
+  });
+  return thread.id;
+}
+
+export interface MemberThreadView {
+  threadId: string;
+  unread: boolean;
+  snoozedUntil: string | null;
+  preview: string;
+  newestAt: Date;
+  status: string;
+}
+
+/**
+ * What a teammate's sidebar shows for bots shared with them: their own chat with each, not the
+ * owner's. A chat is made here the first time, so every shared bot has one to open.
+ */
+export async function memberThreadViews(
+  prisma: PrismaClient,
+  input: { spaceId: string; userId: string; botIds: readonly string[] },
+): Promise<Map<string, MemberThreadView>> {
+  const views = new Map<string, MemberThreadView>();
+  if (input.botIds.length === 0) return views;
+  for (const botId of input.botIds) await memberThreadId(prisma, { ...input, botId });
+  const threads = await prisma.thread.findMany({
+    where: { memberBotId: { in: [...input.botIds] }, userId: input.userId },
+    select: {
+      id: true,
+      memberBotId: true,
+      createdAt: true,
+      reads: readStateFor(input.userId),
+      runs: {
+        where: { status: { in: [...ACTIVE_RUN_STATUSES] } },
+        orderBy: { createdAt: "desc" },
+        select: { status: true },
+      },
+    },
+  });
+  const { previews, newestAt } = await botThreadPreviews(
+    prisma,
+    threads.map((thread) => thread.id),
+  );
+  for (const thread of threads) {
+    if (!thread.memberBotId) continue;
+    views.set(thread.memberBotId, {
+      threadId: thread.id,
+      unread: unreadFor(thread),
+      snoozedUntil: snoozedUntilFor(thread),
+      preview: previews.get(thread.id) ?? "",
+      newestAt: newestAt.get(thread.id) ?? thread.createdAt,
+      status: primaryActiveRun(thread.runs)?.status ?? "idle",
+    });
+  }
+  return views;
 }

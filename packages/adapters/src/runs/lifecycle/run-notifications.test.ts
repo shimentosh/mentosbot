@@ -42,6 +42,7 @@ function deps({
   groupId = null as string | null,
   publish = vi.fn(async () => undefined),
   members = ["user-1"],
+  teammate = null as string | null,
 } = {}) {
   const send = vi.fn(async () => undefined);
   const value = {
@@ -62,7 +63,7 @@ function deps({
       run: {
         findFirst: async () => ({
           bot: { id: "bot-1", name: "Scout", color: "#000000", avatarSet: "", notifyOnFinish },
-          thread: { groupId },
+          thread: { groupId, memberBotId: teammate ? "bot-1" : null, userId: teammate ?? "user-1" },
         }),
       },
     },
@@ -164,13 +165,14 @@ describe("notifyRun and the bell", () => {
 // Ada (user-1) and Bea (user-2) share space-1; nobody else is in it.
 describe("notifications in a shared Space", () => {
   const shared = ["user-1", "user-2"];
+  const group = "group-1";
   const recipients = (send: ReturnType<typeof deps>["send"]) =>
     send.mock.calls
       .map((call) => (call as unknown[])[1] as { userId: string })
       .map((c) => c.userId);
 
-  it("tells everyone about a reply, each with their own unread count", async () => {
-    const { value, publish, send } = deps({ members: shared });
+  it("tells everyone about a group's reply, each with their own unread count", async () => {
+    const { value, publish, send } = deps({ members: shared, groupId: group });
     await notifyRun(value, run, message);
     expect(recipients(send).sort()).toEqual(["user-1", "user-2"]);
     expect(send).toHaveBeenCalledWith(
@@ -189,7 +191,7 @@ describe("notifications in a shared Space", () => {
 
   it("reaches every member of a larger Space, a few at a time", async () => {
     const many = Array.from({ length: 12 }, (_, index) => `user-${index + 1}`);
-    const { value, send } = deps({ members: many });
+    const { value, send } = deps({ members: many, groupId: group });
     await notifyRun(value, run, message);
     expect(recipients(send).sort()).toEqual([...many].sort());
   });
@@ -203,7 +205,7 @@ describe("notifications in a shared Space", () => {
   it("holds a reply for whoever snoozed the chat, but still asks its owner to answer", async () => {
     snoozing.add("user-1");
     try {
-      const { value, publish, send } = deps({ members: shared });
+      const { value, publish, send } = deps({ members: shared, groupId: group });
       await notifyRun(value, run, message);
       expect(recipients(send)).toEqual(["user-2"]);
       expect(publish.mock.calls.map((call) => (call as unknown[])[0])).toEqual(["user-2"]);
@@ -213,6 +215,20 @@ describe("notifications in a shared Space", () => {
       expect(recipients(help.send)).toEqual(["user-1"]);
     } finally {
       snoozing.clear();
+    }
+  });
+
+  it("keeps a bot's own chat to its owner", async () => {
+    const { value, send } = deps({ members: shared });
+    await notifyRun(value, run, message);
+    expect(recipients(send)).toEqual(["user-1"]);
+  });
+
+  it("sends a teammate's chat with a shared bot to the teammate, though it runs as the owner", async () => {
+    for (const kind of ["completion", "help"] as const) {
+      const { value, send } = deps({ members: shared, teammate: "user-2" });
+      await notifyRun(value, run, { ...message, kind });
+      expect(recipients(send)).toEqual(["user-2"]);
     }
   });
 
@@ -226,7 +242,7 @@ describe("notifications in a shared Space", () => {
   });
 
   it("pushes Ada's message to Bea, never to Ada or someone outside the Space", async () => {
-    const { value, publish, send } = deps({ members: shared });
+    const { value, publish, send } = deps({ members: shared, groupId: group });
     await notifyMemberMessage(value, {
       spaceId: "space-1",
       threadId: "thread-1",
@@ -241,6 +257,7 @@ describe("notifications in a shared Space", () => {
         body: "Ada: Can you plan dinner for Saturday?",
         botId: "bot-1",
         threadId: "thread-1",
+        groupId: "group-1",
         badge: 5,
       },
       expect.objectContaining({ userId: "user-2", spaceId: "space-1" }),
@@ -252,15 +269,15 @@ describe("notifications in a shared Space", () => {
     );
   });
 
-  it("sends nothing for a message in a muted chat or a Space of one", async () => {
-    const muted = deps({ members: shared, notifyOnFinish: false });
+  it("sends nothing for a message in a bot's own chat or a Space of one", async () => {
+    const muted = deps({ members: shared });
     await notifyMemberMessage(muted.value, {
       spaceId: "space-1",
       threadId: "thread-1",
       authorUserId: "user-1",
       text: "hello",
     });
-    const alone = deps();
+    const alone = deps({ groupId: group });
     await notifyMemberMessage(alone.value, {
       spaceId: "space-1",
       threadId: "thread-1",

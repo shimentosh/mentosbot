@@ -197,6 +197,8 @@ export function createRepos(
     const rows = await prisma.bot.findMany({
       where: {
         spaceId: { in: spaceIds },
+        // Bots are their owner's: teammates reach one only when it is shared with them.
+        userId,
         archivedAt: null,
       },
       select: {
@@ -251,6 +253,8 @@ export function createRepos(
         where: {
           id: options.botId,
           spaceId: actor.spaceId,
+          // Bots are their owner's: a shared bot is read as its owner (see shared-bot-access).
+          userId: actor.userId,
           archivedAt: options.archived ? { not: null } : null,
         },
         omit: { instructionHistory: options.botId === undefined },
@@ -463,6 +467,7 @@ export function createRepos(
         where: {
           id: botId,
           spaceId: actor.spaceId,
+          userId: actor.userId,
           ...(options.includeArchived ? {} : { archivedAt: null }),
         },
         include: { thread: true, computer: true },

@@ -29,7 +29,8 @@ export function snoozedUntilFor(thread: {
 
 /**
  * Marks a chat unread for every member of its Space except whoever wrote the message at `seq`.
- * Someone with no read state yet had read everything before it.
+ * Someone with no read state yet had read everything before it. A bot's chat is new only to the
+ * bot's owner, and a teammate's own chat with a shared bot only to that teammate.
  */
 export async function markThreadUnreadForMembers(
   tx: Prisma.TransactionClient,
@@ -43,7 +44,14 @@ export async function markThreadUnreadForMembers(
       INSERT INTO thread_reads ("threadId", "userId", "spaceId", unread, "lastReadSeq")
       SELECT ${input.threadId}, m."userId", m."spaceId", true, ${input.seq - 1}::int
       FROM space_members m
+      JOIN threads t ON t.id = ${input.threadId}
       WHERE m."spaceId" = ${input.spaceId} AND m."userId" <> ${input.exceptUserId ?? ""}
+        AND CASE
+          WHEN t."memberBotId" IS NOT NULL THEN m."userId" = t."userId"
+          WHEN t."botId" IS NOT NULL
+            THEN m."userId" = (SELECT b."userId" FROM bots b WHERE b.id = t."botId")
+          ELSE true
+        END
       ON CONFLICT ("threadId", "userId") DO UPDATE SET unread = true`,
   );
 }

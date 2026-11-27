@@ -30,7 +30,7 @@ import {
 } from "@rakazo/db";
 import { hasChatHistory } from "../account/first-bot.js";
 import { otherSpaceOfBot, otherSpaceOfGroup } from "../bots/bot-space.js";
-import { listBotsSharedWith } from "../bots/shared-bot-access.js";
+import { listBotsSharedWith, sharedBotActor } from "../bots/shared-bot-access.js";
 import { invitationRecipientKey, sendInvitationEmail } from "../email/invitation-email.js";
 import type { RouterDeps } from "../router.js";
 import { listRoutinesDto } from "../routines/routines.js";
@@ -328,13 +328,20 @@ export function spacesRoutes(ctx: RouterContext) {
           ? await otherSpaceOfGroup(deps.prisma, actor, input.groupId)
           : undefined;
       const active = requested ?? bots[0];
+      // A bot shared with this person is read as its owner, in the person's own chat with it.
+      const activeActor = active?.share
+        ? ((await sharedBotActor(deps.prisma, actor, ["threads", "get"], { botId: active.id })) ??
+          actor)
+        : actor;
       const [thread, routines] = active
-        ? await Promise.all([
-            resolveThreadTarget(deps.prisma, actor, { botId: active.id }).then((target) =>
-              threadSnapshot(deps, target, actor.userId),
-            ),
-            listRoutinesDto(deps, actor, active.id),
-          ])
+        ? await runAsTenant(activeActor, () =>
+            Promise.all([
+              resolveThreadTarget(deps.prisma, activeActor, { botId: active.id }).then((target) =>
+                threadSnapshot(deps, target, activeActor.userId),
+              ),
+              listRoutinesDto(deps, activeActor, active.id),
+            ]),
+          )
         : [null, []];
       return {
         me,

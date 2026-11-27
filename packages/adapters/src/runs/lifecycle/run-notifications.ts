@@ -38,6 +38,8 @@ async function runNotice(
 ): Promise<{
   enabled: boolean;
   groupId: string | null;
+  /** The teammate whose own chat with a shared bot this is; theirs are its notices. */
+  teammateUserId?: string | null;
   bot?: { id: string; name: string; color: string; avatarSet: string };
 }> {
   // A routine carries its own notify setting, which decides on its failures.
@@ -53,13 +55,14 @@ async function runNotice(
     },
     select: {
       bot: { select: { id: true, name: true, color: true, avatarSet: true, notifyOnFinish: true } },
-      thread: { select: { groupId: true } },
+      thread: { select: { groupId: true, memberBotId: true, userId: true } },
     },
   });
   if (!source) return { enabled: false, groupId: null };
   return {
     enabled: routine ? routine.notify : Boolean(source.thread.groupId || source.bot.notifyOnFinish),
     groupId: source.thread.groupId,
+    teammateUserId: source.thread.memberBotId ? source.thread.userId : null,
     bot: source.bot,
   };
 }
@@ -99,18 +102,25 @@ export async function notifyRun(
     getLogger().error("notification preference lookup", error);
     return null;
   });
-  await recordForBell(deps.prisma, run, message, notice);
+  // A teammate's own chat with a shared bot runs as the bot's owner, but every notice in it is the
+  // teammate's: they asked, and only they answer it.
+  const person = notice?.teammateUserId ?? run.userId;
+  await recordForBell(deps.prisma, { ...run, userId: person }, message, notice);
   if (!notice?.enabled) return;
-  // A reply is news to everyone in the Space. Only the person whose run it is can answer its
-  // questions, take its screen, or fix what made it fail, and a reply to another bot is theirs.
+  // A group's reply is news to everyone in the Space. A bot's chat is its owner's (or the
+  // teammate's), and only that person can answer its questions, take its screen, or fix what made
+  // it fail; a reply to another bot is theirs too.
   const recipients =
-    message.kind === "completion" && run.trigger !== "bot_message"
+    !notice.teammateUserId &&
+    notice.groupId &&
+    message.kind === "completion" &&
+    run.trigger !== "bot_message"
       ? await spaceMemberIds(deps.prisma, run.spaceId).catch((error) => {
           if (options.retryOnFailure) throw error;
           getLogger().error("notification recipients", error);
           return [run.userId];
         })
-      : [run.userId];
+      : [person];
   await deliverChatNotice(deps, {
     spaceId: run.spaceId,
     recipients,
@@ -122,8 +132,8 @@ export async function notifyRun(
 }
 
 /**
- * Another member's message in a chat: everyone else in the Space hears about it, as they would a
- * reply. Nothing goes to the person who wrote it, or anywhere when the chat is muted.
+ * Another member's message in a group chat: everyone else in the Space hears about it, as they
+ * would a reply. Nothing goes to the person who wrote it.
  */
 export async function notifyMemberMessage(
   deps: Pick<ExecutorDeps, "prisma" | "events" | "notifications">,
@@ -157,7 +167,8 @@ export async function notifyMemberMessage(
     deps.prisma.user.findUnique({ where: { id: input.authorUserId }, select: { name: true } }),
   ]);
   const botId = thread?.bot?.id ?? thread?.group?.members[0]?.botId;
-  if (!thread || !botId || (!thread.groupId && !thread.bot?.notifyOnFinish)) return;
+  // A bot's own chat is one person's; only a group chat is shared with the Space.
+  if (!thread || !botId || !thread.groupId) return;
   const chatName = thread.group?.name ?? thread.bot?.name ?? "";
   const authorName = displayName(author?.name ?? "", "Someone");
   await deliverChatNotice(deps, {

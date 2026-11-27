@@ -2,6 +2,7 @@ import type { Actor, Bot } from "@rakazo/contracts";
 import type { BotAccessLevel, createRepos, PrismaClient } from "@rakazo/db";
 import {
   listSharedBots,
+  memberThreadViews,
   recordAuditEvent,
   runAsSystem,
   runAsTenant,
@@ -119,6 +120,8 @@ export async function sharedBotActor(
     spaceId: actor.spaceId,
     email: owner.ownerEmail,
     isDeploymentOwner: false,
+    // Someone the bot is shared with talks to it in their own chat; the team's owner only reads.
+    ...(owner.level === "view" ? {} : { teammateUserId: actor.userId }),
   };
 }
 
@@ -141,12 +144,37 @@ export async function listBotsSharedWith(
   for (const [ownerUserId, entries] of byOwner) {
     const owner = { ...actor, userId: ownerUserId, email: entries[0]!.owner.email };
     const byId = new Map(entries.map((entry) => [entry.id, entry]));
-    const owned = await runAsTenant(owner, () => repos.listBots(owner));
+    const [owned, chats] = await runAsTenant(owner, async () => {
+      const listed = await repos.listBots(owner);
+      return [
+        listed,
+        await memberThreadViews(prisma, {
+          spaceId: actor.spaceId,
+          userId: actor.userId,
+          botIds: listed.filter((bot) => byId.has(bot.id)).map((bot) => bot.id),
+        }),
+      ] as const;
+    });
     for (const bot of owned) {
       const entry = byId.get(bot.id);
       if (!entry) continue;
+      // The teammate's own chat with the bot, never the owner's.
+      const chat = chats.get(bot.id);
       bots.push({
         ...bot,
+        ...(chat
+          ? {
+              threadId: chat.threadId,
+              unread: chat.unread,
+              snoozedUntil: chat.snoozedUntil,
+              preview: chat.preview,
+              status: chat.status,
+              threadStatus: chat.status,
+              updatedAt: chat.newestAt.toISOString(),
+              runErrorId: null,
+              incomingCall: null,
+            }
+          : {}),
         pinned: false,
         sectionId: null,
         share: {

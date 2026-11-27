@@ -110,6 +110,8 @@ export const TeamBotSchema = z.object({
   status: z.string(),
   lastActivityAt: IsoDate,
   archived: z.boolean(),
+  /** Set for a teammate's own chat with a bot shared with them; `owner` is then that teammate. */
+  memberUserId: Id.nullable(),
 });
 export type TeamBot = z.infer<typeof TeamBotSchema>;
 

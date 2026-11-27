@@ -39,6 +39,7 @@ import {
   IsolationError,
   loadMessageAuthor,
   lockSpaceGroup,
+  memberThreadId,
   retireWaitingQuestionInTransaction,
   runHoldsChat,
   SpaceDeletionInProgressError,
@@ -383,7 +384,14 @@ export async function resolveThreadTarget(
     return {
       kind: "bot",
       botId: bot.id,
-      threadId: bot.thread.id,
+      // A teammate using a shared bot has their own chat with it, made on first use.
+      threadId: actor.teammateUserId
+        ? await memberThreadId(prisma, {
+            spaceId: bot.spaceId,
+            botId: bot.id,
+            userId: actor.teammateUserId,
+          })
+        : bot.thread.id,
       bot,
     };
   }

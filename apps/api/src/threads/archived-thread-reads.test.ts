@@ -82,7 +82,7 @@ describe("archived thread read authorization", () => {
       expect(result.status).toBe(200);
       expect(result.body.json.messages).toEqual([expect.objectContaining({ id: "message-1" })]);
       expect(findBot).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: "bot-1", spaceId: "space-1" } }),
+        expect.objectContaining({ where: { id: "bot-1", spaceId: "space-1", userId: "user-1" } }),
       );
     },
   );

@@ -1118,6 +1118,7 @@ model Bot {
   updatedAt         DateTime          @updatedAt
   thread            Thread?           @relation("BotThread")
   helperThreads     Thread[]          @relation("BotHelperThreads")
+  memberThreads     Thread[]          @relation("BotMemberThreads")
   computerId        String?
   computer          Computer?         @relation(fields: [computerId], references: [id], onDelete: SetNull)
   computerSwitching Boolean           @default(false)
@@ -1255,6 +1256,10 @@ model Thread {
   /// Set only on a background helper's own thread: the bot that started the helper owns it.
   helperBotId                 String?
   helperBot                   Bot?       @relation("BotHelperThreads", fields: [helperBotId], references: [id], onDelete: Cascade)
+  /// Set on a teammate's own chat with a bot shared with them; `userId` is the teammate. The bot's
+  /// owner keeps the bot's main chat, and reads these.
+  memberBotId                 String?
+  memberBot                   Bot?       @relation("BotMemberThreads", fields: [memberBotId], references: [id], onDelete: Cascade)
   groupId                     String?    @unique
   group                       ChatGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
   externalConversationId      String?    @unique
@@ -1276,6 +1281,7 @@ model Thread {
   runs                        Run[]
   routines                    Routine[]
 
+  @@unique([memberBotId, userId])
   @@index([spaceId])
   @@index([spaceId, userId])
   @@index([helperBotId])

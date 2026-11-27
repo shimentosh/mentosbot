@@ -452,9 +452,9 @@ describePostgres("team membership (PostgreSQL)", () => {
     await expect(client(ada).bots.get({ botId: bot.id })).resolves.toMatchObject({
       share: { level: "chat" },
     });
-    await expect(client(ada).threads.messages({ botId: bot.id })).resolves.toMatchObject({
-      threadId: bot.threadId,
-    });
+    // Ada talks to it in her own chat, never the owner's.
+    const adaChat = await client(ada).threads.messages({ botId: bot.id });
+    expect(adaChat.threadId).not.toBe(bot.threadId);
     // Using it is not managing it: no sharing it on, and others still see nothing.
     await expect(
       client(ada).team.shareBot({ botId: bot.id, userId: grace.userId, level: "chat" }),
@@ -605,6 +605,63 @@ describePostgres("team membership (PostgreSQL)", () => {
     await expect(
       client(ada).team.usage({ organizationId: owner.spaceId, period: "all" }),
     ).rejects.toBeInstanceOf(IsolationError);
+  });
+
+  it("gives each teammate their own chat with a shared bot, which the team's owner reads", async () => {
+    const owner = await signup();
+    const ada = await join(owner);
+    const grace = await join(owner);
+    const bot = await runAsTenant(owner, () =>
+      createRepos(prisma).createBot(owner, {
+        name: "Front desk",
+        description: "",
+        instructions: "",
+        notifyOnFinish: false,
+      }),
+    );
+    for (const person of [ada, grace])
+      await client(owner).team.shareBot({ botId: bot.id, userId: person.userId, level: "chat" });
+    const adaThread = (await client(ada).threads.head({ botId: bot.id })).threadId;
+    const graceThread = (await client(grace).threads.head({ botId: bot.id })).threadId;
+    expect(new Set([adaThread, graceThread, bot.threadId]).size).toBe(3);
+    // Opening it again finds the same chat.
+    await expect(client(ada).threads.head({ botId: bot.id })).resolves.toMatchObject({
+      threadId: adaThread,
+    });
+    // Her sidebar shows her chat with it.
+    await expect(client(ada).bots.list()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: bot.id, threadId: adaThread })]),
+    );
+
+    await system.message.create({
+      data: { threadId: adaThread, seq: 1, role: "user", blocks: [{ kind: "text", text: "hi" }] },
+    });
+    const where = { spaceId: owner.spaceId, botId: bot.id, threadId: adaThread };
+    const task = await system.task.create({
+      data: { ...where, userId: owner.userId, prompt: "hi", status: "completed" },
+    });
+    await system.run.create({
+      data: {
+        ...where,
+        taskId: task.id,
+        userId: owner.userId,
+        status: "completed",
+        trigger: "user",
+      },
+    });
+    await expect(client(owner).team.bots()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: bot.id, memberUserId: ada.userId })]),
+    );
+    const page = await client(owner).team.botMessages({ botId: bot.id, memberUserId: ada.userId });
+    expect(page.threadId).toBe(adaThread);
+    // A teammate reads neither another's chat nor the owner's.
+    await expect(
+      client(grace).team.botMessages({ botId: bot.id, memberUserId: ada.userId }),
+    ).rejects.toBeInstanceOf(IsolationError);
+    await expect(client(grace).threads.messages({ botId: bot.id })).resolves.toMatchObject({
+      threadId: graceThread,
+      messages: [],
+    });
   });
 
   it("lets the team's owner read a teammate's bot, its files and screen, but not use it", async () => {

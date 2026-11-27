@@ -28,8 +28,9 @@ import { useOrganizations } from "../../../lib/spaces/organizations";
 import { ArtifactImage } from "../chat/message-cards";
 
 /**
- * For a team's owner: every teammate's bot in this Space, filterable by member. Each opens its
- * chat to read; nothing here acts as the teammate.
+ * For a team's owner: every teammate's bot in this Space, and each teammate's own chat with a bot
+ * shared with them, filterable by member. Each opens its chat to read; nothing here acts as the
+ * teammate.
  */
 export function TeamBotsSection() {
   const userId = useQueryUserId();
@@ -55,7 +56,7 @@ export function TeamBotsSection() {
       <TeamBotsHeader members={members} member={member} onMember={setMember} />
       <ul className="mt-1 space-y-0.5">
         {shown.map((bot) => (
-          <li key={bot.id}>
+          <li key={`${bot.id}:${bot.memberUserId ?? ""}`}>
             <button
               type="button"
               onClick={() => setOpen(bot)}
@@ -141,8 +142,13 @@ function TeamBotChat({ bot, onClose }: { bot: TeamBot; onClose: () => void }) {
   const [watching, setWatching] = useState(false);
   const pages = useInfiniteQuery(
     {
-      queryKey: ["team-bot-messages", bot.id],
-      queryFn: ({ pageParam }) => rpc.team.botMessages({ botId: bot.id, before: pageParam }),
+      queryKey: ["team-bot-messages", bot.id, bot.memberUserId ?? ""],
+      queryFn: ({ pageParam }) =>
+        rpc.team.botMessages({
+          botId: bot.id,
+          memberUserId: bot.memberUserId ?? undefined,
+          before: pageParam,
+        }),
       initialPageParam: undefined as number | undefined,
       getNextPageParam: (page) => page.olderCursor ?? undefined,
     },

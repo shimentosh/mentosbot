@@ -155,6 +155,10 @@ const columns = Prisma.sql`m.id, m.seq, m.role, m."runId", m."replyToMessageId",
 
 /** Replies that used tools; matches the predicate of messages_tool_work_idx exactly. */
 const TOOL_WORK = Prisma.sql`m.role = 'bot' AND jsonb_path_exists(m.blocks, '$[*] ? (@.kind == "steps")')`;
+/** Chats are their owner's: "my chats" reads only those of the person whose bot this is. */
+const ownerOf = (botId: string) =>
+  Prisma.sql`SELECT owner."userId" FROM bots owner WHERE owner.id = ${botId}`;
+
 function visible(scope: HistoryScope, myChats = false, targetThreadId?: string): Prisma.Sql {
   // Match loadRunHistoryMessages: only an unassigned row for this bot means waiting.
   // Cross-chat direct threads use their owning bot; groups retain the reading bot.
@@ -173,16 +177,16 @@ function visible(scope: HistoryScope, myChats = false, targetThreadId?: string):
     ${targetThreadId ? Prisma.sql`AND t.id = ${targetThreadId}` : Prisma.empty}
     AND ((t."groupId" IS NULL AND EXISTS (
       SELECT 1 FROM bots b WHERE b.id = t."botId" AND b."spaceId" = ${scope.spaceId}
-        AND b."archivedAt" IS NULL
+        AND b."archivedAt" IS NULL AND b."userId" = (${ownerOf(scope.botId)})
     )) OR (t."botId" IS NULL AND EXISTS (
       SELECT 1 FROM chat_groups g WHERE g.id = t."groupId" AND g."spaceId" = ${scope.spaceId}
-        AND g."archivedAt" IS NULL
+        AND g."archivedAt" IS NULL AND g."userId" = (${ownerOf(scope.botId)})
     )))`;
   const channel = scope.channelId;
   return Prisma.sql`
     t.id = ${scope.threadId} AND t."spaceId" = ${scope.spaceId}
     AND ${notWaiting}
-    AND (t."botId" = ${scope.botId} OR (t."botId" IS NULL AND EXISTS (
+    AND (t."botId" = ${scope.botId} OR t."memberBotId" = ${scope.botId} OR (t."botId" IS NULL AND EXISTS (
       SELECT 1 FROM chat_groups g JOIN chat_group_members member ON member."groupId" = g.id
       WHERE g.id = t."groupId" AND g."spaceId" = ${scope.spaceId}
         AND g."archivedAt" IS NULL AND member."botId" = ${scope.botId}

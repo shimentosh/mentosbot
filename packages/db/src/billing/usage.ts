@@ -17,23 +17,11 @@ export interface UsageAttribution {
   parentRunId?: string;
   operationId?: string;
   operationKind?: UsageOperationKind;
-}
-
-type UsageTx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
-
-/**
- * The teammate whose request started a run, when it is not the bot's owner the run acts as: a
- * message they wrote to a bot shared with them. Null for the owner's own work.
- */
-async function usageStartedBy(tx: UsageTx, attribution: UsageAttribution): Promise<string | null> {
-  const runId = attribution.runId ?? attribution.parentRunId;
-  if (!runId) return null;
-  const run = await tx.run.findUnique({
-    where: { id: runId },
-    select: { sourceMessage: { select: { authorUserId: true } } },
-  });
-  const author = run?.sourceMessage?.authorUserId;
-  return author && author !== attribution.userId ? author : null;
+  /**
+   * The teammate whose request started the work, when it is not `userId`: someone using a bot
+   * shared with them, in their own chat with it.
+   */
+  startedByUserId?: string | null;
 }
 
 /** Usage is financial history, independent from message clearing or bot deletion. */
@@ -67,6 +55,10 @@ export async function recordUsage(
     model: event.model,
     spaceId: attribution.spaceId,
     userId: attribution.userId,
+    startedByUserId:
+      attribution.startedByUserId && attribution.startedByUserId !== attribution.userId
+        ? attribution.startedByUserId
+        : null,
     botId: attribution.botId,
     runId: attribution.runId,
     operationId: attribution.operationId,
@@ -78,11 +70,7 @@ export async function recordUsage(
   };
   return withTransactionRetry(() =>
     prisma.$transaction(async (tx) => {
-      const startedByUserId = await usageStartedBy(tx, attribution);
-      await tx.usageRecord.createMany({
-        data: [{ ...data, startedByUserId }],
-        skipDuplicates: true,
-      });
+      await tx.usageRecord.createMany({ data: [data], skipDuplicates: true });
       if (attribution.fundingSource === "operator") {
         if (reconcile && event.callId)
           await tx.usageRecord.updateMany({

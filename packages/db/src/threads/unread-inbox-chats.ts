@@ -33,6 +33,9 @@ export function countUnreadInboxChats(
         AND (
           EXISTS (SELECT 1 FROM bots b WHERE b.id = t."botId"
             AND b."spaceId" = t."spaceId" AND b."archivedAt" IS NULL)
+          -- This person's own chat with a bot shared with them.
+          OR (t."userId" = ${userId} AND EXISTS (SELECT 1 FROM bots b WHERE b.id = t."memberBotId"
+            AND b."spaceId" = t."spaceId" AND b."archivedAt" IS NULL))
           OR EXISTS (SELECT 1 FROM chat_groups g WHERE g.id = t."groupId"
             AND g."spaceId" = t."spaceId" AND g."archivedAt" IS NULL
             AND (SELECT count(*) FROM chat_group_members gm JOIN bots b ON b.id = gm."botId"

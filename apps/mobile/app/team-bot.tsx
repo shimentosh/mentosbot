@@ -34,12 +34,16 @@ export default function TeamBotScreen() {
     name?: string;
     ownerName?: string;
     ownerId?: string;
+    /** A teammate's own chat with a bot shared with them, instead of the bot's main chat. */
+    memberUserId?: string;
   }>();
   const botId = params.botId;
+  const memberUserId = params.memberUserId;
   const pages = useInfiniteQuery(
     {
-      queryKey: ["team-bot-messages", botId],
-      queryFn: ({ pageParam }) => rpc("team/botMessages", { botId, before: pageParam }),
+      queryKey: ["team-bot-messages", botId, memberUserId ?? ""],
+      queryFn: ({ pageParam }) =>
+        rpc("team/botMessages", { botId, memberUserId, before: pageParam }),
       initialPageParam: undefined as number | undefined,
       getNextPageParam: (page) => page.olderCursor ?? undefined,
     },
