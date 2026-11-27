@@ -1,5 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { InvitableTeamRole, Team, TeamRole } from "@rakazo/contracts";
+import type {
+  BotAccessLevel,
+  InvitableTeamRole,
+  InvitationBotGrant,
+  Team,
+  TeamRole,
+} from "@rakazo/contracts";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,14 +29,16 @@ import {
   OptionSelect,
 } from "@rakazo/ui-web";
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { Check, Copy, Ellipsis, UserPlus } from "lucide-react";
+import { Check, ChevronRight, Copy, Ellipsis, UserPlus } from "lucide-react";
 import { useId, useState } from "react";
-import { SettingsGroup, SettingsRow } from "../../components/settings/SettingsRows";
-import { useCopyText } from "../../lib/copy-text";
-import { queryClient, useQueryUserId } from "../../lib/query/query";
-import { rpc } from "../../lib/query/rpc";
-import { errorText } from "../../lib/query/user-error";
-import { organizationsQuery } from "../../lib/spaces/organizations";
+import { SettingsGroup, SettingsRow } from "../../../components/settings/SettingsRows";
+import { useCopyText } from "../../../lib/copy-text";
+import { queryClient, useQueryUserId } from "../../../lib/query/query";
+import { rpc } from "../../../lib/query/rpc";
+import { errorText } from "../../../lib/query/user-error";
+import { organizationsQuery } from "../../../lib/spaces/organizations";
+import { BotAccessList } from "./bot-access-list";
+import { grantableBotsQuery, MemberDialog } from "./member-dialog";
 
 function teamQuery(userId: string | null, organizationId: string) {
   return queryOptions({
@@ -45,8 +53,10 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
   const query = teamQuery(userId, organizationId);
   const { data: team } = useQuery({ ...query, enabled: Boolean(userId) }, queryClient);
   const [inviting, setInviting] = useState(false);
+  const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   if (!team) return null;
+  const openMember = team.members.find((member) => member.userId === openMemberId);
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: query.queryKey }),
@@ -72,6 +82,7 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
             member={member}
             viewerRole={team.role}
             isSelf={member.userId === userId}
+            onOpen={canInvite ? () => setOpenMemberId(member.userId) : undefined}
             onSetRole={(role) =>
               run(() => rpc.team.setRole({ organizationId, userId: member.userId, role }))
             }
@@ -108,6 +119,14 @@ export function TeamMembersSettings({ organizationId }: { organizationId: string
           <UserPlus aria-hidden="true" />
           <Trans>Invite</Trans>
         </Button>
+      ) : null}
+      {openMember ? (
+        <MemberDialog
+          organizationId={organizationId}
+          member={openMember}
+          showUsage={team.role === "owner"}
+          onClose={() => setOpenMemberId(null)}
+        />
       ) : null}
       {inviting ? (
         <InviteDialog
@@ -199,12 +218,15 @@ function MemberRow({
   member,
   viewerRole,
   isSelf,
+  onOpen,
   onSetRole,
   onRemove,
 }: {
   member: Team["members"][number];
   viewerRole: TeamRole;
   isSelf: boolean;
+  /** Opens the teammate's bots and usage; left out for oneself and for members. */
+  onOpen?: () => void;
   onSetRole: (role: InvitableTeamRole) => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
@@ -213,15 +235,30 @@ function MemberRow({
   const manageable = !isSelf && canManage(viewerRole, member.role);
   const canLeave = isSelf && member.role !== "owner";
   const shown = member.name.trim() || member.email;
+  const name = (
+    <span className="flex min-w-0 flex-col text-left">
+      <span className="truncate">{shown}</span>
+      {shown !== member.email ? (
+        <span className="truncate text-body-sm text-muted-foreground">{member.email}</span>
+      ) : null}
+    </span>
+  );
   return (
     <SettingsRow
       label={
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate">{shown}</span>
-          {shown !== member.email ? (
-            <span className="truncate text-body-sm text-muted-foreground">{member.email}</span>
-          ) : null}
-        </span>
+        onOpen && !isSelf ? (
+          <button
+            type="button"
+            className="-m-1 flex min-w-0 items-center gap-1 rounded-md p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+            aria-label={t`Bots and usage for ${shown}`}
+            onClick={onOpen}
+          >
+            {name}
+            <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        ) : (
+          name
+        )
       }
       control={
         <>
@@ -340,6 +377,12 @@ function InviteDialog({
   const roleId = useId();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitableTeamRole>("member");
+  const userId = useQueryUserId();
+  const { data: bots = [] } = useQuery(
+    { ...grantableBotsQuery(userId, organizationId), enabled: Boolean(userId) },
+    queryClient,
+  );
+  const [grants, setGrants] = useState<ReadonlyMap<string, BotAccessLevel>>(new Map());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Without email delivery the inviter passes the link on themselves.
@@ -351,7 +394,13 @@ function InviteDialog({
     setPending(true);
     setError(null);
     try {
-      const invited = await rpc.team.invite({ organizationId, email: email.trim(), role });
+      const picked: InvitationBotGrant[] = [...grants].map(([botId, level]) => ({ botId, level }));
+      const invited = await rpc.team.invite({
+        organizationId,
+        email: email.trim(),
+        role,
+        bots: picked,
+      });
       await onInvited();
       if (invited.emailSent) {
         onClose();
@@ -367,7 +416,7 @@ function InviteDialog({
 
   return (
     <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
             <Trans>Invite to team</Trans>
@@ -428,6 +477,27 @@ function InviteDialog({
                     { value: "member", label: t`Member` },
                     { value: "admin", label: t`Admin` },
                   ]}
+                />
+              </Field>
+            ) : null}
+            {bots.length ? (
+              <Field>
+                <FieldLabel>
+                  <Trans>Bots</Trans>
+                </FieldLabel>
+                <BotAccessList
+                  bots={bots}
+                  levelOf={(botId) => grants.get(botId) ?? null}
+                  personName={email.trim() || t`They`}
+                  disabled={pending}
+                  onChange={(botId, level) =>
+                    setGrants((now) => {
+                      const next = new Map(now);
+                      if (level) next.set(botId, level);
+                      else next.delete(botId);
+                      return next;
+                    })
+                  }
                 />
               </Field>
             ) : null}

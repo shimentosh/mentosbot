@@ -67,6 +67,9 @@ export const ROSTER_PROCEDURES: Record<string, RosterScope> = {
     spaceIds: ids(field(input, "spaceId")),
     userIds: ids(actor.userId, field(input, "userId")),
   }),
+  "team.accept": actorOnly,
+  "team.shareBot": (actor, input) => ({ userIds: ids(actor.userId, field(input, "userId")) }),
+  "team.unshareBot": (actor, input) => ({ userIds: ids(actor.userId, field(input, "userId")) }),
   "spaces.invites.accept": (actor, _input, output) => ({
     spaceIds: ids(field(output, "spaceId")),
     userIds: [actor.userId],

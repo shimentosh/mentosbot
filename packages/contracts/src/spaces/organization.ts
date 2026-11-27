@@ -112,3 +112,32 @@ export const TeamBotSchema = z.object({
   archived: z.boolean(),
 });
 export type TeamBot = z.infer<typeof TeamBotSchema>;
+
+/** A bot someone may hand out on their team, with what a given member already has. */
+export const GrantableBotSchema = z.object({
+  id: Id,
+  name: z.string(),
+  color: z.string(),
+  avatarSet: BotAvatarSetSchema,
+  /** The Space's name when it is not the team's default one. */
+  spaceName: z.string().nullable(),
+  level: BotAccessLevelSchema.nullable(),
+});
+export type GrantableBot = z.infer<typeof GrantableBotSchema>;
+
+/** Model spend on a team by one person on one bot, for the team's owner. */
+export const TeamUsageRowSchema = z.object({
+  userId: Id,
+  botId: Id.nullable(),
+  botName: z.string().nullable(),
+  costUsd: z.number(),
+  totalTokens: z.number(),
+  calls: z.number().int(),
+  lastUsedAt: IsoDate,
+});
+export type TeamUsageRow = z.infer<typeof TeamUsageRowSchema>;
+export const TeamUsagePeriodSchema = z.enum(["30d", "all"]);
+export type TeamUsagePeriod = z.infer<typeof TeamUsagePeriodSchema>;
+
+export const InvitationBotGrantSchema = z.object({ botId: Id, level: BotAccessLevelSchema });
+export type InvitationBotGrant = z.infer<typeof InvitationBotGrantSchema>;

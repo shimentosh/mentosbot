@@ -62,6 +62,7 @@ export * from "./runs/run-secrets.js";
 export * from "./runs/run-timing.js";
 export * from "./runs/run-turn-checkpoint.js";
 export * from "./spaces/availability.js";
+export * from "./spaces/bot-sharing.js";
 export * from "./spaces/cross-space-communication.js";
 export * from "./spaces/external-conversations.js";
 export * from "./spaces/groups.js";
@@ -74,6 +75,7 @@ export * from "./spaces/space-members.js";
 export * from "./spaces/space-settings.js";
 export * from "./spaces/spaces.js";
 export * from "./spaces/team.js";
+export * from "./spaces/team-usage.js";
 export * from "./speech/costs.js";
 export * from "./threads/chat-alerts.js";
 export {

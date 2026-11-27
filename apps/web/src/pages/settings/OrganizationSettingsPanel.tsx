@@ -20,7 +20,7 @@ import { clearSpaceSelection, rpc, selectSpace } from "../../lib/query/rpc";
 import { errorText } from "../../lib/query/user-error";
 import type { Organization } from "../../lib/spaces/organizations";
 import { organizationsQuery, useOrganizations } from "../../lib/spaces/organizations";
-import { TeamMembersSettings } from "./TeamMembersSettings";
+import { TeamMembersSettings } from "./team/TeamMembersSettings";
 
 export type OrganizationPage = "main" | "log";
 

@@ -8,13 +8,17 @@ import { CreateGroupInput, GroupDetailSchema, GroupSchema, UpdateGroupInput } fr
 import {
   BotAccessEntrySchema,
   BotAccessLevelSchema,
+  GrantableBotSchema,
   InvitableTeamRoleSchema,
+  InvitationBotGrantSchema,
   OrganizationInvitationPreviewSchema,
   OrganizationListSchema,
   OrganizationMembersSchema,
   OrganizationRoleSchema,
   TeamBotSchema,
   TeamSchema,
+  TeamUsagePeriodSchema,
+  TeamUsageRowSchema,
 } from "./organization.js";
 import {
   SpaceInviteLinkSchema,
@@ -121,6 +125,8 @@ export const spacesRpc = {
           organizationId: Id,
           email: z.string().trim().toLowerCase().max(254).email(),
           role: InvitableTeamRoleSchema,
+          /** Bots they get on joining. Left out, renewing an invitation keeps its bots. */
+          bots: z.array(InvitationBotGrantSchema).max(200).optional(),
         }),
       )
       .output(z.object({ id: z.string(), emailSent: z.boolean() })),
@@ -147,6 +153,17 @@ export const spacesRpc = {
     botMessages: oc
       .input(z.object({ botId: Id, before: z.number().int().nonnegative().optional() }))
       .output(ThreadMessagePageSchema),
+    /**
+     * The bots the signed-in person may hand out on a team, with what a member already has; without
+     * a member, those an invitation can include.
+     */
+    grantableBots: oc
+      .input(z.object({ organizationId: Id, userId: Id.optional() }))
+      .output(z.array(GrantableBotSchema)),
+    /** Model spend by person and bot across the team, for its owner only. */
+    usage: oc
+      .input(z.object({ organizationId: Id, period: TeamUsagePeriodSchema }))
+      .output(z.array(TeamUsageRowSchema)),
     /** Who a bot is shared with, for its owner or someone who manages it. */
     botAccess: oc.input(z.object({ botId: Id })).output(z.array(BotAccessEntrySchema)),
     shareBot: oc

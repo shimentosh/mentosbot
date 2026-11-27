@@ -2,8 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { Prisma, PrismaClient } from "../generated/prisma/client.js";
 import { recordUsage } from "./usage.js";
 
-function client(createMany: ReturnType<typeof vi.fn>) {
-  const tx = { usageRecord: { createMany }, modelCreditEntry: { findUnique: async () => null } };
+function client(createMany: ReturnType<typeof vi.fn>, authorUserId: string | null = null) {
+  const tx = {
+    usageRecord: { createMany },
+    modelCreditEntry: { findUnique: async () => null },
+    run: { findUnique: async () => ({ sourceMessage: { authorUserId } }) },
+  };
   return {
     $transaction: async (work: (tx: unknown) => Promise<unknown>) => work(tx),
   } as unknown as Pick<PrismaClient, "$transaction">;
@@ -136,6 +140,20 @@ describe("usage ledger", () => {
       undefined,
       "deployment",
     ]);
+  });
+  it("credits a teammate's request to a shared bot to the teammate, not the bot's owner", async () => {
+    const createMany = vi.fn(async (_args: { data: Prisma.UsageRecordCreateManyInput[] }) => ({
+      count: 1,
+    }));
+    await recordUsage(
+      client(createMany, "teammate-fixture"),
+      { type: "usage", provider: "fixture", model: "test", inputTokens: 1, outputTokens: 1 },
+      { spaceId: "space-fixture", userId: "owner-fixture", runId: "run-fixture" },
+    );
+    expect(createMany.mock.calls[0]?.[0].data[0]).toMatchObject({
+      userId: "owner-fixture",
+      startedByUserId: "teammate-fixture",
+    });
   });
   it("records usage whose first transaction lost a deadlock", async () => {
     const createMany = vi

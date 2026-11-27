@@ -11,6 +11,7 @@ import {
   inviteToTeam,
   listBotAccess,
   listDepartingMemberBots,
+  listGrantableBots,
   listTeam,
   listTeamBots,
   previewTeamInvitation,
@@ -23,6 +24,7 @@ import {
   shareBot,
   TeamPermissionError,
   teamBotForOwner,
+  teamUsage,
   unshareBot,
 } from "@rakazo/db";
 import { loadMessagePage } from "../threads/thread-message-pages.js";
@@ -71,6 +73,7 @@ export function teamRoutes(ctx: RouterContext) {
               organizationId: input.organizationId,
               email: input.email,
               role: input.role,
+              bots: input.bots,
             }),
           );
           await recordAuditEvent({
@@ -78,7 +81,7 @@ export function teamRoutes(ctx: RouterContext) {
             actor: { type: "user", id: context.actor.userId },
             organizationId: input.organizationId,
             target: { type: "invitation", id: invitation.id, label: invitation.email },
-            metadata: { role: invitation.role },
+            metadata: { role: invitation.role, bots: input.bots?.length ?? 0 },
           });
           let emailSent = false;
           if (deps.email) {
@@ -207,50 +210,65 @@ export function teamRoutes(ctx: RouterContext) {
         // The Space is the owner's own, so the tenant scope already reads its chats.
         return loadMessagePage(deps.prisma, bot.threadId, input.before, THREAD_MESSAGE_PAGE_SIZE);
       }),
+      grantableBots: authed.team.grantableBots.handler(({ context, input }) =>
+        runAsSystem("list the bots someone may hand out on a team", async () =>
+          (
+            await listGrantableBots(deps.prisma, {
+              userId: context.actor.userId,
+              organizationId: input.organizationId,
+              memberUserId: input.userId,
+            })
+          ).map((bot) => ({
+            ...bot,
+            avatarSet: bot.avatarSet === "rakazo" ? ("rakazo" as const) : ("organic" as const),
+          })),
+        ),
+      ),
+      usage: authed.team.usage.handler(({ context, input }) =>
+        runAsSystem("total a team's usage by person for its owner", async () =>
+          (
+            await teamUsage(deps.prisma, {
+              userId: context.actor.userId,
+              organizationId: input.organizationId,
+              since:
+                input.period === "30d" ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) : null,
+            })
+          ).map((row) => ({ ...row, lastUsedAt: row.lastUsedAt.toISOString() })),
+        ),
+      ),
       botAccess: authed.team.botAccess.handler(({ context, input }) =>
         runAsSystem("list who a bot is shared with", () =>
-          listBotAccess(deps.prisma, {
-            userId: context.actor.userId,
-            spaceId: context.actor.spaceId,
-            botId: input.botId,
-          }),
+          listBotAccess(deps.prisma, { userId: context.actor.userId, botId: input.botId }),
         ),
       ),
       shareBot: authed.team.shareBot.handler(({ context, input }) =>
         runAsSystem("share a bot with a teammate", async () => {
-          const scope = { userId: context.actor.userId, spaceId: context.actor.spaceId };
-          let bot: Awaited<ReturnType<typeof shareBot>>;
-          try {
-            bot = await shareBot(deps.prisma, {
-              ...scope,
+          const bot = await mapTeamError(
+            shareBot(deps.prisma, {
+              userId: context.actor.userId,
               botId: input.botId,
               memberUserId: input.userId,
               level: input.level,
-            });
-          } catch (error) {
-            if (error instanceof BotShareError)
-              throw new ORPCError("BAD_REQUEST", { message: error.message });
-            throw error;
-          }
+            }),
+          );
           await recordAuditEvent({
             action: "team.bot.shared",
             actor: { type: "user", id: context.actor.userId },
-            spaceId: context.actor.spaceId,
+            spaceId: bot.spaceId,
             target: { type: "bot", id: bot.id, label: bot.name },
             metadata: { with: input.userId, level: input.level },
           });
-          return listBotAccess(deps.prisma, { ...scope, botId: input.botId });
+          return listBotAccess(deps.prisma, { userId: context.actor.userId, botId: input.botId });
         }),
       ),
       unshareBot: authed.team.unshareBot.handler(({ context, input }) =>
         runAsSystem("stop sharing a bot with a teammate", async () => {
           const removed = await unshareBot(deps.prisma, {
             userId: context.actor.userId,
-            spaceId: context.actor.spaceId,
             botId: input.botId,
             memberUserId: input.userId,
           });
-          if (removed)
+          if (removed) {
             await recordAuditEvent({
               action: "team.bot.unshared",
               actor: { type: "user", id: context.actor.userId },
@@ -258,6 +276,7 @@ export function teamRoutes(ctx: RouterContext) {
               target: { type: "bot", id: input.botId },
               metadata: { with: input.userId },
             });
+          }
           return { ok: true as const };
         }),
       ),
@@ -310,6 +329,7 @@ async function mapTeamError<T>(work: Promise<T>): Promise<T> {
     if (error instanceof InvitationUnavailableError)
       throw new ORPCError("NOT_FOUND", { message: error.message });
     if (
+      error instanceof BotShareError ||
       error instanceof AlreadyTeamMemberError ||
       error instanceof InvalidInvitationEmailError ||
       error instanceof InvitationLimitError

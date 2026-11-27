@@ -856,10 +856,25 @@ model Invitation {
   createdAt      DateTime     @default(now())
   inviterId      String
   user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  botAccess      InvitationBotAccess[]
 
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+/// Bots an invitation hands out: the invitee gets them the moment they join.
+model InvitationBotAccess {
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  botId        String
+  bot          Bot        @relation(fields: [botId], references: [id], onDelete: Cascade)
+  level        String
+  createdAt    DateTime   @default(now())
+
+  @@id([invitationId, botId])
+  @@index([botId])
+  @@map("invitation_bot_access")
 }
 
 /// A single-use link that adds whoever opens it to a space. Only the token's
@@ -1125,6 +1140,7 @@ model Bot {
   replyMode              String  @default("chat")
   routines          Routine[]
   access            BotAccess[]
+  invitationAccess  InvitationBotAccess[]
   inboxNotifications InboxNotification[]
   scratchpadItems   ScratchpadItem[]
   taughtSkills      TaughtSkill[]
@@ -2375,6 +2391,9 @@ model UsageRecord {
   /// `BotDeletion.id` is the bot id, so a deleted bot's name stays reachable for display.
   botId              String?
   userId             String
+  /// The person whose request started the work, when not `userId`: a teammate using a bot
+  /// shared with them. Kept on the row so clearing a chat or deleting a bot never loses it.
+  startedByUserId    String?
   runId              String?
   provider           String
   model              String

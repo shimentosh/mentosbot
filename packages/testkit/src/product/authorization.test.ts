@@ -329,6 +329,8 @@ describeWithDatabase("API authorization and resource isolation", () => {
       ["team/remove", { organizationId: "missing-organization", userId: "missing-user" }],
       ["team/bots"],
       ["team/botMessages", { botId: "missing-bot" }],
+      ["team/grantableBots", { organizationId: "missing-organization" }],
+      ["team/usage", { organizationId: "missing-organization", period: "30d" }],
       ["team/botAccess", { botId: "missing-bot" }],
       ["team/shareBot", { botId: "missing-bot", userId: "missing-user", level: "chat" }],
       ["team/unshareBot", { botId: "missing-bot", userId: "missing-user" }],

@@ -106,6 +106,7 @@ describePostgres("team membership (PostgreSQL)", () => {
     if (!db) return;
     installAuditEventStore(undefined);
     await system.auditEvent.deleteMany({ where: { actorId: { in: users } } });
+    await system.usageRecord.deleteMany({ where: { userId: { in: users } } });
     await system.organization.deleteMany({
       where: { members: { some: { userId: { in: users } } } },
     });
@@ -495,6 +496,115 @@ describePostgres("team membership (PostgreSQL)", () => {
         },
       }),
     ).resolves.toBe(6);
+  });
+
+  it("gives an invitee the bots their invitation named the moment they join", async () => {
+    const owner = await signup();
+    const makeBot = (name: string) =>
+      runAsTenant(owner, () =>
+        createRepos(prisma).createBot(owner, {
+          name,
+          description: "",
+          instructions: "",
+          notifyOnFinish: false,
+        }),
+      );
+    const picked = await makeBot("Picked");
+    const other = await makeBot("Not picked");
+    const invitee = await signup();
+    await expect(
+      client(owner).team.grantableBots({ organizationId: owner.spaceId }),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: picked.id, level: null }),
+        expect.objectContaining({ id: other.id, level: null }),
+      ]),
+    );
+
+    const first = await client(owner).team.invite({
+      organizationId: owner.spaceId,
+      email: invitee.email,
+      role: "member",
+      bots: [{ botId: picked.id, level: "manage" }],
+    });
+    // Sending a new link keeps the bots the first one named.
+    const renewed = await client(owner).team.invite({
+      organizationId: owner.spaceId,
+      email: invitee.email,
+      role: "member",
+    });
+    expect(renewed.id).not.toBe(first.id);
+    await client(invitee).team.accept({ invitationId: renewed.id });
+
+    const member = { ...invitee, spaceId: owner.spaceId };
+    const listed = (await client(member).bots.list()).map((bot) => bot.id);
+    expect(listed).toContain(picked.id);
+    expect(listed).not.toContain(other.id);
+    await expect(
+      client(owner).team.grantableBots({ organizationId: owner.spaceId, userId: invitee.userId }),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: picked.id, level: "manage" }),
+        expect.objectContaining({ id: other.id, level: null }),
+      ]),
+    );
+
+    // Nobody can hand out a bot that isn't theirs to give.
+    const stranger = await signup();
+    await expect(
+      client(owner).team.invite({
+        organizationId: owner.spaceId,
+        email: `x-${stranger.email}`,
+        role: "member",
+        bots: [{ botId: stranger.spaceId, level: "chat" }],
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("shows only the team's owner its usage, by the person who started the work", async () => {
+    const owner = await signup();
+    const ada = await join(owner);
+    const bot = await runAsTenant(owner, () =>
+      createRepos(prisma).createBot(owner, {
+        name: "Counted",
+        description: "",
+        instructions: "",
+        notifyOnFinish: false,
+      }),
+    );
+    await system.usageRecord.createMany({
+      data: [
+        {
+          spaceId: owner.spaceId,
+          userId: owner.userId,
+          startedByUserId: ada.userId,
+          botId: bot.id,
+          provider: "fixture",
+          model: "fixture",
+          totalTokens: 100,
+          costUsd: 0.5,
+        },
+        {
+          spaceId: owner.spaceId,
+          userId: owner.userId,
+          botId: bot.id,
+          provider: "fixture",
+          model: "fixture",
+          totalTokens: 10,
+          costUsd: 0.25,
+        },
+      ],
+    });
+    const usage = await client(owner).team.usage({ organizationId: owner.spaceId, period: "all" });
+    expect(usage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: ada.userId, botName: "Counted", costUsd: 0.5 }),
+        expect.objectContaining({ userId: owner.userId, totalTokens: 10 }),
+      ]),
+    );
+    await expect(
+      client(ada).team.usage({ organizationId: owner.spaceId, period: "all" }),
+    ).rejects.toBeInstanceOf(IsolationError);
   });
 
   it("lets the team's owner read a teammate's bot, its files and screen, but not use it", async () => {

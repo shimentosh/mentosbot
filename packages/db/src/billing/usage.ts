@@ -19,6 +19,23 @@ export interface UsageAttribution {
   operationKind?: UsageOperationKind;
 }
 
+type UsageTx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
+
+/**
+ * The teammate whose request started a run, when it is not the bot's owner the run acts as: a
+ * message they wrote to a bot shared with them. Null for the owner's own work.
+ */
+async function usageStartedBy(tx: UsageTx, attribution: UsageAttribution): Promise<string | null> {
+  const runId = attribution.runId ?? attribution.parentRunId;
+  if (!runId) return null;
+  const run = await tx.run.findUnique({
+    where: { id: runId },
+    select: { sourceMessage: { select: { authorUserId: true } } },
+  });
+  const author = run?.sourceMessage?.authorUserId;
+  return author && author !== attribution.userId ? author : null;
+}
+
 /** Usage is financial history, independent from message clearing or bot deletion. */
 export async function recordUsage(
   prisma: Pick<PrismaClient, "$transaction">,
@@ -61,7 +78,11 @@ export async function recordUsage(
   };
   return withTransactionRetry(() =>
     prisma.$transaction(async (tx) => {
-      await tx.usageRecord.createMany({ data: [data], skipDuplicates: true });
+      const startedByUserId = await usageStartedBy(tx, attribution);
+      await tx.usageRecord.createMany({
+        data: [{ ...data, startedByUserId }],
+        skipDuplicates: true,
+      });
       if (attribution.fundingSource === "operator") {
         if (reconcile && event.callId)
           await tx.usageRecord.updateMany({
