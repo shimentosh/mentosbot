@@ -5,7 +5,7 @@ import { getLogger } from "@rakazo/logging";
 import { describe, expect, it, vi } from "vitest";
 import { toHistory } from "../pi/pi-runtime-history.js";
 import { ContextBudgetError, ContextCacheTracker } from "./context-selection.js";
-import { createRuntimeContextPolicy } from "./runtime-context.js";
+import { CONTEXT_POLICY_SETTINGS, createRuntimeContextPolicy } from "./runtime-context.js";
 
 const OFFERED = new Set(["shell", "SLACK_FIND_CHANNELS", "read_file"]);
 
@@ -95,11 +95,15 @@ function connectorPages() {
 
 describe("runtime context policy", () => {
   it.each([200_000, 80_000])(
-    "retains connector pages newest-first within a %i context budget",
+    "retains connector pages newest-first within a stated %i context budget",
     (contextWindow) => {
       const { request, context, bodies } = connectorPages();
-      const policy = createRuntimeContextPolicy({ ...request, contextStrategy: "retrieval" });
-      const prepared = policy.prepareContext(context, { ...model, contextWindow });
+      const policy = createRuntimeContextPolicy({
+        ...request,
+        model: { ...request.model, contextWindow },
+        contextStrategy: "retrieval",
+      });
+      const prepared = policy.prepareContext(context, model);
       const pages = prepared.messages.filter(
         (message) =>
           message.role === "toolResult" && message.toolName === "connectors_execute_tool",
@@ -124,6 +128,18 @@ describe("runtime context policy", () => {
       expect(policy.getDecision()!.estimatedInputTokens).toBeLessThanOrEqual(contextWindow - 4096);
     },
   );
+
+  it("budgets a model card's larger window at the working context cap", () => {
+    const { request, context } = connectorPages();
+    const policy = createRuntimeContextPolicy({ ...request, contextStrategy: "retrieval" });
+    const prepared = policy.prepareContext(context, { ...model, contextWindow: 1_000_000 });
+    expect(JSON.stringify(prepared.messages)).toContain(
+      "Earlier result shortened after you read it",
+    );
+    expect(policy.getDecision()!.estimatedInputTokens).toBeLessThanOrEqual(
+      CONTEXT_POLICY_SETTINGS.workingContextTokens,
+    );
+  });
 
   it.each([0, 100])("keeps fitting recent results with %i earlier messages", (historyCount) => {
     const { request, context } = fixture(historyCount);

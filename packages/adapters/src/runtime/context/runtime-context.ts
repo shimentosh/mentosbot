@@ -61,6 +61,13 @@ const REBUILD_MAX_STALE_IMAGES = 8;
 const REBUILD_HEADROOM = 0.25;
 /** Stale tokens that justify a rebuild when the provider's prompt cache is declared off. */
 const UNCACHED_REBUILD_MIN_SAVED_TOKENS = 3_000;
+/**
+ * The most context a run works in when only the model card states the window. Every call re-reads
+ * the whole transcript, so a run on a million-token card that is never trimmed pays for hundreds of
+ * thousands of stale tokens per call. A window the connection states (its context limit, or the
+ * window the provider reports) is used as given.
+ */
+const WORKING_CONTEXT_TOKENS = 160_000;
 /** Short earlier history is kept whole, instead of snapshots, when it fits this many tokens. */
 const SHORT_HISTORY_MAX_TOKENS = 16_384;
 /** With snapshots, the latest messages are still replayed whole. */
@@ -76,6 +83,7 @@ export const CONTEXT_POLICY_SETTINGS = {
   rebuildMinSavedTokens: REBUILD_MIN_SAVED_TOKENS,
   rebuildMaxStaleImages: REBUILD_MAX_STALE_IMAGES,
   rebuildHeadroom: REBUILD_HEADROOM,
+  workingContextTokens: WORKING_CONTEXT_TOKENS,
   uncachedRebuildMinSavedTokens: UNCACHED_REBUILD_MIN_SAVED_TOKENS,
   shortHistoryMaxTokens: SHORT_HISTORY_MAX_TOKENS,
   snapshotRecentMessages: SNAPSHOT_RECENT_MESSAGES,
@@ -207,8 +215,12 @@ export function createRuntimeContextPolicy(
   let decision: RuntimeContextDecision | undefined;
   let metadataPresent = false;
   let warnedOutputClamp = false;
+  /** The window this run budgets for: what the connection states, else the card's up to a cap. */
+  function workingWindow(model: Model<Api>): number {
+    return request.model.contextWindow ?? Math.min(model.contextWindow, WORKING_CONTEXT_TOKENS);
+  }
   function outputReserve(model: Model<Api>): number {
-    const contextWindow = request.model.contextWindow ?? model.contextWindow;
+    const contextWindow = workingWindow(model);
     const configuredMaxTokens = resolveCompletionMaxTokens(
       model.maxTokens,
       request.model.maxTokens,
@@ -302,7 +314,7 @@ export function createRuntimeContextPolicy(
   function rebuild(
     source: Context,
     model: Model<Api>,
-    modelWindow = request.model.contextWindow ?? model.contextWindow,
+    modelWindow = workingWindow(model),
   ): Prepared {
     const ctx = pruned(source);
     const standaloneHistoryFallback =
@@ -683,7 +695,7 @@ export function createRuntimeContextPolicy(
   }
   /** A rebuild that leaves part of the window free, or none when the run needs all of it. */
   function rebuildWithHeadroom(ctx: Context, model: Model<Api>): Prepared | undefined {
-    const window = request.model.contextWindow ?? model.contextWindow;
+    const window = workingWindow(model);
     const reserve = outputReserve(model);
     try {
       return rebuild(ctx, model, reserve + Math.floor((window - reserve) * (1 - REBUILD_HEADROOM)));
@@ -723,8 +735,7 @@ export function createRuntimeContextPolicy(
           : undefined;
       let append = false;
       if (previous && appended) {
-        const available =
-          (request.model.contextWindow ?? model.contextWindow) - outputReserve(model);
+        const available = workingWindow(model) - outputReserve(model);
         const imageLimit = normalizedImageLimit(request.model.maxImagesPerPrompt);
         const overTokens = (size: Size) => size.tokens > available;
         const overImages = (size: Size) => imageLimit !== undefined && size.images > imageLimit;
