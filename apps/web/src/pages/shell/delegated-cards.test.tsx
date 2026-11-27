@@ -17,6 +17,7 @@ vi.mock("../../lib/query/query", async () => {
   return {
     queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
     useQueryUserId: () => "user-1",
+    useSave: () => ({ run: vi.fn(), pending: false, error: null }),
   };
 });
 vi.mock("@lingui/react/macro", () => ({

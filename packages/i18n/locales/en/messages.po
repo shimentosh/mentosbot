@@ -2541,6 +2541,7 @@ msgstr "Can't read images"
 #: apps/mobile/lib/thread/send/unsent-send-warning.ts
 #: apps/mobile/lib/thread/thread-voice.ts
 #: apps/web/src/components/account/PasskeySettings.tsx
+#: apps/web/src/components/ApprovalItem.tsx
 #: apps/web/src/components/billing/ModelCredits.tsx
 #: apps/web/src/components/billing/SpendingLimitSettings.tsx
 #: apps/web/src/components/ConfirmDialog.tsx
@@ -2567,6 +2568,11 @@ msgstr "Can't read images"
 #: apps/web/src/pages/space/KnowledgeSection.tsx
 msgid "Cancel"
 msgstr "Cancel"
+
+#. placeholder {0}: bot.name
+#: apps/web/src/components/ApprovalItem.tsx
+msgid "Cancel {0}'s request"
+msgstr "Cancel {0}'s request"
 
 #: apps/mobile/components/composer/dictation-bar.tsx
 msgid "Cancel dictation"
@@ -2613,6 +2619,10 @@ msgstr "Cancelled"
 #: apps/web/src/pages/shell/composer/composer-error.tsx
 msgid "Cancelled trials have no computer hours."
 msgstr "Cancelled trials have no computer hours."
+
+#: apps/web/src/components/ApprovalItem.tsx
+msgid "Cancelling…"
+msgstr "Cancelling…"
 
 #: apps/mobile/lib/vault/secret-destination.ts
 #: apps/mobile/lib/vault/vault.ts
@@ -3743,6 +3753,10 @@ msgstr "Could not attach files"
 #: apps/web/src/pages/shell/chat/message-cards.tsx
 msgid "Could not authorize this app"
 msgstr "Could not authorize this app"
+
+#: apps/web/src/components/ApprovalItem.tsx
+msgid "Could not cancel"
+msgstr "Could not cancel"
 
 #: apps/mobile/app/(settings)/organization-members.tsx
 msgid "Could not cancel invitation"

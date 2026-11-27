@@ -6,8 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import { approvalsQueryKey } from "../lib/inbox";
 import { formatRelativeTime } from "../lib/locale/relative-time";
-import { queryClient, useQueryUserId } from "../lib/query/query";
+import { queryClient, useQueryUserId, useSave } from "../lib/query/query";
 import { rpc, rpcForSpace, selectedSpaceId } from "../lib/query/rpc";
+import { SpaceRpcProvider } from "../lib/query/space-rpc";
+import { errorText } from "../lib/query/user-error";
 import { ArtifactImage } from "../pages/shell/chat/message-cards";
 import { AskCard } from "./messages/AskCard";
 
@@ -53,20 +55,32 @@ export function answerApproval(
   });
 }
 
-export function ApprovalItem({
-  approval,
-  showSpace,
-  onAnswered,
-  onOpen,
-}: {
+type ApprovalItemProps = {
   approval: Approval;
   showSpace: boolean;
   onAnswered: () => void;
   onOpen: () => void;
-}) {
+};
+
+export function ApprovalItem(props: ApprovalItemProps) {
+  // Cancelling goes to the card's own space, which may not be the one open.
+  return (
+    <SpaceRpcProvider spaceId={props.approval.spaceId}>
+      <ApprovalRow {...props} />
+    </SpaceRpcProvider>
+  );
+}
+
+function ApprovalRow({ approval, showSpace, onAnswered, onOpen }: ApprovalItemProps) {
   const { t } = useLingui();
   const { ask, bot } = approval;
   const target = approval.groupId ? { groupId: approval.groupId } : { botId: bot.id };
+  // Stops the run waiting on this card, as Stop does in the chat.
+  const cancel = useSave({
+    save: (_: undefined, client) => client.threads.stop(target),
+    onSaved: onAnswered,
+    closesScreen: true,
+  });
   return (
     <li className="flex min-w-0 gap-3" data-testid="approval">
       <BotAvatar identity={bot.id} color={bot.color} avatarSet={bot.avatarSet} size={32} />
@@ -82,12 +96,27 @@ export function ApprovalItem({
             variant="ghost"
             size="xs"
             className="ms-auto shrink-0 text-muted-foreground"
+            aria-label={t`Cancel ${bot.name}'s request`}
+            disabled={cancel.pending}
+            onClick={() => cancel.run(undefined)}
+          >
+            {cancel.pending ? <Trans>Cancelling…</Trans> : <Trans>Cancel</Trans>}
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            className="shrink-0 text-muted-foreground"
             onClick={onOpen}
           >
             <Trans>Open chat</Trans>
             <ArrowUpRight aria-hidden="true" />
           </Button>
         </div>
+        {cancel.error ? (
+          <p role="alert" className="text-body-sm text-destructive">
+            {errorText(cancel.error, t`Could not cancel`)}
+          </p>
+        ) : null}
         {ask?.block.kind === "ask" ? (
           <AskCard
             block={ask.block}

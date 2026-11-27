@@ -6,7 +6,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 
-const api = vi.hoisted(() => ({ approvals: vi.fn(), answer: vi.fn() }));
+const api = vi.hoisted(() => ({ approvals: vi.fn(), answer: vi.fn(), stop: vi.fn() }));
 const tabs = vi.hoisted(() => ({ change: (_value: string): void => undefined }));
 vi.mock("../lib/query/rpc", () => ({
   rpc: { inbox: { approvals: api.approvals } },
@@ -18,6 +18,18 @@ vi.mock("../lib/query/query", async () => {
   return {
     queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
     useQueryUserId: () => "user-1",
+    useSave: <Input,>({
+      save,
+      onSaved,
+    }: {
+      save: (input: Input, client: unknown) => Promise<unknown>;
+      onSaved?: (saved: unknown, input: Input) => unknown;
+    }) => ({
+      run: (input: Input) =>
+        void save(input, { threads: { stop: api.stop } }).then((saved) => onSaved?.(saved, input)),
+      pending: false,
+      error: null,
+    }),
   };
 });
 vi.mock("@lingui/react/macro", () => {
@@ -150,6 +162,35 @@ it("approves every permission card at once and leaves questions to the person", 
     expect(api.answer).toHaveBeenCalledWith(
       expect.objectContaining({ runId: "send", answer: "allow" }),
     );
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("cancels the run a card is waiting on", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  api.approvals.mockResolvedValue([
+    approval("pick", "Planner", {
+      text: "Which day?",
+      actions: [{ id: "mon", label: "Monday" }],
+    }),
+  ]);
+  api.stop.mockResolvedValue({ ok: true });
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        <ApprovalsOverlay bots={[]} groups={[]} onClose={vi.fn()} onOpenChat={vi.fn()} />,
+      ),
+    );
+    await vi.waitFor(() => expect(container.querySelector("[data-ask]")).not.toBeNull());
+    const cancel = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Cancel Planner\'s request"]',
+    )!;
+    await act(async () => cancel.click());
+    expect(api.stop).toHaveBeenCalledWith({ botId: "Planner" });
+    expect(api.answer).not.toHaveBeenCalled();
   } finally {
     await act(async () => root.unmount());
   }
